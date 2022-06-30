@@ -431,13 +431,15 @@ public class TestAdminSparkServer extends AbstractTestAdminSparkServer {
       Assert.assertEquals(ownerRes.getOwner(), owner);
 
       UpdateStoreQueryParams updateStoreQueryParams =
-          new UpdateStoreQueryParams().setPartitionCount(partitionCount).setIncrementalPushEnabled(true);
+          new UpdateStoreQueryParams().setPartitionCount(partitionCount).setHybridOffsetLagThreshold(1).setHybridRewindSeconds(86400);
       ControllerResponse partitionRes = controllerClient.updateStore(storeName, updateStoreQueryParams);
       Assert.assertFalse(partitionRes.isError(), partitionRes.getError());
 
       StoreResponse storeResponse = controllerClient.getStore(storeName);
       Assert.assertEquals(storeResponse.getStore().getPartitionCount(), partitionCount);
-      Assert.assertEquals(storeResponse.getStore().isIncrementalPushEnabled(), true);
+      Assert.assertNull(storeResponse.getStore().getHybridStoreConfig());
+      Assert.assertEquals(storeResponse.getStore().getHybridStoreConfig().getOffsetLagThresholdToGoOnline(), 1);
+      Assert.assertEquals(storeResponse.getStore().getHybridStoreConfig().getRewindTimeInSeconds(), 86400);
     } finally {
       deleteStore(storeName);
     }

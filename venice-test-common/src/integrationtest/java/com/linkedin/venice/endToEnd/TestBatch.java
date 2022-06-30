@@ -15,7 +15,6 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.hadoop.VenicePushJob;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
 import com.linkedin.venice.meta.BackupStrategy;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.read.RequestType;
@@ -428,7 +427,7 @@ public abstract class TestBatch {
       for (int i = 1; i <= 100; i++) {
         Assert.assertEquals(avroClient.get(Integer.toString(i)).get().toString(), "test_name_" + i);
       }
-    }, new UpdateStoreQueryParams().setIncrementalPushEnabled(true));
+    }, new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1).setHybridRewindSeconds(86400));
 
     testBatchStore(inputDir -> {
       Schema recordSchema = writeSimpleAvroFileWithUserSchema2(inputDir);
@@ -439,7 +438,7 @@ public abstract class TestBatch {
       for (int i = 51; i <= 150; i++) {
         Assert.assertEquals(avroClient.get(Integer.toString(i)).get().toString(), "test_name_" + (i * 2));
       }
-    }, storeName, new UpdateStoreQueryParams().setIncrementalPushEnabled(true), false);
+    }, storeName, new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1).setHybridRewindSeconds(86400), false);
   }
 
   /**
@@ -461,7 +460,8 @@ public abstract class TestBatch {
       }
     }, new UpdateStoreQueryParams().setWriteComputationEnabled(true)
         .setLeaderFollowerModel(true)
-        .setIncrementalPushEnabled(true)
+        .setHybridOffsetLagThreshold(1)
+        .setHybridRewindSeconds(86400)
         .setChunkingEnabled(true)
         .setPartitionCount(3));
 
@@ -478,7 +478,8 @@ public abstract class TestBatch {
       }
     }, storeName, new UpdateStoreQueryParams().setWriteComputationEnabled(true)
         .setLeaderFollowerModel(true)
-        .setIncrementalPushEnabled(true)
+        .setHybridOffsetLagThreshold(1)
+        .setHybridRewindSeconds(86400)
         .setPartitionCount(3), false);
   }
 
@@ -500,7 +501,8 @@ public abstract class TestBatch {
       }
     }, new UpdateStoreQueryParams().setWriteComputationEnabled(true)
         .setLeaderFollowerModel(true)
-        .setIncrementalPushEnabled(true)
+        .setHybridOffsetLagThreshold(1)
+        .setHybridRewindSeconds(86400)
         .setPartitionCount(3));
 
     testBatchStore(inputDir -> {
@@ -520,7 +522,8 @@ public abstract class TestBatch {
       }
     }, storeName, new UpdateStoreQueryParams().setWriteComputationEnabled(true)
         .setLeaderFollowerModel(true)
-        .setIncrementalPushEnabled(true)
+        .setHybridOffsetLagThreshold(1)
+        .setHybridRewindSeconds(86400)
         .setPartitionCount(3), false);
   }
 
@@ -550,12 +553,10 @@ public abstract class TestBatch {
           }
         }, new UpdateStoreQueryParams()
             .setAmplificationFactor(2)
-            .setIncrementalPushEnabled(true)
             .setLeaderFollowerModel(true)
             .setChunkingEnabled(true)
             .setHybridOffsetLagThreshold(10)
             .setHybridRewindSeconds(0)
-            .setIncrementalPushPolicy(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)
       );
 
       testBatchStore(inputDir -> {

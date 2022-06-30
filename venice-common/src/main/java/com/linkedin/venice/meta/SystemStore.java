@@ -497,16 +497,6 @@ public class SystemStore extends AbstractStore {
   }
 
   @Override
-  public IncrementalPushPolicy getIncrementalPushPolicy() {
-    return zkSharedStore.getIncrementalPushPolicy();
-  }
-
-  @Override
-  public void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy) {
-    throwUnsupportedOperationException("setIncrementalPushPolicy");
-  }
-
-  @Override
   public long getLatestVersionPromoteToCurrentTimestamp() {
     SystemStoreAttributes systemStoreAttributes = fetchAndBackfillSystemStoreAttributes(true);
     return systemStoreAttributes.getLatestVersionPromoteToCurrentTimestamp();

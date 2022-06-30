@@ -75,12 +75,6 @@ public class VeniceControllerClusterConfig {
   private boolean nativeReplicationEnabledForBatchOnly;
 
   /**
-   * When this option is enabled, all new incremental push enabled store versions created will have native replication
-   * enabled so long as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledForIncremental;
-
-  /**
    * When this option is enabled, all new hybrid store versions created will have native replication enabled so long
    * as the store has leader follower also enabled.
    */
@@ -106,7 +100,6 @@ public class VeniceControllerClusterConfig {
 
   private String nativeReplicationSourceFabricAsDefaultForBatchOnly;
   private String nativeReplicationSourceFabricAsDefaultForHybrid;
-  private String nativeReplicationSourceFabricAsDefaultForIncremental;
 
   /**
    * When this option is enabled, all new batch-only stores will have active-active replication enabled in store config so long
@@ -137,11 +130,6 @@ public class VeniceControllerClusterConfig {
    * When this option is enabled, all new hybrid stores will have leader follower enabled.
    */
   private boolean leaderFollowerEnabledForHybridStores;
-
-  /**
-   * When this option is enabled, all new incremental push stores will have leader follower enabled.
-   */
-  private boolean leaderFollowerEnabledForIncrementalPushStores;
 
   /**
    * When this option is enabled, all new batch-only stores will have leader/follower state model enabled.
@@ -183,7 +171,6 @@ public class VeniceControllerClusterConfig {
   private int kafkaReplicationFactor;
   private Optional<Integer> minIsr;
   private boolean kafkaLogCompactionForHybridStores;
-  private boolean kafkaLogCompactionForIncrementalPushStores;
   private long kafkaMinLogCompactionLagInMs;
 
   /**
@@ -239,7 +226,6 @@ public class VeniceControllerClusterConfig {
     }
     minIsr = props.getOptionalInt(KAFKA_MIN_ISR);
     kafkaLogCompactionForHybridStores = props.getBoolean(KAFKA_LOG_COMPACTION_FOR_HYBRID_STORES, true);
-    kafkaLogCompactionForIncrementalPushStores = props.getBoolean(KAFKA_LOG_COMPACTION_FOR_INCREMENTAL_PUSH_STORES, true);
     kafkaMinLogCompactionLagInMs = props.getLong(KAFKA_MIN_LOG_COMPACTION_LAG_MS, DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS);
     replicationFactor = props.getInt(DEFAULT_REPLICA_FACTOR);
     numberOfPartition = props.getInt(DEFAULT_NUMBER_OF_PARTITION);
@@ -276,19 +262,14 @@ public class VeniceControllerClusterConfig {
 
     nativeReplicationEnabledForBatchOnly = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_BATCH_ONLY, false);
     nativeReplicationEnabledAsDefaultForBatchOnly = props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY, false);
-    nativeReplicationEnabledForIncremental = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_INCREMENTAL_PUSH, false);
     nativeReplicationEnabledAsDefaultForIncremental = props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH, false);
     nativeReplicationEnabledForHybrid = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_HYBRID, false);
     nativeReplicationEnabledAsDefaultForHybrid = props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID, false);
     nativeReplicationSourceFabricAsDefaultForBatchOnly = props.getString(NATIVE_REPLICATION_SOURCE_FABRIC_AS_DEFAULT_FOR_BATCH_ONLY_STORES, "");
     nativeReplicationSourceFabricAsDefaultForHybrid = props.getString(NATIVE_REPLICATION_SOURCE_FABRIC_AS_DEFAULT_FOR_HYBRID_STORES, "");
-    nativeReplicationSourceFabricAsDefaultForIncremental = props.getString(NATIVE_REPLICATION_SOURCE_FABRIC_AS_DEFAULT_FOR_INCREMENTAL_PUSH_STORES, "");
     activeActiveReplicationEnabledAsDefaultForBatchOnly = props.getBoolean(ENABLE_ACTIVE_ACTIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY_STORE, false);
     activeActiveReplicationEnabledAsDefaultForHybrid = props.getBoolean(ENABLE_ACTIVE_ACTIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID_STORE, false);
-    activeActiveReplicationEnabledAsDefaultForIncremental = props.getBoolean(ENABLE_ACTIVE_ACTIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH_STORE, false);
     leaderFollowerEnabledForHybridStores = props.getBoolean(ENABLE_LEADER_FOLLOWER_AS_DEFAULT_FOR_HYBRID_STORES, false);
-    leaderFollowerEnabledForIncrementalPushStores =
-        props.getBoolean(ENABLE_LEADER_FOLLOWER_AS_DEFAULT_FOR_INCREMENTAL_PUSH_STORES, false);
     leaderFollowerEnabledForBatchOnlyStores = props.getBoolean(ENABLE_LEADER_FOLLOWER_AS_DEFAULT_FOR_BATCH_ONLY_STORES, false);
     leaderFollowerEnabledForAllStores = props.getBoolean(ENABLE_LEADER_FOLLOWER_AS_DEFAULT_FOR_ALL_STORES, true);
     controllerSchemaValidationEnabled = props.getBoolean(CONTROLLER_SCHEMA_VALIDATION_ENABLED, true);
@@ -300,7 +281,6 @@ public class VeniceControllerClusterConfig {
           + "the cluster-level native replication flags to false");
       nativeReplicationEnabledForBatchOnly = false;
       nativeReplicationEnabledAsDefaultForBatchOnly = false;
-      nativeReplicationEnabledForIncremental = false;
       nativeReplicationEnabledAsDefaultForIncremental = false;
       nativeReplicationEnabledForHybrid = false;
       nativeReplicationEnabledAsDefaultForHybrid = false;
@@ -508,10 +488,6 @@ public class VeniceControllerClusterConfig {
     return kafkaLogCompactionForHybridStores;
   }
 
-  public boolean isKafkaLogCompactionForIncrementalPushStoresEnabled() {
-    return kafkaLogCompactionForIncrementalPushStores;
-  }
-
   public long getKafkaMinLogCompactionLagInMs() {
     return kafkaMinLogCompactionLagInMs;
   }
@@ -522,10 +498,6 @@ public class VeniceControllerClusterConfig {
 
   public boolean isNativeReplicationEnabledAsDefaultForBatchOnly() {
     return nativeReplicationEnabledAsDefaultForBatchOnly;
-  }
-
-  public boolean isNativeReplicationEnabledForIncremental() {
-    return nativeReplicationEnabledForIncremental;
   }
 
   public boolean isNativeReplicationEnabledAsDefaultForIncremental() {
@@ -560,10 +532,6 @@ public class VeniceControllerClusterConfig {
     return leaderFollowerEnabledForHybridStores || leaderFollowerEnabledForAllStores;
   }
 
-  public boolean isLeaderFollowerEnabledForIncrementalPushStores() {
-    return leaderFollowerEnabledForIncrementalPushStores || leaderFollowerEnabledForAllStores;
-  }
-
   public boolean isLeaderFollowerEnabledForBatchOnlyStores() {
     return leaderFollowerEnabledForBatchOnlyStores || leaderFollowerEnabledForAllStores;
   }
@@ -586,10 +554,6 @@ public class VeniceControllerClusterConfig {
 
   public String getNativeReplicationSourceFabricAsDefaultForHybrid() {
     return nativeReplicationSourceFabricAsDefaultForHybrid;
-  }
-
-  public String getNativeReplicationSourceFabricAsDefaultForIncremental() {
-    return nativeReplicationSourceFabricAsDefaultForIncremental;
   }
 
   public VeniceProperties getJettyConfigOverrides() {

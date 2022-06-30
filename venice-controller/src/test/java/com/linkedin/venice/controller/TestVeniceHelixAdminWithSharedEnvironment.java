@@ -19,8 +19,6 @@ import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.kafka.TopicManagerRepository;
 import com.linkedin.venice.kafka.VeniceOperationAgainstKafkaTimedOut;
 import com.linkedin.venice.meta.DataReplicationPolicy;
-import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.LiveClusterConfig;
 import com.linkedin.venice.meta.OfflinePushStrategy;
 import com.linkedin.venice.meta.PartitionAssignment;
@@ -414,9 +412,6 @@ TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVeniceHelixAdmin {
         partitionCount, 2);
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).getVersion(newVersion.getNumber()).get().getPartitionerConfig().getAmplificationFactor(), amplificationFactor);
 
-    veniceAdmin.setIncrementalPushEnabled(clusterName, storeName, true);
-    Assert.assertTrue(veniceAdmin.getStore(clusterName, storeName).isIncrementalPushEnabled());
-
     veniceAdmin.setBootstrapToOnlineTimeoutInHours(clusterName, storeName, 48);
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).getBootstrapToOnlineTimeoutInHours(), 48);
     veniceAdmin.setLeaderFollowerModelEnabled(clusterName, storeName, true);
@@ -435,8 +430,6 @@ TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVeniceHelixAdmin {
     Assert.assertEquals((int) rmdVersionID.get(), 2);
 
     // test hybrid config
-    //set incrementalPushEnabled to be false as hybrid and incremental are mutex
-    veniceAdmin.setIncrementalPushEnabled(clusterName, storeName, false);
     Assert.assertFalse(veniceAdmin.getStore(clusterName, storeName).isHybrid());
     veniceAdmin.updateStore(clusterName, storeName, new UpdateStoreQueryParams()
             .setHybridRewindSeconds(TimeUnit.SECONDS.convert(2, TimeUnit.DAYS))
@@ -1379,115 +1372,6 @@ TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVeniceHelixAdmin {
   }
 
   @Test
-  public void testUpdateStoreFailsWhenIncrementalAndHybridAreEnabledWithoutCorrectPolicy() {
-    String incrementalEnabledStoreName = Utils.getUniqueString("testIncrementalStore");
-    veniceAdmin.createStore(clusterName, incrementalEnabledStoreName, storeOwner, "\"string\"", "\"string\"");
-
-    String hybridEnabledStoreName = Utils.getUniqueString("testHybridStore");
-    veniceAdmin.createStore(clusterName, hybridEnabledStoreName, storeOwner, "\"string\"", "\"string\"");
-
-    veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams().setIncrementalPushEnabled(true).setIncrementalPushPolicy(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC));
-    veniceAdmin.updateStore(clusterName, hybridEnabledStoreName, new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1).setHybridRewindSeconds(0));
-
-    // Incremental push enabled store can not be enabled as hybrid store without setting incremental push policy
-    Assert.assertThrows(() -> veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams().setHybridOffsetLagThreshold(0).setHybridRewindSeconds(0)));
-    // When incremental push is enabled in a batch-only store for the first time; default inc push policy will be inc_push_to_rt and a default hybrid config will be set
-    veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams().setIncrementalPushPolicy(
-        IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME));
-    // Incremental push enabled store has no effect if hybrid store is being made batch only
-    veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams().setHybridOffsetLagThreshold(-1).setHybridRewindSeconds(-1));
-    // Incremental push enabled store can be made a hybrid store if the incremental push policy is also updated
-    veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams()
-        .setIncrementalPushPolicy(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)
-        .setHybridOffsetLagThreshold(0)
-        .setHybridTimeLagThreshold(0)
-        .setHybridRewindSeconds(0)
-    );
-
-    veniceAdmin.updateStore(clusterName, hybridEnabledStoreName, new UpdateStoreQueryParams().setIncrementalPushEnabled(true));
-
-    // A hybrid and incremental push enabled store can not change the incremental push policy to PUSH_TO_VERSION_TOPIC
-    Assert.assertThrows(() -> veniceAdmin.updateStore(clusterName, hybridEnabledStoreName, new UpdateStoreQueryParams().setIncrementalPushPolicy(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC)));
-  }
-
-  @Test
-  public void testCheckWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid() {
-    String incrementalEnabledStoreName = Utils.getUniqueString("testIncrementalStore");
-    Store incrementalEnabledStore = mock(Store.class);
-
-    String hybridEnabledStoreName = Utils.getUniqueString("testHybridStore");
-    Store hybridEnabledStore = mock(Store.class);
-
-    String incrementalAndHybridEnabledStoreName = Utils.getUniqueString("testHybridIncrementalStore");
-    Store incrementalAndHybridEnabledStore = mock(Store.class);
-
-    HybridStoreConfig mockHybridConfig = mock(HybridStoreConfig.class);
-    HybridStoreConfig mockHybridToBatchConfig = mock(HybridStoreConfig.class);
-
-    doReturn(incrementalEnabledStoreName).when(incrementalEnabledStore).getName();
-    doReturn(false).when(incrementalEnabledStore).isHybrid();
-    doReturn(true).when(incrementalEnabledStore).isIncrementalPushEnabled();
-    doReturn(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC).when(incrementalEnabledStore).getIncrementalPushPolicy();
-
-    doReturn(hybridEnabledStoreName).when(hybridEnabledStore).getName();
-    doReturn(true).when(hybridEnabledStore).isHybrid();
-    doReturn(false).when(hybridEnabledStore).isIncrementalPushEnabled();
-    doReturn(mockHybridConfig).when(hybridEnabledStore).getHybridStoreConfig();
-    doReturn(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC).when(hybridEnabledStore).getIncrementalPushPolicy();
-
-    doReturn(incrementalAndHybridEnabledStoreName).when(incrementalAndHybridEnabledStore).getName();
-    doReturn(true).when(incrementalAndHybridEnabledStore).isHybrid();
-    doReturn(true).when(incrementalAndHybridEnabledStore).isIncrementalPushEnabled();
-    doReturn(mockHybridConfig).when(incrementalAndHybridEnabledStore).getHybridStoreConfig();
-    doReturn(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC).when(incrementalAndHybridEnabledStore).getIncrementalPushPolicy();
-
-    doReturn(0L).when(mockHybridConfig).getRewindTimeInSeconds();
-    doReturn(0L).when(mockHybridConfig).getOffsetLagThresholdToGoOnline();
-    doReturn(0L).when(mockHybridConfig).getProducerTimestampLagThresholdToGoOnlineInSeconds();
-
-    doReturn(-1L).when(mockHybridToBatchConfig).getRewindTimeInSeconds();
-    doReturn(-1L).when(mockHybridToBatchConfig).getOffsetLagThresholdToGoOnline();
-    doReturn(-1L).when(mockHybridToBatchConfig).getProducerTimestampLagThresholdToGoOnlineInSeconds();
-
-    Optional<Boolean> newIncrementalPushEnabled = Optional.of(true);
-    Optional<Boolean> newIncrementalPushDisabled = Optional.of(false);
-    Optional<Boolean> newIncrementalPushNotDefined = Optional.empty();
-
-    Optional<IncrementalPushPolicy> newIncrementalPushPolicyIncompatibleWithHybrid = Optional.of(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC);
-    Optional<IncrementalPushPolicy> newIncrementalPushPolicyCompatibleWithHybrid = Optional.of(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME);
-    Optional<IncrementalPushPolicy> newIncrementalPushPolicyIncompatibleWithBatchOnly = Optional.of(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME);
-    Optional<IncrementalPushPolicy> newIncrementalPushPolicyCompatibleWithBatchOnly = Optional.of(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC);
-    Optional<IncrementalPushPolicy> newIncrementalPushPolicyNotDefined = Optional.empty();
-
-    // Incremental push enabled store can be made a hybrid store if the incremental push policy is also updated
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyCompatibleWithHybrid, Optional.of(mockHybridConfig));
-
-    // Incremental push enabled store can not be enabled as hybrid store without setting a compatible incremental push policy
-    Assert.assertThrows(() -> veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyIncompatibleWithHybrid, Optional.of(mockHybridConfig)));
-
-    // When incremental push is enabled in a batch-only store for the first time; default inc push policy will be inc_push_to_rt and a default hybrid config will be set
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyIncompatibleWithBatchOnly, Optional.of(mockHybridToBatchConfig));
-
-    // Incremental push enabled store has no effect if hybrid store is being made batch only
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyCompatibleWithBatchOnly, Optional.of(mockHybridToBatchConfig));
-
-    // Incremental push enabled store can be made a hybrid store if the incremental push policy is also updated
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyCompatibleWithHybrid, Optional.of(mockHybridConfig));
-
-    // Incremental push can be turned on for hybrid store because inc push to RT is the default policy now
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(hybridEnabledStore, newIncrementalPushEnabled, newIncrementalPushPolicyNotDefined, Optional.empty());
-
-    // Hybrid store can be enabled for incremental push if the incremental push policy is also updated
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(hybridEnabledStore, newIncrementalPushEnabled, newIncrementalPushPolicyCompatibleWithHybrid, Optional.empty());
-
-    // A hybrid and incremental push enabled store can not change the incremental push policy to PUSH_TO_VERSION_TOPIC
-    Assert.assertThrows(() -> veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalAndHybridEnabledStore, newIncrementalPushNotDefined, newIncrementalPushPolicyIncompatibleWithHybrid, Optional.empty()));
-
-    // A hybrid and incremental push enabled store can disable incremental push without changing the policy since there'll be no more incremental pushes
-    veniceAdmin.checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(incrementalAndHybridEnabledStore, newIncrementalPushDisabled, newIncrementalPushPolicyNotDefined, Optional.empty());
-  }
-
-  @Test
   public void testNativeReplicationSourceFabric() {
     String storeName = Utils.getUniqueString("test_store_nr");
     veniceAdmin.createStore(clusterName, storeName, storeOwner, KEY_SCHEMA, VALUE_SCHEMA);
@@ -1503,44 +1387,32 @@ TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVeniceHelixAdmin {
 
   @Test
   public void testGetIncrementalPushVersion() {
-    String incrementalEnabledStoreName = Utils.getUniqueString("testIncrementalStore");
-    veniceAdmin.createStore(clusterName, incrementalEnabledStoreName, storeOwner, "\"string\"", "\"string\"");
-    veniceAdmin.updateStore(clusterName, incrementalEnabledStoreName, new UpdateStoreQueryParams().setIncrementalPushEnabled(true).setIncrementalPushPolicy(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC));
-    veniceAdmin.incrementVersionIdempotent(clusterName, incrementalEnabledStoreName, Version.guidBasedDummyPushId(), 1, 1);
-    TestUtils.waitForNonDeterministicCompletion(TOTAL_TIMEOUT_FOR_SHORT_TEST_MS, TimeUnit.MILLISECONDS,
-        () -> veniceAdmin.getCurrentVersion(clusterName, incrementalEnabledStoreName) == 1);
-    veniceAdmin.getIncrementalPushVersion(clusterName, incrementalEnabledStoreName);
-
-    // For incremental push policy PUSH_TO_VERSION_TOPIC, incremental push should fail if version topic is truncated
-    veniceAdmin.truncateKafkaTopic(Version.composeKafkaTopic(incrementalEnabledStoreName, 1));
-    Assert.assertThrows(VeniceException.class, () -> veniceAdmin.getIncrementalPushVersion(clusterName, incrementalEnabledStoreName));
-
-    String incrementalAndHybridEnabledStoreName = Utils.getUniqueString("testHybridStore");
-    veniceAdmin.createStore(clusterName, incrementalAndHybridEnabledStoreName, storeOwner, "\"string\"", "\"string\"");
-    veniceAdmin.updateStore(clusterName, incrementalAndHybridEnabledStoreName,
+    String storeName = Utils.getUniqueString("testHybridStore");
+    veniceAdmin.createStore(clusterName, storeName, storeOwner, "\"string\"", "\"string\"");
+    veniceAdmin.updateStore(clusterName, storeName,
         new UpdateStoreQueryParams()
             .setHybridOffsetLagThreshold(1)
-            .setHybridRewindSeconds(0)
-            .setIncrementalPushEnabled(true));
-    veniceAdmin.incrementVersionIdempotent(clusterName, incrementalAndHybridEnabledStoreName, Version.guidBasedDummyPushId(), 1, 1);
-    String rtTopic = veniceAdmin.getRealTimeTopic(clusterName, incrementalAndHybridEnabledStoreName);
+            .setHybridRewindSeconds(0));
+    veniceAdmin.incrementVersionIdempotent(clusterName, storeName, Version.guidBasedDummyPushId(), 1, 1);
+    String rtTopic = veniceAdmin.getRealTimeTopic(clusterName, storeName);
     TestUtils.waitForNonDeterministicCompletion(TOTAL_TIMEOUT_FOR_SHORT_TEST_MS, TimeUnit.MILLISECONDS,
-        () -> veniceAdmin.getCurrentVersion(clusterName, incrementalAndHybridEnabledStoreName) == 1);
+        () -> veniceAdmin.getCurrentVersion(clusterName, storeName) == 1);
 
-    // For incremental push policy INCREMENTAL_PUSH_SAME_AS_REAL_TIME, incremental push should succeed even if version topic is truncated
-    veniceAdmin.truncateKafkaTopic(Version.composeKafkaTopic(incrementalAndHybridEnabledStoreName, 1));
-    veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName);
+    // Incremental push should succeed even if version topic is truncated
+    veniceAdmin.truncateKafkaTopic(Version.composeKafkaTopic(storeName, 1));
+    veniceAdmin.getIncrementalPushVersion(clusterName, storeName);
 
-    // For incremental push policy INCREMENTAL_PUSH_SAME_AS_REAL_TIME, incremental push should fail if rt topic is truncated
+    // Incremental push should fail if rt topic is truncated
     veniceAdmin.truncateKafkaTopic(rtTopic);
-    Assert.assertThrows(VeniceException.class, () -> veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName));
+    Assert.assertThrows(VeniceException.class, () -> veniceAdmin.getIncrementalPushVersion(clusterName, storeName));
   }
 
   @Test
   public void testEarlyDeleteBackup() {
     String testDeleteStore = Utils.getUniqueString("testDeleteStore");
     veniceAdmin.createStore(clusterName, testDeleteStore, storeOwner, "\"string\"", "\"string\"");
-    veniceAdmin.updateStore(clusterName, testDeleteStore, new UpdateStoreQueryParams().setIncrementalPushEnabled(true));
+    veniceAdmin.updateStore(clusterName, testDeleteStore,
+        new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1).setHybridRewindSeconds(86400));
     veniceAdmin.incrementVersionIdempotent(clusterName, testDeleteStore, Version.guidBasedDummyPushId(), 1, 1);
     TestUtils.waitForNonDeterministicCompletion(TOTAL_TIMEOUT_FOR_SHORT_TEST_MS, TimeUnit.MILLISECONDS,
         () -> veniceAdmin.getCurrentVersion(clusterName, testDeleteStore) == 1);

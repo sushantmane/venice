@@ -55,7 +55,6 @@ import com.linkedin.venice.kafka.validation.KafkaDataIntegrityValidator;
 import com.linkedin.venice.kafka.validation.ProducerTracker;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.PersistenceType;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
@@ -225,11 +224,6 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected final long databaseSyncBytesIntervalForTransactionalMode;
   /** Message bytes consuming interval before persisting offset in offset db for deferred-write database. */
   protected final long databaseSyncBytesIntervalForDeferredWriteMode;
-
-  /** A quick check point to see if incremental push is supported.
-   * It helps fast {@link #isReadyToServe(PartitionConsumptionState)}*/
-  protected final boolean isIncrementalPushEnabled;
-  protected final IncrementalPushPolicy incrementalPushPolicy;
 
   protected final boolean readOnlyForBatchOnlyStoreEnabled;
   protected final VeniceServerConfig serverConfig;
@@ -416,8 +410,6 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     this.storeBufferService = builder.getStoreBufferService();
     this.isCurrentVersion = isCurrentVersion;
     this.hybridStoreConfig = Optional.ofNullable(version.isUseVersionLevelHybridConfig() ? version.getHybridStoreConfig() : store.getHybridStoreConfig());
-    this.isIncrementalPushEnabled = version.isUseVersionLevelIncrementalPushEnabled() ? version.isIncrementalPushEnabled() : store.isIncrementalPushEnabled();
-    this.incrementalPushPolicy = version.getIncrementalPushPolicy();
 
     this.divErrorMetricCallback = Optional.of(e -> versionedDIVStats.recordException(storeName, versionNumber, e));
 
@@ -487,7 +479,6 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     this.reportStatusAdapter = new ReportStatusAdapter(
         new IngestionNotificationDispatcher(notifiers, kafkaVersionTopic, isCurrentVersion),
         amplificationFactor,
-        incrementalPushPolicy,
         partitionConsumptionStateMap
     );
     this.amplificationAdapter = new AmplificationAdapter(
@@ -1307,8 +1298,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     if (versionNumber <= store.getCurrentVersion()) {
       Set<TopicPartition> topicPartitionsToUnsubscribe = new HashSet<>();
       for (PartitionConsumptionState state : partitionConsumptionStateMap.values()) {
-        if (state.isCompletionReported() && !state.isIncrementalPushEnabled()
-            && consumerHasSubscription(kafkaVersionTopic, state)) {
+        if (state.isCompletionReported() && consumerHasSubscription(kafkaVersionTopic, state)) {
           logger.info("Unsubscribing completed partitions " + state.getPartition() + " of store : " + store.getName()
               + " version : "  + versionNumber + " current version: " + store.getCurrentVersion());
           topicPartitionsToUnsubscribe.add(new TopicPartition(kafkaVersionTopic, state.getPartition()));
@@ -1763,8 +1753,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         reportStatusAdapter.initializePartitionStatus(partition);
         // First let's try to restore the state retrieved from the OffsetManager
         PartitionConsumptionState newPartitionConsumptionState =
-            new PartitionConsumptionState(partition, amplificationFactor, offsetRecord, hybridStoreConfig.isPresent(),
-                isIncrementalPushEnabled, incrementalPushPolicy);
+            new PartitionConsumptionState(partition, amplificationFactor, offsetRecord, hybridStoreConfig.isPresent());
 
         newPartitionConsumptionState.setLeaderFollowerState(leaderState);
 
@@ -1864,8 +1853,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
                 + "on resetting offset for Topic: " + topic + " Partition Id: " + partition);
           }
           partitionConsumptionStateMap.put(partition,
-              new PartitionConsumptionState(partition, amplificationFactor, new OffsetRecord(partitionStateSerializer), hybridStoreConfig.isPresent(),
-                  isIncrementalPushEnabled, incrementalPushPolicy));
+              new PartitionConsumptionState(partition, amplificationFactor, new OffsetRecord(partitionStateSerializer), hybridStoreConfig.isPresent()));
           storageUtilizationManager.initPartition(partition);
         } else {
           logger.info(consumerTaskId + " No need to reset offset by Kafka consumer, since the consumer is not " +
@@ -1942,30 +1930,15 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       /*
        * TODO: right now, if we update a store to enable hybrid, {@link StoreIngestionTask} for the existing versions
        * won't know it since {@link #hybridStoreConfig} parameter is passed during construction.
-       *
-       * Same thing for {@link #isIncrementalPushEnabled}.
-       *
-       * So far, to make hybrid store/incremental store work, customer needs to do a new push after enabling hybrid/
-       * incremental push feature of the store.
+       * To make hybrid store work customer needs to do a new push after converting store to hybrid type.
        */
-      String message = "The record was received after 'EOP', but the store: " + kafkaVersionTopic +
-          " is neither hybrid nor incremental push enabled, so will skip it.";
+      String message = "Skipping the record since it was received after EOP for the batch store: " + kafkaVersionTopic;
       if (!REDUNDANT_LOGGING_FILTER.isRedundantException(message)) {
         logger.warn(message);
       }
       return false;
     }
 
-    if (isIncrementalPushEnabled && incrementalPushPolicy.equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)) {
-      KafkaMessageEnvelope value = record.value();
-      /*
-       * For inc push to RT, filter out the messages if the target version embedded in the message doesn't match the version
-       * of this ingestion task.
-       */
-      if (value.targetVersion > 0 && value.targetVersion != this.versionNumber) {
-        return false;
-      }
-    }
     return true;
   }
 

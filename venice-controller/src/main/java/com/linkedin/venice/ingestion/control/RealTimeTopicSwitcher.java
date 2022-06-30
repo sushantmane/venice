@@ -7,7 +7,6 @@ import com.linkedin.venice.kafka.TopicException;
 import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
@@ -186,7 +185,7 @@ public class RealTimeTopicSwitcher {
 
     if (version.isActiveActiveReplicationEnabled()) {
       remoteKafkaUrls.addAll(activeActiveRealTimeSourceKafkaURLs);
-    } else if (version.isNativeReplicationEnabled() && (isAggregate(store) || (isIncrementalPush(version)))) {
+    } else if (version.isNativeReplicationEnabled() && isAggregate(store)) {
       remoteKafkaUrls.add(aggregateRealTimeSourceKafkaUrl);
     }
     LOGGER.info("Will send TopicSwitch into '{}' instructing to switch to '{}' with a rewindStartTimestamp of {}.",
@@ -196,12 +195,6 @@ public class RealTimeTopicSwitcher {
 
   private static boolean isAggregate(Store store) {
     return store.getHybridStoreConfig().getDataReplicationPolicy() == DataReplicationPolicy.AGGREGATE;
-  }
-
-  private static boolean isIncrementalPush(Version version) {
-    return version.isIncrementalPushEnabled() &&
-        // TODO: Remove this check since we only want to support "same as RT" going forward.
-        version.getIncrementalPushPolicy() == IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME;
   }
 
   /**

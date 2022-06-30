@@ -1,6 +1,5 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.schema.rmd.ReplicationMetadataSchemaGenerator;
 import org.apache.avro.Schema;
@@ -19,8 +18,7 @@ public class PartitionConsumptionStateTest {
    */
   @Test
   public void testTransientRecordMap() {
-    PartitionConsumptionState pcs = new PartitionConsumptionState(0, 1, mock(OffsetRecord.class), false, false,
-        IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC);
+    PartitionConsumptionState pcs = new PartitionConsumptionState(0, 1, mock(OffsetRecord.class), false);
 
     byte[] key1 = new byte[]{65,66,67,68};
     byte[] key2 = new byte[]{65,66,67,68};

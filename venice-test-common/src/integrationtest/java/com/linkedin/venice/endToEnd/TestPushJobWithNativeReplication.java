@@ -24,7 +24,6 @@ import com.linkedin.venice.integration.utils.VeniceMultiClusterWrapper;
 import com.linkedin.venice.integration.utils.VeniceTwoLayerMultiColoMultiClusterWrapper;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Instance;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.VeniceUserStoreType;
@@ -380,9 +379,10 @@ public class  TestPushJobWithNativeReplication {
     motherOfAllTests(
         updateStoreQueryParams -> updateStoreQueryParams
             .setPartitionCount(1)
-            .setHybridOffsetLagThreshold(TEST_TIMEOUT)
-            .setHybridRewindSeconds(2L)
-            .setIncrementalPushEnabled(true),
+            .setHybridOffsetLagThreshold(2)
+            .setHybridRewindSeconds(TEST_TIMEOUT)
+            .setHybridDataReplicationPolicy(DataReplicationPolicy.AGGREGATE)
+            .setPartitionCount(2),
         100,
         (parentControllerClient, clusterName, storeName, props, inputDir) -> {
           try (VenicePushJob job = new VenicePushJob("Batch Push", props)) {
@@ -407,8 +407,7 @@ public class  TestPushJobWithNativeReplication {
   public void testNativeReplicationForHeartbeatSystemStores(int recordCount, int partitionCount) throws Exception {
     motherOfAllTests(
         updateStoreQueryParams -> updateStoreQueryParams
-            .setPartitionCount(partitionCount)
-            .setIncrementalPushEnabled(true),
+            .setPartitionCount(partitionCount),
         recordCount,
         (parentControllerClient, clusterName, storeName, props, inputDir) -> {
           // Enable VPJ to send liveness heartbeat.
@@ -491,8 +490,6 @@ public class  TestPushJobWithNativeReplication {
     motherOfAllTests(updateStoreQueryParams -> updateStoreQueryParams.setPartitionCount(1),
         10,
         (parentControllerClient, clusterName, batchOnlyStoreName, props, inputDir) -> {
-          String parentControllerUrls = parentControllers.stream().map(VeniceControllerWrapper::getControllerUrl).collect(
-              Collectors.joining(","));
             // Create a hybrid store
             String hybridStoreName = Utils.getUniqueString("hybrid-store");
             NewStoreResponse newStoreResponse = parentControllerClient.createNewStore(hybridStoreName, "", STRING_SCHEMA, STRING_SCHEMA);
@@ -502,87 +499,75 @@ public class  TestPushJobWithNativeReplication {
                 .setHybridOffsetLagThreshold(2);
             assertCommand(parentControllerClient.updateStore(hybridStoreName, updateStoreParams));
 
-            /**
-             * Create an incremental push enabled store
-             */
-            String incrementPushStoreName = Utils.getUniqueString("incremental-push-store");
-            newStoreResponse = parentControllerClient.createNewStore(incrementPushStoreName, "", STRING_SCHEMA, STRING_SCHEMA);
-            Assert.assertFalse(newStoreResponse.isError());
-            updateStoreParams = new UpdateStoreQueryParams().setIncrementalPushEnabled(true);
-            assertCommand(parentControllerClient.updateStore(incrementPushStoreName, updateStoreParams));
-
             final Optional<String> defaultNativeReplicationSource = Optional.of(DEFAULT_NATIVE_REPLICATION_SOURCE);
             final Optional<String> newNativeReplicationSource = Optional.of("new-nr-source");
+
             /**
+             * First test:
              * Run admin command to disable native replication for all batch-only stores in the cluster
+             * Expectation:
+             * Batch-only stores should not have native replication enabled;
+             * Hybrid stores have native replication enabled with dc-0 as source.
              */
             assertCommand(parentControllerClient.configureNativeReplicationForCluster(
-                false, VeniceUserStoreType.BATCH_ONLY.toString(), Optional.empty(), Optional.empty()));
+              false, VeniceUserStoreType.BATCH_ONLY.toString(), Optional.empty(), Optional.empty()));
 
-            childDatacenters.get(0).getClusters().get(clusterName).useControllerClient(dc0Client ->
-                childDatacenters.get(1).getClusters().get(clusterName).useControllerClient(dc1Client -> {
-                  List<ControllerClient> allControllerClients = Arrays.asList(parentControllerClient, dc0Client, dc1Client);
+          childDatacenters.get(0).getClusters().get(clusterName).useControllerClient(dc0Client ->
+              childDatacenters.get(1).getClusters().get(clusterName).useControllerClient(dc1Client -> {
+                List<ControllerClient> allControllerClients = Arrays.asList(parentControllerClient, dc0Client, dc1Client);
 
-                  /**
-                   * Batch-only stores should have native replication enabled; hybrid stores or incremental push stores
-                   * have native replication enabled with dc-0 as source.
-                   */
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, false);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, defaultNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, incrementPushStoreName, true, defaultNativeReplicationSource);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, false);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, defaultNativeReplicationSource);
 
-                  /**
-                   * Second test:
-                   * 1. Revert the cluster to previous state
-                   * 2. Test the cluster level command that converts all hybrid stores to native replication
-                   */
-                  assertCommand(parentControllerClient.configureNativeReplicationForCluster(true,
-                      VeniceUserStoreType.BATCH_ONLY.toString(), newNativeReplicationSource, Optional.empty()));
-                  assertCommand(parentControllerClient.configureNativeReplicationForCluster(false,
-                      VeniceUserStoreType.HYBRID_ONLY.toString(), Optional.empty(), Optional.empty()));
+                /**
+                 * Second test:
+                 * 1. Revert the cluster to previous state
+                 * 2. Test the cluster level command that converts all hybrid stores to native replication
+                 * Expectation:
+                 * Hybrid stores shouldn't have native replication enabled; batch-only stores should have
+                 * native replication enabled with the new source fabric.
+                 */
+                assertCommand(parentControllerClient.configureNativeReplicationForCluster(true,
+                    VeniceUserStoreType.BATCH_ONLY.toString(), newNativeReplicationSource, Optional.empty()));
+                assertCommand(parentControllerClient.configureNativeReplicationForCluster(false,
+                    VeniceUserStoreType.HYBRID_ONLY.toString(), Optional.empty(), Optional.empty()));
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, false);
 
-                  /**
-                   * Hybrid stores shouldn't have native replication enabled; batch-only stores should have native replication
-                   * enabled with the new source fabric and incremental push stores should have native replication enabled
-                   * with original source fabric.
-                   */
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, false);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, incrementPushStoreName, true, defaultNativeReplicationSource);
+                /**
+                 * Third test:
+                 * Enable native replication for hybrid stores
+                 * Expectation:
+                 * Both batch-only & hybrid stores should have native replication enabled with new source fabric.
+                 */
+                assertCommand(parentControllerClient.configureNativeReplicationForCluster(true,
+                    VeniceUserStoreType.HYBRID_ONLY.toString(), newNativeReplicationSource, Optional.empty()));
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, newNativeReplicationSource);
 
-                  /**
-                   * Third test:
-                   * 1. Revert the cluster to previous state
-                   * 2. Test the cluster level command that disables native replication for all incremental push stores
-                   */
-                  assertCommand(parentControllerClient.configureNativeReplicationForCluster(true,
-                      VeniceUserStoreType.HYBRID_ONLY.toString(), newNativeReplicationSource, Optional.empty()));
-                  assertCommand(parentControllerClient.configureNativeReplicationForCluster(false,
-                      VeniceUserStoreType.INCREMENTAL_PUSH.toString(), Optional.empty(), Optional.empty()));
+                /**
+                 * Fourth test:
+                 * Disable native replication for all stores
+                 * Expectation:
+                 * batch-only stores or hybrid stores shouldn't have native replication enabled in any region.
+                 */
+                assertCommand(parentControllerClient.configureNativeReplicationForCluster(false,
+                    VeniceUserStoreType.ALL.toString(), Optional.empty(), Optional.empty()));
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, false);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, false);
 
-                  /**
-                   * Incremental push stores shouldn't have native replication enabled; batch-only stores and hybrid stores
-                   * should have native replication enabled with the new source fabric.
-                   */
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, newNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, incrementPushStoreName, false);
-
-                  /**
-                   * Fourth test:
-                   * Test the cluster level command that enables native replication for all incremental push stores
-                   */
-                  assertCommand(parentControllerClient.configureNativeReplicationForCluster(true,
-                      VeniceUserStoreType.INCREMENTAL_PUSH.toString(), newNativeReplicationSource, Optional.empty()));
-
-                  /**
-                   * All stores should have native replication enabled with the new source fabric
-                   */
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, newNativeReplicationSource);
-                  NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, incrementPushStoreName, true, newNativeReplicationSource);
-                }));
-          });
+                /**
+                 * Fifth test:
+                 * Enable native replication for all stores
+                 * Expectation:
+                 * batch-only stores or hybrid stores should have native replication enabled with new source fabric.
+                 */
+                assertCommand(parentControllerClient.configureNativeReplicationForCluster(false,
+                    VeniceUserStoreType.ALL.toString(), newNativeReplicationSource, Optional.empty()));
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, batchOnlyStoreName, true, newNativeReplicationSource);
+                NativeReplicationTestUtils.verifyDCConfigNativeRepl(allControllerClients, hybridStoreName, true, newNativeReplicationSource);
+              }));
+        });
   }
 
   @Test(timeOut = TEST_TIMEOUT)
@@ -600,8 +585,7 @@ public class  TestPushJobWithNativeReplication {
           VeniceWriter<String, String, byte[]> incPushToRTWriter = null;
           try {
             assertFalse(parentControllerClient.updateStore(storeName,
-                new UpdateStoreQueryParams().setIncrementalPushEnabled(true)
-                    .setIncrementalPushPolicy(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)
+                new UpdateStoreQueryParams()
                     .setHybridOffsetLagThreshold(1)
                     .setHybridRewindSeconds(Time.SECONDS_PER_DAY)).isError());
 
@@ -611,7 +595,6 @@ public class  TestPushJobWithNativeReplication {
                 multiColoMultiClusterWrapper.getParentKafkaBrokerWrapper().getAddress());
             props.setProperty(KAFKA_INPUT_MAX_RECORDS_PER_MAPPER, "5");
             props.setProperty(VeniceWriter.ENABLE_CHUNKING, "false");
-            props.setProperty(ALLOW_KIF_REPUSH_FOR_INC_PUSH_FROM_VT_TO_VT, "true");
             props.setProperty(KAFKA_INPUT_TOPIC, Version.composeKafkaTopic(storeName, 1));
 
             try (VenicePushJob rePushJob = new VenicePushJob("Test re-push job re-push", props)) {

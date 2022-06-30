@@ -9,7 +9,6 @@ import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.ETLStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.utils.ObjectMapperFactory;
@@ -58,8 +57,6 @@ public class UpdateStoreQueryParams extends QueryParams {
             .setEnableReads(srcStore.isEnableStoreReads())
             .setEnableWrites(srcStore.isEnableStoreWrites())
             .setHybridStoreDiskQuotaEnabled(srcStore.isHybridStoreDiskQuotaEnabled())
-            .setIncrementalPushEnabled(srcStore.isIncrementalPushEnabled())
-            .setIncrementalPushPolicy(srcStore.getIncrementalPushPolicy())
             .setLargestUsedVersionNumber(srcStore.getLargestUsedVersionNumber())
             .setLeaderFollowerModel(srcStore.isLeaderFollowerModelEnabled())
             .setNativeReplicationEnabled(srcStore.isNativeReplicationEnabled())
@@ -295,15 +292,9 @@ public class UpdateStoreQueryParams extends QueryParams {
   public UpdateStoreQueryParams setChunkingEnabled(boolean chunkingEnabled) {
     return putBoolean(CHUNKING_ENABLED, chunkingEnabled);
   }
+
   public Optional<Boolean> getChunkingEnabled() {
     return getBoolean(CHUNKING_ENABLED);
-  }
-
-  public UpdateStoreQueryParams setIncrementalPushEnabled(boolean incrementalPushEnabled) {
-    return putBoolean(INCREMENTAL_PUSH_ENABLED, incrementalPushEnabled);
-  }
-  public Optional<Boolean> getIncrementalPushEnabled() {
-    return getBoolean(INCREMENTAL_PUSH_ENABLED);
   }
 
   public UpdateStoreQueryParams setBatchGetLimit(int batchGetLimit) {
@@ -423,18 +414,11 @@ public class UpdateStoreQueryParams extends QueryParams {
     return getString(PUSH_STREAM_SOURCE_ADDRESS);
   }
 
-  public UpdateStoreQueryParams setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy) {
-    params.put(INCREMENTAL_PUSH_POLICY, incrementalPushPolicy.name());
-    return this;
-  }
-  public Optional<IncrementalPushPolicy> getIncrementalPushPolicy() {
-    return Optional.ofNullable(params.get(INCREMENTAL_PUSH_POLICY)).map(IncrementalPushPolicy::valueOf);
-  }
-
   public UpdateStoreQueryParams setBackupVersionRetentionMs(long backupVersionRetentionMs) {
     putLong(BACKUP_VERSION_RETENTION_MS, backupVersionRetentionMs);
     return this;
   }
+
   public Optional<Long> getBackupVersionRetentionMs() {
     return getLong(BACKUP_VERSION_RETENTION_MS);
   }

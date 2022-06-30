@@ -209,16 +209,6 @@ public class VersionImpl implements Version {
   }
 
   @Override
-  public IncrementalPushPolicy getIncrementalPushPolicy() {
-    return IncrementalPushPolicy.valueOf(this.storeVersion.incrementalPushPolicy);
-  }
-
-  @Override
-  public void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy) {
-    this.storeVersion.incrementalPushPolicy = incrementalPushPolicy.getValue();
-  }
-
-  @Override
   public int getReplicationFactor() {
     return this.storeVersion.replicationFactor;
   }
@@ -396,7 +386,6 @@ public class VersionImpl implements Version {
     clonedVersion.setPushType(getPushType());
     clonedVersion.setNativeReplicationEnabled(isNativeReplicationEnabled());
     clonedVersion.setPushStreamSourceAddress(getPushStreamSourceAddress());
-    clonedVersion.setIncrementalPushPolicy(getIncrementalPushPolicy());
     clonedVersion.setReplicationFactor(getReplicationFactor());
     clonedVersion.setNativeReplicationSourceFabric(getNativeReplicationSourceFabric());
     clonedVersion.setIncrementalPushEnabled(isIncrementalPushEnabled());

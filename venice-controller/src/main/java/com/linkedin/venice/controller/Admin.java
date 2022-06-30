@@ -14,7 +14,6 @@ import com.linkedin.venice.helix.HelixReadOnlyStoreConfigRepository;
 import com.linkedin.venice.helix.HelixReadOnlyZKSharedSchemaRepository;
 import com.linkedin.venice.helix.HelixReadOnlyZKSharedSystemStoreRepository;
 import com.linkedin.venice.helix.Replica;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.RegionPushDetails;
 import com.linkedin.venice.meta.StoreDataAudit;
 import com.linkedin.venice.meta.StoreInfo;
@@ -619,14 +618,14 @@ public interface Admin extends AutoCloseable, Closeable {
     List<String> getClustersLeaderOf();
 
     /**
-     * Enable/disable native replications for certain stores (batch only, hybrid only, incremental push, hybrid or incremental push,
+     * Enable/disable native replications for certain stores (batch only, hybrid only, or
      * all) in a cluster. If storeName is not empty, only the specified store might be updated.
      */
     void configureNativeReplication(String cluster, VeniceUserStoreType storeType, Optional<String> storeName,
         boolean enableNativeReplicationForCluster, Optional<String> newSourceFabric, Optional<String> regionsFilter);
 
     /**
-     * Enable/disable active active replications for certain stores (batch only, hybrid only, incremental push, hybrid or incremental push,
+     * Enable/disable active active replications for certain stores (batch only, hybrid only, or
      * all) in a cluster. If storeName is not empty, only the specified store might be updated.
      */
     void configureActiveActiveReplication(String cluster, VeniceUserStoreType storeType, Optional<String> storeName,
@@ -658,15 +657,6 @@ public interface Admin extends AutoCloseable, Closeable {
      * Returns default backup version retention time.
      */
     long getBackupVersionDefaultRetentionMs();
-
-    /**
-     * Move all the incremental push stores in a cluster to the specified incremental push policy (incrementalPushPolicyToApply).
-     * @param storeName if storeName is present, only change that specific store, instead of all the stores in the cluster.
-     * @param incrementalPushPolicyToFilter if incrementalPushPolicyToFilter is present, the selected stores' current
-     *                                      incremental push policy must also match the filter
-     */
-    void configureIncrementalPushForCluster(String cluster, Optional<String> storeName, IncrementalPushPolicy incrementalPushPolicyToApply,
-        Optional<IncrementalPushPolicy> incrementalPushPolicyToFilter, Optional<String> regionsFilter);
 
     void wipeCluster(String clusterName, String fabric, Optional<String> storeName, Optional<Integer> versionNum);
 

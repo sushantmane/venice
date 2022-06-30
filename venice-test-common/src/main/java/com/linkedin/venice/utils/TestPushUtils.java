@@ -951,7 +951,7 @@ public class TestPushUtils {
     String keySchemaStr = recordSchema.getField(props.getProperty(KEY_FIELD_PROP)).schema().toString();
     String valueSchemaStr = recordSchema.getField(props.getProperty(VALUE_FIELD_PROP)).schema().toString();
 
-    return createStoreForJob(veniceClusterName, keySchemaStr, valueSchemaStr, props, CompressionStrategy.NO_OP, false, false);
+    return createStoreForJob(veniceClusterName, keySchemaStr, valueSchemaStr, props, CompressionStrategy.NO_OP, false);
   }
 
   public static ControllerClient createStoreForJob(VeniceClusterWrapper veniceClusterWrapper,
@@ -962,20 +962,19 @@ public class TestPushUtils {
   public static ControllerClient createStoreForJob(VeniceClusterWrapper veniceCluster,
                                                    String keySchemaStr, String valueSchemaStr, Properties props,
                                                    CompressionStrategy compressionStrategy, boolean chunkingEnabled) {
-    return createStoreForJob(veniceCluster.getClusterName(), keySchemaStr, valueSchemaStr, props, compressionStrategy, chunkingEnabled, false);
+    return createStoreForJob(veniceCluster.getClusterName(), keySchemaStr, valueSchemaStr, props, compressionStrategy, chunkingEnabled);
   }
 
   public static ControllerClient createStoreForJob(String veniceClusterName,
                                                    String keySchemaStr, String valueSchemaStr, Properties props,
-                                                   CompressionStrategy compressionStrategy, boolean chunkingEnabled, boolean incrementalPushEnabled) {
+                                                   CompressionStrategy compressionStrategy, boolean chunkingEnabled) {
 
     UpdateStoreQueryParams storeParams = new UpdateStoreQueryParams()
         .setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setCompressionStrategy(compressionStrategy)
         .setBatchGetLimit(2000)
         .setReadQuotaInCU(DEFAULT_PER_ROUTER_READ_QUOTA)
-        .setChunkingEnabled(chunkingEnabled)
-        .setIncrementalPushEnabled(incrementalPushEnabled);
+        .setChunkingEnabled(chunkingEnabled);
 
     return createStoreForJob(veniceClusterName, keySchemaStr, valueSchemaStr, props, storeParams, false);
   }

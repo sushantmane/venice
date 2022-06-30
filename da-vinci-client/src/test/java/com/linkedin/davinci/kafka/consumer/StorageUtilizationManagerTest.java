@@ -1,7 +1,6 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.davinci.store.AbstractStorageEngine;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
@@ -47,8 +46,7 @@ public class StorageUtilizationManagerTest {
     partitionConsumptionStateMap = new VeniceConcurrentHashMap<>();
 
     for (int i = 1; i <= storePartitionCount; i++) {
-      PartitionConsumptionState pcs = new PartitionConsumptionState(i, 1, mock(OffsetRecord.class),true, true,
-          IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC);
+      PartitionConsumptionState pcs = new PartitionConsumptionState(i, 1, mock(OffsetRecord.class),true);
       partitionConsumptionStateMap.put(i, pcs);
     }
 

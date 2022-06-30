@@ -283,10 +283,6 @@ public interface Store {
 
   void setStoreMetaSystemStoreEnabled(boolean storeMetaSystemStoreEnabled);
 
-  IncrementalPushPolicy getIncrementalPushPolicy();
-
-  void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy);
-
   long getLatestVersionPromoteToCurrentTimestamp();
 
   void setLatestVersionPromoteToCurrentTimestamp(long latestVersionPromoteToCurrentTimestamp);

@@ -27,7 +27,6 @@ import com.linkedin.venice.controller.kafka.protocol.admin.AbortMigration;
 import com.linkedin.venice.controller.kafka.protocol.admin.AddVersion;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureActiveActiveReplicationForCluster;
-import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureIncrementalPushForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureNativeReplicationForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.CreateStoragePersona;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteAllVersions;
@@ -100,7 +99,6 @@ import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.ETLStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Instance;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.ReadWriteStoreRepository;
@@ -184,7 +182,6 @@ import scala.Char;
 
 import static com.linkedin.venice.controller.VeniceHelixAdmin.*;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.*;
-import static com.linkedin.venice.meta.IncrementalPushPolicy.*;
 
 
 /**
@@ -1237,12 +1234,10 @@ public class VeniceParentHelixAdmin implements Admin {
         logger.info("Found running repush job with push id: " + existingPushJobId + " and incoming push is a batch "
             + "job or stream reprocessing job with push id: " + pushJobId + ". Killing the repush job for store " + storeName);
         killOfflinePush(clusterName, currentPushTopic.get(), true);
-      } else if (pushType.isIncremental()
-          && INCREMENTAL_PUSH_SAME_AS_REAL_TIME.equals(version.get().getIncrementalPushPolicy())) {
-        // No op. Allow concurrent inc push to RT to continue when there is an ongoing batch push
-        logger.info("Found running batch push job with push id: " + existingPushJobId + " and incoming push is an "
-            + "incremental push with push id: " + pushJobId + " with incremental push policy: " +
-            INCREMENTAL_PUSH_SAME_AS_REAL_TIME + ". Letting the push continue for store " + storeName);
+      } else if (pushType.isIncremental()) {
+        // No op. Allow concurrent inc push to continue when there is an ongoing batch push
+        logger.info("Found running batch push job:{} and incoming push is an incremental push with push id:{}. "
+            + "Letting the push continue for store:{}", existingPushJobId, pushJobId, storeName);
       } else {
         VeniceException e = new ConcurrentBatchPushException("Unable to start the push with pushJobId " + pushJobId + " for store " + storeName
             + ". An ongoing push with pushJobId " + existingPushJobId + " and topic " + currentPushTopic.get()
@@ -1355,13 +1350,7 @@ public class VeniceParentHelixAdmin implements Admin {
   //This method is only for internal / test use case
   Version getIncrementalPushVersion(Version incrementalPushVersion, ExecutionStatus status) {
     String storeName = incrementalPushVersion.getStoreName();
-
-    String incrementalPushTopic;
-    if (incrementalPushVersion.getIncrementalPushPolicy().equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)) {
-      incrementalPushTopic = Version.composeRealTimeTopic(storeName);
-    } else {
-      incrementalPushTopic = incrementalPushVersion.kafkaTopicName();
-    }
+    String incrementalPushTopic = Version.composeRealTimeTopic(storeName);
 
     if (!status.isTerminal()) {
       throw new VeniceException("Cannot start incremental push since batch push is on going." + " store: " + storeName);
@@ -1703,7 +1692,6 @@ public class VeniceParentHelixAdmin implements Admin {
       Optional<Boolean> chunkingEnabled = params.getChunkingEnabled();
       Optional<Integer> batchGetLimit = params.getBatchGetLimit();
       Optional<Integer> numVersionsToPreserve = params.getNumVersionsToPreserve();
-      Optional<Boolean> incrementalPushEnabled = params.getIncrementalPushEnabled();
       Optional<Boolean> storeMigration = params.getStoreMigration();
       Optional<Boolean> writeComputationEnabled = params.getWriteComputationEnabled();
       Optional<Integer> replicationMetadataVersionID = params.getReplicationMetadataVersionID();
@@ -1718,7 +1706,6 @@ public class VeniceParentHelixAdmin implements Admin {
       Optional<String> etledUserProxyAccount = params.getETLedProxyUserAccount();
       Optional<Boolean> nativeReplicationEnabled = params.getNativeReplicationEnabled();
       Optional<String> pushStreamSourceAddress = params.getPushStreamSourceAddress();
-      Optional<IncrementalPushPolicy> incrementalPushPolicy = params.getIncrementalPushPolicy();
       Optional<Long> backupVersionRetentionMs = params.getBackupVersionRetentionMs();
       Optional<Integer> replicationFactor = params.getReplicationFactor();
       Optional<Boolean> migrationDuplicateStore = params.getMigrationDuplicateStore();
@@ -1852,10 +1839,6 @@ public class VeniceParentHelixAdmin implements Admin {
           .map(addToUpdatedConfigList(updatedConfigsList, VERSION))
           .orElse(AdminConsumptionTask.IGNORED_CURRENT_VERSION);
 
-      setStore.incrementalPushEnabled = incrementalPushEnabled
-          .map(addToUpdatedConfigList(updatedConfigsList, INCREMENTAL_PUSH_ENABLED))
-          .orElseGet(currStore::isIncrementalPushEnabled);
-
       hybridRewindSeconds.map(addToUpdatedConfigList(updatedConfigsList, REWIND_TIME_IN_SECONDS));
       hybridOffsetLagThreshold.map(addToUpdatedConfigList(updatedConfigsList, OFFSET_LAG_TO_GO_ONLINE));
       hybridTimeLagThreshold.map(addToUpdatedConfigList(updatedConfigsList, TIME_LAG_TO_GO_ONLINE));
@@ -1884,9 +1867,6 @@ public class VeniceParentHelixAdmin implements Admin {
         hybridStoreConfigRecord.bufferReplayPolicy = hybridStoreConfig.getBufferReplayPolicy().getValue();
         setStore.hybridStoreConfig = hybridStoreConfigRecord;
       }
-
-      getVeniceHelixAdmin().checkWhetherStoreWillHaveConflictConfigForIncrementalAndHybrid(currStore,
-          incrementalPushEnabled, incrementalPushPolicy, Optional.ofNullable(hybridStoreConfig));
 
       /**
        * Set storage quota according to store properties. For hybrid stores, rocksDB has the overhead ratio as we
@@ -1954,11 +1934,6 @@ public class VeniceParentHelixAdmin implements Admin {
       setStore.largestUsedVersionNumber = largestUsedVersionNumber
           .map(addToUpdatedConfigList(updatedConfigsList, LARGEST_USED_VERSION_NUMBER))
           .orElseGet(currStore::getLargestUsedVersionNumber);
-
-      setStore.incrementalPushPolicy = incrementalPushPolicy
-          .map(addToUpdatedConfigList(updatedConfigsList, INCREMENTAL_PUSH_POLICY))
-          .map(IncrementalPushPolicy::getValue)
-          .orElse(currStore.getIncrementalPushPolicy().getValue());
       setStore.backupVersionRetentionMs = backupVersionRetentionMs
           .map(addToUpdatedConfigList(updatedConfigsList, BACKUP_VERSION_RETENTION_MS))
           .orElseGet(currStore::getBackupVersionRetentionMs);
@@ -2639,8 +2614,7 @@ public class VeniceParentHelixAdmin implements Admin {
          */
         Store store = getVeniceHelixAdmin().getStore(clusterName, Version.parseStoreFromKafkaTopicName(kafkaTopic));
         boolean failedBatchPush = !incrementalPushVersion.isPresent() && currentReturnStatus == ExecutionStatus.ERROR;
-        boolean incPushEnabledBatchpushSuccess = !incrementalPushVersion.isPresent() && store.isIncrementalPushEnabled() &&
-            store.getIncrementalPushPolicy() == INCREMENTAL_PUSH_SAME_AS_REAL_TIME;
+        boolean incPushEnabledBatchpushSuccess = !incrementalPushVersion.isPresent() && store.isIncrementalPushEnabled();
         boolean nonIncPushBatchSucess =  !store.isIncrementalPushEnabled() && currentReturnStatus != ExecutionStatus.ERROR;
 
         if ((failedBatchPush || nonIncPushBatchSucess || incPushEnabledBatchpushSuccess) &&
@@ -3387,24 +3361,6 @@ public class VeniceParentHelixAdmin implements Admin {
     AdminOperation message = new AdminOperation();
     message.operationType = AdminMessageType.CONFIGURE_ACTIVE_ACTIVE_REPLICATION_FOR_CLUSTER.getValue();
     message.payloadUnion = migrateClusterToActiveActiveReplication;
-    sendAdminMessageAndWaitForConsumed(clusterName, null, message);
-  }
-
-  @Override
-  public void configureIncrementalPushForCluster(String clusterName, Optional<String> storeName,
-      IncrementalPushPolicy incrementalPushPolicyToApply, Optional<IncrementalPushPolicy> incrementalPushPolicyToFilter,
-      Optional<String> regionsFilter) {
-    ConfigureIncrementalPushForCluster incrementalPushBatchUpdateMessage
-        = (ConfigureIncrementalPushForCluster) AdminMessageType.CONFIGURE_INCREMENTAL_PUSH_FOR_CLUSTER.getNewInstance();
-    incrementalPushBatchUpdateMessage.clusterName = clusterName;
-    incrementalPushBatchUpdateMessage.incrementalPushPolicyToApply = incrementalPushPolicyToApply.getValue();
-    incrementalPushBatchUpdateMessage.incrementalPushPolicyToFilter =
-        incrementalPushPolicyToFilter.isPresent() ? incrementalPushPolicyToFilter.get().getValue() : -1;
-    incrementalPushBatchUpdateMessage.regionsFilter = regionsFilter.orElse(null);
-
-    AdminOperation message = new AdminOperation();
-    message.operationType = AdminMessageType.CONFIGURE_INCREMENTAL_PUSH_FOR_CLUSTER.getValue();
-    message.payloadUnion = incrementalPushBatchUpdateMessage;
     sendAdminMessageAndWaitForConsumed(clusterName, null, message);
   }
 

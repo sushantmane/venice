@@ -13,7 +13,6 @@ import com.linkedin.venice.exceptions.VeniceNoStoreException;
 import com.linkedin.venice.exceptions.VeniceUnsupportedOperationException;
 import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.meta.DataReplicationPolicy;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
@@ -235,8 +234,7 @@ public class CreateVersion extends AbstractRoute {
              * Before trying to get the version, create the RT topic in parent kafka since it's needed anyway in following cases.
              * Otherwise topic existence check fails internally.
              */
-            if (pushType.isIncremental() && (isWriteComputeEnabled || store.getIncrementalPushPolicy()
-                .equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME))) {
+            if (pushType.isIncremental()) {
               admin.getRealTimeTopic(clusterName, storeName);
               if (store.isApplyTargetVersionFilterForIncPush()) {
                 int targetVersion;
@@ -278,7 +276,7 @@ public class CreateVersion extends AbstractRoute {
             boolean overrideSourceFabric = true;
             if (pushType.isStreamReprocessing()) {
               responseTopic = Version.composeStreamReprocessingTopic(storeName, version.getNumber());
-            } else if (pushType.isIncremental() && version.getIncrementalPushPolicy().equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)) {
+            } else if (pushType.isIncremental()) {
               responseTopic = Version.composeRealTimeTopic(storeName);
               // disable amplificationFactor logic on real-time topic
               responseObject.setAmplificationFactor(1);
@@ -313,7 +311,7 @@ public class CreateVersion extends AbstractRoute {
              * At this point parent corp cluster is already set in the responseObject.setKafkaBootstrapServers().
              * So we only need to override for 1 and 2.
              */
-            if (pushType.isIncremental() && version.getIncrementalPushPolicy().equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME) && admin.isParent()) {
+            if (pushType.isIncremental() && admin.isParent()) {
               if (isActiveActiveReplicationEnabledInAllRegion.get()) {
                 Optional<String> overRideSourceRegion =
                     emergencySourceRegion.isPresent() ? emergencySourceRegion : Optional.empty();
@@ -337,16 +335,13 @@ public class CreateVersion extends AbstractRoute {
             }
             break;
           case STREAM:
-
             if (admin.isParent()) {
-
               // Conditionally check if the controller allows for fetching this information
               if (disableParentRequestTopicForStreamPushes) {
                 throw new VeniceException(String.format("Parent request topic is disabled!!  Cannot push data to topic in parent colo for store %s.  Aborting!!", storeName));
               }
-
               // Conditionally check if this store has aggregate mode enabled.  If not, throw an exception (as aggregate mode is required to produce to parent colo)
-              // We check the store config instead of the version config because we want this policy to go into affect without needing to perform empty pushes everywhere
+              // We check the store config instead of the version config because we want this policy to go into effect without needing to perform empty pushes everywhere
               if (!store.getHybridStoreConfig().getDataReplicationPolicy().equals(DataReplicationPolicy.AGGREGATE)) {
                 if (!isActiveActiveReplicationEnabledInAllRegionAllVersions.get()) {
                   throw new VeniceException("Store is not in aggregate mode!  Cannot push data to parent topic!!");
@@ -391,9 +386,14 @@ public class CreateVersion extends AbstractRoute {
           store.getName() + " which is configured to have a hybrid data replication policy " +
           store.getHybridStoreConfig().getDataReplicationPolicy(), ErrorType.BAD_REQUEST);
     }
-    if (pushType.isIncremental() && !store.isIncrementalPushEnabled()) {
-      throw new VeniceHttpException(HttpStatus.SC_BAD_REQUEST, "requesting topic for incremental push to store " +
-          store.getName() + " which does not have incremental push enabled.", ErrorType.BAD_REQUEST);
+    DataReplicationPolicy drPolicy = store.isHybrid() ? store.getHybridStoreConfig().getDataReplicationPolicy() : null;
+    if (pushType.isIncremental() && drPolicy != DataReplicationPolicy.AGGREGATE && drPolicy != DataReplicationPolicy.ACTIVE_ACTIVE) {
+      LOGGER.error("Requested push type is not compatible with current store configs. To use incremental push store needs"
+              + " to be of hybrid type with either {} or {} replication policy. Store:{} isHybrid:{} dataReplicationPolicy:{}",
+          DataReplicationPolicy.ACTIVE_ACTIVE, DataReplicationPolicy.AGGREGATE, store.getName(), store.isHybrid(), drPolicy);
+      throw new VeniceHttpException(HttpStatus.SC_BAD_REQUEST, "Push type is not compatible with store type. "
+          + "To use incremental push store needs to be of hybrid type with either AGGREGATE or ACTIVE_ACTIVE replication policy.",
+          ErrorType.BAD_REQUEST);
     }
   }
 

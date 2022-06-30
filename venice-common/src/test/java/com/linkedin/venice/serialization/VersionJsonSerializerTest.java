@@ -12,6 +12,8 @@ import com.linkedin.venice.meta.PartitionerConfigImpl;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionImpl;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -40,5 +42,31 @@ public class VersionJsonSerializerTest {
     byte[] data = versionVeniceJsonSerializer.serialize(version, "");
     Version newVersion = versionVeniceJsonSerializer.deserialize(data, "");
     Assert.assertEquals(newVersion, version);
+  }
+
+  public static class TestPojo {
+    public String name;
+    public int badgeNumber;
+    public TimeUnit latency = TimeUnit.NANOSECONDS;
+  }
+
+  @Test
+  public void testIgnoreUnknownPropertyDuringJsonDeserialization() throws IOException {
+    String jsonString = "{\"name\":\"Baymax\",\"Status\":\"Charged\",\"badgeNumber\":42}";
+    VeniceJsonSerializer<TestPojo> deser = new VeniceJsonSerializer<>(TestPojo.class);
+    TestPojo pojo = deser.deserialize(jsonString.getBytes(StandardCharsets.UTF_8), "");
+    Assert.assertEquals(pojo.name, "Baymax");
+    Assert.assertEquals(pojo.badgeNumber, 42);
+    Assert.assertEquals(pojo.latency, TimeUnit.NANOSECONDS);
+  }
+
+  @Test
+  public void testMissingPropertyDuringJsonDeserialization() throws IOException {
+    String jsonString = "{\"name\":\"Baymax\",\"Status\":\"Charged\"}";
+    VeniceJsonSerializer<TestPojo> deser = new VeniceJsonSerializer<>(TestPojo.class);
+    TestPojo pojo = deser.deserialize(jsonString.getBytes(StandardCharsets.UTF_8), "");
+    Assert.assertEquals(pojo.name, "Baymax");
+    Assert.assertEquals(pojo.badgeNumber, 0);
+    Assert.assertEquals(pojo.latency, TimeUnit.NANOSECONDS);
   }
 }

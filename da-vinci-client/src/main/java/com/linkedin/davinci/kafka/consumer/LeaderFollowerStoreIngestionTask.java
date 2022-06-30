@@ -29,7 +29,6 @@ import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.kafka.protocol.state.StoreVersionState;
 import com.linkedin.venice.kafka.validation.KafkaDataIntegrityValidator;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
@@ -815,8 +814,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
   /**
    * If leader is consuming remote VT or SR, once EOP is received, switch back to local VT to consume TOPIC_SWITCH,
    * unless there are more data to be consumed in remote topic in the following case:
-   * Incremental push is enabled, the policy is PUSH_TO_VERSION_TOPIC, write compute is disabled. OR the version is
-   * hybrid or incremental push enabled and data recovery is in progress.
+   * the version is hybrid enabled and data recovery is in progress.
    */
   private boolean shouldLeaderSwitchToLocalConsumption(PartitionConsumptionState partitionConsumptionState)
       throws InterruptedException {
@@ -833,9 +831,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     return partitionConsumptionState.consumeRemotely()
         && partitionConsumptionState.isEndOfPushReceived()
         && Version.isVersionTopicOrStreamReprocessingTopic(partitionConsumptionState.getOffsetRecord().getLeaderTopic())
-        && (!isDataRecovery || partitionConsumptionState.isDataRecoveryCompleted())
-        && !(partitionConsumptionState.isIncrementalPushEnabled() && partitionConsumptionState.getIncrementalPushPolicy()
-            .equals(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC) && !isWriteComputationEnabled);
+        && (!isDataRecovery || partitionConsumptionState.isDataRecoveryCompleted());
   }
 
   private void checkAndUpdateDataRecoveryStatusOfHybridStore(PartitionConsumptionState partitionConsumptionState)
@@ -1452,7 +1448,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
   /**
    * For Leader/Follower model, the follower should have the same kind of check as the Online/Offline model;
-   * for leader, it's possible that it consumers from real-time topic or GF topic.
+   * for leader, it's possible that it consumes from real-time topic or GF topic.
    */
   @Override
   protected boolean shouldProcessRecord(ConsumerRecord<KafkaKey, KafkaMessageEnvelope> record, int subPartition) {
@@ -1464,9 +1460,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     switch (partitionConsumptionState.getLeaderFollowerState()) {
       case LEADER:
         if (partitionConsumptionState.consumeRemotely()
-            && Version.isVersionTopicOrStreamReprocessingTopic(partitionConsumptionState.getOffsetRecord().getLeaderTopic())
-            && !(partitionConsumptionState.isIncrementalPushEnabled() && partitionConsumptionState.getIncrementalPushPolicy()
-                .equals(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC) && !isWriteComputationEnabled)) {
+            && Version.isVersionTopicOrStreamReprocessingTopic(partitionConsumptionState.getOffsetRecord().getLeaderTopic())) {
           if (partitionConsumptionState.skipKafkaMessage()) {
             String msg = "Skipping messages after EOP in remote version topic. Topic: " + kafkaVersionTopic + " Partition Id: " + subPartition;
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
@@ -1773,12 +1767,11 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
              * 2. SOS and EOS are from version topics in a remote fabric (use cases: native replication for remote fabrics)
              *
              * SOS and EOS will not be produced to local version topic in the following cases:
-             * 1. SOS and EOS are from real-time topics (use cases: hybrid ingestion, incremental push to RT)
+             * 1. SOS and EOS are from real-time topics (use case: hybrid ingestion)
              * 2. SOS and EOS are from version topics in local fabric, which has 2 different scenarios:
              *    i.  native replication is enabled, but the current fabric is the source fabric (use cases: native repl for source fabric)
              *    ii. native replication is not enabled; it doesn't matter whether current replica is leader or follower,
-             *        messages from local VT doesn't need to be reproduced into local VT again (use cases: local batch consumption,
-             *        incremental push to VT)
+             *        messages from local VT doesn't need to be reproduced into local VT again (use case: local batch consumption)
              */
             if (!Version.isRealTimeTopic(consumerRecord.topic())) {
               produceToLocalKafka(consumerRecord, partitionConsumptionState, leaderProducedRecordContext,
@@ -1832,7 +1825,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
              * The leaderUpstreamOffset is set from the TS message config itself. We should not override it.
              */
             if (isDataRecovery && !partitionConsumptionState.isBatchOnly()) {
-              // Ignore remote VT's TS message since we might need to consume more RT or incremental push data from VT
+              // Ignore remote VT's TS message since we might need to consume more RT
               // that's no longer in the local/remote RT due to retention.
               return DelegateConsumerRecordResult.SKIPPED_MESSAGE;
             }

@@ -45,7 +45,6 @@ import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfigImpl;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.PartitionerConfigImpl;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
@@ -536,9 +535,6 @@ public class StoreIngestionTaskTest {
 
     version.setIncrementalPushEnabled(incrementalPushEnabled);
     doReturn(incrementalPushEnabled).when(mockStore).isIncrementalPushEnabled();
-
-    version.setIncrementalPushPolicy(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC);
-    doReturn(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC).when(mockStore).getIncrementalPushPolicy();
 
     version.setHybridStoreConfig(hybridSoreConfigValue);
     doReturn(hybridSoreConfigValue).when(mockStore).getHybridStoreConfig();
@@ -2643,8 +2639,7 @@ public class StoreIngestionTaskTest {
 
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
     doReturn("testStore_v1").when(offsetRecord).getLeaderTopic();
-    PartitionConsumptionState partitionConsumptionState = new PartitionConsumptionState(0, 1, offsetRecord, false,
-    false, IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME);
+    PartitionConsumptionState partitionConsumptionState = new PartitionConsumptionState(0, 1, offsetRecord, false);
 
     long localVersionTopicOffset = 100L;
     long remoteVersionTopicOffset = 200L;

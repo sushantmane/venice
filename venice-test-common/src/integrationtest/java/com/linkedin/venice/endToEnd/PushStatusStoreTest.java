@@ -116,7 +116,8 @@ public class PushStatusStoreTest {
         .setLeaderFollowerModel(true)
         .setPartitionCount(PARTITION_COUNT)
         .setAmplificationFactor(1)
-        .setIncrementalPushEnabled(true)));
+        .setHybridOffsetLagThreshold(1)
+        .setHybridRewindSeconds(86400)));
     String daVinciPushStatusSystemStoreName = VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE.getSystemStoreName(storeName);
     VersionCreationResponse versionCreationResponseForDaVinciPushStatusSystemStore =
         controllerClient.emptyPush(daVinciPushStatusSystemStoreName, "test_da_vinci_push_status_system_store_push_1", 10000);

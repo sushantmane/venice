@@ -783,7 +783,6 @@ public class TestAdminConsumptionTask {
     setStore.enableReads = enableReads;
     setStore.enableWrites = enableWrites;
     setStore.accessControlled = accessControlled;
-    setStore.incrementalPushEnabled = true;
     setStore.isMigrating = storeMigration;
     setStore.writeComputationEnabled = writeComputationEnabled;
     setStore.readComputationEnabled = computationEnabled;
@@ -856,8 +855,7 @@ public class TestAdminConsumptionTask {
         updateStoreQueryParams.getStoreMigration().get() == storeMigration &&
         updateStoreQueryParams.getWriteComputationEnabled().get() == writeComputationEnabled &&
         updateStoreQueryParams.getReadComputationEnabled().get() == computationEnabled &&
-        updateStoreQueryParams.getBootstrapToOnlineTimeoutInHours().get() == bootstrapToOnlineTimeoutInHours &&
-        updateStoreQueryParams.getIncrementalPushEnabled().get() // Incremental push must be enabled.
+        updateStoreQueryParams.getBootstrapToOnlineTimeoutInHours().get() == bootstrapToOnlineTimeoutInHours
     ));
   }
 

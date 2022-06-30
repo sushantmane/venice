@@ -23,7 +23,6 @@ import com.linkedin.venice.hadoop.heartbeat.PushJobHeartbeatSender;
 import com.linkedin.venice.hadoop.heartbeat.PushJobHeartbeatSenderFactory;
 import com.linkedin.venice.hadoop.input.kafka.KafkaInputFormat;
 import com.linkedin.venice.hadoop.input.kafka.KafkaInputFormatCombiner;
-import com.linkedin.venice.hadoop.input.kafka.KafkaInputOffsetTracker;
 import com.linkedin.venice.hadoop.input.kafka.KafkaInputRecordReader;
 import com.linkedin.venice.hadoop.input.kafka.VeniceKafkaInputMapper;
 import com.linkedin.venice.hadoop.input.kafka.VeniceKafkaInputReducer;
@@ -33,8 +32,8 @@ import com.linkedin.venice.hadoop.ssl.TempFileSSLConfigurator;
 import com.linkedin.venice.hadoop.ssl.UserCredentialsFactory;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.BufferReplayPolicy;
+import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
@@ -146,7 +145,6 @@ public class VenicePushJob implements AutoCloseable {
   public final static String SOURCE_ETL = "source.etl";
   public final static String ETL_VALUE_SCHEMA_TRANSFORMATION = "etl.value.schema.transformation";
   public final static String TARGET_VERSION_FOR_INCREMENTAL_PUSH = "target.version.for.incremental.push";
-  public final static String ALLOW_KIF_REPUSH_FOR_INC_PUSH_FROM_VT_TO_VT = "allow.kif.repush.for.inc.push.from.vt.to.vt";
 
   /**
    * Configs used to enable Kafka Input.
@@ -348,7 +346,6 @@ public class VenicePushJob implements AutoCloseable {
   private JobClientWrapper jobClientWrapper;
   private SentPushJobDetailsTracker sentPushJobDetailsTracker;
   private Class<? extends Partitioner> mapRedPartitionerClass = VeniceMRPartitioner.class;
-  private KafkaInputOffsetTracker kafkaInputOffsetTracker;
 
   protected static class SchemaInfo {
     boolean isAvro = true;
@@ -396,7 +393,6 @@ public class VenicePushJob implements AutoCloseable {
     RepushInfoResponse repushInfoResponse;
     long rewindTimeInSecondsOverride;
     long reducerInactiveTimeoutInMs;
-    boolean allowKifRepushForIncPushFromVTToVT;
     boolean kafkaInputCombinerEnabled;
     BufferReplayPolicy validateRemoteReplayPolicy;
     boolean suppressEndOfPushMessage;
@@ -436,7 +432,6 @@ public class VenicePushJob implements AutoCloseable {
     CompressionStrategy compressionStrategy;
     boolean isLeaderFollowerModelEnabled;
     boolean isWriteComputeEnabled;
-    boolean isIncrementalPushEnabled;
     Version sourceKafkaInputVersionInfo;
     Version sourceKafkaOutputVersionInfo;
 
@@ -620,7 +615,6 @@ public class VenicePushJob implements AutoCloseable {
     pushJobSettingToReturn.enableWriteCompute = props.getBoolean(ENABLE_WRITE_COMPUTE, false);
     pushJobSettingToReturn.isSourceETL = props.getBoolean(SOURCE_ETL, false);
     pushJobSettingToReturn.isSourceKafka = props.getBoolean(SOURCE_KAFKA, false);
-    pushJobSettingToReturn.allowKifRepushForIncPushFromVTToVT = props.getBoolean(ALLOW_KIF_REPUSH_FOR_INC_PUSH_FROM_VT_TO_VT, false);
     pushJobSettingToReturn.kafkaInputCombinerEnabled = props.getBoolean(KAFKA_INPUT_COMBINER_ENABLED, false);
     pushJobSettingToReturn.suppressEndOfPushMessage = props.getBoolean(SUPPRESS_END_OF_PUSH_MESSAGE, false);
     pushJobSettingToReturn.deferVersionSwap = props.getBoolean(DEFER_VERSION_SWAP, false);
@@ -834,11 +828,6 @@ public class VenicePushJob implements AutoCloseable {
     this.pushJobHeartbeatSenderFactory = pushJobHeartbeatSenderFactory;
   }
 
-  // Visible for testing
-  protected void setKafkaInputOffsetTracker(KafkaInputOffsetTracker kafkaInputOffsetTracker) {
-    this.kafkaInputOffsetTracker = kafkaInputOffsetTracker;
-  }
-
   /**
    * @throws VeniceException
    */
@@ -936,15 +925,6 @@ public class VenicePushJob implements AutoCloseable {
         // If reducer phase is enabled, each reducer will sort all the messages inside one single
         // topic partition.
         setupMRConf(jobConf, kafkaTopicInfo, pushJobSetting, schemaInfo, storeSetting, props, jobId, inputDirectory);
-
-        //cache the latest VT offsets now, will be used to compare the latest offsets after the job finishes.
-        if (pushJobSetting.isSourceKafka && kafkaInputOffsetTrackingNeeded()) {
-          if (kafkaInputOffsetTracker == null) {
-            kafkaInputOffsetTracker = new KafkaInputOffsetTracker(jobConf);
-          }
-          kafkaInputOffsetTracker.markLatestOffsetAtBeginning();
-        }
-
         if (pushJobSetting.isIncrementalPush) {
           /**
            * N.B.: For now, we always send control messages directly for incremental pushes, regardless of
@@ -975,22 +955,6 @@ public class VenicePushJob implements AutoCloseable {
              */
           }
           runJobAndUpdateStatus();
-
-          /**
-           * Verify that the end offsets did not change before and after the KIF repush job
-           */
-          if (pushJobSetting.isSourceKafka && kafkaInputOffsetTrackingNeeded()) {
-            kafkaInputOffsetTracker.markLatestOffsetAtEnd();
-            if (!kafkaInputOffsetTracker.compareOffsetsAtBeginningAndEnd()) {
-              throw new VeniceException("Store: " + pushJobSetting.storeName
-                  + " source VT topic offsets does not match before and after the push job. This could be "
-                  + "possible if a incremental push to VT has run while this repush was going on");
-            } else {
-              logger.info("Store: " + pushJobSetting.storeName
-                  + " Source VT topic offsets matches before and after the push job");
-            }
-          }
-
           if(!pushJobSetting.suppressEndOfPushMessage) {
             if (pushJobSetting.sendControlMessagesDirectly) {
               getVeniceWriter(kafkaTopicInfo).broadcastEndOfPush(Collections.emptyMap());
@@ -998,8 +962,6 @@ public class VenicePushJob implements AutoCloseable {
               controllerClient.writeEndOfPush(pushJobSetting.storeName, kafkaTopicInfo.version);
             }
           }
-
-
         }
         // Close VeniceWriter before polling job status since polling job status could
         // trigger job deletion
@@ -1060,11 +1022,6 @@ public class VenicePushJob implements AutoCloseable {
         pushJobHeartbeatSender.stop();
       }
       inputDataInfoProvider = null;
-
-      if (kafkaInputOffsetTracker != null) {
-        kafkaInputOffsetTracker.close();
-        kafkaInputOffsetTracker = null;
-      }
     }
   }
 
@@ -1653,14 +1610,20 @@ public class VenicePushJob implements AutoCloseable {
     storeSetting.compressionStrategy = storeResponse.getStore().getCompressionStrategy();
     storeSetting.isWriteComputeEnabled = storeResponse.getStore().isWriteComputationEnabled();
     storeSetting.isLeaderFollowerModelEnabled = storeResponse.getStore().isLeaderFollowerModelEnabled();
-    storeSetting.isIncrementalPushEnabled = storeResponse.getStore().isIncrementalPushEnabled();
 
     if (setting.enableWriteCompute && !storeSetting.isWriteComputeEnabled) {
       throw new VeniceException("Store does not have write compute enabled.");
     }
 
-    if (setting.enableWriteCompute && (!storeSetting.isIncrementalPushEnabled || !setting.isIncrementalPush)) {
-      throw new VeniceException("Write compute is only available for incremental push jobs.");
+    // As of now write compute only works in native replication mode with AGGREGATE data replication policy.
+    // This data replication policy check in VPJ leaks an abstraction and should be replaced with some better way.
+    HybridStoreConfig hybridStoreConf = storeResponse.getStore().getHybridStoreConfig();
+    if (setting.enableWriteCompute && !(setting.isIncrementalPush && hybridStoreConf != null
+        && hybridStoreConf.getDataReplicationPolicy() == DataReplicationPolicy.AGGREGATE)) {
+      logger.error("To use write compute, push job needs to be an incremental push on hybrid store that has AGGREGATE "
+          + "replication policy. IsIncrementalPushJob:{} IsHybridStore:{} DataRepPolicy:{}", setting.isIncrementalPush,
+          hybridStoreConf != null, hybridStoreConf == null ? "" : hybridStoreConf.getDataReplicationPolicy());
+      throw new VeniceException("Write compute is only available for incremental push jobs on hybrid stores that have AGGREGATE replication policy");
     }
 
     if (setting.enableWriteCompute && storeSetting.isWriteComputeEnabled) {
@@ -1807,7 +1770,6 @@ public class VenicePushJob implements AutoCloseable {
        * 2. Compression Strategy.
        * 3. Partition Count.
        * 4. Partitioner Config.
-       * 5. Incremental Push policy
        * Since right now, the messages from the source topic will be passed through to the new version topic without
        * reformatting, we need to make sure the pass-through messages won't violate the new version config.
        *
@@ -1847,14 +1809,6 @@ public class VenicePushJob implements AutoCloseable {
             + "not supported by Kafka Input Format, "
             + " source version: " + sourceVersion.getNumber() + " is using RMD ID: " + sourceVersion.getReplicationMetadataVersionId()
             + ", new version: " + newVersion.getNumber() + " is using RMD ID: " + newVersion.getReplicationMetadataVersionId());
-      }
-      if (!pushJobSetting.allowKifRepushForIncPushFromVTToVT) {
-        if ((sourceVersion.isIncrementalPushEnabled() && sourceVersion.getIncrementalPushPolicy().equals(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC))
-            && (newVersion.isIncrementalPushEnabled() && newVersion.getIncrementalPushPolicy().equals(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC))) {
-          throw new VeniceException("Store: " + pushJobSetting.storeName + " has same Incremental Push to VT policy for source and new version. This may lead to data "
-              + "loss in certain scenario and thus not supported right now. "
-              + "Source version: " + sourceVersion.getNumber() + ", new version: " + newVersion.getNumber());
-        }
       }
     }
   }
@@ -2431,16 +2385,6 @@ public class VenicePushJob implements AutoCloseable {
     } else {
       return clusterDiscoveryResponse.getCluster();
     }
-  }
-
-  private boolean kafkaInputOffsetTrackingNeeded() {
-    return (
-        (storeSetting.sourceKafkaInputVersionInfo.isIncrementalPushEnabled() && storeSetting.sourceKafkaInputVersionInfo
-            .getIncrementalPushPolicy()
-            .equals(IncrementalPushPolicy.PUSH_TO_VERSION_TOPIC)) && (
-            storeSetting.sourceKafkaOutputVersionInfo.isIncrementalPushEnabled()
-                && storeSetting.sourceKafkaOutputVersionInfo.getIncrementalPushPolicy()
-                .equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)));
   }
 
   public String getKafkaTopic() {

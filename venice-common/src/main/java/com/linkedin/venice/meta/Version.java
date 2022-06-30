@@ -130,10 +130,6 @@ public interface Version extends Comparable<Version>, DataModelBackedStructure<S
 
   void setVersionSwapDeferred(boolean versionSwapDeferred);
 
-  IncrementalPushPolicy getIncrementalPushPolicy();
-
-  void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy);
-
   int getReplicationFactor();
 
   void setReplicationFactor(int replicationFactor);

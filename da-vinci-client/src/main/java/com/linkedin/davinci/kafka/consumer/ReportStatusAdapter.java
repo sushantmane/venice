@@ -1,7 +1,6 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.venice.exceptions.VeniceIngestionTaskKilledException;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.pushmonitor.SubPartitionStatus;
 import com.linkedin.venice.utils.PartitionUtils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -24,7 +23,6 @@ import org.apache.logging.log4j.Logger;
 public class ReportStatusAdapter {
   private static final Logger logger = LogManager.getLogger(ReportStatusAdapter.class);
   private final int amplificationFactor;
-  private final IncrementalPushPolicy incrementalPushPolicy;
   private final ConcurrentMap<Integer, PartitionConsumptionState> partitionConsumptionStateMap;
   private final IngestionNotificationDispatcher notificationDispatcher;
   /*
@@ -52,13 +50,11 @@ public class ReportStatusAdapter {
   public ReportStatusAdapter(
       IngestionNotificationDispatcher notificationDispatcher,
       int amplificationFactor,
-      IncrementalPushPolicy incrementalPushPolicy,
       ConcurrentMap<Integer, PartitionConsumptionState> partitionConsumptionStateMap
   ) {
     this.notificationDispatcher = notificationDispatcher;
     this.amplificationFactor = amplificationFactor;
     this.partitionConsumptionStateMap = partitionConsumptionStateMap;
-    this.incrementalPushPolicy = incrementalPushPolicy;
   }
 
   // This method is called when PartitionConsumptionState are not initialized
@@ -168,11 +164,10 @@ public class ReportStatusAdapter {
 
     AtomicInteger statusRecordCounter = statusRecordCounterMap.get(userPartition).get(versionAwareSubPartitionStatus);
     int statusRecordCount;
-    if ((subPartitionStatus.equals(SubPartitionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED)
-        || (subPartitionStatus.equals(SubPartitionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED))) &&
-        incrementalPushPolicy.equals(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME)) {
+    if (subPartitionStatus.equals(SubPartitionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED)
+        || subPartitionStatus.equals(SubPartitionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED)) {
       /*
-       * For inc push to RT policy, the control msg is only consumed by leader subPartition. We need to record the
+       * In inc push to RT, the control msg is only consumed by leader subPartition. We need to record the
        * detailed subPartition status for every subPartition of the same user partition so that the below report logic
        * can be triggered.
        */

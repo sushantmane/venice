@@ -2,7 +2,6 @@ package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.davinci.notifier.VeniceNotifier;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.util.ArrayDeque;
@@ -38,8 +37,7 @@ public class ReportStatusAdapterTest {
     notifiers.add(notifier);
     IngestionNotificationDispatcher dispatcher = new IngestionNotificationDispatcher(notifiers, topic, () -> true);
     ConcurrentMap<Integer, PartitionConsumptionState> partitionConsumptionStateMap = generateMockedPcsMap(amplificationFactor);
-    ReportStatusAdapter reportStatusAdapter = new ReportStatusAdapter(dispatcher, amplificationFactor,
-        IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME, partitionConsumptionStateMap);
+    ReportStatusAdapter reportStatusAdapter = new ReportStatusAdapter(dispatcher, amplificationFactor, partitionConsumptionStateMap);
     reportStatusAdapter.preparePartitionStatusCleanup(0);
     reportStatusAdapter.initializePartitionStatus(0);
 

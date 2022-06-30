@@ -9,7 +9,6 @@ import com.linkedin.venice.controller.kafka.protocol.admin.AbortMigration;
 import com.linkedin.venice.controller.kafka.protocol.admin.AddVersion;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureActiveActiveReplicationForCluster;
-import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureIncrementalPushForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureNativeReplicationForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.CreateStoragePersona;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteAllVersions;
@@ -42,7 +41,6 @@ import com.linkedin.venice.exceptions.VeniceUnsupportedOperationException;
 import com.linkedin.venice.meta.BackupStrategy;
 import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
@@ -228,9 +226,6 @@ public class AdminExecutionTask implements Callable<Void> {
           break;
         case REPLICATION_METADATA_SCHEMA_CREATION:
           handleReplicationMetadataSchemaCreation((MetadataSchemaCreation) adminOperation.payloadUnion);
-          break;
-        case CONFIGURE_INCREMENTAL_PUSH_FOR_CLUSTER:
-          handleConfigureIncrementalPushForCluster((ConfigureIncrementalPushForCluster) adminOperation.payloadUnion);
           break;
         case META_SYSTEM_STORE_AUTO_CREATION_VALIDATION:
           handleMetaSystemStoreCreationValidation((MetaSystemStoreAutoCreationValidation) adminOperation.payloadUnion);
@@ -433,7 +428,6 @@ public class AdminExecutionTask implements Callable<Void> {
         .setChunkingEnabled(message.chunkingEnabled)
         .setBatchGetLimit(message.batchGetLimit)
         .setNumVersionsToPreserve(message.numVersionsToPreserve)
-        .setIncrementalPushEnabled(message.incrementalPushEnabled)
         .setStoreMigration(message.isMigrating)
         .setWriteComputationEnabled(message.writeComputationEnabled)
         .setReadComputationEnabled(message.readComputationEnabled)
@@ -457,7 +451,6 @@ public class AdminExecutionTask implements Callable<Void> {
 
     params.setNativeReplicationEnabled(message.nativeReplicationEnabled)
         .setPushStreamSourceAddress(message.pushStreamSourceAddress == null ? null : message.pushStreamSourceAddress.toString())
-        .setIncrementalPushPolicy(IncrementalPushPolicy.valueOf(message.incrementalPushPolicy))
         .setBackupVersionRetentionMs(message.backupVersionRetentionMs);
 
     params.setNativeReplicationSourceFabric(message.nativeReplicationSourceFabric == null ? null : message.nativeReplicationSourceFabric.toString());
@@ -588,18 +581,6 @@ public class AdminExecutionTask implements Callable<Void> {
     Optional<String> regionsFilter = (message.regionsFilter == null)
         ? Optional.empty() : Optional.of(message.regionsFilter.toString());
     admin.configureActiveActiveReplication(clusterName, storeType, Optional.empty(), enableActiveActiveReplication, regionsFilter);
-  }
-
-  private void handleConfigureIncrementalPushForCluster(ConfigureIncrementalPushForCluster message) {
-    String clusterName = message.clusterName.toString();
-    IncrementalPushPolicy incrementalPushPolicyToApply = IncrementalPushPolicy.valueOf(message.incrementalPushPolicyToApply);
-    Optional<IncrementalPushPolicy> incrementalPushPolicyToFilter = message.incrementalPushPolicyToFilter >= 0
-                                                                    ? Optional.of(IncrementalPushPolicy.valueOf(message.incrementalPushPolicyToFilter))
-                                                                    : Optional.empty();
-    Optional<String> regionsFilter = (message.regionsFilter == null)
-        ? Optional.empty() : Optional.of(message.regionsFilter.toString());
-    admin.configureIncrementalPushForCluster(clusterName, Optional.of(storeName), incrementalPushPolicyToApply,
-        incrementalPushPolicyToFilter, regionsFilter);
   }
 
   private boolean checkPreConditionForReplicateAddVersion(String clusterName, String storeName) {

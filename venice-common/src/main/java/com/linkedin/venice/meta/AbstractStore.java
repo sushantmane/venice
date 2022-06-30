@@ -164,8 +164,6 @@ public abstract class AbstractStore implements Store {
 
       version.setNativeReplicationEnabled(isNativeReplicationEnabled());
 
-      version.setIncrementalPushPolicy(getIncrementalPushPolicy());
-
       version.setReplicationFactor(getReplicationFactor());
 
       version.setNativeReplicationSourceFabric(getNativeReplicationSourceFabric());
