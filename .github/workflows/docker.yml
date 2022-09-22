@@ -1,0 +1,167 @@
+name: Create and publish Venice Docker Images
+
+on:  workflow_dispatch
+
+env:
+  CONTROLLER_IMAGE_NAME: venice-controller
+  SERVER_IMAGE_NAME: venice-server
+  ROUTER_IMAGE_NAME: venice-router
+  CLIENT_IMAGE_NAME: venice-client
+
+  CONTROLLER_JAR: "services/venice-controller/build/libs/venice-controller-all.jar"
+  SERVER_JAR: "services/venice-server/build/libs/venice-server-all.jar"
+  ROUTER_JAR: "services/venice-router/build/libs/venice-router-all.jar"
+  ADMIN_JAR: "clients/venice-admin-tool/build/libs/venice-admin-tool-all.jar"
+  VPJ_JAR: "clients/hadoop-to-venice-bridge/build/libs/hadoop-to-venice-bridge-all.jar"
+  THIN_CLI_JAR: "clients/venice-thin-client/build/libs/venice-thin-client-all.jar"
+
+  VPJ_PROPS_FILES: "docker/venice-client/configs"
+  CONTROLLER_PROPS_FILE: "docker/venice-controller/configs"
+  SERVER_PROPS_FILE: "docker/venice-server/configs"
+  ROUTER_PROPS_FILE: "docker/venice-router/configs"
+
+  CONTROLLER_DOCKERFILE: "docker/venice-controller/Dockerfile"
+  SERVER_DOCKERFILE: "docker/venice-server/Dockerfile"
+  ROUTER_DOCKERFILE: "docker/venice-router/Dockerfile"
+  CLIENT_DOCKERFILE: "docker/venice-client/Dockerfile"
+
+  H1: "hadoop-common-2.3.0.jar"
+  H2: "hadoop-mapreduce-client-common-2.3.0.jar"
+  H3: "hadoop-mapreduce-client-core-2.3.0.jar"
+
+jobs:
+  # Push image to GitHub Packages.
+  # See also https://docs.docker.com/docker-hub/builds/
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'microsoft'
+          cache: 'gradle'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
+        with:
+          arguments: clean assemble
+
+      - name: Build Venice Controller Image
+        run: |
+          docker build --file $CONTROLLER_DOCKERFILE \
+            --build-arg JAR_SRC="$CONTROLLER_JAR" \
+            --build-arg PROPS_FILES="$CONTROLLER_PROPS_FILE" \
+            --tag "$CONTROLLER_IMAGE_NAME" \
+            --label "runnumber=${GITHUB_RUN_ID}" .
+
+      - name: Build Venice Server Image
+        run: |
+          docker build --file $SERVER_DOCKERFILE \
+            --build-arg JAR_SRC="$SERVER_JAR" \
+            --build-arg PROPS_FILES="$SERVER_PROPS_FILE" \
+            --tag "$SERVER_IMAGE_NAME" \
+            --label "runnumber=${GITHUB_RUN_ID}" .
+
+      - name: Build Venice Router Image
+        run: |
+          docker build --file $ROUTER_DOCKERFILE \
+            --build-arg JAR_SRC="$ROUTER_JAR" \
+            --build-arg PROPS_FILES="$ROUTER_PROPS_FILE" \
+            --tag "$ROUTER_IMAGE_NAME" \
+            --label "runnumber=${GITHUB_RUN_ID}" .
+
+      # we need these jars to make vpj work properly
+      - name: Download Hadoop Jars
+        run: |
+          curl -s -o hadoop-common-2.3.0.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/2.3.0/hadoop-common-2.3.0.jar &&
+          curl -s -o hadoop-mapreduce-client-common-2.3.0.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-mapreduce-client-common/2.3.0/hadoop-mapreduce-client-common-2.3.0.jar &&
+          curl -s -o hadoop-mapreduce-client-core-2.3.0.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-mapreduce-client-core/2.3.0/hadoop-mapreduce-client-core-2.3.0.jar  
+
+      - name: Build Venice Client Image
+        run: |
+          docker build --file $CLIENT_DOCKERFILE \
+            --build-arg H1="$H1" \
+            --build-arg H2="$H2" \
+            --build-arg H3="$H3" \
+            --build-arg ADMIN_JAR="$ADMIN_JAR" \
+            --build-arg VPJ_JAR="$VPJ_JAR" \
+            --build-arg THIN_CLI_JAR="$THIN_CLI_JAR" \
+            --build-arg VPJ_PROPS_FILES="$VPJ_PROPS_FILES" \
+            --tag "$CLIENT_IMAGE_NAME" \
+            --label "runnumber=${GITHUB_RUN_ID}" .
+
+      - name: Log in to registry
+        run: echo "${{ secrets.VEN_DOCKER }}" | docker login ghcr.io -u $ --password-stdin
+
+      - name: Push Controller image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$CONTROLLER_IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $CONTROLLER_IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+      - name: Push Server image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$SERVER_IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $SERVER_IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+      - name: Push Router image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$ROUTER_IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $ROUTER_IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
+      - name: Push Main image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$MAIN_IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "master" ] && VERSION=latest
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          docker tag $MAIN_IMAGE_NAME $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
