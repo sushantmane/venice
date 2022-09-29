@@ -14,10 +14,10 @@ steps:
   inputs:
     workingDirectory: ''
     gradleWrapperFile: 'gradlew'
-    gradleOptions: '-Xmx3072m'
+    gradleOptions: "-Xmx3072m clean  --continue --no-daemon --no-build-cache -Pspotallbugs -Pspotbugs.xml -Pspotbugs.ignoreFailures -DforkEvery=1 -DmaxParallelForks=5 -DjvmArgs='-XX:NativeMemoryTracking=detail -XX:+UnlockDiagnosticVMOptions -XX:+CrashOnOutOfMemoryError'"
     javaHomeOption: 'JDKVersion'
     jdkVersionOption: '1.11'
     jdkArchitectureOption: 'x64'
     publishJUnitResults: true
     testResultsFiles: '**/TEST-*.xml'
-    tasks: clean check --continue --no-daemon --no-build-cache -Pspotallbugs -Pspotbugs.xml -Pspotbugs.ignoreFailures -DforkEvery=1 -DmaxParallelForks=5 -DjvmArgs='-XX:NativeMemoryTracking=detail -XX:+UnlockDiagnosticVMOptions -XX:+CrashOnOutOfMemoryError'
+    tasks: 'build'
