@@ -835,9 +835,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     /**
      * Initialize default NR source fabric base on default config for different store types.
      */
-    if (newStore.isIncrementalPushEnabled()) {
-      newStore.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForIncremental());
-    } else if (newStore.isHybrid()) {
+    if (newStore.isHybrid()) {
       newStore.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForHybrid());
     } else {
       newStore.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForBatchOnly());
@@ -1791,42 +1789,36 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           store.getLargestUsedVersionNumber(),
           storeName,
           clusterName);
-    } else {
-      try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreWriteLock(storeName)) {
-        version.setPushType(pushType);
-        store.addVersion(version);
-        // Apply cluster-level native replication configs
-        VeniceControllerClusterConfig clusterConfig = resources.getConfig();
-        if (version.isLeaderFollowerModelEnabled()) {
-          boolean nativeReplicationEnabled = version.isNativeReplicationEnabled();
-          if (store.isHybrid()) {
-            nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForHybrid();
-          } else {
-            if (store.isIncrementalPushEnabled()) {
-              nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForIncremental();
-            } else {
-              nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForBatchOnly();
-            }
-          }
-          version.setNativeReplicationEnabled(nativeReplicationEnabled);
+      return version;
+    }
+    try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreWriteLock(storeName)) {
+      version.setPushType(pushType);
+      store.addVersion(version);
+      // Apply cluster-level native replication configs
+      VeniceControllerClusterConfig clusterConfig = resources.getConfig();
+      if (version.isLeaderFollowerModelEnabled()) {
+        boolean nativeReplicationEnabled = version.isNativeReplicationEnabled();
+        if (store.isHybrid()) {
+          nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForHybrid();
+        } else {
+          nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForBatchOnly();
         }
-        if (version.isNativeReplicationEnabled()) {
-          if (remoteKafkaBootstrapServers != null) {
-            version.setPushStreamSourceAddress(remoteKafkaBootstrapServers);
-          } else {
-            version.setPushStreamSourceAddress(getKafkaBootstrapServers(isSslToKafka()));
-          }
-        }
-        /**
-         * Version-level rewind time override.
-         */
-        handleRewindTimeOverride(store, version, rewindTimeInSecondsOverride);
-
-        version.setRmdVersionId(replicationMetadataVersionId);
-
-        repository.updateStore(store);
-        LOGGER.info("Add version: {} for store: {}", version.getNumber(), storeName);
+        version.setNativeReplicationEnabled(nativeReplicationEnabled);
       }
+      if (version.isNativeReplicationEnabled()) {
+        if (remoteKafkaBootstrapServers != null) {
+          version.setPushStreamSourceAddress(remoteKafkaBootstrapServers);
+        } else {
+          version.setPushStreamSourceAddress(getKafkaBootstrapServers(isSslToKafka()));
+        }
+      }
+      /**
+       * Version-level rewind time override.
+       */
+      handleRewindTimeOverride(store, version, rewindTimeInSecondsOverride);
+      version.setRmdVersionId(replicationMetadataVersionId);
+      repository.updateStore(store);
+      LOGGER.info("Add version: {} for store: {}", version.getNumber(), storeName);
     }
     return version;
   }
@@ -2101,11 +2093,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             if (store.isHybrid()) {
               nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForHybrid();
             } else {
-              if (store.isIncrementalPushEnabled()) {
-                nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForIncremental();
-              } else {
-                nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForBatchOnly();
-              }
+              nativeReplicationEnabled |= clusterConfig.isNativeReplicationEnabledForBatchOnly();
             }
             version.setNativeReplicationEnabled(nativeReplicationEnabled);
           }
@@ -2560,8 +2548,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         throwStoreDoesNotExist(clusterName, storeName);
       }
 
-      if (!store.isIncrementalPushEnabled()) {
-        throw new VeniceException("Incremental push is not enabled for store: " + storeName);
+      if (!store.isHybrid()) {
+        throw new VeniceException("Incremental push is not supported on non-hybrid store: " + storeName);
       }
 
       List<Version> versions = store.getVersions();
