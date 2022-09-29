@@ -90,7 +90,6 @@ public class DataRecoveryManager implements Closeable {
     if (!copyAllVersionConfigs) {
       dataRecoveryVersion.setActiveActiveReplicationEnabled(store.isActiveActiveReplicationEnabled());
       dataRecoveryVersion.setReplicationFactor(store.getReplicationFactor());
-      dataRecoveryVersion.setIncrementalPushEnabled(store.isIncrementalPushEnabled());
     }
     boolean versionAdded = veniceAdmin.addSpecificVersion(clusterName, storeName, dataRecoveryVersion);
     if (!versionAdded) {

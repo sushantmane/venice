@@ -3251,11 +3251,11 @@ public class VeniceParentHelixAdmin implements Admin {
       String leaderControllerUrl = "Unspecified leader controller url";
       try {
         leaderControllerUrl = controllerClient.getLeaderControllerUrl();
-      } catch (VeniceException getMasterException) {
-        LOGGER.warn("Couldn't query {} for job status of {}", region, kafkaTopic, getMasterException);
+      } catch (VeniceException e) {
+        LOGGER.warn("Couldn't query {} for job status of {}", region, kafkaTopic, e);
         statuses.add(ExecutionStatus.UNKNOWN);
         extraInfo.put(region, ExecutionStatus.UNKNOWN.toString());
-        extraDetails.put(region, "Failed to get leader controller url " + getMasterException.getMessage());
+        extraDetails.put(region, "Failed to get leader controller url " + e.getMessage());
         continue;
       }
       JobStatusQueryResponse response = controllerClient.queryJobStatus(kafkaTopic, incrementalPushVersion);
@@ -3312,20 +3312,11 @@ public class VeniceParentHelixAdmin implements Admin {
             "The errored kafka topic {} won't be truncated since it will be used to investigate some Kafka related issue",
             kafkaTopic);
       } else {
-        /**
-         * truncate the topic if either
-         * 1. the store is not incremental push enabled and the push completed (no ERROR)
-         * 2. this is a failed batch push
-         * 3. the store is incremental push enabled and same incPushToRT and batch push finished
+        /*
+         * truncate the topic when the current status is terminal and this is batch/full push
          */
         Store store = getVeniceHelixAdmin().getStore(clusterName, Version.parseStoreFromKafkaTopicName(kafkaTopic));
-        boolean failedBatchPush = !incrementalPushVersion.isPresent() && currentReturnStatus == ExecutionStatus.ERROR;
-        boolean incPushEnabledBatchpushSuccess =
-            !incrementalPushVersion.isPresent() && store.isIncrementalPushEnabled();
-        boolean nonIncPushBatchSucess =
-            !store.isIncrementalPushEnabled() && currentReturnStatus != ExecutionStatus.ERROR;
-
-        if ((failedBatchPush || nonIncPushBatchSucess || incPushEnabledBatchpushSuccess)
+        if (!incrementalPushVersion.isPresent()
             && !getMultiClusterConfigs().getCommonConfig().disableParentTopicTruncationUponCompletion()) {
           LOGGER.info("Truncating kafka topic: {} with job status: {}", kafkaTopic, currentReturnStatus);
           truncateKafkaTopic(kafkaTopic);

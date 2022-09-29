@@ -653,9 +653,6 @@ public abstract class StoreIngestionTaskTest {
     version.setLeaderFollowerModelEnabled(true);
     doReturn(true).when(mockStore).isLeaderFollowerModelEnabled();
 
-    version.setIncrementalPushEnabled(incrementalPushEnabled);
-    doReturn(incrementalPushEnabled).when(mockStore).isIncrementalPushEnabled();
-
     version.setHybridStoreConfig(hybridSoreConfigValue);
     doReturn(hybridSoreConfigValue).when(mockStore).getHybridStoreConfig();
     doReturn(isHybrid).when(mockStore).isHybrid();
