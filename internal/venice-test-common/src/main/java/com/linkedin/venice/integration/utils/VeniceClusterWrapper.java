@@ -6,13 +6,12 @@ import static com.linkedin.venice.ConfigKeys.SERVER_ENABLE_KAFKA_OPENSSL;
 import static com.linkedin.venice.ConfigKeys.ZOOKEEPER_ADDRESS;
 import static com.linkedin.venice.integration.utils.VeniceServerWrapper.CLIENT_CONFIG_FOR_CONSUMER;
 import static com.linkedin.venice.integration.utils.VeniceServerWrapper.SERVER_ENABLE_SERVER_ALLOW_LIST;
-import static com.linkedin.venice.integration.utils.VeniceServerWrapper.SERVER_ENABLE_SERVER_WHITE_LIST;
 import static com.linkedin.venice.integration.utils.VeniceServerWrapper.SERVER_ENABLE_SSL;
 import static com.linkedin.venice.integration.utils.VeniceServerWrapper.SERVER_IS_AUTO_JOIN;
 import static com.linkedin.venice.integration.utils.VeniceServerWrapper.SERVER_SSL_TO_KAFKA;
 import static com.linkedin.venice.utils.ByteUtils.BYTES_PER_KB;
 import static com.linkedin.venice.utils.ByteUtils.BYTES_PER_MB;
-import static com.linkedin.venice.utils.TestPushUtils.defaultH2VProps;
+import static com.linkedin.venice.utils.TestPushUtils.defaultVPJProps;
 import static com.linkedin.venice.utils.TestUtils.assertCommand;
 import static com.linkedin.venice.utils.TestUtils.writeBatchData;
 
@@ -218,7 +217,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
 
       for (int i = 0; i < options.getNumberOfServers(); i++) {
         Properties featureProperties = new Properties();
-        featureProperties.setProperty(SERVER_ENABLE_SERVER_WHITE_LIST, Boolean.toString(options.isEnableAllowlist()));
+        featureProperties.setProperty(SERVER_ENABLE_SERVER_ALLOW_LIST, Boolean.toString(options.isEnableAllowlist()));
         featureProperties.setProperty(SERVER_IS_AUTO_JOIN, Boolean.toString(options.isEnableAutoJoinAllowlist()));
         featureProperties.setProperty(SERVER_ENABLE_SSL, Boolean.toString(options.isSslToStorageNodes()));
         featureProperties.setProperty(SERVER_SSL_TO_KAFKA, Boolean.toString(options.isSslToKafka()));
@@ -986,7 +985,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
       }
 
       String inputDirPath = "file://" + inputDir.getAbsolutePath();
-      Properties props = defaultH2VProps(controllerUrl, inputDirPath, storeName);
+      Properties props = defaultVPJProps(controllerUrl, inputDirPath, storeName);
       TestPushUtils.runPushJob("Test Batch push job", props);
 
       propertyBuilder.put(FORKED_PROCESS_STORE_NAME, storeName);

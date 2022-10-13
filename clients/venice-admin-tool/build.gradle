@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-  implementation (libraries.avro) {
+  implementation(libraries.avro) {
     exclude group: 'org.mortbay.jetty' // jetty 6 conflicts with spark-java used in controller api
   }
 
@@ -16,16 +16,13 @@ dependencies {
   implementation libraries.log4j2api
 }
 
-artifacts {
-  archives shadowJar
-}
+apply from: "$rootDir/gradle/helper/publishing.gradle"
+apply from: "$rootDir/gradle/helper/packaging.gradle"
 
 jar {
   manifest {
-    attributes = [
-        'Implementation-Title': 'Venice Admin Tool',
-        'Implementation-Version': project.version,
-        'Main-Class': 'com.linkedin.venice.AdminTool'
-    ]
+    attributes = ['Implementation-Title'  : 'Venice Admin Tool',
+                  'Implementation-Version': project.version,
+                  'Main-Class'            : 'com.linkedin.venice.AdminTool']
   }
 }

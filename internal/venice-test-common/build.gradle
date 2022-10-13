@@ -32,7 +32,7 @@ dependencies {
   }
 
   implementation project(':clients:da-vinci-client')
-  implementation project(':clients:hadoop-to-venice-bridge')
+  implementation project(':clients:venice-push-job')
   implementation project(':internal:venice-common')
   implementation project(':services:venice-controller')
   implementation project(':services:venice-router')
@@ -40,6 +40,9 @@ dependencies {
   implementation project(':internal:venice-client-common')
   implementation project(':services:venice-server')
   implementation project(':clients:venice-thin-client')
+  implementation project(':internal:alpini:netty4:alpini-netty4-base')
+  implementation project(':internal:alpini:router:alpini-router-api')
+  implementation project(':internal:alpini:router:alpini-router-base')
 
   implementation libraries.avroUtilCompatHelper
   implementation libraries.avroUtilFastserde
@@ -53,10 +56,7 @@ dependencies {
   implementation libraries.kafkaClients
   implementation libraries.kafkaClientsTest
   implementation libraries.mockito
-  implementation (project(':internal:alpini:netty4:netty4-base'))
   implementation libraries.rocksdbjni
-  implementation project(':internal:alpini:router:router-api')
-  implementation (project(':internal:alpini:router:router-base'))
   implementation libraries.samzaApi
   implementation libraries.spark
   implementation libraries.testng
@@ -66,6 +66,7 @@ dependencies {
     exclude group: 'javax.servlet'
   }
   testImplementation project(':clients:venice-admin-tool')
+  testImplementation project(':internal:alpini:common:alpini-common-base')
 
   jmhAnnotationProcessor libraries.jmhGenerator
   jmhImplementation libraries.jmhCore
@@ -88,4 +89,12 @@ check.dependsOn(integrationTest)
 flakyTest {
   classpath += sourceSets.integrationTest.runtimeClasspath
   testClassesDirs += sourceSets.integrationTest.output.classesDirs
+}
+
+idea {
+  module {
+    testSourceDirs += project.sourceSets.integrationTest.java.srcDirs
+    testResourceDirs += project.sourceSets.integrationTest.resources.srcDirs
+    testSourceDirs += project.sourceSets.jmh.java.srcDirs
+  }
 }

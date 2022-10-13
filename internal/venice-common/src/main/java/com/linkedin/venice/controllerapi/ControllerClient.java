@@ -95,6 +95,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -204,10 +205,8 @@ public class ControllerClient implements Closeable {
     try (ControllerTransport transport = new ControllerTransport(sslFactory)) {
       for (String url: urls) {
         try {
-          // TODO: Change this to LEADER_CONTROLLER after backend components with inclusive endpoints are deployed
-          // completely
           String leaderControllerUrl =
-              transport.request(url, ControllerRoute.MASTER_CONTROLLER, newParams(), LeaderControllerResponse.class)
+              transport.request(url, ControllerRoute.LEADER_CONTROLLER, newParams(), LeaderControllerResponse.class)
                   .getUrl();
           LOGGER.info("Discovered leader controller {} from {}", leaderControllerUrl, url);
           return leaderControllerUrl;
@@ -280,7 +279,7 @@ public class ControllerClient implements Closeable {
   }
 
   /**
-   * Request a topic for the VeniceWriter to write into.  A new H2V push, or a Samza bulk processing job should both use
+   * Request a topic for the VeniceWriter to write into.  A new VPJ push, or a Samza bulk processing job should both use
    * this method.  The push job ID needs to be unique for this push.  Multiple requests with the same pushJobId are
    * idempotent and will return the same topic.
    * @param storeName Name of the store being written to.
@@ -645,7 +644,7 @@ public class ControllerClient implements Closeable {
     return request(ControllerRoute.JOB, params, JobStatusQueryResponse.class, timeoutMs, 1, null);
   }
 
-  // TODO remove passing PushJobDetails as JSON string once all H2V plugins are updated.
+  // TODO remove passing PushJobDetails as JSON string once all VPJ plugins are updated.
   public ControllerResponse sendPushJobDetails(String storeName, int version, String pushJobDetailsString) {
     QueryParams params =
         newParams().add(NAME, storeName).add(VERSION, version).add(PUSH_JOB_DETAILS, pushJobDetailsString);
@@ -1176,6 +1175,11 @@ public class ControllerClient implements Closeable {
     return request(ControllerRoute.CLEANUP_INSTANCE_CUSTOMIZED_STATES, params, MultiStoreTopicsResponse.class);
   }
 
+  public ControllerResponse removeStoreFromGraveyard(String storeName) {
+    QueryParams params = newParams().add(NAME, storeName);
+    return request(ControllerRoute.REMOVE_STORE_FROM_GRAVEYARD, params, ControllerResponse.class);
+  }
+
   /***
    * Add all global parameters in this method. Always use a form of this method to generate
    * a new list of NameValuePair objects for making HTTP requests.
@@ -1213,6 +1217,7 @@ public class ControllerClient implements Closeable {
       int maxAttempts,
       byte[] data) {
     Exception lastException = null;
+    boolean logErrorMessage = true;
     try (ControllerTransport transport = new ControllerTransport(sslFactory)) {
       for (int attempt = 1; attempt <= maxAttempts; ++attempt) {
         try {
@@ -1222,6 +1227,10 @@ public class ControllerClient implements Closeable {
           // Total wait time should be at least leader election time (~30 seconds)
           lastException = e;
         } catch (VeniceHttpException e) {
+          if (e.getHttpStatusCode() == HttpStatus.SC_PRECONDITION_FAILED) {
+            logErrorMessage = false;
+            throw e;
+          }
           if (e.getHttpStatusCode() != HttpConstants.SC_MISDIRECTED_REQUEST) {
             throw e;
           }
@@ -1250,14 +1259,24 @@ public class ControllerClient implements Closeable {
     String message =
         "An error occurred during controller request." + " controller = " + this.leaderControllerUrl + ", route = "
             + route.getPath() + ", params = " + params.getAbbreviatedNameValuePairs() + ", timeout = " + timeoutMs;
-    return makeErrorResponse(message, lastException, responseType);
+    return makeErrorResponse(message, lastException, responseType, logErrorMessage);
   }
 
   private <T extends ControllerResponse> T makeErrorResponse(
       String message,
       Exception exception,
       Class<T> responseType) {
-    LOGGER.error(message, exception);
+    return makeErrorResponse(message, exception, responseType, true);
+  }
+
+  private <T extends ControllerResponse> T makeErrorResponse(
+      String message,
+      Exception exception,
+      Class<T> responseType,
+      boolean logErrorMessage) {
+    if (logErrorMessage) {
+      LOGGER.error(message, exception);
+    }
     try {
       T response = responseType.newInstance();
       response.setError(message, exception);

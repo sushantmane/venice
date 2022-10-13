@@ -8,18 +8,19 @@ import com.linkedin.davinci.notifier.VeniceNotifier;
 import com.linkedin.davinci.storage.StorageMetadataService;
 import com.linkedin.davinci.storage.StorageService;
 import com.linkedin.davinci.store.AbstractStorageEngine;
-import com.linkedin.venice.utils.LatencyUtils;
+import com.linkedin.venice.kafka.protocol.state.StoreVersionState;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
 /**
- * DefaultIngestionBackend is the default ingestion backend implementation. Ingestion will be done in the same JVM as the application.
+ * The default ingestion backend implementation. Ingestion will be done in the same JVM as the application.
  */
 public class DefaultIngestionBackend implements DaVinciIngestionBackend, VeniceIngestionBackend {
   private static final Logger LOGGER = LogManager.getLogger(DefaultIngestionBackend.class);
@@ -43,21 +44,24 @@ public class DefaultIngestionBackend implements DaVinciIngestionBackend, VeniceI
       VeniceStoreVersionConfig storeConfig,
       int partition,
       Optional<LeaderFollowerStateType> leaderState) {
-    LOGGER.info("Retrieving storage engine for store {} partition {}", storeConfig.getStoreVersionName(), partition);
-    Utils.waitStoreVersionOrThrow(storeConfig.getStoreVersionName(), getStoreIngestionService().getMetadataRepo());
-    AbstractStorageEngine storageEngine = getStorageService().openStoreForNewPartition(storeConfig, partition);
-    if (topicStorageEngineReferenceMap.containsKey(storeConfig.getStoreVersionName())) {
-      topicStorageEngineReferenceMap.get(storeConfig.getStoreVersionName()).set(storageEngine);
-    }
+    String storeVersion = storeConfig.getStoreVersionName();
+    LOGGER.info("Retrieving storage engine for store {} partition {}", storeVersion, partition);
+    Utils.waitStoreVersionOrThrow(storeVersion, getStoreIngestionService().getMetadataRepo());
+    Supplier<StoreVersionState> svsSupplier = () -> storageMetadataService.getStoreVersionState(storeVersion);
+    AbstractStorageEngine storageEngine = storageService.openStoreForNewPartition(storeConfig, partition, svsSupplier);
+    topicStorageEngineReferenceMap.compute(storeVersion, (key, storageEngineAtomicReference) -> {
+      if (storageEngineAtomicReference != null) {
+        storageEngineAtomicReference.set(storageEngine);
+      }
+      return storageEngineAtomicReference;
+    });
     LOGGER.info(
         "Retrieved storage engine for store {} partition {}. Starting consumption in ingestion service",
-        storeConfig.getStoreVersionName(),
+        storeVersion,
         partition);
     getStoreIngestionService().startConsumption(storeConfig, partition, leaderState);
-    LOGGER.info(
-        "Completed starting consumption in ingestion service for store {} partition {}",
-        storeConfig.getStoreVersionName(),
-        partition);
+    LOGGER
+        .info("Completed starting consumption in ingestion service for store {} partition {}", storeVersion, partition);
   }
 
   @Override
@@ -81,18 +85,15 @@ public class DefaultIngestionBackend implements DaVinciIngestionBackend, VeniceI
       int partition,
       int timeoutInSeconds,
       boolean removeEmptyStorageEngine) {
-    if (storeIngestionService.isPartitionConsuming(storeConfig, partition)) {
-      long startTimeInMs = System.currentTimeMillis();
-      getStoreIngestionService().stopConsumptionAndWait(storeConfig, partition, 1, timeoutInSeconds);
-      LOGGER.info(
-          "Partition: {} of topic: {} has stopped consumption in {} ms.",
-          partition,
-          storeConfig.getStoreVersionName(),
-          LatencyUtils.getElapsedTimeInMs(startTimeInMs));
-    }
-    getStoreIngestionService().resetConsumptionOffset(storeConfig, partition);
+    String topicName = storeConfig.getStoreVersionName();
+    // Delete this replica from meta system store if exists.
+    getStoreIngestionService().getMetaSystemStoreReplicaStatusNotifier()
+        .ifPresent(systemStoreReplicaStatusNotifier -> systemStoreReplicaStatusNotifier.drop(topicName, partition));
+    // Stop consumption of the partition.
+    getStoreIngestionService().stopConsumptionAndWait(storeConfig, partition, 1, timeoutInSeconds);
+    // Drops corresponding data partition from storage.
     getStorageService().dropStorePartition(storeConfig, partition, removeEmptyStorageEngine);
-    LOGGER.info("Partition: {} of topic: {} has been dropped.", partition, storeConfig.getStoreVersionName());
+
   }
 
   @Override
@@ -132,7 +133,11 @@ public class DefaultIngestionBackend implements DaVinciIngestionBackend, VeniceI
   public void setStorageEngineReference(
       String topicName,
       AtomicReference<AbstractStorageEngine> storageEngineReference) {
-    topicStorageEngineReferenceMap.put(topicName, storageEngineReference);
+    if (storageEngineReference == null) {
+      topicStorageEngineReferenceMap.remove(topicName);
+    } else {
+      topicStorageEngineReferenceMap.put(topicName, storageEngineReference);
+    }
   }
 
   @Override

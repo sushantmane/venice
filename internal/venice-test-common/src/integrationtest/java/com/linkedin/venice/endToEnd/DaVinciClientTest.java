@@ -13,7 +13,7 @@ import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT_VALUE_SCHEMA;
 import static com.linkedin.venice.meta.PersistenceType.ROCKS_DB;
 import static com.linkedin.venice.utils.TestPushUtils.createStoreForJob;
-import static com.linkedin.venice.utils.TestPushUtils.defaultH2VProps;
+import static com.linkedin.venice.utils.TestPushUtils.defaultVPJProps;
 import static com.linkedin.venice.utils.TestPushUtils.getTempDataDirectory;
 import static com.linkedin.venice.utils.TestPushUtils.writeSimpleAvroFileWithIntToStringSchema;
 import static org.testng.Assert.assertEquals;
@@ -71,6 +71,7 @@ import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import io.tehuti.Metric;
 import io.tehuti.metrics.MetricsRepository;
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -403,8 +404,8 @@ public class DaVinciClientTest {
   public void testIngestionIsolation(boolean isAmplificationFactorEnabled) throws Exception {
     final int partitionCount = 3;
     final int dataPartition = 1;
-    int emptyPartition1 = (dataPartition + 1) % partitionCount;
-    int emptyPartition2 = (dataPartition + 2) % partitionCount;
+    int emptyPartition1 = 2;
+    int emptyPartition2 = 0;
     final int amplificationFactor = isAmplificationFactorEnabled ? 3 : 1;
     String storeName = Utils.getUniqueString("store");
     String storeName2 = createStoreWithMetaSystemStore(KEY_COUNT);
@@ -517,8 +518,9 @@ public class DaVinciClientTest {
       boolean isAmplificationFactorEnabled,
       DaVinciConfig daVinciConfig) throws Exception {
     // Create store
-    final int partition = 1;
     final int partitionCount = 2;
+    final int emptyPartition = 0;
+    final int dataPartition = 1;
     final int amplificationFactor = isAmplificationFactorEnabled ? 3 : 1;
     String storeName = Utils.getUniqueString("store");
 
@@ -529,7 +531,7 @@ public class DaVinciClientTest {
             .setPartitionCount(partitionCount)
             .setAmplificationFactor(amplificationFactor)
             .setPartitionerParams(
-                Collections.singletonMap(ConstantVenicePartitioner.CONSTANT_PARTITION, String.valueOf(partition)));
+                Collections.singletonMap(ConstantVenicePartitioner.CONSTANT_PARTITION, String.valueOf(dataPartition)));
     setupHybridStore(storeName, paramsConsumer);
 
     VeniceProperties backendConfig = new PropertyBuilder().put(CLIENT_USE_SYSTEM_STORE_REPOSITORY, true)
@@ -544,7 +546,6 @@ public class DaVinciClientTest {
         new CachingDaVinciClientFactory(d2Client, metricsRepository, backendConfig)) {
       DaVinciClient<Integer, Integer> client = factory.getAndStartGenericAvroClient(storeName, daVinciConfig);
       // subscribe to a partition without data
-      int emptyPartition = (partition + 1) % partitionCount;
       client.subscribe(Collections.singleton(emptyPartition)).get();
       for (int i = 0; i < KEY_COUNT; i++) {
         int key = i;
@@ -553,7 +554,7 @@ public class DaVinciClientTest {
       client.unsubscribe(Collections.singleton(emptyPartition));
 
       // subscribe to a partition with data
-      client.subscribe(Collections.singleton(partition)).get();
+      client.subscribe(Collections.singleton(dataPartition)).get();
       TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT, TimeUnit.MILLISECONDS, () -> {
 
         Map<Integer, Integer> keyValueMap = new HashMap<>();
@@ -574,7 +575,6 @@ public class DaVinciClientTest {
       dataToPublish.add(new Pair<>(3, 4));
 
       generateHybridData(storeName, dataToPublish);
-
       TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT, TimeUnit.MILLISECONDS, () -> {
         for (Pair<Object, Object> entry: dataToPublish) {
           assertEquals(client.get((Integer) entry.getFirst()).get(), entry.getSecond());
@@ -675,8 +675,17 @@ public class DaVinciClientTest {
       }
     }
 
-    try (DaVinciClient<Integer, Object> client =
-        ServiceFactory.getGenericAvroDaVinciClient(storeName, cluster, baseDataPath)) {
+    MetricsRepository metricsRepository = new MetricsRepository();
+    DaVinciTestContext<Integer, Object> daVinciTestContext =
+        ServiceFactory.getGenericAvroDaVinciFactoryAndClientWithRetries(
+            d2Client,
+            metricsRepository,
+            Optional.empty(),
+            cluster.getZk().getAddress(),
+            storeName,
+            daVinciConfig,
+            Collections.singletonMap(DATA_BASE_PATH, baseDataPath));
+    try (DaVinciClient<Integer, Object> client = daVinciTestContext.getDaVinciClient()) {
       TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, () -> {
         try {
           Map<Integer, Integer> keyValueMap = new HashMap<>();
@@ -689,6 +698,11 @@ public class DaVinciClientTest {
           throw new AssertionError("", e);
         }
       });
+      // After restart, Da Vinci client will still get correct metrics for ingested stores.
+      String metricName = "." + storeName + "_current--disk_usage_in_bytes.Gauge";
+      Metric storeDiskUsageMetric = metricsRepository.getMetric(metricName);
+      Assert.assertNotNull(storeDiskUsageMetric);
+      Assert.assertTrue(storeDiskUsageMetric.value() > 0);
     }
 
     daVinciConfig.setStorageClass(StorageClass.DISK);
@@ -940,32 +954,32 @@ public class DaVinciClientTest {
     String inputDirPath = "file://" + inputDir.getAbsolutePath();
     writeSimpleAvroFileWithIntToStringSchema(inputDir, true);
 
-    // Setup H2V job properties.
-    Properties h2vProperties = defaultH2VProps(cluster, inputDirPath, storeName);
-    propertiesConsumer.accept(h2vProperties);
+    // Setup VPJ job properties.
+    Properties vpjProperties = defaultVPJProps(cluster, inputDirPath, storeName);
+    propertiesConsumer.accept(vpjProperties);
     // Create & update store for test.
     final int numPartitions = 3;
     UpdateStoreQueryParams params = new UpdateStoreQueryParams().setPartitionCount(numPartitions); // Update the
                                                                                                    // partition count.
     paramsConsumer.accept(params);
     try (ControllerClient controllerClient =
-        createStoreForJob(cluster, DEFAULT_KEY_SCHEMA, "\"string\"", h2vProperties)) {
+        createStoreForJob(cluster, DEFAULT_KEY_SCHEMA, "\"string\"", vpjProperties)) {
       TestUtils.createMetaSystemStore(controllerClient, storeName, Optional.of(LOGGER));
       ControllerResponse response = controllerClient.updateStore(storeName, params);
       Assert.assertFalse(response.isError(), response.getError());
 
-      // Push data through H2V bridge.
-      runH2V(h2vProperties, 1, cluster);
+      // Push data through VPJ.
+      runVPJ(vpjProperties, 1, cluster);
     }
   }
 
-  private static void runH2V(Properties h2vProperties, int expectedVersionNumber, VeniceClusterWrapper cluster) {
-    long h2vStart = System.currentTimeMillis();
+  private static void runVPJ(Properties vpjProperties, int expectedVersionNumber, VeniceClusterWrapper cluster) {
+    long vpjStart = System.currentTimeMillis();
     String jobName = Utils.getUniqueString("batch-job-" + expectedVersionNumber);
-    TestPushUtils.runPushJob(jobName, h2vProperties);
-    String storeName = (String) h2vProperties.get(VenicePushJob.VENICE_STORE_NAME_PROP);
+    TestPushUtils.runPushJob(jobName, vpjProperties);
+    String storeName = (String) vpjProperties.get(VenicePushJob.VENICE_STORE_NAME_PROP);
     cluster.waitVersion(storeName, expectedVersionNumber);
-    LOGGER.info("**TIME** H2V" + expectedVersionNumber + " takes " + (System.currentTimeMillis() - h2vStart));
+    LOGGER.info("**TIME** VPJ" + expectedVersionNumber + " takes " + (System.currentTimeMillis() - vpjStart));
   }
 
   private String createStoreWithMetaSystemStore(int keyCount) throws Exception {

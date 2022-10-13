@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.rocksdb.RocksDBException;
@@ -170,7 +172,7 @@ public class StorageService extends AbstractVeniceService {
         AbstractStorageEngine storageEngine;
 
         try {
-          storageEngine = openStore(storeConfig);
+          storageEngine = openStore(storeConfig, () -> null);
         } catch (Exception e) {
           if (ExceptionUtils.recursiveClassEquals(e, RocksDBException.class)) {
             LOGGER.error("Could not load the following store : " + storeName, e);
@@ -194,9 +196,10 @@ public class StorageService extends AbstractVeniceService {
 
   public synchronized AbstractStorageEngine openStoreForNewPartition(
       VeniceStoreVersionConfig storeConfig,
-      int partitionId) {
+      int partitionId,
+      Supplier<StoreVersionState> initialStoreVersionStateSupplier) {
     LOGGER.info("Opening store for {} partition {}", storeConfig.getStoreVersionName(), partitionId);
-    AbstractStorageEngine engine = openStore(storeConfig);
+    AbstractStorageEngine engine = openStore(storeConfig, initialStoreVersionStateSupplier);
     synchronized (engine) {
       for (int subPartition: getSubPartition(storeConfig.getStoreVersionName(), partitionId)) {
         if (!engine.containsPartition(subPartition)) {
@@ -206,6 +209,15 @@ public class StorageService extends AbstractVeniceService {
     }
     LOGGER.info("Opened store for {} partition {}", storeConfig.getStoreVersionName(), partitionId);
     return engine;
+  }
+
+  public BiConsumer<String, StoreVersionState> getStoreVersionStateSyncer() {
+    return (storeVersionName, storeVersionState) -> {
+      AbstractStorageEngine storageEngine = storageEngineRepository.getLocalStorageEngine(storeVersionName);
+      if (storageEngine != null) {
+        storageEngine.updateStoreVersionStateCache(storeVersionState);
+      }
+    };
   }
 
   /**
@@ -236,9 +248,12 @@ public class StorageService extends AbstractVeniceService {
    * Creates a new storage engine for the given store in the factory and registers the storage engine with the store repository.
    *
    * @param storeConfig   The store specific properties
+   * @param initialStoreVersionStateSupplier invoked to initialize the SVS when a brand-new storage engine is created
    * @return StorageEngine that was created for the given store definition.
    */
-  public synchronized AbstractStorageEngine openStore(VeniceStoreVersionConfig storeConfig) {
+  public synchronized AbstractStorageEngine openStore(
+      VeniceStoreVersionConfig storeConfig,
+      Supplier<StoreVersionState> initialStoreVersionStateSupplier) {
     String topicName = storeConfig.getStoreVersionName();
     AbstractStorageEngine engine = storageEngineRepository.getLocalStorageEngine(topicName);
     if (engine != null) {
@@ -257,6 +272,7 @@ public class StorageService extends AbstractVeniceService {
     StorageEngineFactory factory = getInternalStorageEngineFactory(storeConfig);
     engine =
         factory.getStorageEngine(storeConfig, isReplicationMetadataEnabled(topicName, factory.getPersistenceType()));
+    engine.updateStoreVersionStateCache(initialStoreVersionStateSupplier.get());
     storageEngineRepository.addLocalStorageEngine(engine);
     // Setup storage engine stats
     aggVersionedStorageEngineStats.setStorageEngine(topicName, engine);
@@ -269,15 +285,20 @@ public class StorageService extends AbstractVeniceService {
   }
 
   /**
-   * Removes the Store, Partition from the Storage service.
+   * Drops the partition of the specified store version in the storage service. When all data partitions are dropped,
+   * it will also drop the storage engine of the specific store version.
+   * @param storeConfig config of the store version.
+   * @param partition partition ID to be dropped.
    */
   public synchronized void dropStorePartition(VeniceStoreVersionConfig storeConfig, int partition) {
     dropStorePartition(storeConfig, partition, true);
   }
 
   /**
-   * Removes the Store, Partition from the Storage service.
-   * @param removeEmptyStorageEngine Whether to delete the storage engine when there is no remaining partition.
+   * Drops the partition of the specified store version in the storage service.
+   * @param storeConfig config of the store version.
+   * @param partition partition ID to be dropped.
+   * @param removeEmptyStorageEngine Whether to delete the storage engine when there is no remaining data partition.
    */
   public synchronized void dropStorePartition(
       VeniceStoreVersionConfig storeConfig,

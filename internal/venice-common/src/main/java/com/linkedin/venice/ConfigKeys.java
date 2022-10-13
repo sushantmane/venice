@@ -321,12 +321,28 @@ public class ConfigKeys {
    */
   public static final String CONTROLLER_IN_AZURE_FABRIC = "controller.in.azure.fabric";
 
+  /**
+   * Whether to enable graveyard cleanup for batch-only store at cluster level. Default is false.
+   */
+  public static final String CONTROLLER_STORE_GRAVEYARD_CLEANUP_ENABLED = "controller.store.graveyard.cleanup.enabled";
+
+  /**
+   * When store graveyard cleanup is enabled, delete the graveyard znode if it has not been changed for a specific time.
+   * Default is 0 min.
+   */
+  public static final String CONTROLLER_STORE_GRAVEYARD_CLEANUP_DELAY_MINUTES =
+      "controller.store.graveyard.cleanup.delay.minutes";
+
+  /**
+   * Sleep interval between each graveyard list fetch from ZK in StoreGraveyardCleanup service. Default is 15 min.
+   * */
+  public static final String CONTROLLER_STORE_GRAVEYARD_CLEANUP_SLEEP_INTERVAL_BETWEEN_LIST_FETCH_MINUTES =
+      "controller.store.graveyard.cleanup.sleep.interval.between.list.fetch.minutes";
+
   // Server specific configs
   public static final String LISTENER_PORT = "listener.port";
   public static final String DATA_BASE_PATH = "data.base.path";
   public static final String AUTOCREATE_DATA_PATH = "autocreate.data.path";
-  // go/inclusivecode deprecated(alias="enable.server.allowlist")
-  public static final String ENABLE_SERVER_WHITE_LIST = "enable.server.whitelist";
   public static final String ENABLE_SERVER_ALLOW_LIST = "enable.server.allowlist";
   public static final String MAX_ONLINE_OFFLINE_STATE_TRANSITION_THREAD_NUMBER = "max.state.transition.thread.number";
   public static final String MAX_LEADER_FOLLOWER_STATE_TRANSITION_THREAD_NUMBER =
@@ -1085,6 +1101,7 @@ public class ConfigKeys {
   public static final String EMERGENCY_SOURCE_REGION = "emergency.source.region";
 
   // go/inclusivecode deprecated(alias="child.cluster.allowlist")
+  @Deprecated
   public static final String CHILD_CLUSTER_WHITELIST = "child.cluster.whitelist";
 
   /**
@@ -1109,6 +1126,7 @@ public class ConfigKeys {
   public static final String CHILD_CLUSTER_ALLOWLIST = "child.cluster.allowlist";
 
   // go/inclusivecode deprecated(alias="native.replication.fabric.allowlist")
+  @Deprecated
   public static final String NATIVE_REPLICATION_FABRIC_WHITELIST = "native.replication.fabric.whitelist";
 
   /**
@@ -1171,13 +1189,14 @@ public class ConfigKeys {
       "admin.consumption.max.worker.thread.pool.size";
 
   /**
-   * This factor is used to estimate potential push size. H2V reducer multiplies it
+   * This factor is used to estimate potential push size. VPJ reducer multiplies it
    * with total record size and compares it with store storage quota
    * TODO: it will be moved to Store metadata if we allow stores have various storage engine types.
    */
   public static final String STORAGE_ENGINE_OVERHEAD_RATIO = "storage.engine.overhead.ratio";
 
   // go/inclusivecode deprecated(alias="enable.offline.push.ssl.allowlist")
+  @Deprecated
   public static final String ENABLE_OFFLINE_PUSH_SSL_WHITELIST = "enable.offline.push.ssl.whitelist";
   /**
    * The switcher to enable/disable the allowlist of ssl offline pushes. If we disable the allowlist here, depends on
@@ -1186,6 +1205,7 @@ public class ConfigKeys {
   public static final String ENABLE_OFFLINE_PUSH_SSL_ALLOWLIST = "enable.offline.push.ssl.allowlist";
 
   // go/inclusivecode deprecated(alias="enable.hybrid.push.ssl.allowlist")
+  @Deprecated
   public static final String ENABLE_HYBRID_PUSH_SSL_WHITELIST = "enable.hybrid.push.ssl.whitelist";
   /**
    * The switcher to enable/disable the allowlist of ssl hybrid pushes including both batch and near-line pushes for
@@ -1195,6 +1215,7 @@ public class ConfigKeys {
   public static final String ENABLE_HYBRID_PUSH_SSL_ALLOWLIST = "enable.hybrid.push.ssl.allowlist";
 
   // go/inclusivecode deprecated(alias="push.ssl.allowlist")
+  @Deprecated
   public static final String PUSH_SSL_WHITELIST = "push.ssl.whitelist";
 
   /**
