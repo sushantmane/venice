@@ -1302,7 +1302,7 @@ public class ControllerClient implements Closeable {
   }
 
   public String getLeaderControllerUrl() {
-    this.leaderControllerUrl = discoverLeaderController();
+    this.leaderControllerUrl = this.controllerDiscoveryUrls.get(0);
     return this.leaderControllerUrl;
   }
 

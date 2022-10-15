@@ -328,6 +328,8 @@ public class VenicePushJob implements AutoCloseable {
   public static final String REPUSH_TTL_POLICY = "repush.ttl.policy";
   public static final String RMD_SCHEMA_DIR = "rmd.schema.dir";
   private static final String TEMP_DIR_PREFIX = "/tmp/veniceRmdSchemas/";
+  public static final String SYSTEM_TEST_ENV = "system.test.env";
+  public static final String ADDRESS_MAP = "address.map.";
   public static final int NOT_SET = -1;
   private static final Logger LOGGER = LogManager.getLogger(VenicePushJob.class);
 
@@ -390,6 +392,7 @@ public class VenicePushJob implements AutoCloseable {
   private PushJobSchemaInfo pushJobSchemaInfo;
   private ValidateSchemaAndBuildDictMapperOutput validateSchemaAndBuildDictMapperOutput;
   private String uniqueStringForMapperOutputDirectory;
+  private boolean isSystemTestEnv;
 
   protected static class PushJobSetting {
     boolean enablePush;
@@ -510,6 +513,7 @@ public class VenicePushJob implements AutoCloseable {
       Properties vanillaProps,
       ControllerClient controllerClient,
       ControllerClient clusterDiscoveryControllerClient) {
+    this.isSystemTestEnv = Boolean.parseBoolean(vanillaProps.getProperty(SYSTEM_TEST_ENV, "false"));
     this.controllerClient = controllerClient;
     this.clusterDiscoveryControllerClient = clusterDiscoveryControllerClient;
     this.jobId = jobId;
@@ -2168,6 +2172,9 @@ public class VenicePushJob implements AutoCloseable {
     kafkaTopicInfo.topic = versionCreationResponse.getKafkaTopic();
     kafkaTopicInfo.version = versionCreationResponse.getVersion();
     kafkaTopicInfo.kafkaUrl = versionCreationResponse.getKafkaBootstrapServers();
+    if (isSystemTestEnv) {
+      kafkaTopicInfo.kafkaUrl = props.getString(ADDRESS_MAP + kafkaTopicInfo.kafkaUrl, kafkaTopicInfo.kafkaUrl);
+    }
     kafkaTopicInfo.partitionCount = versionCreationResponse.getPartitions();
     kafkaTopicInfo.sslToKafka = versionCreationResponse.isEnableSSL();
     kafkaTopicInfo.compressionStrategy = versionCreationResponse.getCompressionStrategy();
