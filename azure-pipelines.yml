@@ -1,0 +1,28 @@
+# Gradle
+# Build your Java project and run tests with Gradle using a Gradle wrapper script.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+- job: VeniceCI
+  timeoutInMinutes: 360
+  steps:
+  - script: git remote add upstream https://github.com/linkedin/venice
+  - script: git fetch upstream
+  - task: Gradle@2
+    timeoutInMinutes: 360
+    inputs:
+      workingDirectory: ''
+      gradleWrapperFile: 'gradlew'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'
+      jdkArchitectureOption: 'x64'
+      publishJUnitResults: true
+      testResultsFiles: '**/TEST-*.xml'
+      tasks: 'clean check -x spotlessCheck --continue --no-daemon -Pspotallbugs -Pspotbugs.xml -Pspotbugs.ignoreFailures -DforkEvery=25 -DmaxParallelForks=5'
