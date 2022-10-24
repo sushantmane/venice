@@ -6,7 +6,7 @@ RUN apt-get update
 RUN apt-get install netcat -y
 RUN apt-get install tree -y
 RUN apt-get install wget -y
-RUN mkdir -p ${VENICE_DIR} && ${VENICE_DIR}/bin
+RUN mkdir -p "${VENICE_DIR}/bin"
 RUN wget -O ${VENICE_DIR}/bin/avro-tools.jar https://downloads.apache.org/avro/stable/java/avro-tools-1.11.1.jar
 
 WORKDIR ${VENICE_DIR}
