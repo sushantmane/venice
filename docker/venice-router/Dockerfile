@@ -8,8 +8,8 @@ RUN mkdir -p ${VENICE_DIR}/bin && mkdir -p ${VENICE_DIR}/configs
 
 WORKDIR ${VENICE_DIR}
 
-COPY venice-controller-all.jar bin/venice-controller-all.jar
+COPY venice-router-all.jar bin/venice-router-all.jar
 COPY single-dc-configs configs/single-dc
 COPY multi-dc-configs configs/multi-dc
 
-CMD java -jar bin/venice-controller-all.jar configs/single-dc/cluster.properties configs/single-dc/controller.properties
+CMD java -jar bin/venice-router-all.jar configs/single-dc/router.properties
