@@ -39,7 +39,6 @@ import static com.linkedin.venice.ConfigKeys.HELIX_REBALANCE_ALG;
 import static com.linkedin.venice.ConfigKeys.HELIX_SEND_MESSAGE_TIMEOUT_MS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_LOG_COMPACTION_FOR_HYBRID_STORES;
-import static com.linkedin.venice.ConfigKeys.KAFKA_LOG_COMPACTION_FOR_INCREMENTAL_PUSH_STORES;
 import static com.linkedin.venice.ConfigKeys.KAFKA_MIN_ISR;
 import static com.linkedin.venice.ConfigKeys.KAFKA_MIN_LOG_COMPACTION_LAG_MS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_REPLICATION_FACTOR;
@@ -246,7 +245,6 @@ public class VeniceControllerClusterConfig {
   private int kafkaReplicationFactor;
   private Optional<Integer> minIsr;
   private boolean kafkaLogCompactionForHybridStores;
-  private boolean kafkaLogCompactionForIncrementalPushStores;
   private long kafkaMinLogCompactionLagInMs;
 
   /**
@@ -303,8 +301,6 @@ public class VeniceControllerClusterConfig {
     }
     minIsr = props.getOptionalInt(KAFKA_MIN_ISR);
     kafkaLogCompactionForHybridStores = props.getBoolean(KAFKA_LOG_COMPACTION_FOR_HYBRID_STORES, true);
-    kafkaLogCompactionForIncrementalPushStores =
-        props.getBoolean(KAFKA_LOG_COMPACTION_FOR_INCREMENTAL_PUSH_STORES, true);
     kafkaMinLogCompactionLagInMs =
         props.getLong(KAFKA_MIN_LOG_COMPACTION_LAG_MS, DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS);
     replicationFactor = props.getInt(DEFAULT_REPLICA_FACTOR);
@@ -603,10 +599,6 @@ public class VeniceControllerClusterConfig {
 
   public boolean isKafkaLogCompactionForHybridStoresEnabled() {
     return kafkaLogCompactionForHybridStores;
-  }
-
-  public boolean isKafkaLogCompactionForIncrementalPushStoresEnabled() {
-    return kafkaLogCompactionForIncrementalPushStores;
   }
 
   public long getKafkaMinLogCompactionLagInMs() {

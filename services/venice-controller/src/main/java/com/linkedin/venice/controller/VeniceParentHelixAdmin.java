@@ -2322,14 +2322,6 @@ public class VeniceParentHelixAdmin implements Admin {
         setStore.hybridStoreConfig = hybridStoreConfigRecord;
       }
 
-      if (incrementalPushEnabled.orElse(currStore.isIncrementalPushEnabled())
-          && !veniceHelixAdmin.isHybrid(currStore.getHybridStoreConfig())
-          && !veniceHelixAdmin.isHybrid(hybridStoreConfig)) {
-        LOGGER.info(
-            "Enabling incremental push for a batch store:{} will convert it to a hybrid store with default configs.",
-            storeName);
-      }
-
       /**
        * Set storage quota according to store properties. For hybrid stores, rocksDB has the overhead ratio as we
        * do append-only and compaction will happen later.
