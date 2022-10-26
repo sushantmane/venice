@@ -18,7 +18,6 @@ import static com.linkedin.venice.hadoop.VenicePushJob.SUPPRESS_END_OF_PUSH_MESS
 import static com.linkedin.venice.hadoop.VenicePushJob.VALUE_FIELD_PROP;
 import static com.linkedin.venice.hadoop.VenicePushJob.getLatestPathOfInputDirectory;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_OFFSET_LAG_THRESHOLD;
-import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_TIME_LAG_THRESHOLD;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_REWIND_TIME_IN_SECONDS;
 import static com.linkedin.venice.utils.TestPushUtils.createStoreForJob;
 import static com.linkedin.venice.utils.TestPushUtils.defaultVPJProps;
@@ -476,7 +475,7 @@ public class TestVenicePushJob {
     UpdateStoreQueryParams params = new UpdateStoreQueryParams();
     params.setWriteComputationEnabled(true);
     params.setLeaderFollowerModel(true);
-    params.setHybridRewindSeconds(-1).setHybridOffsetLagThreshold(-1);
+    params.setHybridRewindSeconds(-1).setHybridOffsetLagThreshold(-1); // should not be a hybrid store
 
     controllerClient.createNewStoreWithParameters(storeName, "owner", "\"string\"", "\"string\"", params);
 
@@ -572,7 +571,6 @@ public class TestVenicePushJob {
                 .setPartitionCount(2)
                 .setHybridRewindSeconds(DEFAULT_REWIND_TIME_IN_SECONDS)
                 .setHybridOffsetLagThreshold(DEFAULT_HYBRID_OFFSET_LAG_THRESHOLD)
-                .setHybridTimeLagThreshold(DEFAULT_HYBRID_TIME_LAG_THRESHOLD)
                 .setHybridDataReplicationPolicy(DataReplicationPolicy.NONE)
                 .setLeaderFollowerModel(true)));
     Properties props = defaultVPJProps(veniceCluster, inputDirPath, storeName);
@@ -643,8 +641,8 @@ public class TestVenicePushJob {
             storeName,
             new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
                 .setPartitionCount(2)
-                .setHybridRewindSeconds(10)
-                .setHybridOffsetLagThreshold(1)
+                .setHybridRewindSeconds(DEFAULT_REWIND_TIME_IN_SECONDS)
+                .setHybridOffsetLagThreshold(0)
                 .setHybridDataReplicationPolicy(DataReplicationPolicy.AGGREGATE)
                 .setWriteComputationEnabled(true)
                 .setLeaderFollowerModel(true)));
