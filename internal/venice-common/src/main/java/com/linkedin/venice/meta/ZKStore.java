@@ -446,6 +446,8 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
     } else {
       this.storeProperties.hybridConfig = hybridStoreConfig.dataModel();
     }
+    // for backward compatibility
+    this.storeProperties.incrementalPushEnabled = this.storeProperties.hybridConfig != null;
   }
 
   @Override

@@ -487,8 +487,6 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     assertTrue(rmdVersionID.isPresent());
     assertEquals((int) rmdVersionID.get(), 2);
 
-    // test hybrid config
-    // set incrementalPushEnabled to be false as hybrid and incremental are mutex
     assertFalse(veniceAdmin.getStore(clusterName, storeName).isIncrementalPushEnabled());
     assertFalse(veniceAdmin.getStore(clusterName, storeName).isHybrid());
     veniceAdmin.updateStore(

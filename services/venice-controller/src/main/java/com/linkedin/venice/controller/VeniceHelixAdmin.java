@@ -2127,8 +2127,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               version.setPushStreamSourceAddress(sourceKafkaBootstrapServers);
               version.setNativeReplicationSourceFabric(sourceFabric);
             }
-            if (isParent() && (store.isHybrid()
-                && store.getHybridStoreConfig().getDataReplicationPolicy() == DataReplicationPolicy.AGGREGATE)) {
+            if (isParent() && ((store.isHybrid()
+                && store.getHybridStoreConfig().getDataReplicationPolicy() == DataReplicationPolicy.AGGREGATE))) {
               // Create rt topic in parent colo if the store is aggregate mode hybrid store
               String realTimeTopic = Version.composeRealTimeTopic(storeName);
               if (!getTopicManager().containsTopic(realTimeTopic)) {
@@ -3651,7 +3651,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     Optional<Boolean> chunkingEnabled = params.getChunkingEnabled();
     Optional<Integer> batchGetLimit = params.getBatchGetLimit();
     Optional<Integer> numVersionsToPreserve = params.getNumVersionsToPreserve();
-    Optional<Boolean> incrementalPushEnabled = params.getIncrementalPushEnabled();
     Optional<Boolean> storeMigration = params.getStoreMigration();
     Optional<Boolean> writeComputationEnabled = params.getWriteComputationEnabled();
     Optional<Integer> replicationMetadataVersionID = params.getReplicationMetadataVersionID();
@@ -3686,14 +3685,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       newHybridStoreConfig = Optional.ofNullable(hybridConfig);
     } else {
       newHybridStoreConfig = Optional.empty();
-    }
-
-    if (incrementalPushEnabled.orElse(false)
-        && !isHybrid(newHybridStoreConfig.orElse(originalStore.getHybridStoreConfig()))) {
-      LOGGER.error(
-          "Directly enabling incremental push store is no longer supported. Convert store: {} to hybrid type to use incremental push feature.",
-          storeName);
-      throw new VeniceException("Enabled Incremental Push Is An Unsupported Operation.");
     }
 
     try {
@@ -3783,7 +3774,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
              * still consuming the RT topic.
              */
             store.setHybridStoreConfig(null);
-            store.setIncrementalPushEnabled(false); // for backward compatibility
             if (store.isLeaderFollowerModelEnabled() || clusterConfig.isLfModelDependencyCheckDisabled()) {
               // Disabling hybrid configs for a L/F store
               // Enable/disable native replication for batch-only stores if the cluster level config for new batch
@@ -3810,7 +3800,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                   clusterConfig.isActiveActiveReplicationEnabledAsDefaultForHybrid());
             }
             store.setHybridStoreConfig(finalHybridConfig);
-            store.setIncrementalPushEnabled(true); // for backward compatibility
             if (getTopicManager().containsTopicAndAllPartitionsAreOnline(Version.composeRealTimeTopic(storeName))) {
               // RT already exists, ensure the retention is correct
               getTopicManager().updateTopicRetention(
