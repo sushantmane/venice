@@ -284,12 +284,6 @@ public interface Store {
 
   void setStoreMetaSystemStoreEnabled(boolean storeMetaSystemStoreEnabled);
 
-  @Deprecated
-  IncrementalPushPolicy getIncrementalPushPolicy();
-
-  @Deprecated
-  void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy);
-
   long getLatestVersionPromoteToCurrentTimestamp();
 
   void setLatestVersionPromoteToCurrentTimestamp(long latestVersionPromoteToCurrentTimestamp);

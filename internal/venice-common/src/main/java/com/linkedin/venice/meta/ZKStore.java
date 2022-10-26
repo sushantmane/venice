@@ -210,7 +210,6 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
     setHybridStoreDiskQuotaEnabled(store.isHybridStoreDiskQuotaEnabled());
     setEtlStoreConfig(store.getEtlStoreConfig());
     setStoreMetadataSystemStoreEnabled(store.isStoreMetadataSystemStoreEnabled());
-    setIncrementalPushPolicy(IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME); // to be cleaned up in phase-II
     setLatestVersionPromoteToCurrentTimestamp(store.getLatestVersionPromoteToCurrentTimestamp());
     setBackupVersionRetentionMs(store.getBackupVersionRetentionMs());
     setReplicationFactor(store.getReplicationFactor());
@@ -683,16 +682,6 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
   @Override
   public void setStoreMetaSystemStoreEnabled(boolean storeMetaSystemStoreEnabled) {
     this.storeProperties.storeMetaSystemStoreEnabled = storeMetaSystemStoreEnabled;
-  }
-
-  @Override
-  public IncrementalPushPolicy getIncrementalPushPolicy() {
-    return IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME;
-  }
-
-  @Override
-  public void setIncrementalPushPolicy(IncrementalPushPolicy incrementalPushPolicy) {
-    this.storeProperties.incrementalPushPolicy = IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME.getValue();
   }
 
   @Override

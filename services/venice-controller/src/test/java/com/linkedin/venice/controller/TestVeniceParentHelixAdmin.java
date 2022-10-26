@@ -1758,7 +1758,8 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     Assert.assertEquals(adminMessage.operationType, AdminMessageType.UPDATE_STORE.getValue());
 
     UpdateStore updateStore = (UpdateStore) adminMessage.payloadUnion;
-    Assert.assertEquals(updateStore.incrementalPushEnabled, true);
+    Assert.assertNotNull(updateStore.hybridStoreConfig);
+    Assert.assertEquals(updateStore.hybridStoreConfig.getRewindTimeInSeconds(), 3600);
 
     long readQuota = 100L;
     boolean readability = true;

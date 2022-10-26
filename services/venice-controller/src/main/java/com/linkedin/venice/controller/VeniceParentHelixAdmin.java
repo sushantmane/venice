@@ -148,7 +148,6 @@ import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.ETLStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfig;
-import com.linkedin.venice.meta.IncrementalPushPolicy;
 import com.linkedin.venice.meta.Instance;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.ReadWriteStoreRepository;
@@ -2168,7 +2167,6 @@ public class VeniceParentHelixAdmin implements Admin {
       setStore.clusterName = clusterName;
       setStore.storeName = storeName;
       setStore.owner = owner.map(addToUpdatedConfigList(updatedConfigsList, OWNER)).orElseGet(currStore::getOwner);
-      setStore.incrementalPushPolicy = IncrementalPushPolicy.INCREMENTAL_PUSH_SAME_AS_REAL_TIME.getValue();
 
       // Invalid config update on hybrid will not be populated to admin channel so subsequent updates on the store won't
       // be blocked by retry mechanism.
