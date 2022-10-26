@@ -477,7 +477,6 @@ public class AdminExecutionTask implements Callable<Void> {
         .setChunkingEnabled(message.chunkingEnabled)
         .setBatchGetLimit(message.batchGetLimit)
         .setNumVersionsToPreserve(message.numVersionsToPreserve)
-        .setIncrementalPushEnabled(message.incrementalPushEnabled)
         .setStoreMigration(message.isMigrating)
         .setWriteComputationEnabled(message.writeComputationEnabled)
         .setReadComputationEnabled(message.readComputationEnabled)
