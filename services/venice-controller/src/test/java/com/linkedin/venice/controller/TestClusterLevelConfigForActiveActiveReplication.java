@@ -134,14 +134,6 @@ public class TestClusterLevelConfigForActiveActiveReplication extends AbstractTe
     // Store level active active should be enabled since this store is a batch-only store by default
     assertTrue(veniceAdmin.getStore(clusterName, storeNameBatchOnly).isActiveActiveReplicationEnabled());
 
-    // After updating the store to have incremental push enabled, its A/A is disabled
-    veniceAdmin.setIncrementalPushEnabled(clusterName, storeNameBatchOnly, true);
-    assertFalse(veniceAdmin.getStore(clusterName, storeNameBatchOnly).isActiveActiveReplicationEnabled());
-
-    // After updating the store back to a batch-only store, its A/A becomes enabled again
-    veniceAdmin.setIncrementalPushEnabled(clusterName, storeNameBatchOnly, false);
-    assertTrue(veniceAdmin.getStore(clusterName, storeNameBatchOnly).isActiveActiveReplicationEnabled());
-
     // After updating the store to be a hybrid store, its A/A is disabled is again
     veniceAdmin.updateStore(
         clusterName,
