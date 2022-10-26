@@ -1664,9 +1664,7 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     veniceAdmin.updateStore(
         clusterName,
         incrementalAndHybridEnabledStoreName,
-        new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1)
-            .setHybridRewindSeconds(0)
-            .setIncrementalPushEnabled(true));
+        new UpdateStoreQueryParams().setHybridOffsetLagThreshold(1).setHybridRewindSeconds(0));
     veniceAdmin.incrementVersionIdempotent(
         clusterName,
         incrementalAndHybridEnabledStoreName,
