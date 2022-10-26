@@ -3388,12 +3388,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       VeniceControllerClusterConfig config = getHelixVeniceClusterResources(clusterName).getConfig();
       if (incrementalPushEnabled) {
         // Enabling incremental push
-        if (config.isLeaderFollowerEnabledForIncrementalPushStores()) {
+        if (config.isLeaderFollowerEnabledForHybridStores()) {
           store.setLeaderFollowerModelEnabled(true);
         }
-        store.setActiveActiveReplicationEnabled(config.isActiveActiveReplicationEnabledAsDefaultForIncremental());
-        store.setNativeReplicationEnabled(config.isNativeReplicationEnabledAsDefaultForIncremental());
-        store.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForIncremental());
+        store.setActiveActiveReplicationEnabled(config.isActiveActiveReplicationEnabledAsDefaultForHybrid());
+        store.setNativeReplicationEnabled(config.isNativeReplicationEnabledAsDefaultForHybrid());
+        store.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForHybrid());
       } else {
         // Disabling incremental push
         if (store.isHybrid()) {
@@ -3721,7 +3721,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     if (incrementalPushEnabled.orElse(false)
         && !isHybrid(newHybridStoreConfig.orElse(originalStore.getHybridStoreConfig()))) {
       LOGGER.error(
-          "Directly enabling incremental push store is no longer supported. Make store hybrid to use incremental push feature. Store: {}",
+          "Directly enabling incremental push store is no longer supported. Convert store: {} to hybrid type to use incremental push feature.",
           storeName);
       throw new VeniceException("Enabled Incremental Push Is An Unsupported Operation.");
     }
@@ -3808,57 +3808,39 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         storeMetadataUpdate(clusterName, storeName, store -> {
           if (!isHybrid(finalHybridConfig)) {
             /**
-             * If all of the hybrid config values are negative, it indicates that the store is being set back to batch-only store.
+             * If all the hybrid config values are negative, it indicates that the store is being set back to batch-only store.
              * We cannot remove the RT topic immediately because with NR and AA, existing current version is
              * still consuming the RT topic.
              */
             store.setHybridStoreConfig(null);
+            store.setIncrementalPushEnabled(false); // for backward compatibility
             if (store.isLeaderFollowerModelEnabled() || clusterConfig.isLfModelDependencyCheckDisabled()) {
               // Disabling hybrid configs for a L/F store
-              if (!store.isIncrementalPushEnabled()) {
-                // Enable/disable native replication for batch-only stores if the cluster level config for new batch
-                // stores is on
-                store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForBatchOnly());
-                store.setNativeReplicationSourceFabric(
-                    clusterConfig.getNativeReplicationSourceFabricAsDefaultForBatchOnly());
-                store.setActiveActiveReplicationEnabled(
-                    clusterConfig.isActiveActiveReplicationEnabledAsDefaultForBatchOnly());
-              } else {
-                store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForIncremental());
-                store.setNativeReplicationSourceFabric(
-                    clusterConfig.getNativeReplicationSourceFabricAsDefaultForIncremental());
-                store.setActiveActiveReplicationEnabled(
-                    clusterConfig.isActiveActiveReplicationEnabledAsDefaultForIncremental());
-              }
+              // Enable/disable native replication for batch-only stores if the cluster level config for new batch
+              // stores is on
+              store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForBatchOnly());
+              store.setNativeReplicationSourceFabric(
+                  clusterConfig.getNativeReplicationSourceFabricAsDefaultForBatchOnly());
+              store.setActiveActiveReplicationEnabled(
+                  clusterConfig.isActiveActiveReplicationEnabledAsDefaultForBatchOnly());
             }
           } else {
             if (!store.isHybrid() && (clusterConfig.isLeaderFollowerEnabledForHybridStores()
                 || clusterConfig.isLfModelDependencyCheckDisabled())) {
               // This is a new hybrid store. Enable L/F if the config is set to true.
               store.setLeaderFollowerModelEnabled(true);
-              if (!store.isIncrementalPushEnabled()) {
-                // Enable/disable native replication for hybrid stores if the cluster level config for new hybrid stores
-                // is on
-                store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForHybrid());
-                store.setNativeReplicationSourceFabric(
-                    clusterConfig.getNativeReplicationSourceFabricAsDefaultForHybrid());
-                // Enable/disable active-active replication for hybrid stores if the cluster level config for new hybrid
-                // stores is on
-                store.setActiveActiveReplicationEnabled(
-                    clusterConfig.isActiveActiveReplicationEnabledAsDefaultForHybrid());
-              } else {
-                // The native replication cluster level config for incremental push will cover all incremental push
-                // policy
-                store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForIncremental());
-                store.setNativeReplicationSourceFabric(
-                    clusterConfig.getNativeReplicationSourceFabricAsDefaultForIncremental());
-                // The active-active replication cluster level config for incremental push will cover all incremental
-                // push policy
-                store.setActiveActiveReplicationEnabled(
-                    clusterConfig.isActiveActiveReplicationEnabledAsDefaultForIncremental());
-              }
+              // Enable/disable native replication for hybrid stores if the cluster level config for new hybrid stores
+              // is on
+              store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForHybrid());
+              store
+                  .setNativeReplicationSourceFabric(clusterConfig.getNativeReplicationSourceFabricAsDefaultForHybrid());
+              // Enable/disable active-active replication for hybrid stores if the cluster level config for new hybrid
+              // stores is on
+              store.setActiveActiveReplicationEnabled(
+                  clusterConfig.isActiveActiveReplicationEnabledAsDefaultForHybrid());
             }
             store.setHybridStoreConfig(finalHybridConfig);
+            store.setIncrementalPushEnabled(true); // for backward compatibility
             if (getTopicManager().containsTopicAndAllPartitionsAreOnline(Version.composeRealTimeTopic(storeName))) {
               // RT already exists, ensure the retention is correct
               getTopicManager().updateTopicRetention(
