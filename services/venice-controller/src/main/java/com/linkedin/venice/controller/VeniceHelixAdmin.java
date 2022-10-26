@@ -5,7 +5,6 @@ import static com.linkedin.venice.controller.UserSystemStoreLifeCycleHelper.AUTO
 import static com.linkedin.venice.controller.UserSystemStoreLifeCycleHelper.DEFAULT_META_SYSTEM_STORE_SIZE;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_OFFSET_LAG_THRESHOLD;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_TIME_LAG_THRESHOLD;
-import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_REWIND_TIME_IN_SECONDS;
 import static com.linkedin.venice.meta.Version.PushType;
 import static com.linkedin.venice.meta.VersionStatus.ERROR;
 import static com.linkedin.venice.meta.VersionStatus.NOT_CREATED;
@@ -3383,35 +3382,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     });
   }
 
-  void setIncrementalPushEnabled(String clusterName, String storeName, boolean incrementalPushEnabled) {
-    storeMetadataUpdate(clusterName, storeName, store -> {
-      VeniceControllerClusterConfig config = getHelixVeniceClusterResources(clusterName).getConfig();
-      if (incrementalPushEnabled) {
-        // Enabling incremental push
-        if (config.isLeaderFollowerEnabledForHybridStores()) {
-          store.setLeaderFollowerModelEnabled(true);
-        }
-        store.setActiveActiveReplicationEnabled(config.isActiveActiveReplicationEnabledAsDefaultForHybrid());
-        store.setNativeReplicationEnabled(config.isNativeReplicationEnabledAsDefaultForHybrid());
-        store.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForHybrid());
-      } else {
-        // Disabling incremental push
-        if (store.isHybrid()) {
-          store.setActiveActiveReplicationEnabled(config.isActiveActiveReplicationEnabledAsDefaultForHybrid());
-          store.setNativeReplicationEnabled(config.isNativeReplicationEnabledAsDefaultForHybrid());
-          store.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForHybrid());
-        } else {
-          store.setActiveActiveReplicationEnabled(config.isActiveActiveReplicationEnabledAsDefaultForBatchOnly());
-          store.setNativeReplicationEnabled(config.isNativeReplicationEnabledAsDefaultForBatchOnly());
-          store.setNativeReplicationSourceFabric(config.getNativeReplicationSourceFabricAsDefaultForBatchOnly());
-        }
-      }
-      store.setIncrementalPushEnabled(incrementalPushEnabled);
-
-      return store;
-    });
-  }
-
   private void setReplicationFactor(String clusterName, String storeName, int replicaFactor) {
     storeMetadataUpdate(clusterName, storeName, store -> {
       store.setReplicationFactor(replicaFactor);
@@ -3829,8 +3799,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                 || clusterConfig.isLfModelDependencyCheckDisabled())) {
               // This is a new hybrid store. Enable L/F if the config is set to true.
               store.setLeaderFollowerModelEnabled(true);
-              // Enable/disable native replication for hybrid stores if the cluster level config for new hybrid stores
-              // is on
+              // Enable/disable native replication for hybrid stores if the cluster level config
+              // for new hybrid stores is on
               store.setNativeReplicationEnabled(clusterConfig.isNativeReplicationEnabledAsDefaultForHybrid());
               store
                   .setNativeReplicationSourceFabric(clusterConfig.getNativeReplicationSourceFabricAsDefaultForHybrid());
@@ -3874,13 +3844,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
       if (numVersionsToPreserve.isPresent()) {
         setNumVersionsToPreserve(clusterName, storeName, numVersionsToPreserve.get());
-      }
-
-      if (incrementalPushEnabled.isPresent()) {
-        if (incrementalPushEnabled.get()) {
-          enableHybridModeOrUpdateSettings(clusterName, storeName);
-        }
-        setIncrementalPushEnabled(clusterName, storeName, incrementalPushEnabled.get());
       }
 
       if (replicationFactor.isPresent()) {
@@ -4016,30 +3979,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     }
   }
 
-  private void enableHybridModeOrUpdateSettings(String clusterName, String storeName) {
-    storeMetadataUpdate(clusterName, storeName, store -> {
-      HybridStoreConfig hybridStoreConfig = store.getHybridStoreConfig();
-      if (hybridStoreConfig == null) {
-        store.setHybridStoreConfig(
-            new HybridStoreConfigImpl(
-                DEFAULT_REWIND_TIME_IN_SECONDS,
-                DEFAULT_HYBRID_OFFSET_LAG_THRESHOLD,
-                DEFAULT_HYBRID_TIME_LAG_THRESHOLD,
-                DataReplicationPolicy.NONE,
-                null));
-      } else if (hybridStoreConfig.getDataReplicationPolicy() == null) {
-        store.setHybridStoreConfig(
-            new HybridStoreConfigImpl(
-                hybridStoreConfig.getRewindTimeInSeconds(),
-                hybridStoreConfig.getOffsetLagThresholdToGoOnline(),
-                hybridStoreConfig.getProducerTimestampLagThresholdToGoOnlineInSeconds(),
-                DataReplicationPolicy.NONE,
-                hybridStoreConfig.getBufferReplayPolicy()));
-      }
-      return store;
-    });
-  }
-
   /**
    * This method is invoked in parent controllers for store migration.
    */
@@ -4103,18 +4042,13 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     HybridStoreConfig mergedHybridStoreConfig;
     if (oldStore.isHybrid()) { // for an existing hybrid store, just replace any specified values
       HybridStoreConfig oldHybridConfig = oldStore.getHybridStoreConfig().clone();
+      DataReplicationPolicy drPolicy = hybridDataReplicationPolicy.orElseGet(oldHybridConfig::getDataReplicationPolicy);
       mergedHybridStoreConfig = new HybridStoreConfigImpl(
-          hybridRewindSeconds.isPresent() ? hybridRewindSeconds.get() : oldHybridConfig.getRewindTimeInSeconds(),
-          hybridOffsetLagThreshold.isPresent()
-              ? hybridOffsetLagThreshold.get()
-              : oldHybridConfig.getOffsetLagThresholdToGoOnline(),
-          hybridTimeLagThreshold.isPresent()
-              ? hybridTimeLagThreshold.get()
-              : oldHybridConfig.getProducerTimestampLagThresholdToGoOnlineInSeconds(),
-          hybridDataReplicationPolicy.isPresent()
-              ? hybridDataReplicationPolicy.get()
-              : oldHybridConfig.getDataReplicationPolicy(),
-          bufferReplayPolicy.isPresent() ? bufferReplayPolicy.get() : oldHybridConfig.getBufferReplayPolicy());
+          hybridRewindSeconds.orElseGet(oldHybridConfig::getRewindTimeInSeconds),
+          hybridOffsetLagThreshold.orElseGet(oldHybridConfig::getOffsetLagThresholdToGoOnline),
+          hybridTimeLagThreshold.orElseGet(oldHybridConfig::getProducerTimestampLagThresholdToGoOnlineInSeconds),
+          drPolicy != null ? drPolicy : DataReplicationPolicy.NONE,
+          bufferReplayPolicy.orElseGet(oldHybridConfig::getBufferReplayPolicy));
     } else {
       // switching a non-hybrid store to hybrid; must specify:
       // 1. rewind time
