@@ -77,14 +77,6 @@ public class ConfigKeys {
   public static final String KAFKA_LOG_COMPACTION_FOR_HYBRID_STORES = "kafka.log.compaction.for.hybrid.stores";
 
   /**
-   * Whether to turn on Kafka's log compaction for the store-version topics of incremental push stores.
-   *
-   * Will take effect at topic creation time, and when the incremental push config for the store is turned on.
-   */
-  public static final String KAFKA_LOG_COMPACTION_FOR_INCREMENTAL_PUSH_STORES =
-      "kafka.log.compaction.for.incremental.push.stores";
-
-  /**
    * For log compaction enabled topics, this config will define the minimum time a message will remain uncompacted in the log.
    */
   public static final String KAFKA_MIN_LOG_COMPACTION_LAG_MS = "kafka.min.log.compaction.lag.ms";
