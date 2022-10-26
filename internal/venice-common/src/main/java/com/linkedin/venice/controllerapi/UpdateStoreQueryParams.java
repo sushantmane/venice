@@ -104,7 +104,6 @@ public class UpdateStoreQueryParams extends QueryParams {
             .setEnableReads(srcStore.isEnableStoreReads())
             .setEnableWrites(srcStore.isEnableStoreWrites())
             .setHybridStoreDiskQuotaEnabled(srcStore.isHybridStoreDiskQuotaEnabled())
-            .setIncrementalPushEnabled(srcStore.isIncrementalPushEnabled())
             .setLargestUsedVersionNumber(srcStore.getLargestUsedVersionNumber())
             .setLeaderFollowerModel(srcStore.isLeaderFollowerModelEnabled())
             .setNativeReplicationEnabled(srcStore.isNativeReplicationEnabled())
@@ -363,10 +362,6 @@ public class UpdateStoreQueryParams extends QueryParams {
 
   public Optional<Boolean> getChunkingEnabled() {
     return getBoolean(CHUNKING_ENABLED);
-  }
-
-  public UpdateStoreQueryParams setIncrementalPushEnabled(boolean incrementalPushEnabled) {
-    return putBoolean(INCREMENTAL_PUSH_ENABLED, incrementalPushEnabled);
   }
 
   public Optional<Boolean> getIncrementalPushEnabled() {
