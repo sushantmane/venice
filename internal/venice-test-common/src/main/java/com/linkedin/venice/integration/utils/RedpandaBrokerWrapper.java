@@ -8,7 +8,7 @@ import org.testcontainers.redpanda.RedpandaContainer;
 
 public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
   private static final String REDPANDA_IMAGE = "docker.redpanda.com/vectorized/redpanda:v22.2.1";
-  private final RedpandaContainer redpandaContainer;
+  // private final RedpandaContainer redpandaContainer;
   private final ZkServerWrapper zkServerWrapper;
   private static final int REDPANDA_PORT = 9092;
   public static final String SERVICE_NAME = "PubSubRedPanda";
@@ -16,7 +16,7 @@ public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
   RedpandaBrokerWrapper(String serviceName, File dataDirectory, ZkServerWrapper zkServerWrapper) {
     super(serviceName, dataDirectory);
     this.zkServerWrapper = zkServerWrapper;
-    this.redpandaContainer = new RedpandaContainer(REDPANDA_IMAGE);
+    // this.redpandaContainer = new RedpandaContainer(REDPANDA_IMAGE);
   }
 
   static StatefulServiceProvider<PubSubBrokerWrapper> generateService(
@@ -27,12 +27,12 @@ public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
 
   @Override
   protected void internalStart() throws Exception {
-    redpandaContainer.start();
+    // redpandaContainer.start();
   }
 
   @Override
   protected void internalStop() throws Exception {
-    redpandaContainer.stop();
+    // redpandaContainer.stop();
   }
 
   @Override
@@ -41,17 +41,20 @@ public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
 
   @Override
   public String getHost() {
-    return redpandaContainer.getHost();
+    // return redpandaContainer.getHost();
+    return "localhost";
   }
 
   @Override
   public int getPort() {
-    return redpandaContainer.getMappedPort(REDPANDA_PORT);
+    // return redpandaContainer.getMappedPort(REDPANDA_PORT);
+    return REDPANDA_PORT;
   }
 
   @Override
   public int getSslPort() {
-    return redpandaContainer.getMappedPort(REDPANDA_PORT);
+    // return redpandaContainer.getMappedPort(REDPANDA_PORT);
+    return REDPANDA_PORT;
   }
 
   @Override
@@ -78,7 +81,8 @@ public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
     RedpandaContainer redpandaContainer = new RedpandaContainer(REDPANDA_IMAGE);
     redpandaContainer.start();
 
-    System.out.println(redpandaContainer);
+    System.out.println(redpandaContainer.getHost());
+    System.out.println(redpandaContainer.getBootstrapServers());
 
     redpandaContainer.stop();
   }
