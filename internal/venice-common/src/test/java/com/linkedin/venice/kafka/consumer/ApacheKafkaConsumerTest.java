@@ -1,6 +1,6 @@
 package com.linkedin.venice.kafka.consumer;
 
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.ZkServerWrapper;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
@@ -21,7 +21,7 @@ import org.testng.annotations.Test;
 
 public class ApacheKafkaConsumerTest {
   ApacheKafkaConsumer consumer;
-  KafkaBrokerWrapper kafkaBroker;
+  PubSubBrokerWrapper kafkaBroker;
   private ZkServerWrapper zkServer;
 
   @BeforeMethod

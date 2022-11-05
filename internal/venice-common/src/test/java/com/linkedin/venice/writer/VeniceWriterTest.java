@@ -12,7 +12,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
 import com.linkedin.venice.ConfigKeys;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.ZkServerWrapper;
 import com.linkedin.venice.kafka.KafkaClientFactory;
@@ -59,7 +59,7 @@ import org.testng.annotations.Test;
 
 @Test
 public class VeniceWriterTest {
-  private KafkaBrokerWrapper kafka;
+  private PubSubBrokerWrapper kafka;
   private TopicManager topicManager;
   private KafkaClientFactory kafkaClientFactory;
   private ZkServerWrapper zkServer;

@@ -25,14 +25,14 @@ public class VeniceMultiClusterWrapper extends ProcessWrapper {
   private final Map<String, VeniceClusterWrapper> clusters;
   private final Map<Integer, VeniceControllerWrapper> controllers;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper kafkaBrokerWrapper;
+  private final PubSubBrokerWrapper kafkaBrokerWrapper;
   private final Map<String, String> clusterToD2;
   private final D2Client clientConfigD2Client;
 
   VeniceMultiClusterWrapper(
       File dataDirectory,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       Map<String, VeniceClusterWrapper> clusters,
       Map<Integer, VeniceControllerWrapper> controllers,
       Map<String, String> clusterToD2,
@@ -50,7 +50,7 @@ public class VeniceMultiClusterWrapper extends ProcessWrapper {
     Map<String, VeniceClusterWrapper> clusterWrapperMap = new HashMap<>();
     Map<Integer, VeniceControllerWrapper> controllerMap = new HashMap<>();
     ZkServerWrapper zkServerWrapper = options.getZkServerWrapper();
-    KafkaBrokerWrapper kafkaBrokerWrapper = options.getKafkaBrokerWrapper();
+    PubSubBrokerWrapper kafkaBrokerWrapper = options.getKafkaBrokerWrapper();
 
     try {
       if (zkServerWrapper == null) {
@@ -145,7 +145,7 @@ public class VeniceMultiClusterWrapper extends ProcessWrapper {
                 .collect(Collectors.joining(",")));
       }
       final ZkServerWrapper finalZkServerWrapper = zkServerWrapper;
-      final KafkaBrokerWrapper finalKafkaBrokerWrapper = kafkaBrokerWrapper;
+      final PubSubBrokerWrapper finalKafkaBrokerWrapper = kafkaBrokerWrapper;
       return (serviceName) -> new VeniceMultiClusterWrapper(
           null,
           finalZkServerWrapper,
@@ -206,7 +206,7 @@ public class VeniceMultiClusterWrapper extends ProcessWrapper {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getKafkaBrokerWrapper() {
+  public PubSubBrokerWrapper getKafkaBrokerWrapper() {
     return kafkaBrokerWrapper;
   }
 

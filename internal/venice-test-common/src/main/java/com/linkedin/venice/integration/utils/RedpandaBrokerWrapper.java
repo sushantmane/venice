@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.testcontainers.redpanda.RedpandaContainer;
 
 
-public class RedpandaBrokerWrapper extends KafkaBrokerWrapper {
+public class RedpandaBrokerWrapper extends PubSubBrokerWrapper {
   private static final String REDPANDA_IMAGE = "docker.redpanda.com/vectorized/redpanda:v22.2.1";
   private final RedpandaContainer redpandaContainer;
   private final ZkServerWrapper zkServerWrapper;
@@ -19,7 +19,7 @@ public class RedpandaBrokerWrapper extends KafkaBrokerWrapper {
     this.redpandaContainer = new RedpandaContainer(REDPANDA_IMAGE);
   }
 
-  static StatefulServiceProvider<KafkaBrokerWrapper> generateService(
+  static StatefulServiceProvider<PubSubBrokerWrapper> generateService(
       ZkServerWrapper zkServerWrapper,
       Optional<MockTime> mockTime) {
     return (String serviceName, File dir) -> new RedpandaBrokerWrapper(serviceName, dir, zkServerWrapper);

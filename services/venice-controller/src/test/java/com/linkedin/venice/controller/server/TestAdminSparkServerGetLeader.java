@@ -6,7 +6,7 @@ import static com.linkedin.venice.controllerapi.ControllerRoute.LEADER_CONTROLLE
 import com.linkedin.venice.controllerapi.ControllerApiConstants;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceControllerCreateOptions;
 import com.linkedin.venice.integration.utils.VeniceControllerWrapper;
@@ -39,7 +39,7 @@ import org.testng.annotations.Test;
 public class TestAdminSparkServerGetLeader {
   private String cluster = "test-primary-cluster";
   private VeniceControllerWrapper veniceControllerWrapper;
-  private KafkaBrokerWrapper kafkaBrokerWrapper;
+  private PubSubBrokerWrapper kafkaBrokerWrapper;
   private ZkServerWrapper zkServer;
 
   @BeforeMethod

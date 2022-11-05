@@ -103,9 +103,9 @@ public class ServiceFactory {
   }
 
   /**
-   * @return an instance of {@link KafkaBrokerWrapper}
+   * @return an instance of {@link PubSubBrokerWrapper}
    */
-  public static KafkaBrokerWrapper getKafkaBroker() {
+  public static PubSubBrokerWrapper getKafkaBroker() {
     /**
      * Get the ZK dependency outside of the lambda, to avoid time complexity of
      * O({@value maxAttempt} ^2) on the amount of retries. {@link #getZkServer()}
@@ -115,14 +115,14 @@ public class ServiceFactory {
     return getKafkaBroker(ServiceFactory.getZkServer());
   }
 
-  public static KafkaBrokerWrapper getKafkaBroker(ZkServerWrapper zkServerWrapper) {
+  public static PubSubBrokerWrapper getKafkaBroker(ZkServerWrapper zkServerWrapper) {
     return getKafkaBroker(zkServerWrapper, Optional.empty());
   }
 
-  public static KafkaBrokerWrapper getKafkaBroker(ZkServerWrapper zkServerWrapper, Optional<MockTime> mockTime) {
+  public static PubSubBrokerWrapper getKafkaBroker(ZkServerWrapper zkServerWrapper, Optional<MockTime> mockTime) {
     return getStatefulService(
-        KafkaBrokerWrapper.SERVICE_NAME,
-        KafkaBrokerWrapper.generateService(zkServerWrapper, mockTime));
+        PubSubBrokerWrapper.SERVICE_NAME,
+        PubSubBrokerWrapper.generateService(zkServerWrapper, mockTime));
   }
 
   // to get parent controller, add child controllers to controllerCreateOptions
@@ -162,7 +162,7 @@ public class ServiceFactory {
 
   public static VeniceServerWrapper getVeniceServer(
       String clusterName,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       String zkAddress,
       Properties featureProperties,
       Properties configProperties) {
@@ -179,7 +179,7 @@ public class ServiceFactory {
 
   public static VeniceServerWrapper getVeniceServer(
       String clusterName,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       String zkAddress,
       Properties featureProperties,
       Properties configProperties,
@@ -203,7 +203,7 @@ public class ServiceFactory {
   static VeniceRouterWrapper getVeniceRouter(
       String clusterName,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       boolean sslToStorageNodes,
       Map<String, String> clusterToD2,
       Properties extraProperties) {

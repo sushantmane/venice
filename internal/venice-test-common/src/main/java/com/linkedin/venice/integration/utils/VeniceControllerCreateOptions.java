@@ -28,7 +28,7 @@ public class VeniceControllerCreateOptions {
   private final String zkAddress;
   private final Map<String, String> clusterToD2;
   private final VeniceControllerWrapper[] childControllers;
-  private final KafkaBrokerWrapper kafkaBroker;
+  private final PubSubBrokerWrapper kafkaBroker;
   private final Properties extraProperties;
   private final AuthorizerService authorizerService;
 
@@ -146,7 +146,7 @@ public class VeniceControllerCreateOptions {
     return childControllers;
   }
 
-  public KafkaBrokerWrapper getKafkaBroker() {
+  public PubSubBrokerWrapper getKafkaBroker() {
     return kafkaBroker;
   }
 
@@ -160,7 +160,7 @@ public class VeniceControllerCreateOptions {
 
   public static class Builder {
     private final String[] clusterNames;
-    private final KafkaBrokerWrapper kafkaBroker;
+    private final PubSubBrokerWrapper kafkaBroker;
     private boolean sslToKafka = false;
     private boolean d2Enabled = false;
     private boolean isMinActiveReplicaSet = false;
@@ -174,12 +174,12 @@ public class VeniceControllerCreateOptions {
     private Properties extraProperties = new Properties();
     private AuthorizerService authorizerService;
 
-    public Builder(String[] clusterNames, KafkaBrokerWrapper kafkaBroker) {
+    public Builder(String[] clusterNames, PubSubBrokerWrapper kafkaBroker) {
       this.clusterNames = clusterNames;
       this.kafkaBroker = kafkaBroker;
     }
 
-    public Builder(String clusterName, KafkaBrokerWrapper kafkaBroker) {
+    public Builder(String clusterName, PubSubBrokerWrapper kafkaBroker) {
       this(new String[] { clusterName }, kafkaBroker);
     }
 

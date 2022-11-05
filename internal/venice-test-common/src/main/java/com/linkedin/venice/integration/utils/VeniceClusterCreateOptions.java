@@ -36,7 +36,7 @@ public class VeniceClusterCreateOptions {
   private final Properties extraProperties;
   private final Map<String, Map<String, String>> kafkaClusterMap;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper kafkaBrokerWrapper;
+  private final PubSubBrokerWrapper kafkaBrokerWrapper;
 
   private VeniceClusterCreateOptions(Builder builder) {
     this.clusterName = builder.clusterName;
@@ -142,7 +142,7 @@ public class VeniceClusterCreateOptions {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getKafkaBrokerWrapper() {
+  public PubSubBrokerWrapper getKafkaBrokerWrapper() {
     return kafkaBrokerWrapper;
   }
 
@@ -236,7 +236,7 @@ public class VeniceClusterCreateOptions {
     private Properties extraProperties;
     private Map<String, Map<String, String>> kafkaClusterMap;
     private ZkServerWrapper zkServerWrapper;
-    private KafkaBrokerWrapper kafkaBrokerWrapper;
+    private PubSubBrokerWrapper kafkaBrokerWrapper;
 
     public Builder clusterName(String clusterName) {
       this.clusterName = clusterName;
@@ -339,7 +339,7 @@ public class VeniceClusterCreateOptions {
       return this;
     }
 
-    public Builder kafkaBrokerWrapper(KafkaBrokerWrapper kafkaBrokerWrapper) {
+    public Builder kafkaBrokerWrapper(PubSubBrokerWrapper kafkaBrokerWrapper) {
       this.kafkaBrokerWrapper = kafkaBrokerWrapper;
       return this;
     }

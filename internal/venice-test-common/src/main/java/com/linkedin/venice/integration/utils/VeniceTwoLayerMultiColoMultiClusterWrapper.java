@@ -52,12 +52,12 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
   private final List<VeniceMultiClusterWrapper> clusters;
   private final List<VeniceControllerWrapper> parentControllers;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper parentKafkaBrokerWrapper;
+  private final PubSubBrokerWrapper parentKafkaBrokerWrapper;
 
   VeniceTwoLayerMultiColoMultiClusterWrapper(
       File dataDirectory,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper parentKafkaBrokerWrapper,
+      PubSubBrokerWrapper parentKafkaBrokerWrapper,
       List<VeniceMultiClusterWrapper> clusters,
       List<VeniceControllerWrapper> parentControllers) {
     super(SERVICE_NAME, dataDirectory);
@@ -115,8 +115,8 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
     defaultParentControllerProps.setProperty(ADMIN_TOPIC_REMOTE_CONSUMPTION_ENABLED, "false");
 
     ZkServerWrapper zkServer = null;
-    KafkaBrokerWrapper parentKafka = null;
-    List<KafkaBrokerWrapper> allKafkaBrokers = new ArrayList<>();
+    PubSubBrokerWrapper parentKafka = null;
+    List<PubSubBrokerWrapper> allKafkaBrokers = new ArrayList<>();
 
     try {
       zkServer = ServiceFactory.getZkServer();
@@ -152,7 +152,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
        * and or Zookeeper servers.
        */
       Map<String, ZkServerWrapper> zkServerByColoName = new HashMap<>(childColoNames.size());
-      Map<String, KafkaBrokerWrapper> kafkaBrokerByColoName = new HashMap<>(childColoNames.size());
+      Map<String, PubSubBrokerWrapper> kafkaBrokerByColoName = new HashMap<>(childColoNames.size());
 
       defaultParentControllerProps.put(ENABLE_NATIVE_REPLICATION_FOR_BATCH_ONLY, true);
       defaultParentControllerProps.put(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY, true);
@@ -182,7 +182,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
           .put(CHILD_DATA_CENTER_KAFKA_ZK_PREFIX + "." + parentColoName, parentKafka.getZkAddress());
       for (String coloName: childColoNames) {
         ZkServerWrapper zkServerWrapper = ServiceFactory.getZkServer();
-        KafkaBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServerWrapper);
+        PubSubBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServerWrapper);
         allKafkaBrokers.add(kafkaBrokerWrapper);
         zkServerByColoName.put(coloName, zkServerWrapper);
         kafkaBrokerByColoName.put(coloName, kafkaBrokerWrapper);
@@ -256,7 +256,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
       }
 
       final ZkServerWrapper finalZkServer = zkServer;
-      final KafkaBrokerWrapper finalParentKafka = parentKafka;
+      final PubSubBrokerWrapper finalParentKafka = parentKafka;
 
       return (serviceName) -> new VeniceTwoLayerMultiColoMultiClusterWrapper(
           null,
@@ -276,7 +276,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
   private static Map<String, Map<String, String>> addKafkaClusterIDMappingToServerConfigs(
       Optional<VeniceProperties> serverProperties,
       List<String> coloNames,
-      List<KafkaBrokerWrapper> kafkaBrokers) {
+      List<PubSubBrokerWrapper> kafkaBrokers) {
     if (serverProperties.isPresent()) {
       SecurityProtocol baseSecurityProtocol = SecurityProtocol
           .valueOf(serverProperties.get().getString(KAFKA_SECURITY_PROTOCOL, SecurityProtocol.PLAINTEXT.name));
@@ -296,7 +296,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
 
         // N.B. the first Kafka broker in the list is the parent, which we're excluding from the mapping, so this
         // is why the index here is offset by 1 compared to the cluster ID.
-        KafkaBrokerWrapper kafkaBrokerWrapper = kafkaBrokers.get(i);
+        PubSubBrokerWrapper kafkaBrokerWrapper = kafkaBrokers.get(i);
         String kafkaAddress = securityProtocol == SecurityProtocol.SSL
             ? kafkaBrokerWrapper.getSSLAddress()
             : kafkaBrokerWrapper.getAddress();
@@ -309,7 +309,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
       }
       LOGGER.info(
           "addKafkaClusterIDMappingToServerConfigs \n\treceived broker list: \n\t\t{} \n\tand generated cluster map: \n\t\t{}",
-          kafkaBrokers.stream().map(KafkaBrokerWrapper::toString).collect(Collectors.joining("\n\t\t")),
+          kafkaBrokers.stream().map(PubSubBrokerWrapper::toString).collect(Collectors.joining("\n\t\t")),
           kafkaClusterMap.entrySet().stream().map(Objects::toString).collect(Collectors.joining("\n\t\t")));
       return kafkaClusterMap;
     } else {
@@ -357,7 +357,7 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getParentKafkaBrokerWrapper() {
+  public PubSubBrokerWrapper getParentKafkaBrokerWrapper() {
     return parentKafkaBrokerWrapper;
   }
 

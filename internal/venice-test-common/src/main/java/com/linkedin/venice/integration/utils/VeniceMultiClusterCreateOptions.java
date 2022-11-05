@@ -32,7 +32,7 @@ public class VeniceMultiClusterCreateOptions {
   private final boolean forkServer;
   private final Map<String, Map<String, String>> kafkaClusterMap;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper kafkaBrokerWrapper;
+  private final PubSubBrokerWrapper kafkaBrokerWrapper;
   private final Properties childControllerProperties;
   private final VeniceProperties veniceProperties;
 
@@ -104,7 +104,7 @@ public class VeniceMultiClusterCreateOptions {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getKafkaBrokerWrapper() {
+  public PubSubBrokerWrapper getKafkaBrokerWrapper() {
     return kafkaBrokerWrapper;
   }
 
@@ -224,7 +224,7 @@ public class VeniceMultiClusterCreateOptions {
     private boolean isMinActiveReplicaSet = false;
     private Map<String, Map<String, String>> kafkaClusterMap;
     private ZkServerWrapper zkServerWrapper;
-    private KafkaBrokerWrapper kafkaBrokerWrapper;
+    private PubSubBrokerWrapper kafkaBrokerWrapper;
     private Properties childControllerProperties;
     private VeniceProperties veniceProperties;
 
@@ -313,7 +313,7 @@ public class VeniceMultiClusterCreateOptions {
       return this;
     }
 
-    public Builder kafkaBrokerWrapper(KafkaBrokerWrapper kafkaBrokerWrapper) {
+    public Builder kafkaBrokerWrapper(PubSubBrokerWrapper kafkaBrokerWrapper) {
       this.kafkaBrokerWrapper = kafkaBrokerWrapper;
       return this;
     }

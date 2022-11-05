@@ -28,7 +28,7 @@ public class IntegrationTestUtils {
   static VeniceProperties getClusterProps(
       String clusterName,
       String zkAddress,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       boolean sslToKafka) {
     // TODO: Validate that these configs are all still used.
     // TODO: Centralize default config values in a single place

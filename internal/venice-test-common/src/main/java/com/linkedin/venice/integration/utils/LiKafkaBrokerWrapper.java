@@ -25,7 +25,7 @@ import scala.collection.Seq;
  * This class contains a Kafka Broker, and provides facilities for cleaning up
  * its side effects when we're done using it.
  */
-public class LiKafkaBrokerWrapper extends KafkaBrokerWrapper {
+public class LiKafkaBrokerWrapper extends PubSubBrokerWrapper {
   // Class-level state and APIs
   public static final String SERVICE_NAME = "PubSubKafka";
   private static final int OFFSET_TOPIC_PARTITIONS = 1;
@@ -40,7 +40,7 @@ public class LiKafkaBrokerWrapper extends KafkaBrokerWrapper {
    *
    * @return a function which yields a {@link LiKafkaBrokerWrapper} instance
    */
-  static StatefulServiceProvider<KafkaBrokerWrapper> generateService(
+  static StatefulServiceProvider<PubSubBrokerWrapper> generateService(
       ZkServerWrapper zkServerWrapper,
       Optional<MockTime> mockTime) {
     return (String serviceName, File dir) -> {
@@ -176,6 +176,6 @@ public class LiKafkaBrokerWrapper extends KafkaBrokerWrapper {
 
   @Override
   public String toString() {
-    return "KafkaBrokerWrapper{address: '" + getAddress() + "', sslAddress: '" + getSSLAddress() + "'}";
+    return "PubSubBrokerWrapper{address: '" + getAddress() + "', sslAddress: '" + getSSLAddress() + "'}";
   }
 }

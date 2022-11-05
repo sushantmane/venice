@@ -48,7 +48,7 @@ import com.linkedin.venice.helix.HelixInstanceConverter;
 import com.linkedin.venice.helix.HelixReadOnlySchemaRepository;
 import com.linkedin.venice.helix.SafeHelixManager;
 import com.linkedin.venice.helix.VeniceOfflinePushMonitorAccessor;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
 import com.linkedin.venice.integration.utils.VeniceServerWrapper;
@@ -597,7 +597,7 @@ public class TestUtils {
     return new VeniceWriterFactory(factoryProperties, sharedKafkaProducerService);
   }
 
-  public static KafkaClientFactory getVeniceConsumerFactory(KafkaBrokerWrapper kafka) {
+  public static KafkaClientFactory getVeniceConsumerFactory(PubSubBrokerWrapper kafka) {
     return new TestKafkaClientFactory(kafka.getAddress(), kafka.getZkAddress());
   }
 

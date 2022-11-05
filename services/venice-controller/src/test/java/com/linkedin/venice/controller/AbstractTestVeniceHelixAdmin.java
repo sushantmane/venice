@@ -23,7 +23,7 @@ import com.linkedin.venice.helix.HelixAdapterSerializer;
 import com.linkedin.venice.helix.SafeHelixManager;
 import com.linkedin.venice.helix.VeniceOfflinePushMonitorAccessor;
 import com.linkedin.venice.integration.utils.D2TestUtils;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.ZkServerWrapper;
 import com.linkedin.venice.meta.Store;
@@ -73,7 +73,7 @@ class AbstractTestVeniceHelixAdmin {
 
   ZkServerWrapper zkServerWrapper;
   private ZkServerWrapper kafkaZkServer;
-  KafkaBrokerWrapper kafkaBrokerWrapper;
+  PubSubBrokerWrapper kafkaBrokerWrapper;
   SafeHelixManager helixManager;
   Map<String, SafeHelixManager> helixManagerByNodeID = new ConcurrentHashMap<>();
 

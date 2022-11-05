@@ -151,7 +151,7 @@ public class VeniceServerWrapper extends ProcessWrapper implements MetricsAware 
 
   static StatefulServiceProvider<VeniceServerWrapper> generateService(
       String clusterName,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       Properties featureProperties,
       Properties configProperties,
       boolean forkServer,

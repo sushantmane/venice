@@ -12,7 +12,7 @@ import static org.mockito.Mockito.times;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.ZkServerWrapper;
 import com.linkedin.venice.kafka.admin.KafkaAdminWrapper;
@@ -78,7 +78,7 @@ public class TopicManagerTest {
   private static final int WAIT_TIME_IN_SECONDS = 10;
   private static final long MIN_COMPACTION_LAG = 24 * Time.MS_PER_HOUR;
 
-  private KafkaBrokerWrapper kafka;
+  private PubSubBrokerWrapper kafka;
   private TopicManager topicManager;
   private MockTime mockTime;
   private ZkServerWrapper zkServer;

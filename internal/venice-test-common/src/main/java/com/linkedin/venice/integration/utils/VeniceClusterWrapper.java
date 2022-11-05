@@ -82,7 +82,7 @@ import org.testng.Assert;
 /**
  * This is the whole enchilada:
  * - {@link ZkServerWrapper}
- * - {@link KafkaBrokerWrapper}
+ * - {@link PubSubBrokerWrapper}
  * - {@link VeniceControllerWrapper}
  * - {@link VeniceServerWrapper}
  */
@@ -99,7 +99,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
   private final String clusterName;
   private final boolean standalone;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper kafkaBrokerWrapper;
+  private final PubSubBrokerWrapper kafkaBrokerWrapper;
 
   private final int defaultReplicaFactor;
   private final int defaultPartitionSize;
@@ -135,7 +135,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
       String clusterName,
       boolean standalone,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       Map<Integer, VeniceControllerWrapper> veniceControllerWrappers,
       Map<Integer, VeniceServerWrapper> veniceServerWrappers,
       Map<Integer, VeniceRouterWrapper> veniceRouterWrappers,
@@ -177,7 +177,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     }
 
     ZkServerWrapper zkServerWrapper = options.getZkServerWrapper();
-    KafkaBrokerWrapper kafkaBrokerWrapper = options.getKafkaBrokerWrapper();
+    PubSubBrokerWrapper kafkaBrokerWrapper = options.getKafkaBrokerWrapper();
     try {
       if (zkServerWrapper == null) {
         zkServerWrapper = ServiceFactory.getZkServer();
@@ -278,7 +278,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
        * so we can assume they're reliable enough.
        */
       ZkServerWrapper finalZkServerWrapper = zkServerWrapper;
-      KafkaBrokerWrapper finalKafkaBrokerWrapper = kafkaBrokerWrapper;
+      PubSubBrokerWrapper finalKafkaBrokerWrapper = kafkaBrokerWrapper;
       return (serviceName) -> {
         VeniceClusterWrapper veniceClusterWrapper = null;
         try {
@@ -432,7 +432,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getKafka() {
+  public PubSubBrokerWrapper getKafka() {
     return kafkaBrokerWrapper;
   }
 

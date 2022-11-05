@@ -60,7 +60,7 @@ import com.linkedin.venice.controller.stats.AdminConsumptionStats;
 import com.linkedin.venice.controllerapi.ControllerClient;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.guid.GuidUtils;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceControllerCreateOptions;
 import com.linkedin.venice.integration.utils.VeniceControllerWrapper;
@@ -464,7 +464,7 @@ public class TestAdminConsumptionTask {
   @Test(timeOut = TIMEOUT * 6)
   public void testSkipMessageEndToEnd() throws ExecutionException, InterruptedException, IOException {
     try (ZkServerWrapper zkServer = ServiceFactory.getZkServer();
-        KafkaBrokerWrapper kafka = ServiceFactory.getKafkaBroker(zkServer);
+        PubSubBrokerWrapper kafka = ServiceFactory.getKafkaBroker(zkServer);
         TopicManager topicManager =
             new TopicManager(DEFAULT_KAFKA_OPERATION_TIMEOUT_MS, 100, 0L, TestUtils.getVeniceConsumerFactory(kafka))) {
       String adminTopic = AdminTopicUtils.getTopicNameFromClusterName(clusterName);

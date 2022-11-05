@@ -5,10 +5,10 @@ import java.io.File;
 import java.util.Optional;
 
 
-public abstract class KafkaBrokerWrapper extends ProcessWrapper {
+public abstract class PubSubBrokerWrapper extends ProcessWrapper {
   public static final String SERVICE_NAME = "PubSub";
 
-  KafkaBrokerWrapper(String serviceName, File dataDirectory) {
+  PubSubBrokerWrapper(String serviceName, File dataDirectory) {
     super(serviceName, dataDirectory);
   }
 
@@ -17,9 +17,9 @@ public abstract class KafkaBrokerWrapper extends ProcessWrapper {
   /**
    * This is package private because the only way to call this should be from {@link ServiceFactory#getKafkaBroker()}.
    *
-   * @return a function which yields a {@link KafkaBrokerWrapper} instance
+   * @return a function which yields a {@link PubSubBrokerWrapper} instance
    */
-  static StatefulServiceProvider<KafkaBrokerWrapper> generateService(
+  static StatefulServiceProvider<PubSubBrokerWrapper> generateService(
       ZkServerWrapper zkServerWrapper,
       Optional<MockTime> mockTime) {
     if (useRedpanda) {

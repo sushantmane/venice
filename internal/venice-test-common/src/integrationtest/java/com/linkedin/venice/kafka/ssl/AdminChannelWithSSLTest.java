@@ -2,7 +2,7 @@ package com.linkedin.venice.kafka.ssl;
 
 import com.linkedin.venice.controllerapi.ControllerClient;
 import com.linkedin.venice.controllerapi.MultiStoreResponse;
-import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
+import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceControllerCreateOptions;
 import com.linkedin.venice.integration.utils.VeniceControllerWrapper;
@@ -26,7 +26,7 @@ public class AdminChannelWithSSLTest {
     Utils.thisIsLocalhost();
     String clusterName = "test-cluster";
     try (ZkServerWrapper zkServer = ServiceFactory.getZkServer();
-        KafkaBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServer);
+        PubSubBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServer);
         VeniceControllerWrapper childControllerWrapper = ServiceFactory.getVeniceController(
             new VeniceControllerCreateOptions.Builder(clusterName, kafkaBrokerWrapper).replicationFactor(1)
                 .partitionSize(10)

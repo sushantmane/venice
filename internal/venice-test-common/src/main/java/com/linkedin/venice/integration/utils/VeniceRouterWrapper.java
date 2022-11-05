@@ -78,7 +78,7 @@ public class VeniceRouterWrapper extends ProcessWrapper implements MetricsAware 
   static StatefulServiceProvider<VeniceRouterWrapper> generateService(
       String clusterName,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBrokerWrapper kafkaBrokerWrapper,
       boolean sslToStorageNodes,
       Map<String, String> clusterToD2,
       Properties properties) {
