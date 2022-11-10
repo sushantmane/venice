@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   veniceSpotcheck:
-    runs-on: ubuntu-latest
+    runs-on: macOS-12
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
@@ -26,7 +26,7 @@ jobs:
           arguments: "clean check -x spotlessCheck --continue --no-daemon -Pspotallbugs -Pspotbugs.xml -Pspotbugs.ignoreFailures -x integrationTest -x test"
 
   veniceUnitTests:
-    runs-on: ubuntu-latest
+    runs-on: macOS-12
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
@@ -48,7 +48,7 @@ jobs:
           arguments: "build --continue --no-daemon -DforkEvery=25 -DmaxParallelForks=25 -x shadowDistTar -x shadowDistZip -x shadowJar -x startShadowScripts -x distTar -x distZip -x integrationTest"
 
   veniceIntegrationTests:
-    runs-on: ubuntu-latest
+    runs-on: macOS-12
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v3
