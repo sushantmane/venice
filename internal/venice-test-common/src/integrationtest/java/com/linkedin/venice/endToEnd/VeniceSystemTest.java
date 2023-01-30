@@ -1,9 +1,7 @@
 package com.linkedin.venice.endToEnd;
 
-import static com.linkedin.venice.Arg.*;
-import static com.linkedin.venice.hadoop.VenicePushJob.*;
-import static com.linkedin.venice.utils.TestPushUtils.*;
-import static org.apache.zookeeper.ZooDefs.Ids.*;
+import static com.linkedin.venice.hadoop.VenicePushJob.ADDRESS_MAP;
+import static com.linkedin.venice.hadoop.VenicePushJob.SYSTEM_TEST_ENV;
 
 import com.linkedin.venice.AdminTool;
 import com.linkedin.venice.hadoop.VenicePushJob;
