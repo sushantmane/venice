@@ -1,8 +1,7 @@
 package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.writer.ApacheKafkaProducer.PROPERTIES_KAFKA_PREFIX;
-import static org.apache.kafka.clients.producer.ProducerConfig.BUFFER_MEMORY_CONFIG;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BUFFER_MEMORY;
 import static org.mockito.Mockito.mock;
 
 import com.linkedin.venice.ConfigKeys;
@@ -16,6 +15,10 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
@@ -41,8 +44,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 
-public class SharedKafkaProducerServiceTest {
-  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerServiceTest.class);
+public class SharedKafkaProducerAdapterFactoryTest {
+  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactoryTest.class);
 
   private KafkaBrokerWrapper kafka;
   private TopicManager topicManager;
@@ -72,17 +75,17 @@ public class SharedKafkaProducerServiceTest {
     String nonExistingTopic = "test-topic-2";
     topicManager.createTopic(existingTopic, 1, 1, true);
 
-    SharedKafkaProducerService sharedKafkaProducerService = null;
+    SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory = null;
     try {
       Properties properties = new Properties();
       properties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
       properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafka.getAddress());
       properties.put(ConfigKeys.PARTITIONER_CLASS, DefaultVenicePartitioner.class.getName());
-      properties.put(PROPERTIES_KAFKA_PREFIX + BUFFER_MEMORY_CONFIG, "16384");
-      sharedKafkaProducerService = TestUtils.getSharedKafkaProducerService(properties);
+      properties.put(KAFKA_BUFFER_MEMORY, "16384");
+      sharedKafkaProducerAdapterFactory = TestUtils.getSharedKafkaProducerService(properties);
 
       VeniceWriterFactory veniceWriterFactory =
-          TestUtils.getVeniceWriterFactoryWithSharedProducer(properties, Optional.of(sharedKafkaProducerService));
+          TestUtils.getVeniceWriterFactoryWithSharedProducer(properties, sharedKafkaProducerAdapterFactory);
 
       try (VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter1 = veniceWriterFactory.createVeniceWriter(
           existingTopic,
@@ -157,8 +160,8 @@ public class SharedKafkaProducerServiceTest {
 
       }
     } finally {
-      if (sharedKafkaProducerService != null) {
-        sharedKafkaProducerService.stopInner();
+      if (sharedKafkaProducerAdapterFactory != null) {
+        sharedKafkaProducerAdapterFactory.close();
       }
     }
 
@@ -170,65 +173,60 @@ public class SharedKafkaProducerServiceTest {
     }
   }
 
-  private static class ProducerSupplier implements SharedKafkaProducerService.KafkaProducerSupplier {
-    @Override
-    public KafkaProducerWrapper getNewProducer(VeniceProperties props) {
-      return mock(ApacheKafkaProducer.class);
-    }
-  }
-
   @Test
   public void testProducerReuse() throws Exception {
-    SharedKafkaProducerService sharedKafkaProducerService = null;
+    SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory = null;
     try {
-      sharedKafkaProducerService = new SharedKafkaProducerService(
-          getProperties(),
-          8,
-          new ProducerSupplier(),
-          new MetricsRepository(),
-          Collections.EMPTY_SET);
+      sharedKafkaProducerAdapterFactory =
+          new SharedKafkaProducerAdapterFactory(getProperties(), 8, new ApacheKafkaProducerAdapterFactory() {
+            @Override
+            public ApacheKafkaProducerAdapter create(VeniceProperties properties) {
+              return mock(ApacheKafkaProducerAdapter.class);
+            }
+          }, new MetricsRepository(), Collections.EMPTY_SET);
 
       // Create at least 8 tasks to assign each producer a task.
-      KafkaProducerWrapper producer1 = sharedKafkaProducerService.acquireKafkaProducer("task1");
-      sharedKafkaProducerService.acquireKafkaProducer("task2");
-      sharedKafkaProducerService.acquireKafkaProducer("task3");
-      sharedKafkaProducerService.acquireKafkaProducer("task4");
-      KafkaProducerWrapper producer5 = sharedKafkaProducerService.acquireKafkaProducer("task5");
-      sharedKafkaProducerService.acquireKafkaProducer("task6");
-      sharedKafkaProducerService.acquireKafkaProducer("task7");
-      sharedKafkaProducerService.acquireKafkaProducer("task8");
+      ProducerAdapter producer1 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task2");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task3");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task4");
+      ProducerAdapter producer5 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task5");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task6");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task7");
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task8");
 
       // verify same task acquires the same producer.
-      Assert.assertEquals(producer1, sharedKafkaProducerService.acquireKafkaProducer("task1"));
+      Assert.assertEquals(producer1, sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1"));
 
       // release a producer and verify the last released producer is returned for a new task.
-      sharedKafkaProducerService.releaseKafkaProducer("task5");
-      Assert.assertEquals(producer5, sharedKafkaProducerService.acquireKafkaProducer("task9"));
+      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task5");
+      Assert.assertEquals(producer5, sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task9"));
 
       // already released producer should not cause any harm.
-      sharedKafkaProducerService.releaseKafkaProducer("task5");
+      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task5");
     } finally {
-      if (sharedKafkaProducerService != null) {
-        sharedKafkaProducerService.stopInner();
+      if (sharedKafkaProducerAdapterFactory != null) {
+        sharedKafkaProducerAdapterFactory.close();
       }
     }
   }
 
   @Test
   public void testProducerClosing() throws Exception {
-    SharedKafkaProducerService sharedKafkaProducerService = null;
+    SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory = null;
     try {
-      sharedKafkaProducerService = new SharedKafkaProducerService(
-          getProperties(),
-          8,
-          new ProducerSupplier(),
-          new MetricsRepository(),
-          Collections.EMPTY_SET);
-      sharedKafkaProducerService.acquireKafkaProducer("task1");
-      sharedKafkaProducerService.releaseKafkaProducer("task1");
+      sharedKafkaProducerAdapterFactory =
+          new SharedKafkaProducerAdapterFactory(getProperties(), 8, new ApacheKafkaProducerAdapterFactory() {
+            @Override
+            public ApacheKafkaProducerAdapter create(VeniceProperties properties) {
+              return mock(ApacheKafkaProducerAdapter.class);
+            }
+          }, new MetricsRepository(), Collections.EMPTY_SET);
+      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
+      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task1");
     } finally {
-      if (sharedKafkaProducerService != null) {
-        sharedKafkaProducerService.stopInner();
+      if (sharedKafkaProducerAdapterFactory != null) {
+        sharedKafkaProducerAdapterFactory.close();
       }
     }
   }
