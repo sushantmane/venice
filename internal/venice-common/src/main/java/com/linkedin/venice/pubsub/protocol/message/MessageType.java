@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka.protocol.enums;
+package com.linkedin.venice.pubsub.protocol.message;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceMessageException;

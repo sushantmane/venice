@@ -2,8 +2,11 @@ package com.linkedin.venice.writer;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -17,16 +20,15 @@ import java.util.Properties;
 public class VeniceWriterFactory {
   private final Properties properties;
   private final String localKafkaBootstrapServers;
-  private final Optional<SharedKafkaProducerService> sharedKafkaProducerService;
+  private final ProducerAdapterFactory<ProducerAdapter> producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
-    this(properties, Optional.empty());
+    this(properties, new ApacheKafkaProducerAdapterFactory());
   }
 
-  public VeniceWriterFactory(Properties properties, Optional<SharedKafkaProducerService> sharedKafkaProducerService) {
+  public VeniceWriterFactory(Properties properties, ProducerAdapterFactory producerAdapterFactory) {
     this.properties = properties;
-    this.sharedKafkaProducerService = sharedKafkaProducerService;
-    boolean sslToKafka = Boolean.valueOf(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
+    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       checkProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
       localKafkaBootstrapServers = properties.getProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
@@ -34,6 +36,7 @@ public class VeniceWriterFactory {
       checkProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
       localKafkaBootstrapServers = properties.getProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
     }
+    this.producerAdapterFactory = producerAdapterFactory;
   }
 
   private void checkProperty(String key) {
@@ -57,13 +60,7 @@ public class VeniceWriterFactory {
     writerProperties.put(VeniceWriter.ENABLE_CHUNKING, options.isChunkingEnabled());
     writerProperties.put(VeniceWriter.ENABLE_RMD_CHUNKING, options.isRmdChunkingEnabled());
     VeniceProperties props = new VeniceProperties(writerProperties);
-    return new VeniceWriter<>(options, props, () -> {
-      if (sharedKafkaProducerService.isPresent()) {
-        return sharedKafkaProducerService.get().acquireKafkaProducer(options.getTopicName());
-      } else {
-        return new ApacheKafkaProducer(props);
-      }
-    });
+    return new VeniceWriter<>(options, props, producerAdapterFactory.create(options.getTopicName(), props));
   }
 
   /*

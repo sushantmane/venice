@@ -1,7 +1,7 @@
 package com.linkedin.davinci.notifier;
 
 import com.linkedin.davinci.kafka.consumer.LeaderFollowerStateType;
-import com.linkedin.venice.kafka.protocol.enums.ControlMessageType;
+import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import java.io.Closeable;
 import java.util.Optional;
 

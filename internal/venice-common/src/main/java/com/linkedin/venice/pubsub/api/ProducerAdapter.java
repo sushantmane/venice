@@ -1,7 +1,7 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.api;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -10,12 +10,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
-public interface KafkaProducerWrapper {
+public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   int getNumberOfPartitions(String topic);
@@ -27,14 +25,24 @@ public interface KafkaProducerWrapper {
     return future.get(timeout, timeUnit);
   }
 
-  Future<RecordMetadata> sendMessage(
+  Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback);
+      Integer partition,
+      PubsubProducerCallback callback);
 
-  Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback);
+  Future<ProduceResult> sendMessage(
+      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
+      PubsubProducerCallback callback);
+
+  default Future<ProduceResult> sendMessage(
+      String topic,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubsubProducerCallback callback) {
+    return sendMessage(topic, key, value, null, callback);
+  }
 
   void flush();
 
