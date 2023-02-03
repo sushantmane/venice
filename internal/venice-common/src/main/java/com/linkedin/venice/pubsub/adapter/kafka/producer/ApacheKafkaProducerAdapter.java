@@ -1,14 +1,20 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.utils.KafkaSSLUtils;
 import com.linkedin.venice.utils.VeniceProperties;
+import com.linkedin.venice.writer.VeniceWriter;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,7 +26,6 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.logging.log4j.LogManager;
@@ -30,13 +35,12 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the Kafka Producer for sending messages to Kafka.
  */
-public class ApacheKafkaProducer implements KafkaProducerWrapper {
-  public static final String PROPERTIES_KAFKA_PREFIX = "kafka.";
-  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducer.class);
+public class ApacheKafkaProducerAdapter implements ProducerAdapter {
+  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
 
-  public ApacheKafkaProducer(VeniceProperties props) {
+  public ApacheKafkaProducerAdapter(VeniceProperties props) {
     this(props, true);
   }
 
@@ -45,8 +49,8 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
    * @param strictConfigs if true, the {@param props} will be validated to ensure no mandatory configs are badly overridden
    *                      if false, the check will not happen (useful for tests only)
    */
-  protected ApacheKafkaProducer(VeniceProperties props, boolean strictConfigs) {
-    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link KafkaProducerWrapper} */
+  protected ApacheKafkaProducerAdapter(VeniceProperties props, boolean strictConfigs) {
+    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link ProducerAdapter} */
     Properties properties = getKafkaPropertiesFromVeniceProps(props);
 
     validateClassProp(
@@ -109,7 +113,8 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
 
     if (!properties.containsKey(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)) {
       throw new ConfigurationException(
-          "Props key not found: " + PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
+          "Props key not found: " + ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX
+              + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
     }
 
     LOGGER.info("Constructing KafkaProducer with the following properties: {}", properties);
@@ -185,35 +190,41 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
    * @param topic - The topic to be sent to.
    * @param key - The key of the message to be sent.
    * @param value - The {@link KafkaMessageEnvelope}, which acts as the Kafka value.
-   * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
+   * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
+      Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback) {
-    ProducerRecord<KafkaKey, KafkaMessageEnvelope> kafkaRecord = new ProducerRecord<>(topic, partition, key, value);
-    return sendMessage(kafkaRecord, callback);
-  }
-
-  private void ensureProducerIsNotClosed() {
-    if (producer == null) {
-      throw new VeniceException("The internal KafkaProducer has been closed");
-    }
-  }
-
-  @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
+      PubsubMessageHeaders pubsubMessageHeaders,
+      PubsubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
+    ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
+        topic,
+        partition,
+        key,
+        value,
+        ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
+    Callback kafkaCallback = null;
+    if (pubsubProducerCallback != null) {
+      kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
+    }
     try {
-      return producer.send(record, callback);
+      // todo(sumane): create and complete Future<ProduceResult> in callback
+      return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
               + record.partition(),
           e);
+    }
+  }
+
+  private void ensureProducerIsNotClosed() {
+    if (producer == null) {
+      throw new VeniceException("The internal KafkaProducer has been closed");
     }
   }
 
@@ -270,15 +281,15 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
   }
 
   /**
-   * This class takes in all properties that begin with "{@value #PROPERTIES_KAFKA_PREFIX}" and emits the
+   * This class takes in all properties that begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}" and emits the
    * rest of the properties.
    *
-   * It omits those properties that do not begin with "{@value #PROPERTIES_KAFKA_PREFIX}".
+   * It omits those properties that do not begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}".
    *
-   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link KafkaProducerWrapper}.
+   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link ProducerAdapter}.
   */
   private Properties getKafkaPropertiesFromVeniceProps(VeniceProperties props) {
-    VeniceProperties kafkaProps = props.clipAndFilterNamespace(PROPERTIES_KAFKA_PREFIX);
+    VeniceProperties kafkaProps = props.clipAndFilterNamespace(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX);
     return kafkaProps.toProperties();
   }
 }

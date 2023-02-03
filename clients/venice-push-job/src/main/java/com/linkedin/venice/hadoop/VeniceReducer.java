@@ -19,6 +19,8 @@ import com.linkedin.venice.guid.GuidUtils;
 import com.linkedin.venice.hadoop.utils.HadoopUtils;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.ByteUtils;
@@ -60,8 +62,6 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.util.Progressable;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -91,7 +91,7 @@ public class VeniceReducer extends AbstractMapReduceTask
         byte[] keyBytes,
         byte[] valueBytes,
         int valueSchemaId,
-        Callback callback,
+        PubsubProducerCallback callback,
         boolean enableWriteCompute,
         int derivedValueSchemaId) {
       this(keyBytes, valueBytes, valueSchemaId, -1, null, callback, enableWriteCompute, derivedValueSchemaId);
@@ -103,7 +103,7 @@ public class VeniceReducer extends AbstractMapReduceTask
         int valueSchemaId,
         int rmdVersionId,
         ByteBuffer rmdPayload,
-        Callback callback,
+        PubsubProducerCallback callback,
         boolean enableWriteCompute,
         int derivedValueSchemaId) {
       this.keyBytes = keyBytes;
@@ -244,7 +244,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     updateExecutionTimeStatus(timeOfLastReduceFunctionStartInNS);
   }
 
-  protected Callback getCallback() {
+  protected PubsubProducerCallback getCallback() {
     return callback;
   }
 
@@ -574,7 +574,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     this.exceedQuota = exceedQuota;
   }
 
-  protected class KafkaMessageCallback implements Callback {
+  protected class KafkaMessageCallback implements PubsubProducerCallback {
     private final Reporter reporter;
 
     public KafkaMessageCallback(Reporter reporter) {
@@ -582,14 +582,14 @@ public class VeniceReducer extends AbstractMapReduceTask
     }
 
     @Override
-    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+    public void onCompletion(ProduceResult produceResult, Exception e) {
       if (e != null) {
         messageErrored.incrementAndGet();
         LOGGER.error("Exception thrown in send message callback. ", e);
         sendException = e;
       } else {
         messageCompleted.incrementAndGet();
-        int partition = recordMetadata.partition();
+        int partition = produceResult.partition();
         partitionSet.add(partition);
         if (partition != getTaskId()) {
           // Reducer input and output are not aligned!
