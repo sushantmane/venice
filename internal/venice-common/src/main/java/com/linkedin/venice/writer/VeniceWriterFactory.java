@@ -3,6 +3,7 @@ package com.linkedin.venice.writer;
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.Time;
@@ -61,7 +62,7 @@ public class VeniceWriterFactory {
       if (sharedKafkaProducerService.isPresent()) {
         return sharedKafkaProducerService.get().acquireKafkaProducer(options.getTopicName());
       } else {
-        return new ApacheKafkaProducer(props);
+        return new ApacheKafkaProducerAdapter(props);
       }
     });
   }

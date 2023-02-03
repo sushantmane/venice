@@ -68,6 +68,7 @@ import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -75,7 +76,6 @@ import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
 import com.linkedin.venice.serializer.AvroSerializer;
 import com.linkedin.venice.throttle.EventThrottler;
-import com.linkedin.venice.writer.ApacheKafkaProducer;
 import com.linkedin.venice.writer.SharedKafkaProducerService;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
@@ -567,7 +567,7 @@ public class TestUtils {
     return new SharedKafkaProducerService(
         factoryProperties,
         1,
-        ApacheKafkaProducer::new,
+        ApacheKafkaProducerAdapter::new,
         new MetricsRepository(),
         new HashSet<>(
             Arrays.asList(

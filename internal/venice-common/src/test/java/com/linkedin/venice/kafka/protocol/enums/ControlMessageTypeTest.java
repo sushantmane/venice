@@ -1,14 +1,15 @@
 package com.linkedin.venice.kafka.protocol.enums;
 
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.END_OF_INCREMENTAL_PUSH;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.END_OF_PUSH;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.END_OF_SEGMENT;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.START_OF_INCREMENTAL_PUSH;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.START_OF_PUSH;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.START_OF_SEGMENT;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.TOPIC_SWITCH;
-import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.VERSION_SWAP;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.END_OF_INCREMENTAL_PUSH;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.END_OF_PUSH;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.END_OF_SEGMENT;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.START_OF_INCREMENTAL_PUSH;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.START_OF_PUSH;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.START_OF_SEGMENT;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.TOPIC_SWITCH;
+import static com.linkedin.venice.pubsub.protocol.message.ControlMessageType.VERSION_SWAP;
 
+import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

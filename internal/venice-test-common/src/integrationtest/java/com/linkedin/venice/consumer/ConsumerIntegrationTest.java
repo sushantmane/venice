@@ -13,11 +13,12 @@ import com.linkedin.venice.exceptions.VeniceMessageException;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.avro.DirectionalSchemaCompatibilityType;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -30,7 +31,6 @@ import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
-import com.linkedin.venice.writer.ApacheKafkaProducer;
 import com.linkedin.venice.writer.LeaderMetadataWrapper;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterOptions;
@@ -179,10 +179,10 @@ public class ConsumerIntegrationTest {
 
     Properties javaProps = new Properties();
     javaProps.put(
-        ApacheKafkaProducer.PROPERTIES_KAFKA_PREFIX + ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
         KafkaValueSerializerWithNewerProtocol.class.getName());
     javaProps.put(
-        ApacheKafkaProducer.PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
         cluster.getKafka().getAddress());
     VeniceProperties props = new VeniceProperties(javaProps);
     String stringSchema = "\"string\"";
@@ -306,7 +306,7 @@ public class ConsumerIntegrationTest {
     }
   }
 
-  private static class ApacheKafkaProducerWithNewerProtocol extends ApacheKafkaProducer {
+  private static class ApacheKafkaProducerWithNewerProtocol extends ApacheKafkaProducerAdapter {
     public ApacheKafkaProducerWithNewerProtocol(VeniceProperties props) {
       super(props, false);
     }

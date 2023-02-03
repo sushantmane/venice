@@ -1,13 +1,13 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import static com.linkedin.venice.kafka.protocol.enums.MessageType.CONTROL_MESSAGE;
-import static com.linkedin.venice.kafka.protocol.enums.MessageType.DELETE;
-import static com.linkedin.venice.kafka.protocol.enums.MessageType.PUT;
+import static com.linkedin.venice.pubsub.protocol.message.MessageType.CONTROL_MESSAGE;
+import static com.linkedin.venice.pubsub.protocol.message.MessageType.DELETE;
+import static com.linkedin.venice.pubsub.protocol.message.MessageType.PUT;
 
 import com.linkedin.venice.kafka.protocol.ControlMessage;
 import com.linkedin.venice.kafka.protocol.Delete;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import java.util.concurrent.CompletableFuture;
 
 

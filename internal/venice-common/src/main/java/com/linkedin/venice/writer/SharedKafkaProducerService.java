@@ -1,6 +1,6 @@
 package com.linkedin.venice.writer;
 
-import static com.linkedin.venice.writer.ApacheKafkaProducer.PROPERTIES_KAFKA_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX;
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 import static org.apache.kafka.clients.producer.ProducerConfig.BOOTSTRAP_SERVERS_CONFIG;

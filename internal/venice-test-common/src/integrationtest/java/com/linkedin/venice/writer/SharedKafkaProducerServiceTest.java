@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.writer.ApacheKafkaProducer.PROPERTIES_KAFKA_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX;
 import static org.apache.kafka.clients.producer.ProducerConfig.BUFFER_MEMORY_CONFIG;
 import static org.mockito.Mockito.mock;
 
@@ -13,10 +13,11 @@ import com.linkedin.venice.integration.utils.ZkServerWrapper;
 import com.linkedin.venice.kafka.KafkaClientFactory;
 import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
@@ -174,7 +175,7 @@ public class SharedKafkaProducerServiceTest {
   private static class ProducerSupplier implements SharedKafkaProducerService.KafkaProducerSupplier {
     @Override
     public VeniceProducer getNewProducer(VeniceProperties props) {
-      return mock(ApacheKafkaProducer.class);
+      return mock(ApacheKafkaProducerAdapter.class);
     }
   }
 

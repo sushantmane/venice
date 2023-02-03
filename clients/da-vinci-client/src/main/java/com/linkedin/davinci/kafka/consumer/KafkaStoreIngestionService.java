@@ -48,6 +48,7 @@ import com.linkedin.venice.meta.StoreDataChangedListener;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.offsets.OffsetRecord;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.schema.SchemaReader;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
@@ -69,7 +70,6 @@ import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.locks.AutoCloseableLock;
 import com.linkedin.venice.utils.locks.ResourceAutoClosableLockManager;
-import com.linkedin.venice.writer.ApacheKafkaProducer;
 import com.linkedin.venice.writer.SharedKafkaProducerService;
 import com.linkedin.venice.writer.VeniceWriterFactory;
 import io.tehuti.metrics.MetricsRepository;
@@ -245,7 +245,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
           new SharedKafkaProducerService.KafkaProducerSupplier() {
             @Override
             public VeniceProducer getNewProducer(VeniceProperties props) {
-              return new ApacheKafkaProducer(props);
+              return new ApacheKafkaProducerAdapter(props);
             }
           },
           metricsRepository,

@@ -1,7 +1,7 @@
 package com.linkedin.venice.kafka.validation;
 
 import com.linkedin.venice.exceptions.VeniceMessageException;
-import com.linkedin.venice.kafka.protocol.enums.ControlMessageType;
+import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import java.util.HashMap;
 import java.util.Map;
 

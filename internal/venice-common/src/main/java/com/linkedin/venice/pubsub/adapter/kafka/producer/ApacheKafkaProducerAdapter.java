@@ -1,4 +1,4 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.exceptions.ConfigurationException;
@@ -10,6 +10,7 @@ import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.utils.KafkaSSLUtils;
 import com.linkedin.venice.utils.VeniceProperties;
+import com.linkedin.venice.writer.VeniceWriter;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,13 +32,13 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the Kafka Producer for sending messages to Kafka.
  */
-public class ApacheKafkaProducer implements VeniceProducer {
+public class ApacheKafkaProducerAdapter implements VeniceProducer {
   public static final String PROPERTIES_KAFKA_PREFIX = "kafka.";
-  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducer.class);
+  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
 
-  public ApacheKafkaProducer(VeniceProperties props) {
+  public ApacheKafkaProducerAdapter(VeniceProperties props) {
     this(props, true);
   }
 
@@ -46,7 +47,7 @@ public class ApacheKafkaProducer implements VeniceProducer {
    * @param strictConfigs if true, the {@param props} will be validated to ensure no mandatory configs are badly overridden
    *                      if false, the check will not happen (useful for tests only)
    */
-  protected ApacheKafkaProducer(VeniceProperties props, boolean strictConfigs) {
+  protected ApacheKafkaProducerAdapter(VeniceProperties props, boolean strictConfigs) {
     /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link VeniceProducer} */
     Properties properties = getKafkaPropertiesFromVeniceProps(props);
 
