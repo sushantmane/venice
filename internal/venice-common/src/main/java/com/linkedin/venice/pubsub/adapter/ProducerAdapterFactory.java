@@ -1,9 +1,8 @@
 package com.linkedin.venice.pubsub.adapter;
 
-import com.linkedin.venice.pubsub.api.VeniceProducer;
-import com.linkedin.venice.pubsub.api.VeniceProducerConfig;
+import com.linkedin.venice.pubsub.api.ProducerConfig;
 
 
 public interface ProducerAdapterFactory<VeniceProducer> {
-  public VeniceProducer create(VeniceProducerConfig producerConfig);
+  public VeniceProducer create(ProducerConfig producerConfig);
 }

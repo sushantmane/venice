@@ -17,7 +17,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.avro.DirectionalSchemaCompatibilityType;
 import com.linkedin.venice.serialization.DefaultSerializer;
@@ -190,7 +190,7 @@ public class ConsumerIntegrationTest {
     VeniceKafkaSerializer valueSerializer = new VeniceAvroKafkaSerializer(stringSchema);
     VenicePartitioner partitioner = new DefaultVenicePartitioner(props);
     Time time = new SystemTime();
-    Supplier<VeniceProducer> producerWrapperSupplier = () -> new ApacheKafkaProducerWithNewerProtocol(props);
+    Supplier<ProducerAdapter> producerWrapperSupplier = () -> new ApacheKafkaProducerWithNewerProtocolAdapter(props);
 
     VeniceWriterOptions veniceWriterOptions = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
         .setValueSerializer(valueSerializer)
@@ -230,7 +230,7 @@ public class ConsumerIntegrationTest {
     protected VeniceWriterWithNewerProtocol(
         VeniceWriterOptions veniceWriterOptions,
         VeniceProperties props,
-        Supplier<VeniceProducer> producerWrapperSupplier) {
+        Supplier<ProducerAdapter> producerWrapperSupplier) {
       super(veniceWriterOptions, props, producerWrapperSupplier);
     }
 
@@ -306,8 +306,8 @@ public class ConsumerIntegrationTest {
     }
   }
 
-  private static class ApacheKafkaProducerWithNewerProtocol extends ApacheKafkaProducerAdapter {
-    public ApacheKafkaProducerWithNewerProtocol(VeniceProperties props) {
+  private static class ApacheKafkaProducerWithNewerProtocolAdapter extends ApacheKafkaProducerAdapter {
+    public ApacheKafkaProducerWithNewerProtocolAdapter(VeniceProperties props) {
       super(props, false);
     }
   }

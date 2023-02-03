@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
@@ -27,28 +27,28 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the shared Kafka Producer for sending messages to Kafka.
  */
-public class SharedKafkaProducer implements VeniceProducer {
-  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducer.class);
+public class SharedKafkaProducerAdapter implements ProducerAdapter {
+  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
   private final SharedKafkaProducerService sharedKafkaProducerService;
   private final int id;
   private final Set<String> producerTasks;
-  private final VeniceProducer veniceProducer;
+  private final ProducerAdapter producerAdapter;
 
   private long lastStatUpdateTsMs = 0;
   private final Map<String, Double> kafkaProducerMetrics;
   private SharedKafkaProducerStats sharedKafkaProducerStats;
 
-  public SharedKafkaProducer(
+  public SharedKafkaProducerAdapter(
       SharedKafkaProducerService sharedKafkaProducerService,
       int id,
-      VeniceProducer veniceProducer,
+      ProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
     this.sharedKafkaProducerService = sharedKafkaProducerService;
     this.id = id;
     producerTasks = new HashSet<>();
-    this.veniceProducer = veniceProducer;
+    this.producerAdapter = producerAdapter;
     kafkaProducerMetrics = new HashMap<>();
     metricsToBeReported
         .forEach(metric -> kafkaProducerMetrics.put(metric, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
@@ -59,7 +59,7 @@ public class SharedKafkaProducer implements VeniceProducer {
 
   @Override
   public int getNumberOfPartitions(String topic) {
-    return veniceProducer.getNumberOfPartitions(topic);
+    return producerAdapter.getNumberOfPartitions(topic);
   }
 
   /**
@@ -77,7 +77,7 @@ public class SharedKafkaProducer implements VeniceProducer {
       int partition,
       Callback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = veniceProducer.sendMessage(topic, key, value, partition, callback);
+    Future<RecordMetadata> result = producerAdapter.sendMessage(topic, key, value, partition, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
@@ -85,24 +85,24 @@ public class SharedKafkaProducer implements VeniceProducer {
   @Override
   public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = veniceProducer.sendMessage(record, callback);
+    Future<RecordMetadata> result = producerAdapter.sendMessage(record, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
 
   @Override
   public void flush() {
-    veniceProducer.flush();
+    producerAdapter.flush();
   }
 
   @Override
   public void close(int closeTimeOutMs) {
-    veniceProducer.close(closeTimeOutMs);
+    producerAdapter.close(closeTimeOutMs);
   }
 
   @Override
   public void close(int closeTimeOutMs, boolean doFlush) {
-    veniceProducer.close(closeTimeOutMs, doFlush);
+    producerAdapter.close(closeTimeOutMs, doFlush);
   }
 
   @Override
@@ -117,14 +117,14 @@ public class SharedKafkaProducer implements VeniceProducer {
   @Override
   public void close(String topic, int closeTimeoutMs, boolean doFlush) {
     if (doFlush) {
-      veniceProducer.flush();
+      producerAdapter.flush();
     }
     close(topic, closeTimeoutMs);
   }
 
   @Override
   public Map<String, Double> getMeasurableProducerMetrics() {
-    return veniceProducer.getMeasurableProducerMetrics();
+    return producerAdapter.getMeasurableProducerMetrics();
   }
 
   public int getId() {
@@ -238,7 +238,7 @@ public class SharedKafkaProducer implements VeniceProducer {
     }
 
     // measure
-    Map<String, Double> metrics = veniceProducer.getMeasurableProducerMetrics();
+    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
     for (String metricName: kafkaProducerMetrics.keySet()) {
       kafkaProducerMetrics
           .put(metricName, metrics.getOrDefault(metricName, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
@@ -251,10 +251,10 @@ public class SharedKafkaProducer implements VeniceProducer {
     private final Sensor producerSendLatencySensor;
 
     public SharedKafkaProducerStats(MetricsRepository metricsRepository) {
-      super(metricsRepository, "SharedKafkaProducer");
+      super(metricsRepository, "SharedKafkaProducerAdapter");
       kafkaProducerMetrics.keySet().forEach(metric -> {
         String metricName = "producer_" + id + "_" + metric;
-        LOGGER.info("SharedKafkaProducer: Registering metric: {}", metricName);
+        LOGGER.info("SharedKafkaProducerAdapter: Registering metric: {}", metricName);
         registerSensorIfAbsent(metricName, new Gauge(() -> {
           mayBeCalculateAllProducerMetrics();
           return kafkaProducerMetrics.get(metric);

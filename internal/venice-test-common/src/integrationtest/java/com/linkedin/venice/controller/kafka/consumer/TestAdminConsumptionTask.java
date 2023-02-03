@@ -89,7 +89,7 @@ import com.linkedin.venice.unit.kafka.consumer.poll.CompositePollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.FilteringPollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.PollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.RandomPollStrategy;
-import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducer;
+import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducerAdapter;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
 import com.linkedin.venice.utils.Pair;
@@ -201,7 +201,7 @@ public class TestAdminConsumptionTask {
     return new TestVeniceWriter(
         veniceWriterOptions,
         new VeniceProperties(props),
-        () -> new MockInMemoryProducer(inMemoryKafkaBroker));
+        () -> new MockInMemoryProducerAdapter(inMemoryKafkaBroker));
   }
 
   private AdminConsumptionTask getAdminConsumptionTask(PollStrategy pollStrategy, boolean isParent) {

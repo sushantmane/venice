@@ -8,7 +8,7 @@ import static org.apache.kafka.clients.producer.ProducerConfig.CLIENT_ID_CONFIG;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -40,8 +40,8 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
   private final String localKafkaBootstrapServers;
   private final int kafkaProducerCloseTimeout;
 
-  private final SharedKafkaProducer[] producers;
-  private final Map<String, SharedKafkaProducer> producerTaskToProducerMap = new VeniceConcurrentHashMap<>();
+  private final SharedKafkaProducerAdapter[] producers;
+  private final Map<String, SharedKafkaProducerAdapter> producerTaskToProducerMap = new VeniceConcurrentHashMap<>();
   private final KafkaProducerSupplier kafkaProducerSupplier;
   private volatile boolean isRunning = true;
 
@@ -89,11 +89,11 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
     }
 
     this.numOfProducersPerKafkaCluster = sharedProducerPoolCount;
-    this.producers = new SharedKafkaProducer[numOfProducersPerKafkaCluster];
+    this.producers = new SharedKafkaProducerAdapter[numOfProducersPerKafkaCluster];
 
     this.metricsRepository = metricsRepository;
     this.producerMetricsToBeReported = producerMetricsToBeReported;
-    LOGGER.info("SharedKafkaProducer: is initialized");
+    LOGGER.info("SharedKafkaProducerAdapter: is initialized");
   }
 
   @Override
@@ -104,27 +104,27 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
   @Override
   public synchronized void stopInner() throws Exception {
     isRunning = false;
-    LOGGER.info("SharedKafkaProducer: is being closed");
+    LOGGER.info("SharedKafkaProducerAdapter: is being closed");
     // This map should be empty when this is called.
     if (!producerTaskToProducerMap.isEmpty()) {
       LOGGER.error(
-          "SharedKafkaProducer: following producerTasks are still using the shared producers. [{}]",
+          "SharedKafkaProducerAdapter: following producerTasks are still using the shared producers. [{}]",
           producerTaskToProducerMap.keySet().stream().collect(Collectors.joining(",")));
     }
 
-    Set<SharedKafkaProducer> producerInstanceSet = new HashSet<>(Arrays.asList(producers));
+    Set<SharedKafkaProducerAdapter> producerInstanceSet = new HashSet<>(Arrays.asList(producers));
     producerInstanceSet.parallelStream().filter(Objects::nonNull).forEach(sharedKafkaProducer -> {
       try {
         // Force close all the producer even if there are active producerTask assigned to it.
         LOGGER.info(
-            "SharedKafkaProducer: Closing producer: {}, Currently assigned task: {}",
+            "SharedKafkaProducerAdapter: Closing producer: {}, Currently assigned task: {}",
             sharedKafkaProducer,
             sharedKafkaProducer.getProducerTaskCount());
         sharedKafkaProducer.close(kafkaProducerCloseTimeout, false);
         producers[sharedKafkaProducer.getId()] = null;
         decrActiveSharedProducerCount();
       } catch (Exception e) {
-        LOGGER.warn("SharedKafkaProducer: Error in closing kafka producer", e);
+        LOGGER.warn("SharedKafkaProducerAdapter: Error in closing kafka producer", e);
       }
     });
   }
@@ -133,31 +133,34 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
     return isRunning;
   }
 
-  public synchronized VeniceProducer acquireKafkaProducer(String producerTaskName) {
+  public synchronized ProducerAdapter acquireKafkaProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
-          "SharedKafkaProducer: is already closed, can't assign new producer for task:" + producerTaskName);
+          "SharedKafkaProducerAdapter: is already closed, can't assign new producer for task:" + producerTaskName);
     }
 
-    SharedKafkaProducer sharedKafkaProducer = null;
+    SharedKafkaProducerAdapter sharedKafkaProducer = null;
 
     if (producerTaskToProducerMap.containsKey(producerTaskName)) {
       sharedKafkaProducer = producerTaskToProducerMap.get(producerTaskName);
-      LOGGER
-          .info("SharedKafkaProducer: {} already has a producer id: {}", producerTaskName, sharedKafkaProducer.getId());
+      LOGGER.info(
+          "SharedKafkaProducerAdapter: {} already has a producer id: {}",
+          producerTaskName,
+          sharedKafkaProducer.getId());
       return sharedKafkaProducer;
     }
 
     // Do lazy creation of producers
     for (int i = 0; i < producers.length; i++) {
       if (producers[i] == null) {
-        LOGGER.info("SharedKafkaProducer: Creating Producer id: {}", i);
+        LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(PROPERTIES_KAFKA_PREFIX + CLIENT_ID_CONFIG, "shared-producer-" + String.valueOf(i));
-        VeniceProducer veniceProducer = kafkaProducerSupplier.getNewProducer(new VeniceProperties(producerProperties));
+        ProducerAdapter producerAdapter =
+            kafkaProducerSupplier.getNewProducer(new VeniceProperties(producerProperties));
         sharedKafkaProducer =
-            new SharedKafkaProducer(this, i, veniceProducer, metricsRepository, producerMetricsToBeReported);
+            new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);
         producers[i] = sharedKafkaProducer;
-        LOGGER.info("SharedKafkaProducer: Created Shared Producer instance: {}", sharedKafkaProducer);
+        LOGGER.info("SharedKafkaProducerAdapter: Created Shared Producer instance: {}", sharedKafkaProducer);
         incrActiveSharedProducerCount();
         break;
       }
@@ -176,7 +179,10 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
 
     sharedKafkaProducer.addProducerTask(producerTaskName);
     producerTaskToProducerMap.put(producerTaskName, sharedKafkaProducer);
-    LOGGER.info("SharedKafkaProducer: {} acquired the producer id: {}", producerTaskName, sharedKafkaProducer.getId());
+    LOGGER.info(
+        "SharedKafkaProducerAdapter: {} acquired the producer id: {}",
+        producerTaskName,
+        sharedKafkaProducer.getId());
     logProducerInstanceAssignments();
     incrActiveSharedProducerTasksCount();
     return sharedKafkaProducer;
@@ -185,17 +191,20 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
   public synchronized void releaseKafkaProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
-          "SharedKafkaProducer: is already closed, can't release the producer for task:" + producerTaskName);
+          "SharedKafkaProducerAdapter: is already closed, can't release the producer for task:" + producerTaskName);
     }
 
     if (!producerTaskToProducerMap.containsKey(producerTaskName)) {
-      LOGGER.error("SharedKafkaProducer: {} does not have a producer", producerTaskName);
+      LOGGER.error("SharedKafkaProducerAdapter: {} does not have a producer", producerTaskName);
       return;
     }
-    SharedKafkaProducer sharedKafkaProducer = producerTaskToProducerMap.get(producerTaskName);
+    SharedKafkaProducerAdapter sharedKafkaProducer = producerTaskToProducerMap.get(producerTaskName);
     sharedKafkaProducer.removeProducerTask(producerTaskName);
     producerTaskToProducerMap.remove(producerTaskName, sharedKafkaProducer);
-    LOGGER.info("SharedKafkaProducer: {} released the producer id: {}", producerTaskName, sharedKafkaProducer.getId());
+    LOGGER.info(
+        "SharedKafkaProducerAdapter: {} released the producer id: {}",
+        producerTaskName,
+        sharedKafkaProducer.getId());
     logProducerInstanceAssignments();
     decrActiveSharedProducerTasksCount();
   }
@@ -219,11 +228,11 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
       }
     }
     sb.append("]");
-    LOGGER.info("SharedKafkaProducer: Current Assignments: {}", sb);
+    LOGGER.info("SharedKafkaProducerAdapter: Current Assignments: {}", sb);
   }
 
   public interface KafkaProducerSupplier {
-    VeniceProducer getNewProducer(VeniceProperties props);
+    ProducerAdapter getNewProducer(VeniceProperties props);
   }
 
   public long getActiveSharedProducerTasksCount() {

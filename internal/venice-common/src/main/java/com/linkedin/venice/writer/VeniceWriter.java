@@ -29,7 +29,7 @@ import com.linkedin.venice.kafka.validation.Segment;
 import com.linkedin.venice.kafka.validation.checksum.CheckSumType;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
@@ -198,7 +198,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   private final VeniceKafkaSerializer<K> keySerializer;
   private final VeniceKafkaSerializer<V> valueSerializer;
   private final VeniceKafkaSerializer<U> writeComputeSerializer;
-  private final VeniceProducer producer;
+  private final ProducerAdapter producer;
   private final GUID producerGUID;
   private final Time time;
   private final VenicePartitioner partitioner;
@@ -247,7 +247,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   public VeniceWriter(
       VeniceWriterOptions params,
       VeniceProperties props,
-      Supplier<VeniceProducer> producerWrapperSupplier) {
+      Supplier<ProducerAdapter> producerWrapperSupplier) {
     super(params.getTopicName());
     this.keySerializer = params.getKeySerializer();
     this.valueSerializer = params.getValueSerializer();
@@ -336,7 +336,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       if (gracefulClose) {
         endAllSegments(true);
       }
-      // DO NOT call the {@link #VeniceProducer.close(int) version from here.}
+      // DO NOT call the {@link #ProducerAdapter.close(int) version from here.}
       // For non shared producer mode gracefulClose will flush the producer
 
       producer.close(topicName, closeTimeOut, gracefulClose);
@@ -352,12 +352,12 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     close(true);
   }
 
-  public VeniceProducer getProducer() {
+  public ProducerAdapter getProducer() {
     return producer;
   }
 
   /**
-   * Call flush on the internal {@link VeniceProducer}.
+   * Call flush on the internal {@link ProducerAdapter}.
    */
   @Override
   public void flush() {

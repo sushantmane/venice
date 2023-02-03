@@ -15,7 +15,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
-public interface VeniceProducer {
+public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   int getNumberOfPartitions(String topic);

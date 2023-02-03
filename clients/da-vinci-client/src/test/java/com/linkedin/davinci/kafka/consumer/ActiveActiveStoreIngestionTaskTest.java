@@ -29,7 +29,7 @@ import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.SchemaEntry;
@@ -88,7 +88,7 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] key = "foo".getBytes();
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
-    VeniceProducer mockedProducer = mock(VeniceProducer.class);
+    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);

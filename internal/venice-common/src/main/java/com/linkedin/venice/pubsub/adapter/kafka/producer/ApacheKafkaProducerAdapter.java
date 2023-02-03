@@ -4,7 +4,7 @@ import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
@@ -32,7 +32,7 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the Kafka Producer for sending messages to Kafka.
  */
-public class ApacheKafkaProducerAdapter implements VeniceProducer {
+public class ApacheKafkaProducerAdapter implements ProducerAdapter {
   public static final String PROPERTIES_KAFKA_PREFIX = "kafka.";
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
@@ -48,7 +48,7 @@ public class ApacheKafkaProducerAdapter implements VeniceProducer {
    *                      if false, the check will not happen (useful for tests only)
    */
   protected ApacheKafkaProducerAdapter(VeniceProperties props, boolean strictConfigs) {
-    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link VeniceProducer} */
+    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link ProducerAdapter} */
     Properties properties = getKafkaPropertiesFromVeniceProps(props);
 
     // TODO : For sending control message, this is not required. Move this higher in the stack.
@@ -278,7 +278,7 @@ public class ApacheKafkaProducerAdapter implements VeniceProducer {
    *
    * It omits those properties that do not begin with "{@value #PROPERTIES_KAFKA_PREFIX}".
    *
-   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link VeniceProducer}.
+   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link ProducerAdapter}.
   */
   private Properties getKafkaPropertiesFromVeniceProps(VeniceProperties props) {
     VeniceProperties kafkaProps = props.clipAndFilterNamespace(PROPERTIES_KAFKA_PREFIX);

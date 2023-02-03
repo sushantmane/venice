@@ -15,7 +15,7 @@ import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.serialization.DefaultSerializer;
@@ -174,7 +174,7 @@ public class SharedKafkaProducerServiceTest {
 
   private static class ProducerSupplier implements SharedKafkaProducerService.KafkaProducerSupplier {
     @Override
-    public VeniceProducer getNewProducer(VeniceProperties props) {
+    public ProducerAdapter getNewProducer(VeniceProperties props) {
       return mock(ApacheKafkaProducerAdapter.class);
     }
   }
@@ -191,11 +191,11 @@ public class SharedKafkaProducerServiceTest {
           Collections.EMPTY_SET);
 
       // Create at least 8 tasks to assign each producer a task.
-      VeniceProducer producer1 = sharedKafkaProducerService.acquireKafkaProducer("task1");
+      ProducerAdapter producer1 = sharedKafkaProducerService.acquireKafkaProducer("task1");
       sharedKafkaProducerService.acquireKafkaProducer("task2");
       sharedKafkaProducerService.acquireKafkaProducer("task3");
       sharedKafkaProducerService.acquireKafkaProducer("task4");
-      VeniceProducer producer5 = sharedKafkaProducerService.acquireKafkaProducer("task5");
+      ProducerAdapter producer5 = sharedKafkaProducerService.acquireKafkaProducer("task5");
       sharedKafkaProducerService.acquireKafkaProducer("task6");
       sharedKafkaProducerService.acquireKafkaProducer("task7");
       sharedKafkaProducerService.acquireKafkaProducer("task8");

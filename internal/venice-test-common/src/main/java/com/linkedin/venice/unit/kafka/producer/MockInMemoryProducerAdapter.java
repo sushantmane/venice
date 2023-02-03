@@ -1,7 +1,7 @@
 package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
@@ -18,13 +18,13 @@ import org.apache.kafka.common.TopicPartition;
 
 
 /**
- * A {@link VeniceProducer} implementation which interacts with the
+ * A {@link ProducerAdapter} implementation which interacts with the
  * {@link InMemoryKafkaBroker} in order to make unit tests more lightweight.
  */
-public class MockInMemoryProducer implements VeniceProducer {
+public class MockInMemoryProducerAdapter implements ProducerAdapter {
   private final InMemoryKafkaBroker broker;
 
-  public MockInMemoryProducer(InMemoryKafkaBroker broker) {
+  public MockInMemoryProducerAdapter(InMemoryKafkaBroker broker) {
     this.broker = broker;
   }
 

@@ -49,7 +49,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
-import com.linkedin.venice.pubsub.api.VeniceProducer;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.schema.SchemaReader;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
@@ -244,7 +244,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
           serverConfig.getSharedProducerPoolSizePerKafkaCluster(),
           new SharedKafkaProducerService.KafkaProducerSupplier() {
             @Override
-            public VeniceProducer getNewProducer(VeniceProperties props) {
+            public ProducerAdapter getNewProducer(VeniceProperties props) {
               return new ApacheKafkaProducerAdapter(props);
             }
           },
