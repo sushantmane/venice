@@ -1,4 +1,4 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.api;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
@@ -10,16 +10,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
-public interface KafkaProducerWrapper {
+public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
+  /**
+   * The support for the following API will be removed.
+   */
+  @Deprecated
   int getNumberOfPartitions(String topic);
 
+  @Deprecated
   default int getNumberOfPartitions(String topic, int timeout, TimeUnit timeUnit)
       throws InterruptedException, ExecutionException, TimeoutException {
     Callable<Integer> task = () -> getNumberOfPartitions(topic);
@@ -27,14 +29,34 @@ public interface KafkaProducerWrapper {
     return future.get(timeout, timeUnit);
   }
 
-  Future<RecordMetadata> sendMessage(
+  Future<ProduceResult> sendMessage(
+      String topic,
+      Integer partition,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubsubMessageHeaders headers,
+      PubsubProducerCallback callback);
+
+  default Future<ProduceResult> sendMessage(
+      String topic,
+      Integer partition,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubsubProducerCallback callback) {
+    return sendMessage(topic, partition, key, value, null, callback);
+  }
+
+  default Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback);
+      PubsubProducerCallback callback) {
+    return sendMessage(topic, null, key, value, null, callback);
+  }
 
-  Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback);
+  default Future<ProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
+    return sendMessage(topic, null, key, value, null, null);
+  }
 
   void flush();
 
