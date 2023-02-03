@@ -2,7 +2,7 @@ package com.linkedin.venice.kafka.consumer;
 
 import com.linkedin.venice.exceptions.UnsubscribedTopicPartitionException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.io.Closeable;
 import java.util.Set;
 import org.apache.kafka.clients.consumer.ConsumerRecords;

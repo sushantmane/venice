@@ -27,10 +27,13 @@ import com.linkedin.venice.kafka.protocol.GUID;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
-import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -42,7 +45,6 @@ import com.linkedin.venice.utils.ByteUtils;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.lazy.Lazy;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.nio.ByteBuffer;
@@ -53,8 +55,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 import org.testng.Assert;
@@ -88,7 +88,7 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] key = "foo".getBytes();
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -105,8 +105,8 @@ public class ActiveActiveStoreIngestionTaskTest {
             any())).thenAnswer((Answer<Future>) invocation -> {
               KafkaKey kafkaKey = invocation.getArgument(1);
               KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(2);
-              Callback callback = invocation.getArgument(4);
-              RecordMetadata recordMetadata = mock(RecordMetadata.class);
+              PubsubProducerCallback callback = invocation.getArgument(4);
+              ProduceResult recordMetadata = mock(ProduceResult.class);
               offset.addAndGet(1);
               when(recordMetadata.offset()).thenReturn(offset.get());
               when(recordMetadata.serializedKeySize()).thenReturn(kafkaKey.getKeyLength());
@@ -126,7 +126,7 @@ public class ActiveActiveStoreIngestionTaskTest {
             .setTime(SystemTime.INSTANCE)
             .build();
     VeniceWriter<byte[], byte[], byte[]> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
     when(ingestionTask.getVeniceWriter()).thenReturn(Lazy.of(() -> writer));
     StringBuilder stringBuilder = new StringBuilder();
     for (int i = 0; i < 50000; i++) {

@@ -26,9 +26,10 @@ import com.linkedin.venice.kafka.protocol.Delete;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
-import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -60,7 +61,6 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.mockito.ArgumentCaptor;
 import org.testng.Assert;
@@ -155,7 +155,7 @@ public class VeniceWriterTest {
 
   @Test
   public void testCloseSegmentBasedOnElapsedTime() throws InterruptedException, ExecutionException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -172,7 +172,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
     for (int i = 0; i < 1000; i++) {
       writer.put(Integer.toString(i), Integer.toString(i), 1, null);
     }
@@ -194,7 +194,7 @@ public class VeniceWriterTest {
   @Test
   public void testReplicationMetadataWrittenCorrectly()
       throws InterruptedException, ExecutionException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -210,7 +210,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     // verify the new veniceWriter API's are able to encode the A/A metadat info correctly.
     long ctime = System.currentTimeMillis();
@@ -293,7 +293,7 @@ public class VeniceWriterTest {
 
   @Test(timeOut = 10000)
   public void testReplicationMetadataChunking() throws ExecutionException, InterruptedException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -312,7 +312,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     ByteBuffer replicationMetadata = ByteBuffer.wrap(new byte[] { 0xa, 0xb });
     PutMetadata putMetadata = new PutMetadata(1, replicationMetadata);
@@ -455,7 +455,7 @@ public class VeniceWriterTest {
   }
 
   @Test(timeOut = 30000)
-  public void testProducerClose() {
+  public void testProducerClosex() {
     String topicName = Utils.getUniqueString("topic-for-vw-thread-safety");
     int partitionCount = 1;
     topicManager.createTopic(topicName, partitionCount, 1, true);
@@ -466,7 +466,7 @@ public class VeniceWriterTest {
 
     VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter =
         TestUtils.getVeniceWriterFactory(properties).createVeniceWriter(topicName, partitionCount);
-    KafkaProducerWrapper producer = veniceWriter.getProducer();
+    ProducerAdapter producer = veniceWriter.getProducerAdapter();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);
 
@@ -474,7 +474,7 @@ public class VeniceWriterTest {
       Future future = executor.submit(() -> {
         countDownLatch.countDown();
         // send to non-existent topic
-        producer.sendMessage(new ProducerRecord("topic", "key", "value"), null);
+        producer.sendMessage("topic", new KafkaKey(MessageType.PUT, "key".getBytes()), null, null);
         fail("Should be blocking send");
       });
 

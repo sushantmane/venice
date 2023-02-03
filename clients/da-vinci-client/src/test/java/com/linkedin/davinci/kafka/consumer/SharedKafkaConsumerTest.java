@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import com.linkedin.davinci.stats.KafkaConsumerServiceStats;
 import com.linkedin.venice.kafka.consumer.KafkaConsumerWrapper;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;

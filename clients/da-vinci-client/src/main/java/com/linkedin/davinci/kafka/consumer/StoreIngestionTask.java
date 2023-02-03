@@ -54,13 +54,10 @@ import com.linkedin.venice.kafka.protocol.StartOfIncrementalPush;
 import com.linkedin.venice.kafka.protocol.StartOfPush;
 import com.linkedin.venice.kafka.protocol.TopicSwitch;
 import com.linkedin.venice.kafka.protocol.Update;
-import com.linkedin.venice.kafka.protocol.enums.ControlMessageType;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.kafka.protocol.state.PartitionState;
 import com.linkedin.venice.kafka.protocol.state.StoreVersionState;
 import com.linkedin.venice.kafka.validation.KafkaDataIntegrityValidator;
 import com.linkedin.venice.kafka.validation.ProducerTracker;
-import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
@@ -70,6 +67,10 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
@@ -124,7 +125,6 @@ import java.util.function.Supplier;
 import org.apache.avro.Schema;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -3251,7 +3251,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    */
   @FunctionalInterface
   interface ProduceToTopic {
-    Future<RecordMetadata> apply(ChunkAwareCallback callback, LeaderMetadataWrapper leaderMetadataWrapper);
+    Future<ProduceResult> apply(ChunkAwareCallback callback, LeaderMetadataWrapper leaderMetadataWrapper);
   }
 
   /**

@@ -1,30 +1,29 @@
 package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.adapter.SimpleProduceResultImpl;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.TopicPartition;
 
 
 /**
- * A {@link KafkaProducerWrapper} implementation which interacts with the
+ * A {@link ProducerAdapter} implementation which interacts with the
  * {@link InMemoryKafkaBroker} in order to make unit tests more lightweight.
  */
-public class MockInMemoryProducer implements KafkaProducerWrapper {
+public class MockInMemoryProducerAdapter implements ProducerAdapter {
   private final InMemoryKafkaBroker broker;
 
-  public MockInMemoryProducer(InMemoryKafkaBroker broker) {
+  public MockInMemoryProducerAdapter(InMemoryKafkaBroker broker) {
     this.broker = broker;
   }
 
@@ -34,17 +33,16 @@ public class MockInMemoryProducer implements KafkaProducerWrapper {
   }
 
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback) {
+      Integer partition,
+      PubsubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
-    RecordMetadata recordMetadata =
-        new RecordMetadata(new TopicPartition(topic, partition), 0, offset, -1, -1L, -1, -1);
-    callback.onCompletion(recordMetadata, null);
-    return new Future<RecordMetadata>() {
+    ProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);
+    callback.onCompletion(produceResult, null);
+    return new Future<ProduceResult>() {
       @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
@@ -61,21 +59,16 @@ public class MockInMemoryProducer implements KafkaProducerWrapper {
       }
 
       @Override
-      public RecordMetadata get() throws InterruptedException, ExecutionException {
-        return recordMetadata;
+      public ProduceResult get() throws InterruptedException, ExecutionException {
+        return produceResult;
       }
 
       @Override
-      public RecordMetadata get(long timeout, TimeUnit unit)
+      public ProduceResult get(long timeout, TimeUnit unit)
           throws InterruptedException, ExecutionException, TimeoutException {
-        return recordMetadata;
+        return produceResult;
       }
     };
-  }
-
-  @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
-    return sendMessage(record.topic(), record.key(), record.value(), record.partition(), callback);
   }
 
   @Override

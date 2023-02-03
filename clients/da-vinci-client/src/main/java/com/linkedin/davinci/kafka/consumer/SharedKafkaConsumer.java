@@ -5,7 +5,7 @@ import com.linkedin.venice.exceptions.UnsubscribedTopicPartitionException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.consumer.KafkaConsumerWrapper;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;

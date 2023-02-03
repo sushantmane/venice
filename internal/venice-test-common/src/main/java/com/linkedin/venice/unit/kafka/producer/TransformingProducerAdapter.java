@@ -1,27 +1,26 @@
 package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.util.Map;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 /**
- * This {@link KafkaProducerWrapper} implementation allows tests to perform
+ * This {@link ProducerAdapter} implementation allows tests to perform
  * arbitrary transformations on the messages that are about to be written to
  * Kafka.
  *
  * This can be used in unit tests to inject corrupt data.
  */
-public class TransformingProducer implements KafkaProducerWrapper {
-  private final KafkaProducerWrapper baseProducer;
+public class TransformingProducerAdapter implements ProducerAdapter {
+  private final ProducerAdapter baseProducer;
   private final SendMessageParametersTransformer transformer;
 
-  public TransformingProducer(KafkaProducerWrapper baseProducer, SendMessageParametersTransformer transformer) {
+  public TransformingProducerAdapter(ProducerAdapter baseProducer, SendMessageParametersTransformer transformer) {
     this.baseProducer = baseProducer;
     this.transformer = transformer;
   }
@@ -32,19 +31,14 @@ public class TransformingProducer implements KafkaProducerWrapper {
   }
 
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback) {
+      Integer partition,
+      PubsubProducerCallback callback) {
     SendMessageParameters parameters = transformer.transform(topic, key, value, partition);
     return baseProducer.sendMessage(parameters.topic, parameters.key, parameters.value, parameters.partition, callback);
-  }
-
-  @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
-    return sendMessage(record.topic(), record.key(), record.value(), record.partition(), callback);
   }
 
   @Override

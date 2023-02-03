@@ -7,7 +7,7 @@ import com.linkedin.venice.exceptions.VeniceMessageException;
 import com.linkedin.venice.guid.GuidUtils;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.SchemaReader;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;

@@ -7,7 +7,7 @@ import com.linkedin.venice.kafka.TopicDoesNotExistException;
 import com.linkedin.venice.kafka.VeniceOperationAgainstKafkaTimedOut;
 import com.linkedin.venice.kafka.admin.KafkaAdminWrapper;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.lazy.Lazy;
 import com.linkedin.venice.utils.locks.AutoCloseableLock;

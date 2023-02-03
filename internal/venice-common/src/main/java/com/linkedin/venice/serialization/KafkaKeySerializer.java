@@ -1,7 +1,7 @@
 package com.linkedin.venice.serialization;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;

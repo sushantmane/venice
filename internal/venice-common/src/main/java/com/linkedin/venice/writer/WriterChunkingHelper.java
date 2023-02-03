@@ -4,8 +4,8 @@ import static com.linkedin.venice.writer.VeniceWriter.VENICE_DEFAULT_TIMESTAMP_M
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.storage.protocol.ChunkId;

@@ -3,11 +3,11 @@ package com.linkedin.davinci.kafka.consumer;
 import com.linkedin.davinci.store.record.ValueRecord;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.writer.VeniceWriter;
 import java.nio.ByteBuffer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 public class ActiveActiveProducerCallback extends LeaderProducerCallback {
@@ -33,9 +33,9 @@ public class ActiveActiveProducerCallback extends LeaderProducerCallback {
   }
 
   @Override
-  public void onCompletion(RecordMetadata recordMetadata, Exception exception) {
+  public void onCompletion(ProduceResult produceResult, Exception exception) {
     this.onCompletionFunction.run();
-    super.onCompletion(recordMetadata, exception);
+    super.onCompletion(produceResult, exception);
   }
 
   @Override
