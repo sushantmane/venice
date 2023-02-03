@@ -24,9 +24,8 @@ public class KMEProtocolCompatibilityTest extends ProtocolCompatibilityTest {
       Map<Integer, Schema> protocolSchemaMap = new HashMap<>();
       int knownKMEProtocolsNum = new KafkaValueSerializer().knownProtocols().size();
       for (int i = 1; i <= knownKMEProtocolsNum; i++) {
-        protocolSchemaMap.put(
-            i,
-            Utils.getSchemaFromResource("avro/pubsub/KafkaMessageEnvelope/v" + i + "/KafkaMessageEnvelope.avsc"));
+        protocolSchemaMap
+            .put(i, Utils.getSchemaFromResource("avro/KafkaMessageEnvelope/v" + i + "/KafkaMessageEnvelope.avsc"));
       }
       return protocolSchemaMap;
     } catch (IOException e) {
