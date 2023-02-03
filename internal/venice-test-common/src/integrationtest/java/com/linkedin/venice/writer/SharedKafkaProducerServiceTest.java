@@ -16,6 +16,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;

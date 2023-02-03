@@ -2,6 +2,7 @@ package com.linkedin.venice.writer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
 import com.linkedin.venice.stats.StatsErrorCode;

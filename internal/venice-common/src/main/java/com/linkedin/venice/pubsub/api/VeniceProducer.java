@@ -1,4 +1,4 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.api;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;

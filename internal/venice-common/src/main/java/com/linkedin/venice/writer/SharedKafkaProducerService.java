@@ -8,6 +8,7 @@ import static org.apache.kafka.clients.producer.ProducerConfig.CLIENT_ID_CONFIG;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;

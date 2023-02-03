@@ -2,7 +2,7 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.writer.VeniceProducer;
+import com.linkedin.venice.pubsub.api.VeniceProducer;
 import java.util.Map;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Callback;

@@ -2,9 +2,9 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.api.VeniceProducer;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
-import com.linkedin.venice.writer.VeniceProducer;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
