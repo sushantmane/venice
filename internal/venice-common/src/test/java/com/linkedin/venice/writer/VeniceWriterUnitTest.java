@@ -26,7 +26,7 @@ import org.testng.annotations.Test;
 public class VeniceWriterUnitTest {
   @Test(dataProvider = "Chunking-And-Partition-Counts", dataProviderClass = DataProviderUtils.class)
   public void testTargetPartitionIsSameForAllOperationsWithTheSameKey(boolean isChunkingEnabled, int partitionCount) {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    VeniceProducer mockedProducer = mock(VeniceProducer.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.sendMessage(anyString(), any(), any(), anyInt(), any())).thenReturn(mockedFuture);
     Properties writerProperties = new Properties();

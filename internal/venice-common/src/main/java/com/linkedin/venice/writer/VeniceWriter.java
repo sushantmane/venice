@@ -197,7 +197,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   private final VeniceKafkaSerializer<K> keySerializer;
   private final VeniceKafkaSerializer<V> valueSerializer;
   private final VeniceKafkaSerializer<U> writeComputeSerializer;
-  private final KafkaProducerWrapper producer;
+  private final VeniceProducer producer;
   private final GUID producerGUID;
   private final Time time;
   private final VenicePartitioner partitioner;
@@ -246,7 +246,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   public VeniceWriter(
       VeniceWriterOptions params,
       VeniceProperties props,
-      Supplier<KafkaProducerWrapper> producerWrapperSupplier) {
+      Supplier<VeniceProducer> producerWrapperSupplier) {
     super(params.getTopicName());
     this.keySerializer = params.getKeySerializer();
     this.valueSerializer = params.getValueSerializer();
@@ -335,7 +335,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       if (gracefulClose) {
         endAllSegments(true);
       }
-      // DO NOT call the {@link #KafkaProducerWrapper.close(int) version from here.}
+      // DO NOT call the {@link #VeniceProducer.close(int) version from here.}
       // For non shared producer mode gracefulClose will flush the producer
 
       producer.close(topicName, closeTimeOut, gracefulClose);
@@ -351,12 +351,12 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     close(true);
   }
 
-  public KafkaProducerWrapper getProducer() {
+  public VeniceProducer getProducer() {
     return producer;
   }
 
   /**
-   * Call flush on the internal {@link KafkaProducerWrapper}.
+   * Call flush on the internal {@link VeniceProducer}.
    */
   @Override
   public void flush() {

@@ -30,8 +30,8 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.writer.ApacheKafkaProducer;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
 import com.linkedin.venice.writer.LeaderMetadataWrapper;
+import com.linkedin.venice.writer.VeniceProducer;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.io.ByteArrayOutputStream;
@@ -190,7 +190,7 @@ public class ConsumerIntegrationTest {
     VeniceKafkaSerializer valueSerializer = new VeniceAvroKafkaSerializer(stringSchema);
     VenicePartitioner partitioner = new DefaultVenicePartitioner(props);
     Time time = new SystemTime();
-    Supplier<KafkaProducerWrapper> producerWrapperSupplier = () -> new ApacheKafkaProducerWithNewerProtocol(props);
+    Supplier<VeniceProducer> producerWrapperSupplier = () -> new ApacheKafkaProducerWithNewerProtocol(props);
 
     VeniceWriterOptions veniceWriterOptions = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
         .setValueSerializer(valueSerializer)
@@ -230,7 +230,7 @@ public class ConsumerIntegrationTest {
     protected VeniceWriterWithNewerProtocol(
         VeniceWriterOptions veniceWriterOptions,
         VeniceProperties props,
-        Supplier<KafkaProducerWrapper> producerWrapperSupplier) {
+        Supplier<VeniceProducer> producerWrapperSupplier) {
       super(veniceWriterOptions, props, producerWrapperSupplier);
     }
 

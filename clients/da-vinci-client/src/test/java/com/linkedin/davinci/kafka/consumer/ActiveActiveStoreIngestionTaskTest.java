@@ -42,7 +42,7 @@ import com.linkedin.venice.utils.ByteUtils;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.lazy.Lazy;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
+import com.linkedin.venice.writer.VeniceProducer;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.nio.ByteBuffer;
@@ -88,7 +88,7 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] key = "foo".getBytes();
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    VeniceProducer mockedProducer = mock(VeniceProducer.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);

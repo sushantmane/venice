@@ -26,13 +26,13 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the shared Kafka Producer for sending messages to Kafka.
  */
-public class SharedKafkaProducer implements KafkaProducerWrapper {
+public class SharedKafkaProducer implements VeniceProducer {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducer.class);
 
   private final SharedKafkaProducerService sharedKafkaProducerService;
   private final int id;
   private final Set<String> producerTasks;
-  private final KafkaProducerWrapper kafkaProducerWrapper;
+  private final VeniceProducer veniceProducer;
 
   private long lastStatUpdateTsMs = 0;
   private final Map<String, Double> kafkaProducerMetrics;
@@ -41,13 +41,13 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
   public SharedKafkaProducer(
       SharedKafkaProducerService sharedKafkaProducerService,
       int id,
-      KafkaProducerWrapper kafkaProducerWrapper,
+      VeniceProducer veniceProducer,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
     this.sharedKafkaProducerService = sharedKafkaProducerService;
     this.id = id;
     producerTasks = new HashSet<>();
-    this.kafkaProducerWrapper = kafkaProducerWrapper;
+    this.veniceProducer = veniceProducer;
     kafkaProducerMetrics = new HashMap<>();
     metricsToBeReported
         .forEach(metric -> kafkaProducerMetrics.put(metric, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
@@ -58,7 +58,7 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
 
   @Override
   public int getNumberOfPartitions(String topic) {
-    return kafkaProducerWrapper.getNumberOfPartitions(topic);
+    return veniceProducer.getNumberOfPartitions(topic);
   }
 
   /**
@@ -76,7 +76,7 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
       int partition,
       Callback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = kafkaProducerWrapper.sendMessage(topic, key, value, partition, callback);
+    Future<RecordMetadata> result = veniceProducer.sendMessage(topic, key, value, partition, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
@@ -84,24 +84,24 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
   @Override
   public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = kafkaProducerWrapper.sendMessage(record, callback);
+    Future<RecordMetadata> result = veniceProducer.sendMessage(record, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
 
   @Override
   public void flush() {
-    kafkaProducerWrapper.flush();
+    veniceProducer.flush();
   }
 
   @Override
   public void close(int closeTimeOutMs) {
-    kafkaProducerWrapper.close(closeTimeOutMs);
+    veniceProducer.close(closeTimeOutMs);
   }
 
   @Override
   public void close(int closeTimeOutMs, boolean doFlush) {
-    kafkaProducerWrapper.close(closeTimeOutMs, doFlush);
+    veniceProducer.close(closeTimeOutMs, doFlush);
   }
 
   @Override
@@ -116,14 +116,14 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
   @Override
   public void close(String topic, int closeTimeoutMs, boolean doFlush) {
     if (doFlush) {
-      kafkaProducerWrapper.flush();
+      veniceProducer.flush();
     }
     close(topic, closeTimeoutMs);
   }
 
   @Override
   public Map<String, Double> getMeasurableProducerMetrics() {
-    return kafkaProducerWrapper.getMeasurableProducerMetrics();
+    return veniceProducer.getMeasurableProducerMetrics();
   }
 
   public int getId() {
@@ -237,7 +237,7 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
     }
 
     // measure
-    Map<String, Double> metrics = kafkaProducerWrapper.getMeasurableProducerMetrics();
+    Map<String, Double> metrics = veniceProducer.getMeasurableProducerMetrics();
     for (String metricName: kafkaProducerMetrics.keySet()) {
       kafkaProducerMetrics
           .put(metricName, metrics.getOrDefault(metricName, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));

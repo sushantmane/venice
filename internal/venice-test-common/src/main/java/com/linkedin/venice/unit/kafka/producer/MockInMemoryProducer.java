@@ -4,7 +4,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
+import com.linkedin.venice.writer.VeniceProducer;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -18,10 +18,10 @@ import org.apache.kafka.common.TopicPartition;
 
 
 /**
- * A {@link KafkaProducerWrapper} implementation which interacts with the
+ * A {@link VeniceProducer} implementation which interacts with the
  * {@link InMemoryKafkaBroker} in order to make unit tests more lightweight.
  */
-public class MockInMemoryProducer implements KafkaProducerWrapper {
+public class MockInMemoryProducer implements VeniceProducer {
   private final InMemoryKafkaBroker broker;
 
   public MockInMemoryProducer(InMemoryKafkaBroker broker) {

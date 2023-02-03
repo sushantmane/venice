@@ -2,7 +2,7 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
+import com.linkedin.venice.writer.VeniceProducer;
 import java.util.Map;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Callback;
@@ -11,17 +11,17 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 /**
- * This {@link KafkaProducerWrapper} implementation allows tests to perform
+ * This {@link VeniceProducer} implementation allows tests to perform
  * arbitrary transformations on the messages that are about to be written to
  * Kafka.
  *
  * This can be used in unit tests to inject corrupt data.
  */
-public class TransformingProducer implements KafkaProducerWrapper {
-  private final KafkaProducerWrapper baseProducer;
+public class TransformingProducer implements VeniceProducer {
+  private final VeniceProducer baseProducer;
   private final SendMessageParametersTransformer transformer;
 
-  public TransformingProducer(KafkaProducerWrapper baseProducer, SendMessageParametersTransformer transformer) {
+  public TransformingProducer(VeniceProducer baseProducer, SendMessageParametersTransformer transformer) {
     this.baseProducer = baseProducer;
     this.transformer = transformer;
   }

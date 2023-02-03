@@ -69,8 +69,8 @@ import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.locks.AutoCloseableLock;
 import com.linkedin.venice.utils.locks.ResourceAutoClosableLockManager;
 import com.linkedin.venice.writer.ApacheKafkaProducer;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
 import com.linkedin.venice.writer.SharedKafkaProducerService;
+import com.linkedin.venice.writer.VeniceProducer;
 import com.linkedin.venice.writer.VeniceWriterFactory;
 import io.tehuti.metrics.MetricsRepository;
 import java.nio.ByteBuffer;
@@ -244,7 +244,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
           serverConfig.getSharedProducerPoolSizePerKafkaCluster(),
           new SharedKafkaProducerService.KafkaProducerSupplier() {
             @Override
-            public KafkaProducerWrapper getNewProducer(VeniceProperties props) {
+            public VeniceProducer getNewProducer(VeniceProperties props) {
               return new ApacheKafkaProducer(props);
             }
           },

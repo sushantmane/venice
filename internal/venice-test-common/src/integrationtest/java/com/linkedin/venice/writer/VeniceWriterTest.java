@@ -155,7 +155,7 @@ public class VeniceWriterTest {
 
   @Test
   public void testCloseSegmentBasedOnElapsedTime() throws InterruptedException, ExecutionException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    VeniceProducer mockedProducer = mock(VeniceProducer.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -194,7 +194,7 @@ public class VeniceWriterTest {
   @Test
   public void testReplicationMetadataWrittenCorrectly()
       throws InterruptedException, ExecutionException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    VeniceProducer mockedProducer = mock(VeniceProducer.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -293,7 +293,7 @@ public class VeniceWriterTest {
 
   @Test(timeOut = 10000)
   public void testReplicationMetadataChunking() throws ExecutionException, InterruptedException, TimeoutException {
-    KafkaProducerWrapper mockedProducer = mock(KafkaProducerWrapper.class);
+    VeniceProducer mockedProducer = mock(VeniceProducer.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -466,7 +466,7 @@ public class VeniceWriterTest {
 
     VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter =
         TestUtils.getVeniceWriterFactory(properties).createVeniceWriter(topicName, partitionCount);
-    KafkaProducerWrapper producer = veniceWriter.getProducer();
+    VeniceProducer producer = veniceWriter.getProducer();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);
 

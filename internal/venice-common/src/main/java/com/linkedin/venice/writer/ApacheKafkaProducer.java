@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the Kafka Producer for sending messages to Kafka.
  */
-public class ApacheKafkaProducer implements KafkaProducerWrapper {
+public class ApacheKafkaProducer implements VeniceProducer {
   public static final String PROPERTIES_KAFKA_PREFIX = "kafka.";
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducer.class);
 
@@ -46,7 +46,7 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
    *                      if false, the check will not happen (useful for tests only)
    */
   protected ApacheKafkaProducer(VeniceProperties props, boolean strictConfigs) {
-    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link KafkaProducerWrapper} */
+    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link VeniceProducer} */
     Properties properties = getKafkaPropertiesFromVeniceProps(props);
 
     // TODO : For sending control message, this is not required. Move this higher in the stack.
@@ -276,7 +276,7 @@ public class ApacheKafkaProducer implements KafkaProducerWrapper {
    *
    * It omits those properties that do not begin with "{@value #PROPERTIES_KAFKA_PREFIX}".
    *
-   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link KafkaProducerWrapper}.
+   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link VeniceProducer}.
   */
   private Properties getKafkaPropertiesFromVeniceProps(VeniceProperties props) {
     VeniceProperties kafkaProps = props.clipAndFilterNamespace(PROPERTIES_KAFKA_PREFIX);

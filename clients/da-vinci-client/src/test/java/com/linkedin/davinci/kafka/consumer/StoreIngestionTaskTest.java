@@ -152,7 +152,7 @@ import com.linkedin.venice.utils.TestMockTime;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
-import com.linkedin.venice.writer.KafkaProducerWrapper;
+import com.linkedin.venice.writer.VeniceProducer;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
 import com.linkedin.venice.writer.VeniceWriterOptions;
@@ -447,7 +447,7 @@ public abstract class StoreIngestionTaskTest {
 
   private VeniceWriter getVeniceWriter(
       String topic,
-      Supplier<KafkaProducerWrapper> producerSupplier,
+      Supplier<VeniceProducer> producerSupplier,
       int amplificationFactor) {
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(topic).setKeySerializer(new DefaultSerializer())
@@ -470,7 +470,7 @@ public abstract class StoreIngestionTaskTest {
     return partitioner;
   }
 
-  private VeniceWriter getVeniceWriter(Supplier<KafkaProducerWrapper> producerSupplier) {
+  private VeniceWriter getVeniceWriter(Supplier<VeniceProducer> producerSupplier) {
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(topic).setKeySerializer(new DefaultSerializer())
             .setValueSerializer(new DefaultSerializer())
@@ -486,7 +486,7 @@ public abstract class StoreIngestionTaskTest {
   }
 
   class CorruptedKafkaProducer extends TransformingProducer {
-    public CorruptedKafkaProducer(KafkaProducerWrapper baseProducer, byte[] valueToCorrupt) {
+    public CorruptedKafkaProducer(VeniceProducer baseProducer, byte[] valueToCorrupt) {
       super(baseProducer, (topicName, key, value, partition) -> {
         KafkaMessageEnvelope transformedMessageEnvelope = value;
 

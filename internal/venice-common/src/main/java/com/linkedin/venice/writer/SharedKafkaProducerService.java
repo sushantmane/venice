@@ -132,7 +132,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
     return isRunning;
   }
 
-  public synchronized KafkaProducerWrapper acquireKafkaProducer(String producerTaskName) {
+  public synchronized VeniceProducer acquireKafkaProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
           "SharedKafkaProducer: is already closed, can't assign new producer for task:" + producerTaskName);
@@ -152,10 +152,9 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducer: Creating Producer id: {}", i);
         producerProperties.put(PROPERTIES_KAFKA_PREFIX + CLIENT_ID_CONFIG, "shared-producer-" + String.valueOf(i));
-        KafkaProducerWrapper kafkaProducerWrapper =
-            kafkaProducerSupplier.getNewProducer(new VeniceProperties(producerProperties));
+        VeniceProducer veniceProducer = kafkaProducerSupplier.getNewProducer(new VeniceProperties(producerProperties));
         sharedKafkaProducer =
-            new SharedKafkaProducer(this, i, kafkaProducerWrapper, metricsRepository, producerMetricsToBeReported);
+            new SharedKafkaProducer(this, i, veniceProducer, metricsRepository, producerMetricsToBeReported);
         producers[i] = sharedKafkaProducer;
         LOGGER.info("SharedKafkaProducer: Created Shared Producer instance: {}", sharedKafkaProducer);
         incrActiveSharedProducerCount();
@@ -223,7 +222,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
   }
 
   public interface KafkaProducerSupplier {
-    KafkaProducerWrapper getNewProducer(VeniceProperties props);
+    VeniceProducer getNewProducer(VeniceProperties props);
   }
 
   public long getActiveSharedProducerTasksCount() {

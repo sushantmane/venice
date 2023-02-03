@@ -172,7 +172,7 @@ public class SharedKafkaProducerServiceTest {
 
   private static class ProducerSupplier implements SharedKafkaProducerService.KafkaProducerSupplier {
     @Override
-    public KafkaProducerWrapper getNewProducer(VeniceProperties props) {
+    public VeniceProducer getNewProducer(VeniceProperties props) {
       return mock(ApacheKafkaProducer.class);
     }
   }
@@ -189,11 +189,11 @@ public class SharedKafkaProducerServiceTest {
           Collections.EMPTY_SET);
 
       // Create at least 8 tasks to assign each producer a task.
-      KafkaProducerWrapper producer1 = sharedKafkaProducerService.acquireKafkaProducer("task1");
+      VeniceProducer producer1 = sharedKafkaProducerService.acquireKafkaProducer("task1");
       sharedKafkaProducerService.acquireKafkaProducer("task2");
       sharedKafkaProducerService.acquireKafkaProducer("task3");
       sharedKafkaProducerService.acquireKafkaProducer("task4");
-      KafkaProducerWrapper producer5 = sharedKafkaProducerService.acquireKafkaProducer("task5");
+      VeniceProducer producer5 = sharedKafkaProducerService.acquireKafkaProducer("task5");
       sharedKafkaProducerService.acquireKafkaProducer("task6");
       sharedKafkaProducerService.acquireKafkaProducer("task7");
       sharedKafkaProducerService.acquireKafkaProducer("task8");
