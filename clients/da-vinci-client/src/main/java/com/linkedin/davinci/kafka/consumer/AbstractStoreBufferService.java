@@ -1,7 +1,7 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.service.AbstractVeniceService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 

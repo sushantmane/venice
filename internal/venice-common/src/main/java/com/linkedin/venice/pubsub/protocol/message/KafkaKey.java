@@ -1,4 +1,4 @@
-package com.linkedin.venice.message;
+package com.linkedin.venice.pubsub.protocol.message;
 
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.storage.protocol.ChunkId;

@@ -4,7 +4,7 @@ import com.linkedin.avroutil1.compatibility.shaded.org.apache.commons.lang3.Vali
 import com.linkedin.davinci.ingestion.consumption.ConsumedDataReceiver;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.utils.ExceptionUtils;
 import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
