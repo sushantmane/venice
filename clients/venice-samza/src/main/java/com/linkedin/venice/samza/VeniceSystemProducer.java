@@ -21,6 +21,7 @@ import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushmonitor.HybridStoreQuotaStatus;
 import com.linkedin.venice.pushmonitor.RouterBasedHybridStoreQuotaMonitor;
@@ -60,7 +61,6 @@ import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.io.FileUtils;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.samza.SamzaException;
@@ -235,7 +235,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
    * @param primaryControllerColoD2ZKHost D2 Zk Address of the colo where the primary controller resides
    * @param primaryControllerD2ServiceName The service name that the primary controller uses to announce itself to D2
    * @param storeName The store to write to
-   * @param pushType The {@link PushType} to use to write to the store
+   * @param pushType The {@link Version.PushType} to use to write to the store
    * @param samzaJobId A unique id used to identify jobs that can concurrently write to the same store
    * @param runningFabric The colo where the job is running. It is used to find the best destination for the data to be written to
    * @param verifyLatestProtocolPresent Config to check whether the protocol versions used at runtime are valid in Venice backend
@@ -584,7 +584,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
     byte[] key = serializeObject(topicName, keyObject);
     final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-    final Callback callback = new CompletableFutureCallback(completableFuture);
+    final PubsubProducerCallback callback = new CompletableFutureCallback(completableFuture);
 
     long logicalTimestamp = -1;
     if (valueObject instanceof VeniceObjectWithTimestamp) {

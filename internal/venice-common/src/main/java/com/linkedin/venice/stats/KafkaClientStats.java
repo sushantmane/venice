@@ -1,6 +1,6 @@
 package com.linkedin.venice.stats;
 
-import com.linkedin.venice.writer.SharedKafkaProducerService;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
 import com.linkedin.venice.writer.VeniceWriter;
 import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
@@ -11,7 +11,7 @@ import java.util.Optional;
  * This stats should work in the host level to measure stats of Kafka clients, like number of active clients.
  */
 public class KafkaClientStats extends AbstractVeniceStats {
-  private Optional<SharedKafkaProducerService> sharedKafkaProducerService;
+  private Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService;
 
   /**
    * Metric for active VeniceWriter numbers; once shared producer service is on, the number of VeniceWriter is not equal
@@ -37,7 +37,7 @@ public class KafkaClientStats extends AbstractVeniceStats {
   private KafkaClientStats(
       MetricsRepository metricsRepository,
       String name,
-      Optional<SharedKafkaProducerService> sharedKafkaProducerService) {
+      Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService) {
     super(metricsRepository, name);
     this.sharedKafkaProducerService = sharedKafkaProducerService;
 
@@ -60,7 +60,7 @@ public class KafkaClientStats extends AbstractVeniceStats {
   public static void registerKafkaClientStats(
       MetricsRepository metricsRepository,
       String name,
-      Optional<SharedKafkaProducerService> sharedKafkaProducerService) {
+      Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService) {
     new KafkaClientStats(metricsRepository, name, sharedKafkaProducerService);
   }
 }

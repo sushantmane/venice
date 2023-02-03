@@ -170,6 +170,7 @@ import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.persona.StoragePersona;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushstatushelper.PushStatusStoreRecordDeleter;
 import com.linkedin.venice.schema.AvroSchemaParseUtils;
@@ -239,7 +240,6 @@ import org.apache.avro.Schema;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.http.HttpStatus;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -732,11 +732,11 @@ public class VeniceParentHelixAdmin implements Admin {
         VeniceWriter<byte[], byte[], byte[]> veniceWriter = veniceWriterMap.get(clusterName);
         byte[] serializedValue = adminOperationSerializer.serialize(message);
         try {
-          Future<RecordMetadata> future = veniceWriter
+          Future<ProduceResult> future = veniceWriter
               .put(emptyKeyByteArr, serializedValue, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-          RecordMetadata meta = future.get();
+          ProduceResult produceResult = future.get();
 
-          LOGGER.info("Sent message: {} to kafka, offset: {}", message, meta.offset());
+          LOGGER.info("Sent message: {} to kafka, offset: {}", message, produceResult.offset());
         } catch (Exception e) {
           throw new VeniceException("Got exception during sending message to Kafka -- " + e.getMessage(), e);
         }

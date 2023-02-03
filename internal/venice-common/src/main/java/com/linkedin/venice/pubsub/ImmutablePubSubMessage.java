@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub;
 
 import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
 
 
 public class ImmutablePubSubMessage<K, V> implements PubSubMessage<K, V, Long> {
@@ -11,6 +12,7 @@ public class ImmutablePubSubMessage<K, V> implements PubSubMessage<K, V, Long> {
   private final long offset;
   private final long timestamp;
   private final int payloadSize;
+  private final PubsubMessageHeaders headers;
 
   public ImmutablePubSubMessage(
       K key,
@@ -19,12 +21,24 @@ public class ImmutablePubSubMessage<K, V> implements PubSubMessage<K, V, Long> {
       long offset,
       long timestamp,
       int payloadSize) {
+    this(key, value, topicPartition, offset, timestamp, payloadSize, null);
+  }
+
+  public ImmutablePubSubMessage(
+      K key,
+      V value,
+      PubSubTopicPartition topicPartition,
+      long offset,
+      long timestamp,
+      int payloadSize,
+      PubsubMessageHeaders headers) {
     this.key = key;
     this.value = value;
     this.topicPartition = topicPartition;
     this.offset = offset;
     this.timestamp = timestamp;
     this.payloadSize = payloadSize;
+    this.headers = headers;
   }
 
   @Override
@@ -55,5 +69,10 @@ public class ImmutablePubSubMessage<K, V> implements PubSubMessage<K, V, Long> {
   @Override
   public int getPayloadSize() {
     return payloadSize;
+  }
+
+  @Override
+  public PubsubMessageHeaders getHeaders() {
+    return headers;
   }
 }
