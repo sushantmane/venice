@@ -73,6 +73,7 @@ import com.linkedin.venice.offsets.InMemoryOffsetManager;
 import com.linkedin.venice.offsets.OffsetManager;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -86,7 +87,7 @@ import com.linkedin.venice.unit.kafka.consumer.poll.CompositePollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.FilteringPollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.PollStrategy;
 import com.linkedin.venice.unit.kafka.consumer.poll.RandomPollStrategy;
-import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducer;
+import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducerAdapter;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.Pair;
 import com.linkedin.venice.utils.SystemTime;
@@ -115,8 +116,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -195,10 +194,10 @@ public class AdminConsumptionTaskTest {
             .setPartitioner(new SimplePartitioner())
             .setTime(SystemTime.INSTANCE)
             .build();
-    return new TestVeniceWriter(
+    return new VeniceWriter(
         veniceWriterOptions,
         new VeniceProperties(props),
-        () -> new MockInMemoryProducer(inMemoryKafkaBroker));
+        new MockInMemoryProducerAdapter(inMemoryKafkaBroker));
   }
 
   private AdminConsumptionTask getAdminConsumptionTask(PollStrategy pollStrategy, boolean isParent) {
@@ -239,8 +238,8 @@ public class AdminConsumptionTaskTest {
         pubSubMessageDeserializer);
   }
 
-  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(RecordMetadata recordMetadata) {
-    return new Pair<>(new TopicPartition(recordMetadata.topic(), recordMetadata.partition()), recordMetadata.offset());
+  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(ProduceResult produceResult) {
+    return new Pair<>(new TopicPartition(produceResult.topic(), produceResult.partition()), produceResult.offset());
   }
 
   private long getLastOffset(String clusterName) {
@@ -372,7 +371,7 @@ public class AdminConsumptionTaskTest {
   @Test(timeOut = TIMEOUT)
   public void testDelegateExceptionSetsFailingOffset() throws ExecutionException, InterruptedException, IOException {
     long failingOffset =
-        ((RecordMetadata) veniceWriter
+        ((ProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
@@ -459,8 +458,8 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testRunWithDuplicateMessagesWithSameOffset() throws Exception {
-    RecordMetadata killJobMetadata =
-        (RecordMetadata) veniceWriter
+    ProduceResult killJobMetadata =
+        (ProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
@@ -531,8 +530,8 @@ public class AdminConsumptionTaskTest {
     OffsetRecord offsetRecord = getOffsetRecordByOffsetAndSeqNum(firstAdminMessageOffset, firstAdminMessageSeqNum);
     offsetManager.put(topicName, AdminTopicUtils.ADMIN_TOPIC_PARTITION_ID, offsetRecord);
 
-    RecordMetadata killJobMetadata =
-        (RecordMetadata) veniceWriter
+    ProduceResult killJobMetadata =
+        (ProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
@@ -581,7 +580,7 @@ public class AdminConsumptionTaskTest {
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     long offsetToSkip =
-        ((RecordMetadata) veniceWriter
+        ((ProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
@@ -678,7 +677,7 @@ public class AdminConsumptionTaskTest {
     String storeName3 = "test_store3";
 
     VeniceWriter oldVeniceWriter = getVeniceWriter(inMemoryKafkaBroker);
-    Future<RecordMetadata> metadataForStoreName0Future = oldVeniceWriter.put(
+    Future<ProduceResult> metadataForStoreName0Future = oldVeniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName0, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1054,7 +1053,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    Future<RecordMetadata> future = veniceWriter.put(
+    Future<ProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1088,7 +1087,7 @@ public class AdminConsumptionTaskTest {
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     long failingOffset =
-        ((RecordMetadata) veniceWriter
+        ((ProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getAddVersionMessage(clusterName, storeName, mockPushJobId, 1, 1, 2L),
@@ -1150,7 +1149,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    Future<RecordMetadata> future = veniceWriter.put(
+    Future<ProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1206,7 +1205,7 @@ public class AdminConsumptionTaskTest {
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     // New admin messages should fail with DIV error
-    Future<RecordMetadata> future = veniceWriter.put(
+    Future<ProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1261,7 +1260,7 @@ public class AdminConsumptionTaskTest {
             -1,
             1,
             false);
-    Future<RecordMetadata> future = veniceWriter.put(
+    Future<ProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getAddVersionMessage(clusterName, storeName, mockPushJobId, versionNumber, numberOfPartitions, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1409,15 +1408,5 @@ public class AdminConsumptionTaskTest {
     adminMessage.payloadUnion = addVersion;
     adminMessage.executionId = executionId;
     return adminOperationSerializer.serialize(adminMessage);
-  }
-
-  /**
-   * Used for test only. As the CTOR of VeniceWriter is protected, so the only way to create an instance is extend it
-   * and create an instance of this sub-class.
-   */
-  private static class TestVeniceWriter<K, V> extends VeniceWriter {
-    protected TestVeniceWriter(VeniceWriterOptions veniceWriterOptions, VeniceProperties props, Supplier supplier) {
-      super(veniceWriterOptions, props, supplier);
-    }
   }
 }
