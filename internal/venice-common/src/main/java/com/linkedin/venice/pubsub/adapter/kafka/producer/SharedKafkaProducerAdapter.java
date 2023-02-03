@@ -1,7 +1,11 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
 import com.linkedin.venice.stats.StatsErrorCode;
@@ -16,9 +20,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,28 +27,28 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the shared Kafka Producer for sending messages to Kafka.
  */
-public class SharedKafkaProducer implements KafkaProducerWrapper {
-  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducer.class);
+public class SharedKafkaProducerAdapter implements ProducerAdapter {
+  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
-  private final SharedKafkaProducerService sharedKafkaProducerService;
+  private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
   private final int id;
   private final Set<String> producerTasks;
-  private final KafkaProducerWrapper kafkaProducerWrapper;
+  private final ProducerAdapter producerAdapter;
 
   private long lastStatUpdateTsMs = 0;
   private final Map<String, Double> kafkaProducerMetrics;
   private SharedKafkaProducerStats sharedKafkaProducerStats;
 
-  public SharedKafkaProducer(
-      SharedKafkaProducerService sharedKafkaProducerService,
+  public SharedKafkaProducerAdapter(
+      SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory,
       int id,
-      KafkaProducerWrapper kafkaProducerWrapper,
+      ProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
-    this.sharedKafkaProducerService = sharedKafkaProducerService;
+    this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
     this.id = id;
     producerTasks = new HashSet<>();
-    this.kafkaProducerWrapper = kafkaProducerWrapper;
+    this.producerAdapter = producerAdapter;
     kafkaProducerMetrics = new HashMap<>();
     metricsToBeReported
         .forEach(metric -> kafkaProducerMetrics.put(metric, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
@@ -58,7 +59,7 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
 
   @Override
   public int getNumberOfPartitions(String topic) {
-    return kafkaProducerWrapper.getNumberOfPartitions(topic);
+    return producerAdapter.getNumberOfPartitions(topic);
   }
 
   /**
@@ -69,45 +70,38 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
    * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
+      Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
-      Callback callback) {
+      PubsubMessageHeaders headers,
+      PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = kafkaProducerWrapper.sendMessage(topic, key, value, partition, callback);
-    sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
-    return result;
-  }
-
-  @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
-    long startNs = System.nanoTime();
-    Future<RecordMetadata> result = kafkaProducerWrapper.sendMessage(record, callback);
+    Future<ProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
 
   @Override
   public void flush() {
-    kafkaProducerWrapper.flush();
+    producerAdapter.flush();
   }
 
   @Override
   public void close(int closeTimeOutMs) {
-    kafkaProducerWrapper.close(closeTimeOutMs);
+    producerAdapter.close(closeTimeOutMs);
   }
 
   @Override
   public void close(int closeTimeOutMs, boolean doFlush) {
-    kafkaProducerWrapper.close(closeTimeOutMs, doFlush);
+    producerAdapter.close(closeTimeOutMs, doFlush);
   }
 
   @Override
   public void close(String topic, int closeTimeoutMs) {
-    if (sharedKafkaProducerService.isRunning()) {
-      sharedKafkaProducerService.releaseKafkaProducer(topic);
+    if (sharedKafkaProducerAdapterFactory.isRunning()) {
+      sharedKafkaProducerAdapterFactory.releaseKafkaProducer(topic);
     } else {
       LOGGER.info("producer is already closed, can't release for topic: {}", topic);
     }
@@ -116,14 +110,14 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
   @Override
   public void close(String topic, int closeTimeoutMs, boolean doFlush) {
     if (doFlush) {
-      kafkaProducerWrapper.flush();
+      producerAdapter.flush();
     }
     close(topic, closeTimeoutMs);
   }
 
   @Override
   public Map<String, Double> getMeasurableProducerMetrics() {
-    return kafkaProducerWrapper.getMeasurableProducerMetrics();
+    return producerAdapter.getMeasurableProducerMetrics();
   }
 
   public int getId() {
@@ -237,7 +231,7 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
     }
 
     // measure
-    Map<String, Double> metrics = kafkaProducerWrapper.getMeasurableProducerMetrics();
+    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
     for (String metricName: kafkaProducerMetrics.keySet()) {
       kafkaProducerMetrics
           .put(metricName, metrics.getOrDefault(metricName, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
@@ -250,10 +244,10 @@ public class SharedKafkaProducer implements KafkaProducerWrapper {
     private final Sensor producerSendLatencySensor;
 
     public SharedKafkaProducerStats(MetricsRepository metricsRepository) {
-      super(metricsRepository, "SharedKafkaProducer");
+      super(metricsRepository, "SharedKafkaProducerAdapter");
       kafkaProducerMetrics.keySet().forEach(metric -> {
         String metricName = "producer_" + id + "_" + metric;
-        LOGGER.info("SharedKafkaProducer: Registering metric: {}", metricName);
+        LOGGER.info("SharedKafkaProducerAdapter: Registering metric: {}", metricName);
         registerSensorIfAbsent(metricName, new Gauge(() -> {
           mayBeCalculateAllProducerMetrics();
           return kafkaProducerMetrics.get(metric);

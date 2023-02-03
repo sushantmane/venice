@@ -1,10 +1,10 @@
 package com.linkedin.venice.writer;
 
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 /**
@@ -25,29 +25,29 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
     return this.topicName;
   }
 
-  public Future<RecordMetadata> put(K key, V value, int valueSchemaId) {
+  public Future<ProduceResult> put(K key, V value, int valueSchemaId) {
     return put(key, value, valueSchemaId, null);
   }
 
   public abstract void close(boolean gracefulClose) throws IOException;
 
-  public abstract Future<RecordMetadata> put(K key, V value, int valueSchemaId, Callback callback);
+  public abstract Future<ProduceResult> put(K key, V value, int valueSchemaId, PubsubProducerCallback callback);
 
-  public abstract Future<RecordMetadata> put(
+  public abstract Future<ProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
-      Callback callback,
+      PubsubProducerCallback callback,
       PutMetadata putMetadata);
 
-  public abstract Future<RecordMetadata> delete(K key, Callback callback, DeleteMetadata deleteMetadata);
+  public abstract Future<ProduceResult> delete(K key, PubsubProducerCallback callback, DeleteMetadata deleteMetadata);
 
-  public abstract Future<RecordMetadata> update(
+  public abstract Future<ProduceResult> update(
       K key,
       U update,
       int valueSchemaId,
       int derivedSchemaId,
-      Callback callback);
+      PubsubProducerCallback callback);
 
   public abstract void flush();
 }
