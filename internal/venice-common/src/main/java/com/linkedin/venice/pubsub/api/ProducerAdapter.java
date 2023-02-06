@@ -10,9 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 public interface ProducerAdapter {
@@ -27,14 +25,16 @@ public interface ProducerAdapter {
     return future.get(timeout, timeUnit);
   }
 
-  Future<RecordMetadata> sendMessage(
+  Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
       int partition,
-      Callback callback);
+      PubsubProducerCallback callback);
 
-  Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback);
+  Future<ProduceResult> sendMessage(
+      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
+      PubsubProducerCallback callback);
 
   void flush();
 

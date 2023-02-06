@@ -68,6 +68,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
@@ -130,7 +131,6 @@ import java.util.function.Supplier;
 import org.apache.avro.Schema;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -3596,7 +3596,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    */
   @FunctionalInterface
   interface ProduceToTopic {
-    Future<RecordMetadata> apply(ChunkAwareCallback callback, LeaderMetadataWrapper leaderMetadataWrapper);
+    Future<ProduceResult> apply(ChunkAwareCallback callback, LeaderMetadataWrapper leaderMetadataWrapper);
   }
 
   /**

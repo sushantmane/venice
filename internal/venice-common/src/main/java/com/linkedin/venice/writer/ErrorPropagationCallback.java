@@ -1,21 +1,21 @@
 package com.linkedin.venice.writer;
 
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 
 
 /**
- * Wraps another {@link Callback} and propagates exceptions to it, but swallows successful completions.
+ * Wraps another {@link PubsubProducerCallback} and propagates exceptions to it, but swallows successful completions.
  */
-class ErrorPropagationCallback implements Callback {
-  private final Callback callback;
+class ErrorPropagationCallback implements PubsubProducerCallback {
+  private final PubsubProducerCallback callback;
 
-  public ErrorPropagationCallback(Callback callback) {
+  public ErrorPropagationCallback(PubsubProducerCallback callback) {
     this.callback = callback;
   }
 
   @Override
-  public void onCompletion(RecordMetadata metadata, Exception exception) {
+  public void onCompletion(ProduceResult metadata, Exception exception) {
     if (exception != null) {
       callback.onCompletion(null, exception);
     } // else, no-op

@@ -1,7 +1,9 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
@@ -17,9 +19,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -70,22 +70,24 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
    * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
       int partition,
-      Callback callback) {
+      PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = producerAdapter.sendMessage(topic, key, value, partition, callback);
+    Future<ProduceResult> result = producerAdapter.sendMessage(topic, key, value, partition, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
 
   @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
+  public Future<ProduceResult> sendMessage(
+      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
+      PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<RecordMetadata> result = producerAdapter.sendMessage(record, callback);
+    Future<ProduceResult> result = producerAdapter.sendMessage(record, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }

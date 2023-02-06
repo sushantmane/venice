@@ -6,6 +6,7 @@ import com.linkedin.davinci.store.record.ValueRecord;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.Put;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.ChunkedValueManifestSerializer;
@@ -15,7 +16,6 @@ import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.writer.ChunkAwareCallback;
 import java.nio.ByteBuffer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -66,7 +66,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
   }
 
   @Override
-  public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+  public void onCompletion(ProduceResult recordMetadata, Exception e) {
     if (e != null) {
       LOGGER.error(
           "Leader failed to send out message to version topic when consuming {} partition {}",

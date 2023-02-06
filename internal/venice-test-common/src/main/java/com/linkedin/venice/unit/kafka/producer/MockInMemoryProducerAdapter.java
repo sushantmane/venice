@@ -1,7 +1,10 @@
 package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.SimpleProduceResultImpl;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
@@ -11,10 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.TopicPartition;
 
 
 /**
@@ -34,17 +34,16 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
   }
 
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
       int partition,
-      Callback callback) {
+      PubsubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
-    RecordMetadata recordMetadata =
-        new RecordMetadata(new TopicPartition(topic, partition), 0, offset, -1, -1L, -1, -1);
-    callback.onCompletion(recordMetadata, null);
-    return new Future<RecordMetadata>() {
+    ProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);
+    callback.onCompletion(produceResult, null);
+    return new Future<ProduceResult>() {
       @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
@@ -61,20 +60,22 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
       }
 
       @Override
-      public RecordMetadata get() throws InterruptedException, ExecutionException {
-        return recordMetadata;
+      public ProduceResult get() throws InterruptedException, ExecutionException {
+        return produceResult;
       }
 
       @Override
-      public RecordMetadata get(long timeout, TimeUnit unit)
+      public ProduceResult get(long timeout, TimeUnit unit)
           throws InterruptedException, ExecutionException, TimeoutException {
-        return recordMetadata;
+        return produceResult;
       }
     };
   }
 
   @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
+  public Future<ProduceResult> sendMessage(
+      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
+      PubsubProducerCallback callback) {
     return sendMessage(record.topic(), record.key(), record.value(), record.partition(), callback);
   }
 

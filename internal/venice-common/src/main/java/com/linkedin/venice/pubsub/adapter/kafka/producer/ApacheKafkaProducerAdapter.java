@@ -4,7 +4,9 @@ import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
@@ -18,11 +20,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.logging.log4j.LogManager;
@@ -191,12 +191,12 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
    * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<RecordMetadata> sendMessage(
+  public Future<ProduceResult> sendMessage(
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
       int partition,
-      Callback callback) {
+      PubsubProducerCallback callback) {
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> kafkaRecord = new ProducerRecord<>(topic, partition, key, value);
     return sendMessage(kafkaRecord, callback);
   }
@@ -207,17 +207,28 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
     }
   }
 
-  @Override
-  public Future<RecordMetadata> sendMessage(ProducerRecord<KafkaKey, KafkaMessageEnvelope> record, Callback callback) {
+  // @Override
+  public Future<ProduceResult> sendMessage(
+      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
+      PubsubProducerCallback callback) {
     ensureProducerIsNotClosed();
     try {
-      return producer.send(record, callback);
+      // return producer.send(record, getKafkaSpecificCallback(callback));
+      return null;
+
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
               + record.partition(),
           e);
     }
+  }
+
+  private static ApacheKafkaProducerCallback getKafkaSpecificCallback(PubsubProducerCallback callback) {
+    if (callback == null) {
+      return null;
+    }
+    return new ApacheKafkaProducerCallback(callback);
   }
 
   @Override
