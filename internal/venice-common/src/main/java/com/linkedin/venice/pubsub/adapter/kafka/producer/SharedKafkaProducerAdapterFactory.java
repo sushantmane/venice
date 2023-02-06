@@ -1,4 +1,4 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX;
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
@@ -9,7 +9,7 @@ import static org.apache.kafka.clients.producer.ProducerConfig.CLIENT_ID_CONFIG;
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
-import com.linkedin.venice.service.AbstractVeniceService;
+import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
@@ -29,8 +29,9 @@ import org.apache.logging.log4j.Logger;
  * This service maintains a pool of kafka producer. Ingestion task can acquire or release a producer on demand basis.
  * It does lazy initialization of producers. Also producers are assigned based on least loaded manner.
  */
-public class SharedKafkaProducerService extends AbstractVeniceService {
-  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerService.class);
+public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory<SharedKafkaProducerAdapter> {
+  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactory.class);
+  public static final String NAME = "ApacheKafkaSharedProducer";
 
   // This helps override kafka config for shared producer seperately than dedicated producer.
   public static final String SHARED_KAFKA_PRODUCER_CONFIG_PREFIX = "shared.producer.";
@@ -42,7 +43,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
 
   private final SharedKafkaProducerAdapter[] producers;
   private final Map<String, SharedKafkaProducerAdapter> producerTaskToProducerMap = new VeniceConcurrentHashMap<>();
-  private final KafkaProducerSupplier kafkaProducerSupplier;
+  private final ApacheKafkaProducerAdapterFactory producerAdapterFactory;
   private volatile boolean isRunning = true;
 
   // stats
@@ -55,17 +56,19 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
    *
    * @param properties -- List of properties to construct a kafka producer
    * @param sharedProducerPoolCount  -- producer pool sizes
-   * @param kafkaProducerSupplier -- function to create a KafkaProducer object
+   * @param producerAdapterFactory -- factory to create a KafkaProducerAdapter object
    * @param metricsRepository -- metric repository
    * @param producerMetricsToBeReported -- a comma seperated list of KafkaProducer metrics that will exported as ingraph metrics
+   *
+   * Note: This producer will not work when target topic is in different fabric than the localKafkaBootstrapServers.
    */
-  public SharedKafkaProducerService(
+  public SharedKafkaProducerAdapterFactory(
       Properties properties,
       int sharedProducerPoolCount,
-      KafkaProducerSupplier kafkaProducerSupplier,
+      ApacheKafkaProducerAdapterFactory producerAdapterFactory,
       MetricsRepository metricsRepository,
       Set<String> producerMetricsToBeReported) {
-    this.kafkaProducerSupplier = kafkaProducerSupplier;
+    this.producerAdapterFactory = producerAdapterFactory;
     boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       localKafkaBootstrapServers = properties.getProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
@@ -97,12 +100,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
   }
 
   @Override
-  public boolean startInner() throws Exception {
-    return true;
-  }
-
-  @Override
-  public synchronized void stopInner() throws Exception {
+  public synchronized void close() {
     isRunning = false;
     LOGGER.info("SharedKafkaProducerAdapter: is being closed");
     // This map should be empty when this is called.
@@ -133,7 +131,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
     return isRunning;
   }
 
-  public synchronized ProducerAdapter acquireKafkaProducer(String producerTaskName) {
+  public synchronized SharedKafkaProducerAdapter acquireKafkaProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
           "SharedKafkaProducerAdapter: is already closed, can't assign new producer for task:" + producerTaskName);
@@ -155,8 +153,7 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(PROPERTIES_KAFKA_PREFIX + CLIENT_ID_CONFIG, "shared-producer-" + String.valueOf(i));
-        ProducerAdapter producerAdapter =
-            kafkaProducerSupplier.getNewProducer(new VeniceProperties(producerProperties));
+        ProducerAdapter producerAdapter = producerAdapterFactory.create(new VeniceProperties(producerProperties));
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);
         producers[i] = sharedKafkaProducer;
@@ -231,8 +228,14 @@ public class SharedKafkaProducerService extends AbstractVeniceService {
     LOGGER.info("SharedKafkaProducerAdapter: Current Assignments: {}", sb);
   }
 
-  public interface KafkaProducerSupplier {
-    ProducerAdapter getNewProducer(VeniceProperties props);
+  /**
+   *
+   * @param veniceProperties
+   * @return
+   */
+  @Override
+  public SharedKafkaProducerAdapter create(String topicName, VeniceProperties veniceProperties) {
+    return acquireKafkaProducer(topicName);
   }
 
   public long getActiveSharedProducerTasksCount() {

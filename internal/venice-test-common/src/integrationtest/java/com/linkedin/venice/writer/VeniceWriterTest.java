@@ -173,7 +173,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
     for (int i = 0; i < 1000; i++) {
       writer.put(Integer.toString(i), Integer.toString(i), 1, null);
     }
@@ -211,7 +211,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     // verify the new veniceWriter API's are able to encode the A/A metadat info correctly.
     long ctime = System.currentTimeMillis();
@@ -313,7 +313,7 @@ public class VeniceWriterTest {
         .setTime(SystemTime.INSTANCE)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     ByteBuffer replicationMetadata = ByteBuffer.wrap(new byte[] { 0xa, 0xb });
     PutMetadata putMetadata = new PutMetadata(1, replicationMetadata);
@@ -467,7 +467,7 @@ public class VeniceWriterTest {
 
     VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter =
         TestUtils.getVeniceWriterFactory(properties).createVeniceWriter(topicName, partitionCount);
-    ProducerAdapter producer = veniceWriter.getProducer();
+    ProducerAdapter producer = veniceWriter.getProducerAdapter();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);
 

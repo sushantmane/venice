@@ -118,7 +118,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.testng.Assert;
@@ -198,10 +197,10 @@ public class TestAdminConsumptionTask {
             .setPartitioner(new SimplePartitioner())
             .setTime(SystemTime.INSTANCE)
             .build();
-    return new TestVeniceWriter(
+    return new VeniceWriter(
         veniceWriterOptions,
         new VeniceProperties(props),
-        () -> new MockInMemoryProducerAdapter(inMemoryKafkaBroker));
+        new MockInMemoryProducerAdapter(inMemoryKafkaBroker));
   }
 
   private AdminConsumptionTask getAdminConsumptionTask(PollStrategy pollStrategy, boolean isParent) {
@@ -1456,15 +1455,5 @@ public class TestAdminConsumptionTask {
     adminMessage.payloadUnion = addVersion;
     adminMessage.executionId = executionId;
     return adminOperationSerializer.serialize(adminMessage);
-  }
-
-  /**
-   * Used for test only. As the CTOR of VeniceWriter is protected, so the only way to create an instance is extend it
-   * and create an instance of this sub-class.
-   */
-  private static class TestVeniceWriter<K, V> extends VeniceWriter {
-    protected TestVeniceWriter(VeniceWriterOptions veniceWriterOptions, VeniceProperties props, Supplier supplier) {
-      super(veniceWriterOptions, props, supplier);
-    }
   }
 }

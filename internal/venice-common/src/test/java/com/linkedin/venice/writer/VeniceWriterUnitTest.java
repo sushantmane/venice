@@ -43,7 +43,7 @@ public class VeniceWriterUnitTest {
         .setPartitionCount(Optional.of(partitionCount))
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     String valueString = "value-string";
     String key = "test-key";

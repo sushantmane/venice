@@ -198,7 +198,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   private final VeniceKafkaSerializer<K> keySerializer;
   private final VeniceKafkaSerializer<V> valueSerializer;
   private final VeniceKafkaSerializer<U> writeComputeSerializer;
-  private final ProducerAdapter producer;
+  private final ProducerAdapter producerAdapter;
   private final GUID producerGUID;
   private final Time time;
   private final VenicePartitioner partitioner;
@@ -244,10 +244,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
   private final boolean isRmdChunkingEnabled;
 
-  public VeniceWriter(
-      VeniceWriterOptions params,
-      VeniceProperties props,
-      Supplier<ProducerAdapter> producerWrapperSupplier) {
+  public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, ProducerAdapter producerAdapter) {
     super(params.getTopicName());
     this.keySerializer = params.getKeySerializer();
     this.valueSerializer = params.getValueSerializer();
@@ -298,7 +295,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         LogManager.getLogger(VeniceWriter.class.getSimpleName() + " [" + GuidUtils.getHexFromGuid(producerGUID) + "]");
 
     try {
-      this.producer = producerWrapperSupplier.get();
+      this.producerAdapter = producerAdapter;
       // We cache the number of partitions, as it is expected to be immutable, and the call to Kafka is expensive.
       // Also avoiding a metadata call to kafka here as the partitionsFor() call sometimes may get blocked indefinitely
       // if the
@@ -306,7 +303,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       if (params.getPartitionCount().isPresent()) {
         this.numberOfPartitions = params.getPartitionCount().get();
       } else {
-        this.numberOfPartitions = producer.getNumberOfPartitions(topicName, 30, TimeUnit.SECONDS);
+        this.numberOfPartitions = this.producerAdapter.getNumberOfPartitions(topicName, 30, TimeUnit.SECONDS);
       }
       this.segmentsCreationTimeArray = new long[this.numberOfPartitions];
       // Prepare locks for all partitions instead of using map to avoid the searching and creation cost during
@@ -339,7 +336,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       // DO NOT call the {@link #ProducerAdapter.close(int) version from here.}
       // For non shared producer mode gracefulClose will flush the producer
 
-      producer.close(topicName, closeTimeOut, gracefulClose);
+      producerAdapter.close(topicName, closeTimeOut, gracefulClose);
       OPEN_VENICE_WRITER_COUNT.decrementAndGet();
     } catch (Exception e) {
       logger.warn("Swallowed an exception while trying to close the VeniceWriter for topic: {}", topicName, e);
@@ -352,8 +349,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     close(true);
   }
 
-  public ProducerAdapter getProducer() {
-    return producer;
+  public ProducerAdapter getProducerAdapter() {
+    return producerAdapter;
   }
 
   /**
@@ -361,7 +358,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    */
   @Override
   public void flush() {
-    producer.flush();
+    producerAdapter.flush();
   }
 
   @Override
@@ -854,7 +851,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     controlMessage.controlMessageUnion = startOfPush;
     broadcastControlMessage(controlMessage, debugInfo);
     // Flush start of push message to avoid data message arrives before it.
-    producer.flush();
+    producerAdapter.flush();
   }
 
   /**
@@ -892,7 +889,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     topicSwitch.rewindStartTimestamp = rewindStartTimestamp;
     controlMessage.controlMessageUnion = topicSwitch;
     broadcastControlMessage(controlMessage, debugInfo);
-    producer.flush();
+    producerAdapter.flush();
   }
 
   /**
@@ -916,7 +913,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
     controlMessage.controlMessageUnion = versionSwap;
     broadcastControlMessage(controlMessage, debugInfo);
-    producer.flush();
+    producerAdapter.flush();
   }
 
   public void broadcastStartOfIncrementalPush(String version, Map<String, String> debugInfo) {
@@ -925,7 +922,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     startOfIncrementalPush.version = version;
     controlMessage.controlMessageUnion = startOfIncrementalPush;
     broadcastControlMessage(controlMessage, debugInfo);
-    producer.flush();
+    producerAdapter.flush();
   }
 
   public void broadcastEndOfIncrementalPush(String version, Map<String, String> debugInfo) {
@@ -934,7 +931,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     endOfIncrementalPush.version = version;
     controlMessage.controlMessageUnion = endOfIncrementalPush;
     broadcastControlMessage(controlMessage, debugInfo);
-    producer.flush();
+    producerAdapter.flush();
   }
 
   /**
@@ -1082,7 +1079,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       }
 
       try {
-        return producer.sendMessage(topicName, key, kafkaValue, partition, messageCallback);
+        return producerAdapter.sendMessage(topicName, key, kafkaValue, partition, messageCallback);
       } catch (Exception e) {
         if (ExceptionUtils.recursiveClassEquals(e, TopicAuthorizationException.class)) {
           throw new TopicAuthorizationVeniceException(

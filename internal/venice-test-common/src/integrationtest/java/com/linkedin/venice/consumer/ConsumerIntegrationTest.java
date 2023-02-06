@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -190,7 +189,6 @@ public class ConsumerIntegrationTest {
     VeniceKafkaSerializer valueSerializer = new VeniceAvroKafkaSerializer(stringSchema);
     VenicePartitioner partitioner = new DefaultVenicePartitioner(props);
     Time time = new SystemTime();
-    Supplier<ProducerAdapter> producerWrapperSupplier = () -> new ApacheKafkaProducerWithNewerProtocolAdapter(props);
 
     VeniceWriterOptions veniceWriterOptions = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
         .setValueSerializer(valueSerializer)
@@ -198,8 +196,10 @@ public class ConsumerIntegrationTest {
         .setTime(time)
         .setPartitioner(partitioner)
         .build();
-    try (VeniceWriter veniceWriterWithNewerProtocol =
-        new VeniceWriterWithNewerProtocol(veniceWriterOptions, props, producerWrapperSupplier)) {
+    try (VeniceWriter<String, String, byte[]> veniceWriterWithNewerProtocol = new VeniceWriterWithNewerProtocol(
+        veniceWriterOptions,
+        props,
+        new ApacheKafkaProducerWithNewerProtocolAdapter(props))) {
       writeAndVerifyRecord(veniceWriterWithNewerProtocol, client, "value2");
     }
   }
@@ -230,8 +230,8 @@ public class ConsumerIntegrationTest {
     protected VeniceWriterWithNewerProtocol(
         VeniceWriterOptions veniceWriterOptions,
         VeniceProperties props,
-        Supplier<ProducerAdapter> producerWrapperSupplier) {
-      super(veniceWriterOptions, props, producerWrapperSupplier);
+        ProducerAdapter producerAdapter) {
+      super(veniceWriterOptions, props, producerAdapter);
     }
 
     @Override

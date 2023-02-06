@@ -1,4 +1,4 @@
-package com.linkedin.venice.writer;
+package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 public class SharedKafkaProducerAdapter implements ProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
-  private final SharedKafkaProducerService sharedKafkaProducerService;
+  private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
   private final int id;
   private final Set<String> producerTasks;
   private final ProducerAdapter producerAdapter;
@@ -40,12 +40,12 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
   private SharedKafkaProducerStats sharedKafkaProducerStats;
 
   public SharedKafkaProducerAdapter(
-      SharedKafkaProducerService sharedKafkaProducerService,
+      SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory,
       int id,
       ProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
-    this.sharedKafkaProducerService = sharedKafkaProducerService;
+    this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
     this.id = id;
     producerTasks = new HashSet<>();
     this.producerAdapter = producerAdapter;
@@ -107,8 +107,8 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
 
   @Override
   public void close(String topic, int closeTimeoutMs) {
-    if (sharedKafkaProducerService.isRunning()) {
-      sharedKafkaProducerService.releaseKafkaProducer(topic);
+    if (sharedKafkaProducerAdapterFactory.isRunning()) {
+      sharedKafkaProducerAdapterFactory.releaseKafkaProducer(topic);
     } else {
       LOGGER.info("producer is already closed, can't release for topic: {}", topic);
     }

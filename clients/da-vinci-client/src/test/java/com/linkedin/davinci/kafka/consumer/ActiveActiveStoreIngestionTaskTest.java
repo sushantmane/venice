@@ -126,7 +126,7 @@ public class ActiveActiveStoreIngestionTaskTest {
             .setTime(SystemTime.INSTANCE)
             .build();
     VeniceWriter<byte[], byte[], byte[]> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), () -> mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
     when(ingestionTask.getVeniceWriter()).thenReturn(Lazy.of(() -> writer));
     StringBuilder stringBuilder = new StringBuilder();
     for (int i = 0; i < 50000; i++) {
