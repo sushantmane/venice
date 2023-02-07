@@ -61,7 +61,6 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.mockito.ArgumentCaptor;
 import org.testng.Assert;
@@ -456,7 +455,7 @@ public class VeniceWriterTest {
   }
 
   @Test(timeOut = 30000)
-  public void testProducerClose() {
+  public void testProducerClosex() {
     String topicName = Utils.getUniqueString("topic-for-vw-thread-safety");
     int partitionCount = 1;
     topicManager.createTopic(topicName, partitionCount, 1, true);
@@ -475,7 +474,7 @@ public class VeniceWriterTest {
       Future future = executor.submit(() -> {
         countDownLatch.countDown();
         // send to non-existent topic
-        producer.sendMessage(new ProducerRecord("topic", "key", "value"), null);
+        producer.sendMessage("topic", new KafkaKey(MessageType.PUT, "key".getBytes()), null, null);
         fail("Should be blocking send");
       });
 

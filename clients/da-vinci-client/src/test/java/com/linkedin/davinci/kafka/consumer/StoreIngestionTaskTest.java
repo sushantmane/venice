@@ -112,6 +112,7 @@ import com.linkedin.venice.offsets.InMemoryStorageMetadataService;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.UserPartitionAwarePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
@@ -500,8 +501,8 @@ public abstract class StoreIngestionTaskTest {
     }
   }
 
-  private long getOffset(Future<RecordMetadata> recordMetadataFuture) throws ExecutionException, InterruptedException {
-    return recordMetadataFuture.get().offset();
+  private long getOffset(Future<ProduceResult> produceResultFuture) throws ExecutionException, InterruptedException {
+    return produceResultFuture.get().offset();
   }
 
   private void runTest(Set<Integer> partitions, Runnable assertions, boolean isActiveActiveReplicationEnabled)
@@ -1048,8 +1049,8 @@ public abstract class StoreIngestionTaskTest {
     setStoreVersionStateSupplier(storeVersionState);
   }
 
-  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(RecordMetadata recordMetadata) {
-    return new Pair<>(new TopicPartition(recordMetadata.topic(), recordMetadata.partition()), recordMetadata.offset());
+  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(ProduceResult produceResult) {
+    return new Pair<>(new TopicPartition(produceResult.topic(), produceResult.partition()), produceResult.offset());
   }
 
   private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(String topic, int partition, long offset) {
@@ -1065,11 +1066,11 @@ public abstract class StoreIngestionTaskTest {
   @Test(dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
   public void testVeniceMessagesProcessing(boolean isActiveActiveReplicationEnabled) throws Exception {
     localVeniceWriter.broadcastStartOfPush(new HashMap<>());
-    RecordMetadata putMetadata =
-        (RecordMetadata) localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
+    ProduceResult putMetadata =
+        (ProduceResult) localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
             .get();
-    RecordMetadata deleteMetadata =
-        (RecordMetadata) localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
+    ProduceResult deleteMetadata =
+        (ProduceResult) localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
 
     Queue<AbstractPollStrategy> pollStrategies = new LinkedList<>();
     pollStrategies.add(new RandomPollStrategy());
@@ -1170,11 +1171,10 @@ public abstract class StoreIngestionTaskTest {
     when(mockTopicManager.isTopicCompactionEnabled(topic)).thenReturn(true);
 
     localVeniceWriter.broadcastStartOfPush(new HashMap<>());
-    RecordMetadata putMetadata1 = (RecordMetadata) localVeniceWriter.put(putKeyFoo, putValueToCorrupt, SCHEMA_ID).get();
+    ProduceResult putMetadata1 = (ProduceResult) localVeniceWriter.put(putKeyFoo, putValueToCorrupt, SCHEMA_ID).get();
     localVeniceWriter.put(putKeyFoo, putValue, SCHEMA_ID).get();
-    RecordMetadata putMetadata3 =
-        (RecordMetadata) localVeniceWriter.put(putKeyFoo2, putValueToCorrupt, SCHEMA_ID).get();
-    RecordMetadata putMetadata4 = (RecordMetadata) localVeniceWriter.put(putKeyFoo2, putValue, SCHEMA_ID).get();
+    ProduceResult putMetadata3 = (ProduceResult) localVeniceWriter.put(putKeyFoo2, putValueToCorrupt, SCHEMA_ID).get();
+    ProduceResult putMetadata4 = (ProduceResult) localVeniceWriter.put(putKeyFoo2, putValue, SCHEMA_ID).get();
 
     Queue<Pair<TopicPartition, Long>> pollDeliveryOrder = new LinkedList<>();
     /**
@@ -1934,10 +1934,10 @@ public abstract class StoreIngestionTaskTest {
       byte[] key = getNumberedKey(i);
       byte[] value = getNumberedValue(i);
 
-      RecordMetadata recordMetadata = (RecordMetadata) localVeniceWriter.put(key, value, SCHEMA_ID).get();
+      ProduceResult produceResult = (ProduceResult) localVeniceWriter.put(key, value, SCHEMA_ID).get();
 
-      maxOffsetPerPartition.put(recordMetadata.partition(), recordMetadata.offset());
-      pushedRecords.put(new Pair(recordMetadata.partition(), new ByteArray(key)), new ByteArray(value));
+      maxOffsetPerPartition.put(produceResult.partition(), produceResult.offset());
+      pushedRecords.put(new Pair(produceResult.partition(), new ByteArray(key)), new ByteArray(value));
     }
     localVeniceWriter.broadcastEndOfPush(new HashMap<>());
 
@@ -2109,8 +2109,8 @@ public abstract class StoreIngestionTaskTest {
   public void testVeniceMessagesProcessingWithSortedInput(boolean isActiveActiveReplicationEnabled) throws Exception {
     setStoreVersionStateSupplier(true);
     localVeniceWriter.broadcastStartOfPush(true, new HashMap<>());
-    RecordMetadata putMetadata = (RecordMetadata) localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID).get();
-    RecordMetadata deleteMetadata = (RecordMetadata) localVeniceWriter.delete(deleteKeyFoo, null).get();
+    ProduceResult putMetadata = (ProduceResult) localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID).get();
+    ProduceResult deleteMetadata = (ProduceResult) localVeniceWriter.delete(deleteKeyFoo, null).get();
     localVeniceWriter.broadcastEndOfPush(new HashMap<>());
 
     runTest(Utils.setOf(PARTITION_FOO), () -> {

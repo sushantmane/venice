@@ -195,7 +195,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
+      Integer partition,
       PubsubProducerCallback callback) {
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> kafkaRecord = new ProducerRecord<>(topic, partition, key, value);
     return sendMessage(kafkaRecord, callback);
@@ -213,9 +213,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       PubsubProducerCallback callback) {
     ensureProducerIsNotClosed();
     try {
-      // return producer.send(record, getKafkaSpecificCallback(callback));
-      return null;
-
+      return new ApacheKafkaProduceResultFuture(producer.send(record, getKafkaSpecificCallback(callback)));
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "

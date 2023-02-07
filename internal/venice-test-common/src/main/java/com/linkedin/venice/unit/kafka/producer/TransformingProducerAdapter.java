@@ -36,7 +36,7 @@ public class TransformingProducerAdapter implements ProducerAdapter {
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
+      Integer partition,
       PubsubProducerCallback callback) {
     SendMessageParameters parameters = transformer.transform(topic, key, value, partition);
     return baseProducer.sendMessage(parameters.topic, parameters.key, parameters.value, parameters.partition, callback);

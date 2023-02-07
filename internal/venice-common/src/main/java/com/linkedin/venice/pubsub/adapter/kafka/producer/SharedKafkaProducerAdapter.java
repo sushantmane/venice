@@ -74,7 +74,7 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
+      Integer partition,
       PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
     Future<ProduceResult> result = producerAdapter.sendMessage(topic, key, value, partition, callback);

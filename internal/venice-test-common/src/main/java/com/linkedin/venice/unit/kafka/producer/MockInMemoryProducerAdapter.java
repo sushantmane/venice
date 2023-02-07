@@ -38,7 +38,7 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
+      Integer partition,
       PubsubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
     ProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);

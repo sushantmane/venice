@@ -29,12 +29,20 @@ public interface ProducerAdapter {
       String topic,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      int partition,
+      Integer partition,
       PubsubProducerCallback callback);
 
   Future<ProduceResult> sendMessage(
       ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
       PubsubProducerCallback callback);
+
+  default Future<ProduceResult> sendMessage(
+      String topic,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubsubProducerCallback callback) {
+    return sendMessage(topic, key, value, null, callback);
+  }
 
   void flush();
 
