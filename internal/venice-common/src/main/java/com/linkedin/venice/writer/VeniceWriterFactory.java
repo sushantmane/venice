@@ -4,7 +4,6 @@ import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -20,10 +19,10 @@ import java.util.Properties;
 public class VeniceWriterFactory {
   private final Properties properties;
   private final String localKafkaBootstrapServers;
-  private final ProducerAdapterFactory<ProducerAdapter> producerAdapterFactory;
+  private final ProducerAdapterFactory producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
-    this(properties, new ApacheKafkaProducerAdapterFactory());
+    this(properties, null);
   }
 
   public VeniceWriterFactory(Properties properties, ProducerAdapterFactory producerAdapterFactory) {
@@ -35,6 +34,9 @@ public class VeniceWriterFactory {
     } else {
       checkProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
       localKafkaBootstrapServers = properties.getProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
+    }
+    if (producerAdapterFactory == null) {
+      producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }
     this.producerAdapterFactory = producerAdapterFactory;
   }
