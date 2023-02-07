@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -207,26 +208,24 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
     }
   }
 
-  // @Override
+  @Override
   public Future<ProduceResult> sendMessage(
       ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
-      PubsubProducerCallback callback) {
+      PubsubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
+    Callback kafkaCallback = null;
+    if (pubsubProducerCallback != null) {
+      kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
+    }
     try {
-      return new ApacheKafkaProduceResultFuture(producer.send(record, getKafkaSpecificCallback(callback)));
+      // todo(sumane): create and complete future in callback
+      return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
               + record.partition(),
           e);
     }
-  }
-
-  private static ApacheKafkaProducerCallback getKafkaSpecificCallback(PubsubProducerCallback callback) {
-    if (callback == null) {
-      return null;
-    }
-    return new ApacheKafkaProducerCallback(callback);
   }
 
   @Override

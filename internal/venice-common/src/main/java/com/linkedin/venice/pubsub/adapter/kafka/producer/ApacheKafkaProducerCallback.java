@@ -39,10 +39,6 @@ public class ApacheKafkaProducerCallback implements Callback {
    */
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
-    if (exception != null) {
-      pubsubProducerCallback.onCompletion(null, exception);
-      return;
-    }
-    pubsubProducerCallback.onCompletion(new ApacheKafkaProduceResult(metadata), null);
+    pubsubProducerCallback.onCompletion(new ApacheKafkaProduceResult(metadata), exception);
   }
 }

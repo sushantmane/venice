@@ -67,7 +67,7 @@ import com.linkedin.venice.meta.VersionImpl;
 import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.InvalidKeySchemaPartitioner;
-import com.linkedin.venice.pubsub.adapter.kafka.producer.SimpleProduceResultImpl;
+import com.linkedin.venice.pubsub.adapter.SimpleProduceResultImpl;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushmonitor.OfflinePushStatus;
 import com.linkedin.venice.pushmonitor.PartitionStatus;

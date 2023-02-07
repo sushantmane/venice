@@ -1,7 +1,7 @@
 package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.pubsub.adapter.kafka.producer.SimpleProduceResultImpl;
+import com.linkedin.venice.pubsub.adapter.SimpleProduceResultImpl;
 import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;

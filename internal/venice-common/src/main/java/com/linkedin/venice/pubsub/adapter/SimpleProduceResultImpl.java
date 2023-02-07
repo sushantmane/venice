@@ -1,4 +1,4 @@
-package com.linkedin.venice.pubsub.adapter.kafka.producer;
+package com.linkedin.venice.pubsub.adapter;
 
 import com.linkedin.venice.pubsub.api.ProduceResult;
 
