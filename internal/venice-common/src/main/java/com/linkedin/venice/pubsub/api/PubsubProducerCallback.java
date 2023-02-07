@@ -1,5 +1,5 @@
 package com.linkedin.venice.pubsub.api;
 
 public interface PubsubProducerCallback {
-  void onCompletion(ProduceResult metadata, Exception exception);
+  void onCompletion(ProduceResult produceResult, Exception exception);
 }

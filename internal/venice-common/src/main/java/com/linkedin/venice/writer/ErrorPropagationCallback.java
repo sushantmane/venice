@@ -15,7 +15,7 @@ class ErrorPropagationCallback implements PubsubProducerCallback {
   }
 
   @Override
-  public void onCompletion(ProduceResult metadata, Exception exception) {
+  public void onCompletion(ProduceResult produceResult, Exception exception) {
     if (exception != null) {
       callback.onCompletion(null, exception);
     } // else, no-op

@@ -66,7 +66,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
   }
 
   @Override
-  public void onCompletion(ProduceResult recordMetadata, Exception e) {
+  public void onCompletion(ProduceResult produceResult, Exception e) {
     if (e != null) {
       LOGGER.error(
           "Leader failed to send out message to version topic when consuming {} partition {}",
@@ -81,7 +81,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
       // when leaderSubPartition != recordMetadata.partition(), local StorageEngine will be written by
       // followers consuming from VTs. So it is safe to skip adding the record to leader's StorageBufferService
       if (partitionConsumptionState.getLeaderFollowerState() == LEADER
-          && recordMetadata.partition() != partitionConsumptionState.getPartition()) {
+          && produceResult.partition() != partitionConsumptionState.getPartition()) {
         leaderProducedRecordContext.completePersistedToDBFuture(null);
         return;
       }
@@ -132,7 +132,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
           if (key != null) {
             leaderProducedRecordContext.setKeyBytes(key);
           }
-          leaderProducedRecordContext.setProducedOffset(recordMetadata.offset());
+          leaderProducedRecordContext.setProducedOffset(produceResult.offset());
           ingestionTask.produceToStoreBufferService(
               sourceConsumerRecord,
               leaderProducedRecordContext,
@@ -142,7 +142,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
 
           producedRecordNum++;
           producedRecordSize =
-              Math.max(0, recordMetadata.serializedKeySize()) + Math.max(0, recordMetadata.serializedValueSize());
+              Math.max(0, produceResult.serializedKeySize()) + Math.max(0, produceResult.serializedValueSize());
         } else {
           producedRecordSize += produceChunksToStoreBufferService(chunkedValueManifest, valueChunks, false);
           producedRecordNum += chunkedValueManifest.keysWithChunkIdSuffix.size();
@@ -168,7 +168,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
               key,
               manifestPut,
               leaderProducedRecordContext.getPersistedToDBFuture());
-          producedRecordForManifest.setProducedOffset(recordMetadata.offset());
+          producedRecordForManifest.setProducedOffset(produceResult.offset());
           ingestionTask.produceToStoreBufferService(
               sourceConsumerRecord,
               producedRecordForManifest,

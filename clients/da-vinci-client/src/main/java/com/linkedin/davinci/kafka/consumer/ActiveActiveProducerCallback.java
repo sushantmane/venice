@@ -33,9 +33,9 @@ public class ActiveActiveProducerCallback extends LeaderProducerCallback {
   }
 
   @Override
-  public void onCompletion(ProduceResult recordMetadata, Exception exception) {
+  public void onCompletion(ProduceResult produceResult, Exception exception) {
     this.onCompletionFunction.run();
-    super.onCompletion(recordMetadata, exception);
+    super.onCompletion(produceResult, exception);
   }
 
   @Override
