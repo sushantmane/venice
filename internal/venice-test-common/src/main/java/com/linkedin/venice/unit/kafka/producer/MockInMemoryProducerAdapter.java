@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.producer.ProducerRecord;
 
 
 /**
@@ -70,13 +69,6 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
         return produceResult;
       }
     };
-  }
-
-  @Override
-  public Future<ProduceResult> sendMessage(
-      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
-      PubsubProducerCallback callback) {
-    return sendMessage(record.topic(), record.key(), record.value(), record.partition(), callback);
   }
 
   @Override

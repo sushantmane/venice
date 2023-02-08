@@ -189,7 +189,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
    * @param topic - The topic to be sent to.
    * @param key - The key of the message to be sent.
    * @param value - The {@link KafkaMessageEnvelope}, which acts as the Kafka value.
-   * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
+   * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
   public Future<ProduceResult> sendMessage(
@@ -197,34 +197,27 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       Integer partition,
-      PubsubProducerCallback callback) {
-    ProducerRecord<KafkaKey, KafkaMessageEnvelope> kafkaRecord = new ProducerRecord<>(topic, partition, key, value);
-    return sendMessage(kafkaRecord, callback);
-  }
-
-  private void ensureProducerIsNotClosed() {
-    if (producer == null) {
-      throw new VeniceException("The internal KafkaProducer has been closed");
-    }
-  }
-
-  @Override
-  public Future<ProduceResult> sendMessage(
-      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
       PubsubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
+    ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(topic, partition, key, value);
     Callback kafkaCallback = null;
     if (pubsubProducerCallback != null) {
       kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     }
     try {
-      // todo(sumane): create and complete future in callback
+      // todo(sumane): create and complete Future<ProduceResult> in callback
       return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
               + record.partition(),
           e);
+    }
+  }
+
+  private void ensureProducerIsNotClosed() {
+    if (producer == null) {
+      throw new VeniceException("The internal KafkaProducer has been closed");
     }
   }
 

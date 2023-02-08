@@ -24,6 +24,8 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.LeaderMetadata;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
+import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
@@ -51,9 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.mockito.Mockito;
 import org.testng.Assert;
@@ -244,7 +244,7 @@ public class KafkaConsumptionTest {
   }
 
   /**
-   * This method produces either an random data record or a control message/record to Kafka with a given producer timestamp.
+   * This method produces either a random data record or a control message/record to Kafka with a given producer timestamp.
    *
    * @param topic
    * @param isDataRecord
@@ -259,7 +259,7 @@ public class KafkaConsumptionTest {
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaKeySerializer.class);
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaValueSerializer.class);
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUrl);
-    KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer = new KafkaProducer(props);
+    ProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(new VeniceProperties(props));
     final byte[] randomBytes = new byte[] { 0, 1 };
 
     // Prepare record key
@@ -285,7 +285,6 @@ public class KafkaConsumptionTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(topic, recordKey, recordValue);
-    producer.send(record).get();
+    producerAdapter.sendMessage(topic, recordKey, recordValue).get();
   }
 }

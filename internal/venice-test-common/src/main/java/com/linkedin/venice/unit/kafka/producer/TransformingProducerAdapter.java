@@ -7,7 +7,6 @@ import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
 import java.util.Map;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.ProducerRecord;
 
 
 /**
@@ -40,13 +39,6 @@ public class TransformingProducerAdapter implements ProducerAdapter {
       PubsubProducerCallback callback) {
     SendMessageParameters parameters = transformer.transform(topic, key, value, partition);
     return baseProducer.sendMessage(parameters.topic, parameters.key, parameters.value, parameters.partition, callback);
-  }
-
-  @Override
-  public Future<ProduceResult> sendMessage(
-      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
-      PubsubProducerCallback callback) {
-    return sendMessage(record.topic(), record.key(), record.value(), record.partition(), callback);
   }
 
   @Override

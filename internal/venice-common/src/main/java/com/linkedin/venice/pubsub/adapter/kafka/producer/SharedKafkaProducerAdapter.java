@@ -19,7 +19,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -78,16 +77,6 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
       PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
     Future<ProduceResult> result = producerAdapter.sendMessage(topic, key, value, partition, callback);
-    sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
-    return result;
-  }
-
-  @Override
-  public Future<ProduceResult> sendMessage(
-      ProducerRecord<KafkaKey, KafkaMessageEnvelope> record,
-      PubsubProducerCallback callback) {
-    long startNs = System.nanoTime();
-    Future<ProduceResult> result = producerAdapter.sendMessage(record, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }
