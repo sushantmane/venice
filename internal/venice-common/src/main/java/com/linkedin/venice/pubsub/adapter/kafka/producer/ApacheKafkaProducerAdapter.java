@@ -34,7 +34,6 @@ import org.apache.logging.log4j.Logger;
  * Implementation of the Kafka Producer for sending messages to Kafka.
  */
 public class ApacheKafkaProducerAdapter implements ProducerAdapter {
-  public static final String PROPERTIES_KAFKA_PREFIX = "kafka.";
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
@@ -113,7 +112,8 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
 
     if (!properties.containsKey(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)) {
       throw new ConfigurationException(
-          "Props key not found: " + PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
+          "Props key not found: " + ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX
+              + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
     }
 
     LOGGER.info("Constructing KafkaProducer with the following properties: {}", properties);
@@ -274,15 +274,15 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
   }
 
   /**
-   * This class takes in all properties that begin with "{@value #PROPERTIES_KAFKA_PREFIX}" and emits the
+   * This class takes in all properties that begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}" and emits the
    * rest of the properties.
    *
-   * It omits those properties that do not begin with "{@value #PROPERTIES_KAFKA_PREFIX}".
+   * It omits those properties that do not begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}".
    *
    * TODO: Consider making this logic part of {@link VeniceWriter} or {@link ProducerAdapter}.
   */
   private Properties getKafkaPropertiesFromVeniceProps(VeniceProperties props) {
-    VeniceProperties kafkaProps = props.clipAndFilterNamespace(PROPERTIES_KAFKA_PREFIX);
+    VeniceProperties kafkaProps = props.clipAndFilterNamespace(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX);
     return kafkaProps.toProperties();
   }
 }

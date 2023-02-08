@@ -1,6 +1,7 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerConfig.SHARED_KAFKA_PRODUCER_CONFIG_PREFIX;
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 import static org.apache.kafka.clients.producer.ProducerConfig.BOOTSTRAP_SERVERS_CONFIG;
@@ -32,10 +33,6 @@ import org.apache.logging.log4j.Logger;
 public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory<SharedKafkaProducerAdapter> {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactory.class);
   public static final String NAME = "ApacheKafkaSharedProducer";
-
-  // This helps override kafka config for shared producer seperately than dedicated producer.
-  public static final String SHARED_KAFKA_PRODUCER_CONFIG_PREFIX = "shared.producer.";
-
   private final int numOfProducersPerKafkaCluster;
   private final Properties producerProperties;
   private final String localKafkaBootstrapServers;
@@ -78,7 +75,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
 
     producerProperties = new Properties();
     producerProperties.putAll(properties);
-    producerProperties.put(PROPERTIES_KAFKA_PREFIX + BOOTSTRAP_SERVERS_CONFIG, localKafkaBootstrapServers);
+    producerProperties.put(KAFKA_CONFIG_PREFIX + BOOTSTRAP_SERVERS_CONFIG, localKafkaBootstrapServers);
 
     VeniceProperties veniceWriterProperties = new VeniceProperties(producerProperties);
     kafkaProducerCloseTimeout = veniceWriterProperties.getInt(CLOSE_TIMEOUT_MS, DEFAULT_CLOSE_TIMEOUT_MS);
@@ -87,7 +84,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     Properties sharedProducerProperties =
         veniceWriterProperties.clipAndFilterNamespace(SHARED_KAFKA_PRODUCER_CONFIG_PREFIX).toProperties();
     for (Map.Entry<Object, Object> entry: sharedProducerProperties.entrySet()) {
-      String key = PROPERTIES_KAFKA_PREFIX + (String) entry.getKey();
+      String key = KAFKA_CONFIG_PREFIX + (String) entry.getKey();
       producerProperties.put(key, entry.getValue());
     }
 
@@ -152,7 +149,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     for (int i = 0; i < producers.length; i++) {
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
-        producerProperties.put(PROPERTIES_KAFKA_PREFIX + CLIENT_ID_CONFIG, "shared-producer-" + String.valueOf(i));
+        producerProperties.put(KAFKA_CONFIG_PREFIX + CLIENT_ID_CONFIG, "shared-producer-" + String.valueOf(i));
         ProducerAdapter producerAdapter = producerAdapterFactory.create(new VeniceProperties(producerProperties));
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);

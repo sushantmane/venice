@@ -1,9 +1,5 @@
 package com.linkedin.venice;
 
-import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
-import org.apache.kafka.clients.producer.ProducerConfig;
-
-
 public class ConfigKeys {
   private ConfigKeys() {
   }
@@ -32,10 +28,6 @@ public class ConfigKeys {
   public static final String KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC =
       "kafka.admin.get.topic.config.max.retry.sec";
 
-  public static final String KAFKA_LINGER_MS =
-      ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.LINGER_MS_CONFIG;
-  public static final String KAFKA_BATCH_SIZE =
-      ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.BATCH_SIZE_CONFIG;
   /**
    * The time window used by the consumption throttler. Throttler will sum the requests during the time window and
    * compare with the quota accumulated in the time window to see whether the usage exceeds quota or not.

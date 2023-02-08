@@ -17,6 +17,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.MessageType;
 import com.linkedin.venice.schema.avro.DirectionalSchemaCompatibilityType;
@@ -47,7 +48,6 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.specific.SpecificRecord;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -177,12 +177,9 @@ public class ConsumerIntegrationTest {
     }
 
     Properties javaProps = new Properties();
-    javaProps.put(
-        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-        KafkaValueSerializerWithNewerProtocol.class.getName());
-    javaProps.put(
-        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        cluster.getKafka().getAddress());
+    javaProps
+        .put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializerWithNewerProtocol.class.getName());
+    javaProps.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, cluster.getKafka().getAddress());
     VeniceProperties props = new VeniceProperties(javaProps);
     String stringSchema = "\"string\"";
     VeniceKafkaSerializer keySerializer = new VeniceAvroKafkaSerializer(stringSchema);

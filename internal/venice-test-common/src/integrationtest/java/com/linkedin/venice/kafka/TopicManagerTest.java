@@ -31,6 +31,7 @@ import com.linkedin.venice.meta.HybridStoreConfigImpl;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.protocol.message.ControlMessageType;
 import com.linkedin.venice.pubsub.protocol.message.KafkaKey;
@@ -61,7 +62,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import kafka.log.LogConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.errors.TimeoutException;
 import org.apache.logging.log4j.LogManager;
@@ -189,20 +189,10 @@ public class TopicManagerTest {
   private void produceToKafka(String topic, boolean isDataRecord, long producerTimestamp)
       throws ExecutionException, InterruptedException {
     Properties props = new Properties();
-    props.put(
-        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-        KafkaKeySerializer.class.getName());
-    props.put(
-        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-        KafkaValueSerializer.class.getName());
-    props.put(
-        ApacheKafkaProducerAdapter.PROPERTIES_KAFKA_PREFIX + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        kafka.getAddress());
+    props.put(ApacheKafkaProducerConfig.KAFKA_KEY_SERIALIZER, KafkaKeySerializer.class.getName());
+    props.put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializer.class.getName());
+    props.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
     ProducerAdapter producer = new ApacheKafkaProducerAdapter(new VeniceProperties(props));
-    // VeniceWriter<KafkaKey, KafkaMessageEnvelope, byte[]> vw = new VeniceWriterFactory(props)
-    // .createVeniceWriter(
-    // new
-    // VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true).setUseKafkaKeySerializer(true).setKafkaBootstrapServers(kafka.getAddress()).build());
 
     final byte[] randomBytes = new byte[] { 0, 1 };
 
