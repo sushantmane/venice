@@ -32,18 +32,11 @@ import com.linkedin.venice.kafka.validation.checksum.CheckSumType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.pubsub.ImmutablePubSubMessage;
-import com.linkedin.venice.pubsub.PubSubTopicImpl;
-import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
-import com.linkedin.venice.pubsub.PubSubTopicRepository;
-import com.linkedin.venice.pubsub.api.PubSubMessage;
-import com.linkedin.venice.pubsub.api.PubSubTopic;
-import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
-import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -258,10 +251,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
   private final boolean isRmdChunkingEnabled;
 
-  public VeniceWriter(
-      VeniceWriterOptions params,
-      VeniceProperties props,
-      ProducerAdapter producerAdapter) {
+  public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, ProducerAdapter producerAdapter) {
     this(params, props, producerAdapter, KafkaMessageEnvelope.SCHEMA$);
   }
 
@@ -271,7 +261,11 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    *
    * @param overrideProtocolSchema The schema to pass in CM headers, or null to omit that header entirely
    */
-  public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, ProducerAdapter producerAdapter, Schema overrideProtocolSchema) {
+  public VeniceWriter(
+      VeniceWriterOptions params,
+      VeniceProperties props,
+      ProducerAdapter producerAdapter,
+      Schema overrideProtocolSchema) {
     super(params.getTopicName());
     this.keySerializer = params.getKeySerializer();
     this.valueSerializer = params.getValueSerializer();
@@ -1123,7 +1117,13 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       }
       try {
         // todo: pack these in PubSubMessage?
-        return producerAdapter.sendMessage(topicName, partition, key, kafkaValue, getHeaders(kafkaValue.getProducerMetadata()), messageCallback);
+        return producerAdapter.sendMessage(
+            topicName,
+            partition,
+            key,
+            kafkaValue,
+            getHeaders(kafkaValue.getProducerMetadata()),
+            messageCallback);
       } catch (Exception e) {
         if (ExceptionUtils.recursiveClassEquals(e, TopicAuthorizationException.class)) {
           throw new TopicAuthorizationVeniceException(
@@ -1470,7 +1470,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * The Key part of the {@link KafkaKey} needs to be unique in order to avoid clobbering each other during
    * Kafka's Log Compaction. Since there is no key per say associated with control messages, we generate one
    * from the producer metadata, including: GUID, segment and sequence number.
-
+  
    * @param producerMetadata necessary to generate the key.
    * @return a {@link KafkaKey} guaranteed to be unique within its target partition.
    */

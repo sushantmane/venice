@@ -201,7 +201,11 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       PubsubMessageHeaders pubsubMessageHeaders,
       PubsubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
-    ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(topic, partition, key, value,
+    ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
+        topic,
+        partition,
+        key,
+        value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
     Callback kafkaCallback = null;
     if (pubsubProducerCallback != null) {

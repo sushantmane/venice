@@ -327,7 +327,8 @@ public class VeniceWriterTest {
         putMetadata);
     ArgumentCaptor<KafkaKey> keyArgumentCaptor = ArgumentCaptor.forClass(KafkaKey.class);
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
-    verify(mockedProducer, atLeast(2)).sendMessage(any(), any(), keyArgumentCaptor.capture(),kmeArgumentCaptor.capture(), any(), any());
+    verify(mockedProducer, atLeast(2))
+        .sendMessage(any(), any(), keyArgumentCaptor.capture(), kmeArgumentCaptor.capture(), any(), any());
     KeyWithChunkingSuffixSerializer keyWithChunkingSuffixSerializer = new KeyWithChunkingSuffixSerializer();
     byte[] serializedKey = serializer.serialize(testTopic, Integer.toString(1));
     byte[] serializedValue = serializer.serialize(testTopic, valueString);

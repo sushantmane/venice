@@ -176,8 +176,11 @@ public abstract class ConsumerIntegrationTest {
         .setPartitioner(partitioner)
         .build();
 
-    try (VeniceWriter<String, String, byte[]> veniceWriterWithNewerProtocol =
-        getVeniceWriter(veniceWriterOptions, props, new ApacheKafkaProducerWithNewerProtocolAdapter(props), NEW_PROTOCOL_SCHEMA)) {
+    try (VeniceWriter<String, String, byte[]> veniceWriterWithNewerProtocol = getVeniceWriter(
+        veniceWriterOptions,
+        props,
+        new ApacheKafkaProducerWithNewerProtocolAdapter(props),
+        NEW_PROTOCOL_SCHEMA)) {
       writeAndVerifyRecord(veniceWriterWithNewerProtocol, client, "value2");
     }
   }

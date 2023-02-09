@@ -14,7 +14,6 @@ public class PubsubProduceMessage<K, V> implements PubSubMessage<K, V, Long> {
   private final int payloadSize;
   private final PubsubMessageHeaders headers;
 
-
   public PubsubProduceMessage(Builder<K, V> builder) {
     this.key = builder.key;
     this.value = builder.value;

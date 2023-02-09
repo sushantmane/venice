@@ -5,7 +5,6 @@ import java.util.Objects;
 
 
 public class PubsubMessageHeader {
-
   private final String key;
   private final byte[] value;
 
@@ -14,7 +13,6 @@ public class PubsubMessageHeader {
     this.value = value;
   }
 
-
   public String key() {
     return key;
   }
@@ -22,7 +20,6 @@ public class PubsubMessageHeader {
   public byte[] value() {
     return value;
   }
-
 
   @Override
   public int hashCode() {

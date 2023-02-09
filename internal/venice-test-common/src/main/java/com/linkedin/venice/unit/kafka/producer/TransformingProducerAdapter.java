@@ -40,7 +40,8 @@ public class TransformingProducerAdapter implements ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback) {
     SendMessageParameters parameters = transformer.transform(topic, key, value, partition);
-    return baseProducer.sendMessage(parameters.topic, parameters.partition, parameters.key, parameters.value, headers, callback);
+    return baseProducer
+        .sendMessage(parameters.topic, parameters.partition, parameters.key, parameters.value, headers, callback);
   }
 
   @Override

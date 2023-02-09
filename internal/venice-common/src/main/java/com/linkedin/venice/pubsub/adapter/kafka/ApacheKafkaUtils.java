@@ -6,7 +6,6 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 
 
 public class ApacheKafkaUtils {
-
   public static RecordHeaders convertToKafkaSpecificHeaders(PubsubMessageHeaders headers) {
     RecordHeaders recordHeaders = new RecordHeaders();
     if (headers != null) {

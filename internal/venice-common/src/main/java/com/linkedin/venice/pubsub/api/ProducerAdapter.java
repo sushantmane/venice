@@ -15,8 +15,10 @@ import java.util.concurrent.TimeoutException;
 public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
+  @Deprecated
   int getNumberOfPartitions(String topic);
 
+  @Deprecated
   default int getNumberOfPartitions(String topic, int timeout, TimeUnit timeUnit)
       throws InterruptedException, ExecutionException, TimeoutException {
     Callable<Integer> task = () -> getNumberOfPartitions(topic);
@@ -32,7 +34,7 @@ public interface ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback);
 
-  default  Future<ProduceResult> sendMessage(
+  default Future<ProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
