@@ -44,7 +44,6 @@ import com.linkedin.venice.utils.TestMockTime;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
-import com.linkedin.venice.utils.VeniceProperties;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -192,7 +191,7 @@ public class TopicManagerTest {
     props.put(ApacheKafkaProducerConfig.KAFKA_KEY_SERIALIZER, KafkaKeySerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
-    ProducerAdapter producer = new ApacheKafkaProducerAdapter(new VeniceProperties(props));
+    ProducerAdapter producer = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
 
     final byte[] randomBytes = new byte[] { 0, 1 };
 

@@ -1,7 +1,5 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.client.exceptions.VeniceClientException;
-import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
@@ -10,21 +8,14 @@ import com.linkedin.venice.pubsub.api.ProduceResult;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
-import com.linkedin.venice.serialization.KafkaKeySerializer;
-import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
-import com.linkedin.venice.utils.KafkaSSLUtils;
-import com.linkedin.venice.utils.VeniceProperties;
-import com.linkedin.venice.writer.VeniceWriter;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
@@ -40,136 +31,12 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
 
-  public ApacheKafkaProducerAdapter(VeniceProperties props) {
-    this(props, true);
-  }
-
   /**
-   * @param props containing producer configs
-   * @param strictConfigs if true, the {@param props} will be validated to ensure no mandatory configs are badly overridden
-   *                      if false, the check will not happen (useful for tests only)
+   * @param cfg contains producer configs
    */
-  protected ApacheKafkaProducerAdapter(VeniceProperties props, boolean strictConfigs) {
-    /** TODO: Consider making these default settings part of {@link VeniceWriter} or {@link ProducerAdapter} */
-    Properties properties = getKafkaPropertiesFromVeniceProps(props);
-
-    validateClassProp(
-        properties,
-        strictConfigs,
-        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-        KafkaKeySerializer.class.getName());
-    validateClassProp(
-        properties,
-        strictConfigs,
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-        KafkaValueSerializer.class.getName());
-
-    // This is to guarantee ordering, even in the face of failures.
-    validateProp(properties, strictConfigs, ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "1");
-    // This will ensure the durability on Kafka broker side
-    validateProp(properties, strictConfigs, ProducerConfig.ACKS_CONFIG, "all");
-
-    if (!properties.containsKey(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG)) {
-      properties.setProperty(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, "300000"); // 5min
-    }
-
-    if (!properties.containsKey(ProducerConfig.RETRIES_CONFIG)) {
-      properties.setProperty(ProducerConfig.RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
-    }
-
-    if (!properties.contains(ProducerConfig.RETRY_BACKOFF_MS_CONFIG)) {
-      // Hard-coded backoff config to be 1 sec
-      validateProp(properties, strictConfigs, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "1000");
-    }
-
-    if (!properties.containsKey(ProducerConfig.MAX_BLOCK_MS_CONFIG)) {
-      // Block if buffer is full
-      validateProp(properties, strictConfigs, ProducerConfig.MAX_BLOCK_MS_CONFIG, String.valueOf(Long.MAX_VALUE));
-    }
-
-    if (properties.containsKey(ProducerConfig.COMPRESSION_TYPE_CONFIG)) {
-      LOGGER.info(
-          "Compression type explicitly specified by config: {}",
-          properties.getProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG));
-    } else {
-      /**
-       * In general, 'gzip' compression ratio is the best among all the available codecs:
-       * 1. none
-       * 2. lz4
-       * 3. gzip
-       * 4. snappy
-       *
-       * We want to minimize the cross-COLO bandwidth usage.
-       */
-      properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");
-    }
-
-    // Setup ssl config if needed.
-    if (KafkaSSLUtils.validateAndCopyKafakaSSLConfig(props, properties)) {
-      LOGGER.info("Will initialize an SSL Kafka producer");
-    } else {
-      LOGGER.info("Will initialize a non-SSL Kafka producer");
-    }
-
-    if (!properties.containsKey(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)) {
-      throw new ConfigurationException(
-          "Props key not found: " + ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX
-              + ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
-    }
-
-    LOGGER.info("Constructing KafkaProducer with the following properties: {}", properties);
-    producer = new KafkaProducer<>(properties);
-    // TODO: Consider making the choice of partitioner implementation configurable
-  }
-
-  /**
-   * Function which sets some needed defaults... Also bubbles up an exception in order
-   * to fail fast if any calling class tries to override these defaults.
-   *
-   * TODO: Decide if this belongs here or higher up the call-stack
-   */
-  private void validateProp(
-      Properties properties,
-      boolean strictConfigs,
-      String requiredConfigKey,
-      String requiredConfigValue) {
-    String actualConfigValue = properties.getProperty(requiredConfigKey);
-    if (actualConfigValue == null) {
-      properties.setProperty(requiredConfigKey, requiredConfigValue);
-    } else if (!actualConfigValue.equals(requiredConfigValue) && strictConfigs) {
-      // We fail fast rather than attempting to use non-standard serializers
-      throw new VeniceException(
-          "The Kafka Producer must use certain configuration settings in order to work properly. "
-              + "requiredConfigKey: '" + requiredConfigKey + "', requiredConfigValue: '" + requiredConfigValue
-              + "', actualConfigValue: '" + actualConfigValue + "'.");
-    }
-  }
-
-  /**
-   * Validate and load Class properties.
-   */
-  private void validateClassProp(
-      Properties properties,
-      boolean strictConfigs,
-      String requiredConfigKey,
-      String requiredConfigValue) {
-    validateProp(properties, strictConfigs, requiredConfigKey, requiredConfigValue);
-    String className = properties.getProperty(requiredConfigKey);
-    if (className != null) {
-      try {
-        /**
-         * The following code is trying to fix ClassNotFoundException while using JDK11.
-         * Instead of letting Kafka lib loads the specified class, application will load it on its own.
-         * The difference is that Kafka lib is trying to load the specified class by `Thread.currentThread().getContextClassLoader()`,
-         * which seems to be problematic with JDK11.
-         */
-        properties.put(requiredConfigKey, Class.forName(className));
-      } catch (ClassNotFoundException e) {
-        throw new VeniceClientException(
-            "Failed to load the specified class: " + className + " for key: " + requiredConfigKey,
-            e);
-      }
-    }
+  public ApacheKafkaProducerAdapter(ApacheKafkaProducerConfig cfg) {
+    LOGGER.info("Constructing KafkaProducer with the following properties: {}", cfg.getProducerProperties());
+    producer = new KafkaProducer<>(cfg.getProducerProperties());
   }
 
   /**
@@ -178,6 +45,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
    * @param topic for which we want to request the number of partitions.
    * @return the number of partitions for this topic.
    */
+  @Deprecated
   public int getNumberOfPartitions(String topic) {
     ensureProducerIsNotClosed();
     // TODO: This blocks forever. Using getNumberOfPartitions with timeout parameter adds a timeout to this call but
@@ -212,7 +80,8 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     }
     try {
-      // todo(sumane): create and complete Future<ProduceResult> in callback
+      // TODO: evaluate if it makes sense to complete Future<ProduceResult> in callback itself or use producer
+      // interceptors
       return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {
       throw new VeniceException(
@@ -278,18 +147,5 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       }
     }
     return extractedMetrics;
-  }
-
-  /**
-   * This class takes in all properties that begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}" and emits the
-   * rest of the properties.
-   *
-   * It omits those properties that do not begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}".
-   *
-   * TODO: Consider making this logic part of {@link VeniceWriter} or {@link ProducerAdapter}.
-  */
-  private Properties getKafkaPropertiesFromVeniceProps(VeniceProperties props) {
-    VeniceProperties kafkaProps = props.clipAndFilterNamespace(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX);
-    return kafkaProps.toProperties();
   }
 }

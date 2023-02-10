@@ -9,7 +9,7 @@ public class ApacheKafkaProducerAdapterFactory implements ProducerAdapterFactory
 
   @Override
   public ApacheKafkaProducerAdapter create(String topicName, VeniceProperties veniceProperties) {
-    return new ApacheKafkaProducerAdapter(veniceProperties);
+    return new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(veniceProperties));
   }
 
   @Override
