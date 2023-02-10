@@ -134,7 +134,7 @@ public class VeniceController {
     this.routerClientConfig = routerClientConfig;
     this.icProvider = icProvider;
     createServices();
-    KafkaClientStats.registerKafkaClientStats(metricsRepository, "KafkaClientStats", Optional.empty());
+    KafkaClientStats.registerKafkaClientStats(metricsRepository, "KafkaClientStats", null);
   }
 
   private void createServices() {
