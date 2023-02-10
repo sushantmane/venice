@@ -7,8 +7,10 @@ import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
+import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
+import io.tehuti.metrics.MetricsRepository;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -22,11 +24,23 @@ public class VeniceWriterFactory {
   private final ProducerAdapterFactory producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
-    this(properties, null);
+    this(properties, null, null);
   }
 
-  public VeniceWriterFactory(Properties properties, ProducerAdapterFactory producerAdapterFactory) {
+  public VeniceWriterFactory(
+      Properties properties,
+      ProducerAdapterFactory producerAdapterFactory,
+      MetricsRepository metricsRepository) {
     this.properties = properties;
+    if (metricsRepository != null) {
+      new VeniceWriterStats(metricsRepository);
+    }
+    if (producerAdapterFactory == null) {
+      // For now, if VeniceWriterFactory caller does not pass ProducerAdapterFactory, use Kafka factory as default.
+      producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
+    }
+    this.producerAdapterFactory = producerAdapterFactory;
+
     boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       checkProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
@@ -35,10 +49,6 @@ public class VeniceWriterFactory {
       checkProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
       localKafkaBootstrapServers = properties.getProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
     }
-    if (producerAdapterFactory == null) {
-      producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
-    }
-    this.producerAdapterFactory = producerAdapterFactory;
   }
 
   private void checkProperty(String key) {

@@ -62,7 +62,6 @@ import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.serialization.avro.OptimizedKafkaValueSerializer;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.service.ICProvider;
-import com.linkedin.venice.stats.KafkaClientStats;
 import com.linkedin.venice.system.store.MetaStoreWriter;
 import com.linkedin.venice.throttle.EventThrottler;
 import com.linkedin.venice.utils.ComplementSet;
@@ -243,7 +242,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
       veniceWriterProperties.put(KAFKA_LINGER_MS, DEFAULT_KAFKA_LINGER_MS);
     }
 
-    /* TODO: Inject producerAdapterFactory */
+    // TODO: Once we start testing with other PubSub systems, we'll inject corresponding systems ProducerAdapterFactory
     LOGGER.info(
         "Shared kafka producer service is {}",
         serverConfig.isSharedKafkaProducerEnabled() ? "enabled" : "disabled");
@@ -258,16 +257,9 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
       producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }
 
-    VeniceWriterFactory veniceWriterFactory = new VeniceWriterFactory(veniceWriterProperties, producerAdapterFactory);
+    VeniceWriterFactory veniceWriterFactory =
+        new VeniceWriterFactory(veniceWriterProperties, producerAdapterFactory, metricsRepository);
     VeniceWriterFactory veniceWriterFactoryForMetaStoreWriter = new VeniceWriterFactory(veniceWriterProperties);
-
-    // Create Kafka client stats
-    KafkaClientStats.registerKafkaClientStats(
-        metricsRepository,
-        "KafkaClientStats",
-        producerAdapterFactory instanceof SharedKafkaProducerAdapterFactory
-            ? (SharedKafkaProducerAdapterFactory) producerAdapterFactory
-            : null);
 
     EventThrottler bandwidthThrottler = new EventThrottler(
         serverConfig.getKafkaFetchQuotaBytesPerSecond(),
