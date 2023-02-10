@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * Set of key-value pairs to send with PubsubMessage
+ * In case of headers with the same key, only the most recently added headers value will be kept.
+ */
 public class PubsubMessageHeaders {
 
   // Kafka allows duplicate keys in the headers but some pubsub systems may not

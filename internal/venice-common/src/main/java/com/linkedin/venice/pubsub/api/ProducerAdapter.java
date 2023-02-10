@@ -15,6 +15,9 @@ import java.util.concurrent.TimeoutException;
 public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
+  /**
+   * The support for the following API will be removed.
+   */
   @Deprecated
   int getNumberOfPartitions(String topic);
 
