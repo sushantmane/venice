@@ -4,14 +4,13 @@ import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdap
 import com.linkedin.venice.writer.VeniceWriter;
 import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
-import java.util.Optional;
 
 
 /**
  * This stats should work in the host level to measure stats of Kafka clients, like number of active clients.
  */
 public class KafkaClientStats extends AbstractVeniceStats {
-  private Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService;
+  private SharedKafkaProducerAdapterFactory sharedKafkaProducerService;
 
   /**
    * Metric for active VeniceWriter numbers; once shared producer service is on, the number of VeniceWriter is not equal
@@ -37,7 +36,7 @@ public class KafkaClientStats extends AbstractVeniceStats {
   private KafkaClientStats(
       MetricsRepository metricsRepository,
       String name,
-      Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService) {
+      SharedKafkaProducerAdapterFactory sharedKafkaProducerService) {
     super(metricsRepository, name);
     this.sharedKafkaProducerService = sharedKafkaProducerService;
 
@@ -47,20 +46,20 @@ public class KafkaClientStats extends AbstractVeniceStats {
         "venice_writer_failed_to_close_count",
         new Gauge(() -> VeniceWriter.VENICE_WRITER_CLOSE_FAILED_COUNT.get()));
 
-    if (sharedKafkaProducerService.isPresent()) {
+    if (sharedKafkaProducerService != null) {
       sharedProducerActiveTasksCountSensor = registerSensor(
           "shared_producer_active_task_count",
-          new Gauge(() -> sharedKafkaProducerService.get().getActiveSharedProducerTasksCount()));
+          new Gauge(() -> sharedKafkaProducerService.getActiveSharedProducerTasksCount()));
       sharedProducerActiveCountSensor = registerSensor(
           "shared_producer_active_count",
-          new Gauge(() -> sharedKafkaProducerService.get().getActiveSharedProducerCount()));
+          new Gauge(() -> sharedKafkaProducerService.getActiveSharedProducerCount()));
     }
   }
 
   public static void registerKafkaClientStats(
       MetricsRepository metricsRepository,
       String name,
-      Optional<SharedKafkaProducerAdapterFactory> sharedKafkaProducerService) {
+      SharedKafkaProducerAdapterFactory sharedKafkaProducerService) {
     new KafkaClientStats(metricsRepository, name, sharedKafkaProducerService);
   }
 }
