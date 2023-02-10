@@ -584,7 +584,10 @@ public class TestUtils {
       SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory) {
     Properties factoryProperties = new Properties();
     factoryProperties.putAll(properties);
-    return new VeniceWriterFactory(factoryProperties, sharedKafkaProducerAdapterFactory);
+    return new VeniceWriterFactory(
+        factoryProperties,
+        sharedKafkaProducerAdapterFactory,
+        sharedKafkaProducerAdapterFactory.getMetricsRepository());
   }
 
   public static Store getRandomStore() {

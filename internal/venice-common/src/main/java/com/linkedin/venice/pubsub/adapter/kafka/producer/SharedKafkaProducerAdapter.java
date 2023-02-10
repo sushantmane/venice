@@ -52,7 +52,7 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
     kafkaProducerMetrics = new HashMap<>();
     metricsToBeReported
         .forEach(metric -> kafkaProducerMetrics.put(metric, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
-    if (kafkaProducerMetrics.size() > 0) {
+    if (metricsRepository != null && kafkaProducerMetrics.size() > 0) {
       sharedKafkaProducerStats = new SharedKafkaProducerStats(metricsRepository);
     }
   }

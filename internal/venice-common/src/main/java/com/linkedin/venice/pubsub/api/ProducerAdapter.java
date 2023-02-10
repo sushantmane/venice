@@ -16,7 +16,7 @@ public interface ProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   /**
-   * The support for the following API will be removed.
+   * The support for the following two getNumberOfPartitions APIs will be removed.
    */
   @Deprecated
   int getNumberOfPartitions(String topic);
