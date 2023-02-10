@@ -46,6 +46,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   // stats
   private final MetricsRepository metricsRepository;
   private final Set<String> producerMetricsToBeReported;
+  private final SharedProducerServiceStats sharedProducerServiceStats;
   final AtomicLong activeSharedProducerTasksCount = new AtomicLong(0);
   final AtomicLong activeSharedProducerCount = new AtomicLong(0);
 
@@ -89,9 +90,11 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
 
     this.numOfProducersPerKafkaCluster = sharedProducerPoolCount;
     this.producers = new SharedKafkaProducerAdapter[numOfProducersPerKafkaCluster];
-
     this.metricsRepository = metricsRepository;
     this.producerMetricsToBeReported = producerMetricsToBeReported;
+    this.sharedProducerServiceStats =
+        metricsRepository != null ? new SharedProducerServiceStats(metricsRepository, this) : null;
+
     LOGGER.info("SharedKafkaProducerAdapter: is initialized");
   }
 
@@ -258,4 +261,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     activeSharedProducerCount.decrementAndGet();
   }
 
+  public MetricsRepository getMetricsRepository() {
+    return metricsRepository;
+  }
 }
