@@ -1,8 +1,7 @@
 package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
-import static org.apache.kafka.clients.producer.ProducerConfig.BUFFER_MEMORY_CONFIG;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BUFFER_MEMORY;
 import static org.mockito.Mockito.mock;
 
 import com.linkedin.venice.ConfigKeys;
@@ -82,7 +81,7 @@ public class SharedKafkaProducerAdapterFactoryTest {
       properties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
       properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafka.getAddress());
       properties.put(ConfigKeys.PARTITIONER_CLASS, DefaultVenicePartitioner.class.getName());
-      properties.put(KAFKA_CONFIG_PREFIX + BUFFER_MEMORY_CONFIG, "16384");
+      properties.put(KAFKA_BUFFER_MEMORY, "16384");
       sharedKafkaProducerAdapterFactory = TestUtils.getSharedKafkaProducerService(properties);
 
       VeniceWriterFactory veniceWriterFactory =

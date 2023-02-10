@@ -276,7 +276,7 @@ public class KafkaConsumptionTest {
     props.put(ApacheKafkaProducerConfig.KAFKA_KEY_SERIALIZER, KafkaKeySerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafkaUrl);
-    ProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(new VeniceProperties(props));
+    ProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
 
     final byte[] randomBytes = new byte[] { 0, 1 };
 
