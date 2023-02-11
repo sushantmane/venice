@@ -42,6 +42,7 @@ import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.writer.CompletableFutureCallback;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
@@ -336,8 +337,12 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
         store.getPartitionerClass(),
         amplificationFactor,
         new VeniceProperties(partitionerProperties));
-    return new VeniceWriterFactory(veniceWriterProperties)
-        .createBasicVeniceWriter(store.getKafkaTopic(), time, isChunkingEnabled, venicePartitioner, partitionCount);
+    return new VeniceWriterFactory(veniceWriterProperties).createVeniceWriter(
+        new VeniceWriterOptions.Builder(store.getKafkaTopic()).setTime(time)
+            .setPartitioner(venicePartitioner)
+            .setPartitionCount(partitionCount)
+            .setChunkingEnabled(isChunkingEnabled)
+            .build());
   }
 
   @Override

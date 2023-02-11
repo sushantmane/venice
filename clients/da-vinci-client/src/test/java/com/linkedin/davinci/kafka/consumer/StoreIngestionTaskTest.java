@@ -25,7 +25,6 @@ import static com.linkedin.venice.utils.TestUtils.waitForNonDeterministicAsserti
 import static com.linkedin.venice.utils.TestUtils.waitForNonDeterministicCompletion;
 import static com.linkedin.venice.utils.Time.MS_PER_DAY;
 import static com.linkedin.venice.utils.Time.MS_PER_HOUR;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyDouble;
@@ -1160,9 +1159,7 @@ public abstract class StoreIngestionTaskTest {
     runTest(new RandomPollStrategy(), Utils.setOf(PARTITION_FOO), () -> {}, () -> {
       vtWriter.broadcastStartOfPush(new HashMap<>());
       vtWriter.broadcastEndOfPush(new HashMap<>());
-      doReturn(vtWriter).when(mockWriterFactory)
-          .createBasicVeniceWriter(anyString(), anyBoolean(), any(VenicePartitioner.class), anyInt());
-      doReturn(vtWriter).when(mockWriterFactory).createVeniceWriter(any());
+      doReturn(vtWriter).when(mockWriterFactory).createVeniceWriter(any(VeniceWriterOptions.class));
       verify(mockLogNotifier, never()).completed(anyString(), anyInt(), anyLong());
       vtWriter.broadcastTopicSwitch(
           Collections.singletonList(inMemoryLocalKafkaBroker.getKafkaBootstrapServer()),
