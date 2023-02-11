@@ -17,6 +17,7 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -159,7 +160,7 @@ public class RealTimeTopicSwitcherTest {
 
     // Version 1 does not have a view but 2 does. In this case DON'T transmit a version swap message
     realTimeTopicSwitcher.transmitVersionSwapMessage(mockStore, 1, 2);
-    verify(mockWriterFactory, never()).createVeniceWriter(anyString(), any(), any(), anyInt());
+    verify(mockWriterFactory, never()).createVeniceWriter(any(VeniceWriterOptions.class));
 
     // Version 4 doesn't exist. In this case DON'T transmit a version swap message, and throw an exception to boot
     Assert.assertThrows(() -> realTimeTopicSwitcher.transmitVersionSwapMessage(mockStore, 3, 4));

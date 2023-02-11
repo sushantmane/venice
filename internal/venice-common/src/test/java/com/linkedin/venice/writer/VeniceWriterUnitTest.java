@@ -14,7 +14,6 @@ import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.VeniceProperties;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Future;
 import org.mockito.ArgumentCaptor;
@@ -38,7 +37,7 @@ public class VeniceWriterUnitTest {
         .setValueSerializer(serializer)
         .setWriteComputeSerializer(serializer)
         .setPartitioner(new DefaultVenicePartitioner())
-        .setPartitionCount(Optional.of(partitionCount))
+        .setPartitionCount(partitionCount)
         .build();
     VeniceWriter<Object, Object, Object> writer =
         new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);

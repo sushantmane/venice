@@ -1084,9 +1084,10 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           VeniceSystemStoreUtils.getPushJobDetailsStoreName(),
           value.getSchema().toString());
       return getVeniceWriterFactory().createVeniceWriter(
-          pushJobDetailsRTTopic,
-          new VeniceAvroKafkaSerializer(key.getSchema().toString()),
-          new VeniceAvroKafkaSerializer(value.getSchema().toString()));
+          new VeniceWriterOptions.Builder(pushJobDetailsRTTopic)
+              .setKeySerializer(new VeniceAvroKafkaSerializer(key.getSchema().toString()))
+              .setValueSerializer(new VeniceAvroKafkaSerializer(value.getSchema().toString()))
+              .build());
     });
 
     pushJobDetailsWriter.put(key, value, pushJobDetailsSchemaId, null);
@@ -1172,7 +1173,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     int partitionCount = version.getPartitionCount() * version.getPartitionerConfig().getAmplificationFactor();
     VeniceWriterOptions.Builder vwOptionsBuilder =
         new VeniceWriterOptions.Builder(topicToReceiveEndOfPush).setUseKafkaKeySerializer(true)
-            .setPartitionCount(Optional.of(partitionCount));
+            .setPartitionCount(partitionCount);
     if (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled()) {
       vwOptionsBuilder.setKafkaBootstrapServers(version.getPushStreamSourceAddress());
     }
@@ -2338,7 +2339,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             try {
               VeniceWriterOptions.Builder vwOptionsBuilder =
                   new VeniceWriterOptions.Builder(finalVersion.kafkaTopicName()).setUseKafkaKeySerializer(true)
-                      .setPartitionCount(Optional.of(subPartitionCount));
+                      .setPartitionCount(subPartitionCount);
               if (multiClusterConfigs.isParent() && finalVersion.isNativeReplicationEnabled()) {
                 // Produce directly into one of the child fabric
                 vwOptionsBuilder.setKafkaBootstrapServers(finalVersion.getPushStreamSourceAddress());
@@ -6009,9 +6010,10 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                 + VeniceSystemStoreUtils.getParticipantStoreNameForCluster(clusterName));
       }
       return getVeniceWriterFactory().createVeniceWriter(
-          topic,
-          new VeniceAvroKafkaSerializer(ParticipantMessageKey.getClassSchema().toString()),
-          new VeniceAvroKafkaSerializer(ParticipantMessageValue.getClassSchema().toString()));
+          new VeniceWriterOptions.Builder(topic)
+              .setKeySerializer(new VeniceAvroKafkaSerializer(ParticipantMessageKey.getClassSchema().toString()))
+              .setValueSerializer(new VeniceAvroKafkaSerializer(ParticipantMessageValue.getClassSchema().toString()))
+              .build());
     });
   }
 

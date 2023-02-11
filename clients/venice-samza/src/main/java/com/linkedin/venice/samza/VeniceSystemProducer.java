@@ -322,15 +322,15 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
       VersionCreationResponse store,
       Properties veniceWriterProperties) {
     int amplificationFactor = store.getAmplificationFactor();
-    Optional<Integer> partitionCount = pushType.isBatchOrStreamReprocessing()
-        ? Optional.of(store.getPartitions() * amplificationFactor)
+    Integer partitionCount = pushType.isBatchOrStreamReprocessing()
+        ? (store.getPartitions() * amplificationFactor)
         /**
          * N.B. There is an issue in the controller where the partition count inside a {@link VersionCreationResponse}
          *      for a non-batch topic is invalid, so in that case we don't rely on it, and let the {@link VeniceWriter}
          *      figure it out by doing a metadata call to Kafka. It would be great to fix the controller bug and then
          *      always pass in the partition count here, so we can skip this MD call.
          */
-        : Optional.empty();
+        : null;
     Properties partitionerProperties = new Properties();
     partitionerProperties.putAll(store.getPartitionerParams());
     VenicePartitioner venicePartitioner = PartitionUtils.getVenicePartitioner(
