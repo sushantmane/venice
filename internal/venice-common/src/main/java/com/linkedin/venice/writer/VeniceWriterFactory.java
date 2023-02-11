@@ -11,7 +11,6 @@ import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdap
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.stats.VeniceWriterStats;
-import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
 import java.util.Properties;
@@ -88,19 +87,6 @@ public class VeniceWriterFactory {
    * The following deprecated methods will be deleted once all clients are upgraded the release containing
    * the new code.
    */
-
-  @Deprecated
-  public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(
-      String topicName,
-      Time time,
-      VenicePartitioner partitioner,
-      int topicPartitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setTime(time)
-        .setPartitioner(partitioner)
-        .setPartitionCount(topicPartitionCount)
-        .build();
-    return createVeniceWriter(options);
-  }
 
   /** test-only */
   @Deprecated

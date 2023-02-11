@@ -15,7 +15,6 @@ import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
-import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -97,11 +96,11 @@ public class RealTimeTopicSwitcher {
     } else {
       sourceClusters.add(destKafkaBootstrapServers);
     }
-    try (VeniceWriter veniceWriter = getVeniceWriterFactory().createBasicVeniceWriter(
-        topicWhereToSendTheTopicSwitch,
-        getTimer(),
-        new DefaultVenicePartitioner(),
-        destinationPartitionCount)) {
+
+    try (VeniceWriter veniceWriter = getVeniceWriterFactory().createVeniceWriter(
+        new VeniceWriterOptions.Builder(topicWhereToSendTheTopicSwitch).setTime(getTimer())
+            .setPartitionCount(destinationPartitionCount)
+            .build())) {
       veniceWriter
           .broadcastTopicSwitch(sourceClusters, realTimeTopicName, rewindStartTimestamp, Collections.emptyMap());
     }
