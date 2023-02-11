@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +56,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -96,7 +96,6 @@ public class VeniceWriterTest {
     topicManager.createTopic(topicName, partitionCount, 1, true);
     Properties properties = new Properties();
     properties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
-    properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafka.getAddress());
     properties.put(ConfigKeys.PARTITIONER_CLASS, DefaultVenicePartitioner.class.getName());
 
     ExecutorService executorService = null;
@@ -445,17 +444,19 @@ public class VeniceWriterTest {
   }
 
   @Test(timeOut = 30000)
-  public void testProducerClosex() {
+  public void testProducerCloses() {
     String topicName = Utils.getUniqueString("topic-for-vw-thread-safety");
     int partitionCount = 1;
     topicManager.createTopic(topicName, partitionCount, 1, true);
     Properties properties = new Properties();
     properties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
-    properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafka.getAddress());
-    properties.put(ConfigKeys.PARTITIONER_CLASS, DefaultVenicePartitioner.class.getName());
 
-    VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter =
-        TestUtils.getVeniceWriterFactory(properties).createVeniceWriter(topicName, partitionCount);
+    VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter = TestUtils.getVeniceWriterFactory(properties)
+        .createVeniceWriter(
+            new VeniceWriterOptions.Builder(topicName).setUseKafkaKeySerializer(true)
+                .setPartitionCount(Optional.of(partitionCount))
+                .setPartitioner(new DefaultVenicePartitioner())
+                .build());
     ProducerAdapter producer = veniceWriter.getProducerAdapter();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);

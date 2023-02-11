@@ -34,6 +34,8 @@ public class ApacheKafkaProducerConfig {
       KAFKA_CONFIG_PREFIX + ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG;
   public static final String KAFKA_PRODUCER_REQUEST_TIMEOUT_MS =
       KAFKA_CONFIG_PREFIX + ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG;
+  public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = "ssl." + KAFKA_BOOTSTRAP_SERVERS;
+  public static final String SSL_TO_KAFKA = "ssl.to.kakfa";
 
   private final Properties producerProperties;
 
