@@ -19,17 +19,13 @@ import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdap
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
-import com.linkedin.venice.serialization.DefaultSerializer;
-import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
-import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,17 +82,8 @@ public class SharedKafkaProducerAdapterFactoryTest {
 
       VeniceWriterFactory veniceWriterFactory =
           TestUtils.getVeniceWriterFactoryWithSharedProducer(properties, sharedKafkaProducerAdapterFactory);
-
       try (VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter1 = veniceWriterFactory.createVeniceWriter(
-          existingTopic,
-          new KafkaKeySerializer(),
-          new DefaultSerializer(),
-          new DefaultSerializer(),
-          Optional.empty(),
-          SystemTime.INSTANCE,
-          new DefaultVenicePartitioner(),
-          Optional.of(1),
-          Optional.empty())) {
+          new VeniceWriterOptions.Builder(existingTopic).setUseKafkaKeySerializer(true).setPartitionCount(1).build())) {
         CountDownLatch producedTopicPresent = new CountDownLatch(100);
         for (int i = 0; i < 100 && !Thread.interrupted(); i++) {
           try {
@@ -120,16 +107,9 @@ public class SharedKafkaProducerAdapterFactoryTest {
       VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter2 = null;
       try {
         veniceWriter2 = veniceWriterFactory.createVeniceWriter(
-            nonExistingTopic,
-            new KafkaKeySerializer(),
-            new DefaultSerializer(),
-            new DefaultSerializer(),
-            Optional.empty(),
-            SystemTime.INSTANCE,
-            new DefaultVenicePartitioner(),
-            Optional.of(1),
-            Optional.empty());
-
+            new VeniceWriterOptions.Builder(nonExistingTopic).setUseKafkaKeySerializer(true)
+                .setPartitionCount(1)
+                .build());
         AtomicInteger producedTopicNotPresent = new AtomicInteger();
         VeniceWriter<KafkaKey, byte[], byte[]> finalVeniceWriter = veniceWriter2;
         thread2 = new Thread(() -> {

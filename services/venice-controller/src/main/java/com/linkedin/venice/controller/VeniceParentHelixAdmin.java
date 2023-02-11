@@ -501,11 +501,10 @@ public class VeniceParentHelixAdmin implements Admin {
        * 2. Data out of order;
        * 3. Data duplication;
        */
-      VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setTime(getTimer())
-          .setPartitionCount(Optional.of(AdminTopicUtils.PARTITION_NUM_FOR_ADMIN_TOPIC))
-          .build();
-
-      return getVeniceWriterFactory().createVeniceWriter(options);
+      return getVeniceWriterFactory().createVeniceWriter(
+          new VeniceWriterOptions.Builder(topicName).setTime(getTimer())
+              .setPartitionCount(AdminTopicUtils.PARTITION_NUM_FOR_ADMIN_TOPIC)
+              .build());
     });
 
     if (!getMultiClusterConfigs().getPushJobStatusStoreClusterName().isEmpty()

@@ -323,10 +323,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       this.producerAdapter = producerAdapter;
       // We cache the number of partitions, as it is expected to be immutable, and the call to Kafka is expensive.
       // Also avoiding a metadata call to kafka here as the partitionsFor() call sometimes may get blocked indefinitely
-      // if the
-      // kafka broker is overloaded and does not respond in timely manner.
-      if (params.getPartitionCount().isPresent()) {
-        this.numberOfPartitions = params.getPartitionCount().get();
+      // if the kafka broker is overloaded and does not respond in timely manner.
+      if (params.getPartitionCount() != null) {
+        this.numberOfPartitions = params.getPartitionCount();
       } else {
         this.numberOfPartitions = this.producerAdapter.getNumberOfPartitions(topicName, 30, TimeUnit.SECONDS);
       }

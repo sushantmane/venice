@@ -14,7 +14,6 @@ import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
-import java.util.Optional;
 import java.util.Properties;
 
 
@@ -98,7 +97,7 @@ public class VeniceWriterFactory {
       int topicPartitionCount) {
     VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setTime(time)
         .setPartitioner(partitioner)
-        .setPartitionCount(Optional.of(topicPartitionCount))
+        .setPartitionCount(topicPartitionCount)
         .build();
     return createVeniceWriter(options);
   }
@@ -107,19 +106,6 @@ public class VeniceWriterFactory {
   @Deprecated
   public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(String topicName) {
     return createVeniceWriter(new VeniceWriterOptions.Builder(topicName).build());
-  }
-
-  @Deprecated
-  public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(
-      String topicName,
-      boolean chunkingEnabled,
-      VenicePartitioner partitioner,
-      int topicPartitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setPartitioner(partitioner)
-        .setPartitionCount(Optional.of(topicPartitionCount))
-        .setChunkingEnabled(chunkingEnabled)
-        .build();
-    return createVeniceWriter(options);
   }
 
   @Deprecated
@@ -142,7 +128,7 @@ public class VeniceWriterFactory {
       VenicePartitioner partitioner) {
     VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
         .setValueSerializer(valueSerializer)
-        .setPartitionCount(Optional.of(partitionCount))
+        .setPartitionCount(partitionCount)
         .setPartitioner(partitioner)
         .build();
     return createVeniceWriter(options);
@@ -166,51 +152,10 @@ public class VeniceWriterFactory {
     return createVeniceWriter(options);
   }
 
-  // TODO(sumane): Remove this API in the next major release
-  /**
-   * @deprecated
-   * This method is being deprecated and will be removed in the next release.
-   * <p> Use {@link VeniceWriterFactory#createVeniceWriter(VeniceWriterOptions)} instead.
-   */
-  public <K, V, U> VeniceWriter<K, V, U> createVeniceWriter(
-      String topic,
-      VeniceKafkaSerializer<K> keySerializer,
-      VeniceKafkaSerializer<V> valueSerializer,
-      VeniceKafkaSerializer<U> writeComputeSerializer,
-      Optional<Boolean> chunkingEnabled,
-      Time time,
-      VenicePartitioner partitioner,
-      Optional<Integer> topicPartitionCount,
-      Optional<Integer> targetStoreVersionForIncPush) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setKeySerializer(keySerializer)
-        .setValueSerializer(valueSerializer)
-        .setWriteComputeSerializer(writeComputeSerializer)
-        .setChunkingEnabled(chunkingEnabled.orElse(false))
-        .setTime(time)
-        .setPartitioner(partitioner)
-        .setPartitionCount(topicPartitionCount)
-        .build();
-    return createVeniceWriter(options);
-  }
-
   @Deprecated
   public VeniceWriter<KafkaKey, byte[], byte[]> createVeniceWriter(String topic, int partitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true)
-        .setPartitionCount(Optional.of(partitionCount))
-        .build();
-    return createVeniceWriter(options);
-  }
-
-  @Deprecated
-  public VeniceWriter<KafkaKey, byte[], byte[]> createVeniceWriter(
-      String topic,
-      VenicePartitioner partitioner,
-      Optional<Integer> targetStoreVersionForIncPush,
-      int partitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true)
-        .setPartitionCount(Optional.of(partitionCount))
-        .setPartitioner(partitioner)
-        .build();
+    VeniceWriterOptions options =
+        new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true).setPartitionCount(partitionCount).build();
     return createVeniceWriter(options);
   }
 }
