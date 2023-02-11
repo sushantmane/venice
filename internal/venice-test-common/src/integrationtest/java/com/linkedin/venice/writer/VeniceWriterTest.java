@@ -99,8 +99,11 @@ public class VeniceWriterTest {
     properties.put(ConfigKeys.PARTITIONER_CLASS, DefaultVenicePartitioner.class.getName());
 
     ExecutorService executorService = null;
-    try (VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter =
-        TestUtils.getVeniceWriterFactory(properties).createVeniceWriter(topicName, partitionCount)) {
+    try (VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter = TestUtils.getVeniceWriterFactory(properties)
+        .createVeniceWriter(
+            new VeniceWriterOptions.Builder(topicName).setUseKafkaKeySerializer(true)
+                .setPartitionCount(partitionCount)
+                .build())) {
       executorService = Executors.newFixedThreadPool(numberOfThreads);
       Future[] vwFutures = new Future[numberOfThreads];
       for (int i = 0; i < numberOfThreads; i++) {

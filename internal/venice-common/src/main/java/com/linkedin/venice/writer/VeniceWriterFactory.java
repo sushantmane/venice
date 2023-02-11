@@ -5,8 +5,6 @@ import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProdu
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -105,21 +103,6 @@ public class VeniceWriterFactory {
     return createVeniceWriter(options);
   }
 
-  @Deprecated
-  public <K, V> VeniceWriter<K, V, byte[]> createVeniceWriter(
-      String topicName,
-      VeniceKafkaSerializer<K> keySerializer,
-      VeniceKafkaSerializer<V> valueSerializer,
-      int partitionCount,
-      VenicePartitioner partitioner) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
-        .setValueSerializer(valueSerializer)
-        .setPartitionCount(partitionCount)
-        .setPartitioner(partitioner)
-        .build();
-    return createVeniceWriter(options);
-  }
-
   /**
    * test-only
    *
@@ -135,13 +118,6 @@ public class VeniceWriterFactory {
         .setValueSerializer(valueSerializer)
         .setChunkingEnabled(chunkingEnabled)
         .build();
-    return createVeniceWriter(options);
-  }
-
-  @Deprecated
-  public VeniceWriter<KafkaKey, byte[], byte[]> createVeniceWriter(String topic, int partitionCount) {
-    VeniceWriterOptions options =
-        new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true).setPartitionCount(partitionCount).build();
     return createVeniceWriter(options);
   }
 }
