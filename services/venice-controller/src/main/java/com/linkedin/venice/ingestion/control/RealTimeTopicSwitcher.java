@@ -97,7 +97,7 @@ public class RealTimeTopicSwitcher {
       sourceClusters.add(destKafkaBootstrapServers);
     }
 
-    try (VeniceWriter veniceWriter = getVeniceWriterFactory().createVeniceWriter(
+    try (VeniceWriter<byte[], byte[], byte[]> veniceWriter = getVeniceWriterFactory().createVeniceWriter(
         new VeniceWriterOptions.Builder(topicWhereToSendTheTopicSwitch).setTime(getTimer())
             .setPartitionCount(destinationPartitionCount)
             .build())) {

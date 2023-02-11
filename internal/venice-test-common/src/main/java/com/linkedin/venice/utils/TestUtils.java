@@ -71,7 +71,6 @@ import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
-import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
@@ -79,6 +78,7 @@ import com.linkedin.venice.serializer.AvroSerializer;
 import com.linkedin.venice.throttle.EventThrottler;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import com.linkedin.venice.writer.VeniceWriterOptions;
 import io.tehuti.metrics.MetricsRepository;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -373,11 +373,9 @@ public class TestUtils {
       compressor = new NoopCompressor();
     }
     try (VeniceWriter<byte[], byte[], byte[]> writer = writerFactory.createVeniceWriter(
-        kafkaTopic,
-        new DefaultSerializer(),
-        new DefaultSerializer(),
-        partitionCount,
-        venicePartitioner)) {
+        new VeniceWriterOptions.Builder(kafkaTopic).setPartitionCount(partitionCount)
+            .setPartitioner(venicePartitioner)
+            .build())) {
       writer.broadcastStartOfPush(
           false,
           false,
@@ -413,11 +411,11 @@ public class TestUtils {
       Stream<Map.Entry> batchData) {
 
     try (VeniceWriter<Object, Object, byte[]> writer = writerFactory.createVeniceWriter(
-        kafkaTopic,
-        new VeniceAvroKafkaSerializer(keySchema),
-        new VeniceAvroKafkaSerializer(valueSchema),
-        partitionCount,
-        venicePartitioner)) {
+        new VeniceWriterOptions.Builder(kafkaTopic).setKeySerializer(new VeniceAvroKafkaSerializer(keySchema))
+            .setValueSerializer(new VeniceAvroKafkaSerializer(valueSchema))
+            .setPartitionCount(partitionCount)
+            .setPartitioner(venicePartitioner)
+            .build())) {
       writer.broadcastStartOfPush(Collections.emptyMap());
 
       LinkedList<Future> putFutures = new LinkedList<>();
