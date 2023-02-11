@@ -1174,12 +1174,13 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     // write EOP message
     VeniceWriterFactory factory = getVeniceWriterFactory();
     int partitionCount = version.getPartitionCount() * version.getPartitionerConfig().getAmplificationFactor();
-    VeniceWriterOptions.Builder vwoBuilder =
+    VeniceWriterOptions.Builder vwOptionsBuilder =
         new VeniceWriterOptions.Builder(topicToReceiveEndOfPush).setUseKafkaKeySerializer(true)
             .setPartitionCount(Optional.of(partitionCount));
-    try (VeniceWriter veniceWriter = (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled())
-        ? factory.createVeniceWriter(vwoBuilder.setKafkaBootstrapServers(version.getPushStreamSourceAddress()).build())
-        : factory.createVeniceWriter(vwoBuilder.build())) {
+    if (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled()) {
+      vwOptionsBuilder.setKafkaBootstrapServers(version.getPushStreamSourceAddress());
+    }
+    try (VeniceWriter veniceWriter = factory.createVeniceWriter(vwOptionsBuilder.build())) {
       if (alsoWriteStartOfPush) {
         veniceWriter.broadcastStartOfPush(
             false,
@@ -2339,18 +2340,14 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             final Version finalVersion = version;
             VeniceWriter veniceWriter = null;
             try {
+              VeniceWriterOptions.Builder vwOptionsBuilder =
+                  new VeniceWriterOptions.Builder(finalVersion.kafkaTopicName()).setUseKafkaKeySerializer(true)
+                      .setPartitionCount(Optional.of(subPartitionCount));
               if (multiClusterConfigs.isParent() && finalVersion.isNativeReplicationEnabled()) {
-                /**
-                 * Produce directly into one of the child fabric
-                 */
-                veniceWriter = getVeniceWriterFactory().createVeniceWriter(
-                    finalVersion.kafkaTopicName(),
-                    finalVersion.getPushStreamSourceAddress(),
-                    subPartitionCount);
-              } else {
-                veniceWriter =
-                    getVeniceWriterFactory().createVeniceWriter(finalVersion.kafkaTopicName(), subPartitionCount);
+                // Produce directly into one of the child fabric
+                vwOptionsBuilder.setKafkaBootstrapServers(finalVersion.getPushStreamSourceAddress());
               }
+              veniceWriter = getVeniceWriterFactory().createVeniceWriter(vwOptionsBuilder.build());
               veniceWriter.broadcastStartOfPush(
                   sorted,
                   finalVersion.isChunkingEnabled(),

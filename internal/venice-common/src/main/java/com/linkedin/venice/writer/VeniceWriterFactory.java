@@ -213,16 +213,4 @@ public class VeniceWriterFactory {
         .build();
     return createVeniceWriter(options);
   }
-
-  @Deprecated
-  public VeniceWriter<KafkaKey, byte[], byte[]> createVeniceWriter(
-      String topic,
-      String kafkaBootstrapServers,
-      int partitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setKafkaBootstrapServers(kafkaBootstrapServers)
-        .setUseKafkaKeySerializer(true)
-        .setPartitionCount(Optional.of(partitionCount))
-        .build();
-    return createVeniceWriter(options);
-  }
 }
