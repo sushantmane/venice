@@ -1,6 +1,9 @@
 package com.linkedin.venice.writer;
 
-import com.linkedin.venice.ConfigKeys;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA;
+
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.VenicePartitioner;
@@ -41,13 +44,13 @@ public class VeniceWriterFactory {
     }
     this.producerAdapterFactory = producerAdapterFactory;
 
-    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
+    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
-      checkProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
-      localKafkaBootstrapServers = properties.getProperty(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS);
+      checkProperty(KAFKA_BOOTSTRAP_SERVERS);
+      localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
     } else {
-      checkProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
-      localKafkaBootstrapServers = properties.getProperty(ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS);
+      checkProperty(SSL_KAFKA_BOOTSTRAP_SERVERS);
+      localKafkaBootstrapServers = properties.getProperty(SSL_KAFKA_BOOTSTRAP_SERVERS);
     }
   }
 
@@ -65,9 +68,9 @@ public class VeniceWriterFactory {
     writerProperties.putAll(this.properties);
 
     if (options.getKafkaBootstrapServers() != null) {
-      writerProperties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, options.getKafkaBootstrapServers());
+      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, options.getKafkaBootstrapServers());
     } else {
-      writerProperties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, localKafkaBootstrapServers);
+      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, localKafkaBootstrapServers);
     }
     writerProperties.put(VeniceWriter.ENABLE_CHUNKING, options.isChunkingEnabled());
     writerProperties.put(VeniceWriter.ENABLE_RMD_CHUNKING, options.isRmdChunkingEnabled());
