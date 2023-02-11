@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -401,7 +400,6 @@ public class VeniceReducer extends AbstractMapReduceTask
             .setRmdChunkingEnabled(rmdChunkingEnabled)
             .setTime(SystemTime.INSTANCE)
             .setPartitioner(partitioner)
-            .setPartitionCount(Optional.empty())
             .build();
     return veniceWriterFactoryFactory.createVeniceWriter(options);
   }

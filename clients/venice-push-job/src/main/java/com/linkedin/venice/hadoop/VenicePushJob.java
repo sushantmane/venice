@@ -2230,10 +2230,9 @@ public class VenicePushJob implements AutoCloseable {
       VeniceWriterOptions vwOptions = new VeniceWriterOptions.Builder(topicInfo.topic).setUseKafkaKeySerializer(true)
           .setPartitioner(venicePartitioner)
           .setPartitionCount(
-              Optional.of(
-                  Version.isVersionTopic(topicInfo.topic)
-                      ? topicInfo.partitionCount * topicInfo.amplificationFactor
-                      : topicInfo.partitionCount))
+              Version.isVersionTopic(topicInfo.topic)
+                  ? topicInfo.partitionCount * topicInfo.amplificationFactor
+                  : topicInfo.partitionCount)
           .build();
       VeniceWriter<KafkaKey, byte[], byte[]> newVeniceWriter = veniceWriterFactory.createVeniceWriter(vwOptions);
       LOGGER.info("Created VeniceWriter: {}", newVeniceWriter);

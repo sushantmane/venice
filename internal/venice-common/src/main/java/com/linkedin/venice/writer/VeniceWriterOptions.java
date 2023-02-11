@@ -7,7 +7,6 @@ import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;
-import java.util.Optional;
 
 
 /**
@@ -22,7 +21,7 @@ public class VeniceWriterOptions {
   private final VeniceKafkaSerializer writeComputeSerializer;
   private final VenicePartitioner partitioner;
   private final Time time;
-  private final Optional<Integer> partitionCount;
+  private final Integer partitionCount;
   private final boolean chunkingEnabled;
   private final boolean rmdChunkingEnabled;
   private final String kafkaBootstrapServers;
@@ -55,7 +54,7 @@ public class VeniceWriterOptions {
     return time;
   }
 
-  public Optional<Integer> getPartitionCount() {
+  public Integer getPartitionCount() {
     return partitionCount;
   }
 
@@ -92,7 +91,7 @@ public class VeniceWriterOptions {
         .append(chunkingEnabled)
         .append(", ")
         .append("partitionCount:")
-        .append(partitionCount.isPresent() ? partitionCount : "-")
+        .append(partitionCount != null ? partitionCount : "-")
         .append("}")
         .toString();
   }
@@ -104,7 +103,7 @@ public class VeniceWriterOptions {
     private VeniceKafkaSerializer writeComputeSerializer = null;
     private VenicePartitioner partitioner = null;
     private Time time = null;
-    private Optional<Integer> partitionCount = Optional.empty();
+    private Integer partitionCount = null;
     private boolean chunkingEnabled;
     private boolean rmdChunkingEnabled;
     private boolean useKafkaKeySerializer = false;
@@ -225,11 +224,11 @@ public class VeniceWriterOptions {
       return this;
     }
 
-    public Optional<Integer> getPartitionCount() {
+    public Integer getPartitionCount() {
       return partitionCount;
     }
 
-    public Builder setPartitionCount(Optional<Integer> partitionCount) {
+    public Builder setPartitionCount(Integer partitionCount) {
       this.partitionCount = partitionCount;
       return this;
     }

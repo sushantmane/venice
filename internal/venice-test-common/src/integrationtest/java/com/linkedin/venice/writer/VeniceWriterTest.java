@@ -49,7 +49,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -453,7 +452,7 @@ public class VeniceWriterTest {
     properties.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
     VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter = new VeniceWriterFactory(properties).createVeniceWriter(
         new VeniceWriterOptions.Builder(topicName).setUseKafkaKeySerializer(true)
-            .setPartitionCount(Optional.of(partitionCount))
+            .setPartitionCount(partitionCount)
             .setPartitioner(new DefaultVenicePartitioner())
             .build());
     ProducerAdapter producer = veniceWriter.getProducerAdapter();
