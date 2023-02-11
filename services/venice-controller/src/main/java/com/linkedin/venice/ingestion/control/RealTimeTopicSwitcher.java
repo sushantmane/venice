@@ -21,6 +21,7 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import com.linkedin.venice.writer.VeniceWriterOptions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -228,13 +229,11 @@ public class RealTimeTopicSwitcher {
       // NoOp
       return;
     }
-
     // Write the thing!
-    try (VeniceWriter veniceWriter = getVeniceWriterFactory().createBasicVeniceWriter(
-        Version.composeRealTimeTopic(store.getName()),
-        getTimer(),
-        new DefaultVenicePartitioner(),
-        previousStoreVersion.getPartitionCount())) {
+    try (VeniceWriter veniceWriter = getVeniceWriterFactory().createVeniceWriter(
+        new VeniceWriterOptions.Builder(Version.composeRealTimeTopic(store.getName())).setTime(getTimer())
+            .setPartitionCount(previousStoreVersion.getPartitionCount())
+            .build())) {
       veniceWriter.broadcastVersionSwap(
           previousStoreVersion.kafkaTopicName(),
           nextStoreVersion.kafkaTopicName(),
