@@ -193,35 +193,6 @@ public class VeniceWriterFactory {
     return createVeniceWriter(options);
   }
 
-  /**
-   * Create a {@link VeniceWriter} which is used to communicate with the real-time topic.
-   *
-   * @param chunkingEnabled override the factory's default chunking setting.
-   */
-  @Deprecated
-  protected <K, V, U> VeniceWriter<K, V, U> createVeniceWriter(
-      String topic,
-      String kafkaBootstrapServers,
-      VeniceKafkaSerializer<K> keySerializer,
-      VeniceKafkaSerializer<V> valueSerializer,
-      VeniceKafkaSerializer<U> writeComputeSerializer,
-      Optional<Boolean> chunkingEnabled,
-      Time time,
-      VenicePartitioner partitioner,
-      Optional<Integer> topicPartitionCount,
-      Optional<Integer> targetStoreVersionForIncPush) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setKafkaBootstrapServers(kafkaBootstrapServers)
-        .setKeySerializer(keySerializer)
-        .setValueSerializer(valueSerializer)
-        .setWriteComputeSerializer(writeComputeSerializer)
-        .setChunkingEnabled(chunkingEnabled.orElse(false))
-        .setTime(time)
-        .setPartitioner(partitioner)
-        .setPartitionCount(topicPartitionCount)
-        .build();
-    return createVeniceWriter(options);
-  }
-
   @Deprecated
   public VeniceWriter<KafkaKey, byte[], byte[]> createVeniceWriter(String topic, int partitionCount) {
     VeniceWriterOptions options = new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true)
