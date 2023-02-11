@@ -103,21 +103,6 @@ public class VeniceWriterFactory {
     return createVeniceWriter(options);
   }
 
-  @Deprecated
-  public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(
-      String topicName,
-      Time time,
-      boolean chunkingEnabled,
-      VenicePartitioner partitioner,
-      Optional<Integer> topicPartitionCount) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setTime(time)
-        .setPartitioner(partitioner)
-        .setPartitionCount(topicPartitionCount)
-        .setChunkingEnabled(chunkingEnabled)
-        .build();
-    return createVeniceWriter(options);
-  }
-
   /** test-only */
   @Deprecated
   public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(String topicName) {

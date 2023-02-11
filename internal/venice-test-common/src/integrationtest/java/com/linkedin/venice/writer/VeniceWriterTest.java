@@ -27,6 +27,7 @@ import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -449,14 +450,12 @@ public class VeniceWriterTest {
     int partitionCount = 1;
     topicManager.createTopic(topicName, partitionCount, 1, true);
     Properties properties = new Properties();
-    properties.put(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
-
-    VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter = TestUtils.getVeniceWriterFactory(properties)
-        .createVeniceWriter(
-            new VeniceWriterOptions.Builder(topicName).setUseKafkaKeySerializer(true)
-                .setPartitionCount(Optional.of(partitionCount))
-                .setPartitioner(new DefaultVenicePartitioner())
-                .build());
+    properties.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
+    VeniceWriter<KafkaKey, byte[], byte[]> veniceWriter = new VeniceWriterFactory(properties).createVeniceWriter(
+        new VeniceWriterOptions.Builder(topicName).setUseKafkaKeySerializer(true)
+            .setPartitionCount(Optional.of(partitionCount))
+            .setPartitioner(new DefaultVenicePartitioner())
+            .build());
     ProducerAdapter producer = veniceWriter.getProducerAdapter();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);
