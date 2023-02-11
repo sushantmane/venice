@@ -1,7 +1,18 @@
 package com.linkedin.venice.ingestion.control;
 
 import static com.linkedin.venice.meta.BufferReplayPolicy.REWIND_FROM_EOP;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyMap;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.kafka.TopicManager;
@@ -148,8 +159,8 @@ public class RealTimeTopicSwitcherTest {
     VeniceWriter mockVeniceWriter = mock(VeniceWriter.class);
 
     VeniceWriterFactory mockWriterFactory = mock(VeniceWriterFactory.class);
-    ArgumentCaptor<String> realTimeTopicCaptor = ArgumentCaptor.forClass(String.class);
-    when(mockWriterFactory.createBasicVeniceWriter(anyString(), any(), any(), anyInt())).thenReturn(mockVeniceWriter);
+    ArgumentCaptor<VeniceWriterOptions> vwOptionsArgumentCaptor = ArgumentCaptor.forClass(VeniceWriterOptions.class);
+    when(mockWriterFactory.createVeniceWriter(any(VeniceWriterOptions.class))).thenReturn(mockVeniceWriter);
 
     VeniceProperties mockVeniceProperties = mock(VeniceProperties.class);
     when(mockVeniceProperties.getString(ConfigKeys.KAFKA_BOOTSTRAP_SERVERS))
@@ -167,8 +178,9 @@ public class RealTimeTopicSwitcherTest {
 
     // Version 2 and 3 both have view configs, so we should transmit a version swap message
     realTimeTopicSwitcher.transmitVersionSwapMessage(mockStore, 2, 3);
-    verify(mockWriterFactory, times(2)).createBasicVeniceWriter(realTimeTopicCaptor.capture(), any(), any(), anyInt());
-    Assert.assertEquals(realTimeTopicCaptor.getValue(), realTimeTopic);
+    verify(mockWriterFactory, times(2)).createVeniceWriter(vwOptionsArgumentCaptor.capture());
+    VeniceWriterOptions capturedVwo = vwOptionsArgumentCaptor.getValue();
+    Assert.assertEquals(capturedVwo.getTopicName(), realTimeTopic);
 
     ArgumentCaptor<String> oldVersionCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> newVersionCaptor = ArgumentCaptor.forClass(String.class);
