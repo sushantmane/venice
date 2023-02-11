@@ -191,6 +191,7 @@ import com.linkedin.venice.views.VeniceView;
 import com.linkedin.venice.views.ViewUtils;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
+import com.linkedin.venice.writer.VeniceWriterOptions;
 import io.tehuti.metrics.MetricsRepository;
 import java.nio.ByteBuffer;
 import java.security.cert.X509Certificate;
@@ -1173,9 +1174,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     // write EOP message
     VeniceWriterFactory factory = getVeniceWriterFactory();
     int partitionCount = version.getPartitionCount() * version.getPartitionerConfig().getAmplificationFactor();
+    VeniceWriterOptions.Builder vwoBuilder =
+        new VeniceWriterOptions.Builder(topicToReceiveEndOfPush).setUseKafkaKeySerializer(true)
+            .setPartitionCount(Optional.of(partitionCount));
     try (VeniceWriter veniceWriter = (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled())
-        ? factory.createVeniceWriter(topicToReceiveEndOfPush, version.getPushStreamSourceAddress(), partitionCount)
-        : factory.createVeniceWriter(topicToReceiveEndOfPush, partitionCount)) {
+        ? factory.createVeniceWriter(vwoBuilder.setKafkaBootstrapServers(version.getPushStreamSourceAddress()).build())
+        : factory.createVeniceWriter(vwoBuilder.build())) {
       if (alsoWriteStartOfPush) {
         veniceWriter.broadcastStartOfPush(
             false,
