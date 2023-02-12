@@ -43,10 +43,6 @@ public class ApacheKafkaProducerConfig {
     this(new VeniceProperties(allVeniceProperties), true);
   }
 
-  public ApacheKafkaProducerConfig(VeniceProperties allVeniceProperties) {
-    this(allVeniceProperties, true);
-  }
-
   public ApacheKafkaProducerConfig(VeniceProperties allVeniceProperties, boolean strictConfigs) {
     this.producerProperties = validateAndExtractConfigs(allVeniceProperties, strictConfigs);
   }
