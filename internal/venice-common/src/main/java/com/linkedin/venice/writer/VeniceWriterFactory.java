@@ -1,16 +1,14 @@
 package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA;
 
-import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
+import java.util.Objects;
 import java.util.Properties;
 
 
@@ -19,7 +17,9 @@ import java.util.Properties;
  */
 public class VeniceWriterFactory {
   private final Properties properties;
-  private final String localKafkaBootstrapServers;
+  // Unless otherwise specified in VeniceWriterOptions the following address will be used
+  // as the target broker address for VeniceWriter
+  private final String localBrokerAddress;
   private final ProducerAdapterFactory producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
@@ -39,22 +39,9 @@ public class VeniceWriterFactory {
       producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }
     this.producerAdapterFactory = producerAdapterFactory;
-
-    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(SSL_TO_KAFKA, "false"));
-    if (!sslToKafka) {
-      checkProperty(KAFKA_BOOTSTRAP_SERVERS);
-      localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
-    } else {
-      checkProperty(SSL_KAFKA_BOOTSTRAP_SERVERS);
-      localKafkaBootstrapServers = properties.getProperty(SSL_KAFKA_BOOTSTRAP_SERVERS);
-    }
-  }
-
-  private void checkProperty(String key) {
-    if (!properties.containsKey(key)) {
-      throw new VeniceException(
-          "Invalid properties for Venice writer factory. Required property: " + key + " is missing.");
-    }
+    this.localBrokerAddress = Objects.requireNonNull(
+        producerAdapterFactory.getPubsubBrokerAddress(properties),
+        "Pubsub broker address cannot be null");
   }
 
   public <K, V, U> VeniceWriter<K, V, U> createVeniceWriter(VeniceWriterOptions options) {
@@ -66,7 +53,7 @@ public class VeniceWriterFactory {
     if (options.getKafkaBootstrapServers() != null) {
       writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, options.getKafkaBootstrapServers());
     } else {
-      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, localKafkaBootstrapServers);
+      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, localBrokerAddress);
     }
     writerProperties.put(VeniceWriter.ENABLE_CHUNKING, options.isChunkingEnabled());
     writerProperties.put(VeniceWriter.ENABLE_RMD_CHUNKING, options.isRmdChunkingEnabled());

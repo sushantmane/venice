@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub.api;
 
 import com.linkedin.venice.utils.VeniceProperties;
 import java.io.Closeable;
+import java.util.Properties;
 
 
 public interface ProducerAdapterFactory<ADAPTER extends ProducerAdapter> extends Closeable {
@@ -10,4 +11,6 @@ public interface ProducerAdapterFactory<ADAPTER extends ProducerAdapter> extends
   default ADAPTER create(VeniceProperties veniceProperties) {
     return create(null, veniceProperties);
   }
+
+  String getPubsubBrokerAddress(Properties properties);
 }
