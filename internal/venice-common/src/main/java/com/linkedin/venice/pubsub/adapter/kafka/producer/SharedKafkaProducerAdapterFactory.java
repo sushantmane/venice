@@ -41,7 +41,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
 
   private final SharedKafkaProducerAdapter[] producers;
   private final Map<String, SharedKafkaProducerAdapter> producerTaskToProducerMap = new VeniceConcurrentHashMap<>();
-  private final ApacheKafkaProducerAdapterFactory producerAdapterFactory;
+  private final ApacheKafkaProducerAdapterFactory internalProducerAdapterFactory;
   private volatile boolean isRunning = true;
 
   // stats
@@ -55,7 +55,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
    *
    * @param properties -- List of properties to construct a kafka producer
    * @param sharedProducerPoolCount  -- producer pool sizes
-   * @param producerAdapterFactory -- factory to create a KafkaProducerAdapter object
+   * @param internalProducerAdapterFactory -- factory to create a KafkaProducerAdapter object
    * @param metricsRepository -- metric repository
    * @param producerMetricsToBeReported -- a comma seperated list of KafkaProducer metrics that will exported as ingraph metrics
    *
@@ -64,10 +64,10 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   public SharedKafkaProducerAdapterFactory(
       Properties properties,
       int sharedProducerPoolCount,
-      ApacheKafkaProducerAdapterFactory producerAdapterFactory,
+      ApacheKafkaProducerAdapterFactory internalProducerAdapterFactory,
       MetricsRepository metricsRepository,
       Set<String> producerMetricsToBeReported) {
-    this.producerAdapterFactory = producerAdapterFactory;
+    this.internalProducerAdapterFactory = internalProducerAdapterFactory;
     boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
@@ -95,7 +95,6 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     this.producerMetricsToBeReported = producerMetricsToBeReported;
     this.sharedProducerServiceStats =
         metricsRepository != null ? new SharedProducerServiceStats(metricsRepository, this) : null;
-
     LOGGER.info("SharedKafkaProducerAdapter: is initialized");
   }
 
@@ -153,7 +152,8 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + i);
-        ProducerAdapter producerAdapter = producerAdapterFactory.create(new VeniceProperties(producerProperties));
+        ProducerAdapter producerAdapter =
+            internalProducerAdapterFactory.create(new VeniceProperties(producerProperties));
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);
         producers[i] = sharedKafkaProducer;
@@ -236,6 +236,11 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   @Override
   public SharedKafkaProducerAdapter create(String topicName, VeniceProperties veniceProperties) {
     return acquireKafkaProducer(topicName);
+  }
+
+  @Override
+  public String getPubsubBrokerAddress(Properties properties) {
+    return internalProducerAdapterFactory.getPubsubBrokerAddress(properties);
   }
 
   public long getActiveSharedProducerTasksCount() {
