@@ -2,8 +2,6 @@ package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.writer.VeniceWriter.APP_DEFAULT_LOGICAL_TS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES;
-import static com.linkedin.venice.writer.VeniceWriter.ENABLE_CHUNKING;
-import static com.linkedin.venice.writer.VeniceWriter.ENABLE_RMD_CHUNKING;
 import static com.linkedin.venice.writer.VeniceWriter.VENICE_DEFAULT_LOGICAL_TS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
@@ -294,10 +292,6 @@ public class VeniceWriterTest {
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
     when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
-    Properties writerProperties = new Properties();
-    writerProperties.put(ENABLE_CHUNKING, true);
-    writerProperties.put(ENABLE_RMD_CHUNKING, true);
-
     String stringSchema = "\"string\"";
     VeniceKafkaSerializer serializer = new VeniceAvroKafkaSerializer(stringSchema);
     String testTopic = "test";
@@ -306,9 +300,11 @@ public class VeniceWriterTest {
         .setWriteComputeSerializer(serializer)
         .setPartitioner(new DefaultVenicePartitioner())
         .setTime(SystemTime.INSTANCE)
+        .setChunkingEnabled(true)
+        .setRmdChunkingEnabled(true)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(new Properties()), mockedProducer);
 
     ByteBuffer replicationMetadata = ByteBuffer.wrap(new byte[] { 0xa, 0xb });
     PutMetadata putMetadata = new PutMetadata(1, replicationMetadata);
