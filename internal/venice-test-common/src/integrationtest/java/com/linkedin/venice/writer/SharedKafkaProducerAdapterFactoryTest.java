@@ -160,7 +160,10 @@ public class SharedKafkaProducerAdapterFactoryTest {
       sharedKafkaProducerAdapterFactory =
           new SharedKafkaProducerAdapterFactory(getProperties(), 8, new ApacheKafkaProducerAdapterFactory() {
             @Override
-            public ApacheKafkaProducerAdapter create(VeniceProperties properties) {
+            public ApacheKafkaProducerAdapter create(
+                VeniceProperties props,
+                String producerName,
+                String brokerAddressToOverride) {
               return mock(ApacheKafkaProducerAdapter.class);
             }
           }, new MetricsRepository(), Collections.EMPTY_SET);
@@ -198,7 +201,10 @@ public class SharedKafkaProducerAdapterFactoryTest {
       sharedKafkaProducerAdapterFactory =
           new SharedKafkaProducerAdapterFactory(getProperties(), 8, new ApacheKafkaProducerAdapterFactory() {
             @Override
-            public ApacheKafkaProducerAdapter create(VeniceProperties properties) {
+            public ApacheKafkaProducerAdapter create(
+                VeniceProperties props,
+                String producerName,
+                String brokerAddressToOverride) {
               return mock(ApacheKafkaProducerAdapter.class);
             }
           }, new MetricsRepository(), Collections.EMPTY_SET);

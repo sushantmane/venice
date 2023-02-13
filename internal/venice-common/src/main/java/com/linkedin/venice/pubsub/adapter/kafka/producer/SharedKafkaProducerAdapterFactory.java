@@ -68,6 +68,8 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       MetricsRepository metricsRepository,
       Set<String> producerMetricsToBeReported) {
     this.internalProducerAdapterFactory = internalProducerAdapterFactory;
+
+    // TODO: check and see if we can remove the duplicate logic
     boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
@@ -152,8 +154,8 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + i);
-        ProducerAdapter producerAdapter =
-            internalProducerAdapterFactory.create(new VeniceProperties(producerProperties));
+        ProducerAdapter producerAdapter = internalProducerAdapterFactory
+            .create(new VeniceProperties(producerProperties), "shared-producer-" + i, null);
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);
         producers[i] = sharedKafkaProducer;
@@ -229,18 +231,17 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   }
 
   /**
+   * N.B. This shared producer does not support brokerAddressToOverride. Do not use this in controllers.
    *
    * @param veniceProperties
    * @return
    */
   @Override
-  public SharedKafkaProducerAdapter create(String topicName, VeniceProperties veniceProperties) {
+  public SharedKafkaProducerAdapter create(
+      VeniceProperties veniceProperties,
+      String topicName,
+      String brokerAddressToOverride) {
     return acquireKafkaProducer(topicName);
-  }
-
-  @Override
-  public String getPubsubBrokerAddress(Properties properties) {
-    return internalProducerAdapterFactory.getPubsubBrokerAddress(properties);
   }
 
   public long getActiveSharedProducerTasksCount() {

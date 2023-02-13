@@ -1175,7 +1175,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         new VeniceWriterOptions.Builder(topicToReceiveEndOfPush).setUseKafkaKeySerializer(true)
             .setPartitionCount(partitionCount);
     if (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled()) {
-      vwOptionsBuilder.setKafkaBootstrapServers(version.getPushStreamSourceAddress());
+      vwOptionsBuilder.setBrokerAddress(version.getPushStreamSourceAddress());
     }
     try (VeniceWriter veniceWriter = factory.createVeniceWriter(vwOptionsBuilder.build())) {
       if (alsoWriteStartOfPush) {
@@ -2342,7 +2342,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                       .setPartitionCount(subPartitionCount);
               if (multiClusterConfigs.isParent() && finalVersion.isNativeReplicationEnabled()) {
                 // Produce directly into one of the child fabric
-                vwOptionsBuilder.setKafkaBootstrapServers(finalVersion.getPushStreamSourceAddress());
+                vwOptionsBuilder.setBrokerAddress(finalVersion.getPushStreamSourceAddress());
               }
               veniceWriter = getVeniceWriterFactory().createVeniceWriter(vwOptionsBuilder.build());
               veniceWriter.broadcastStartOfPush(

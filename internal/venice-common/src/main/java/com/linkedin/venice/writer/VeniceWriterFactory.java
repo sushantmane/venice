@@ -1,14 +1,11 @@
 package com.linkedin.venice.writer;
 
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
-
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
-import java.util.Objects;
 import java.util.Properties;
 
 
@@ -17,9 +14,6 @@ import java.util.Properties;
  */
 public class VeniceWriterFactory {
   private final Properties properties;
-  // Unless otherwise specified in VeniceWriterOptions the following address will be used
-  // as the target broker address for VeniceWriter
-  private final String localBrokerAddress;
   private final ProducerAdapterFactory producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
@@ -34,31 +28,25 @@ public class VeniceWriterFactory {
     if (metricsRepository != null) {
       new VeniceWriterStats(metricsRepository);
     }
+    // For now, if VeniceWriterFactory caller does not pass ProducerAdapterFactory, use Kafka factory as default.
+    // Eventually we'll force VeniceWriterFactory creators to inject ProducerAdapterFactory.
     if (producerAdapterFactory == null) {
-      // For now, if VeniceWriterFactory caller does not pass ProducerAdapterFactory, use Kafka factory as default.
       producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }
     this.producerAdapterFactory = producerAdapterFactory;
-    this.localBrokerAddress = Objects.requireNonNull(
-        producerAdapterFactory.getPubsubBrokerAddress(properties),
-        "Pubsub broker address cannot be null");
   }
 
   public <K, V, U> VeniceWriter<K, V, U> createVeniceWriter(VeniceWriterOptions options) {
-    // Currently this writerProperties is overloaded as it contains KafkaProducer config and as well as
-    // VeniceWriter config. We should clean this up and also not add more KafkaProducer config here.
     Properties writerProperties = new Properties();
     writerProperties.putAll(this.properties);
-
-    if (options.getKafkaBootstrapServers() != null) {
-      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, options.getKafkaBootstrapServers());
-    } else {
-      writerProperties.put(KAFKA_BOOTSTRAP_SERVERS, localBrokerAddress);
-    }
+    // TODO: extract chunking settings directly from VeniceWriterOptions in VeniceWriter
     writerProperties.put(VeniceWriter.ENABLE_CHUNKING, options.isChunkingEnabled());
     writerProperties.put(VeniceWriter.ENABLE_RMD_CHUNKING, options.isRmdChunkingEnabled());
     VeniceProperties props = new VeniceProperties(writerProperties);
-    return new VeniceWriter<>(options, props, producerAdapterFactory.create(options.getTopicName(), props));
+    return new VeniceWriter<>(
+        options,
+        props,
+        producerAdapterFactory.create(props, options.getTopicName(), options.getBrokerAddress()));
   }
 
   /*

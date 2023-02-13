@@ -87,4 +87,9 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
   public Map<String, Double> getMeasurableProducerMetrics() {
     return Collections.emptyMap();
   }
+
+  @Override
+  public String getBrokerAddress() {
+    return broker.getKafkaBootstrapServer();
+  }
 }

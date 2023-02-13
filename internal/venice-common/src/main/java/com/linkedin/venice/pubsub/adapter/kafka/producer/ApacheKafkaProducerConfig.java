@@ -1,7 +1,6 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.client.exceptions.VeniceClientException;
-import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
@@ -35,35 +34,57 @@ public class ApacheKafkaProducerConfig {
   public static final String KAFKA_PRODUCER_REQUEST_TIMEOUT_MS =
       KAFKA_CONFIG_PREFIX + ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG;
   public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = "ssl." + KAFKA_BOOTSTRAP_SERVERS;
+  // do not attempt to change spelling, kakfa, without carefully replacing all instances in all mps
   public static final String SSL_TO_KAFKA = "ssl.to.kakfa";
 
   private final Properties producerProperties;
 
   public ApacheKafkaProducerConfig(Properties allVeniceProperties) {
-    this(new VeniceProperties(allVeniceProperties), true);
+    this(new VeniceProperties(allVeniceProperties), null, true);
   }
 
-  public ApacheKafkaProducerConfig(VeniceProperties allVeniceProperties, boolean strictConfigs) {
-    this.producerProperties = validateAndExtractConfigs(allVeniceProperties, strictConfigs);
+  public ApacheKafkaProducerConfig(
+      VeniceProperties allVeniceProperties,
+      String brokerAddressToOverride,
+      boolean strictConfigs) {
+    String brokerAddress =
+        brokerAddressToOverride != null ? brokerAddressToOverride : getPubsubBrokerAddress(allVeniceProperties);
+    this.producerProperties = allVeniceProperties.clipAndFilterNamespace(KAFKA_CONFIG_PREFIX).toProperties();
+    this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
+    validateAndUpdateProperties(this.producerProperties, strictConfigs);
+    // Setup ssl config if needed.
+    if (KafkaSSLUtils.validateAndCopyKafkaSSLConfig(allVeniceProperties, this.producerProperties)) {
+      LOGGER.info("Will initialize an SSL Kafka producer");
+    } else {
+      LOGGER.info("Will initialize a non-SSL Kafka producer");
+    }
   }
 
   public Properties getProducerProperties() {
     return producerProperties;
   }
 
-  /**
-   * This class takes in all properties that begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}" and emits the
-   * rest of the properties.
-   * It omits those properties that do not begin with "{@value ApacheKafkaProducerConfig#KAFKA_CONFIG_PREFIX}"
-   */
-  private Properties validateAndExtractConfigs(VeniceProperties allVeniceProperties, boolean strictConfigs) {
-    if (!allVeniceProperties.containsKey(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS)) {
-      throw new ConfigurationException("Props key not found: " + ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS);
+  public static String getPubsubBrokerAddress(VeniceProperties properties) {
+    if (Boolean.parseBoolean(properties.getString(SSL_TO_KAFKA, "false"))) {
+      checkProperty(properties, SSL_KAFKA_BOOTSTRAP_SERVERS);
+      return properties.getString(SSL_KAFKA_BOOTSTRAP_SERVERS);
     }
+    checkProperty(properties, KAFKA_BOOTSTRAP_SERVERS);
+    return properties.getString(KAFKA_BOOTSTRAP_SERVERS);
+  }
 
-    Properties kafkaProducerProperties =
-        allVeniceProperties.clipAndFilterNamespace(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX).toProperties();
+  private static void checkProperty(VeniceProperties properties, String key) {
+    if (!properties.containsKey(key)) {
+      throw new VeniceException(
+          "Invalid properties for Kafka producer factory. Required property: " + key + " is missing.");
+    }
+  }
 
+  public String getBrokerAddress() {
+    return producerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
+  }
+
+  private void validateAndUpdateProperties(Properties kafkaProducerProperties, boolean strictConfigs) {
     validateClassProp(
         kafkaProducerProperties,
         strictConfigs,
@@ -118,15 +139,6 @@ public class ApacheKafkaProducerConfig {
        */
       kafkaProducerProperties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");
     }
-
-    // Setup ssl config if needed.
-    if (KafkaSSLUtils.validateAndCopyKafkaSSLConfig(allVeniceProperties, kafkaProducerProperties)) {
-      LOGGER.info("Will initialize an SSL Kafka producer");
-    } else {
-      LOGGER.info("Will initialize a non-SSL Kafka producer");
-    }
-
-    return kafkaProducerProperties;
   }
 
   /**

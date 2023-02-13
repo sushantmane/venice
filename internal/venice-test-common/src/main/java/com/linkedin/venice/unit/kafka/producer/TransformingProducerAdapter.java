@@ -59,6 +59,11 @@ public class TransformingProducerAdapter implements ProducerAdapter {
     return baseProducer.getMeasurableProducerMetrics();
   }
 
+  @Override
+  public String getBrokerAddress() {
+    return baseProducer.getBrokerAddress();
+  }
+
   public static class SendMessageParameters {
     public final String topic;
     public final KafkaKey key;

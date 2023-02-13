@@ -120,6 +120,11 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
     return producerAdapter.getMeasurableProducerMetrics();
   }
 
+  @Override
+  public String getBrokerAddress() {
+    return producerAdapter.getBrokerAddress();
+  }
+
   public int getId() {
     return id;
   }
