@@ -276,7 +276,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     this.checkSumType = CheckSumType.valueOf(props.getString(CHECK_SUM_TYPE, DEFAULT_CHECK_SUM_TYPE));
     // override factory chunking settings
     this.isChunkingEnabled = params.isChunkingEnabled();
-    this.isChunkingSet = params.isChunkingSet();
+    this.isChunkingSet = true;
     this.isRmdChunkingEnabled = params.isRmdChunkingEnabled();
     this.maxSizeForUserPayloadPerMessageInBytes = props
         .getInt(MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES, DEFAULT_MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES);
