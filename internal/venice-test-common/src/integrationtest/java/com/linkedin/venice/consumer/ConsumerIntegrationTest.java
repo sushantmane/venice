@@ -277,7 +277,7 @@ public abstract class ConsumerIntegrationTest {
 
   private static class ApacheKafkaProducerWithNewerProtocolAdapter extends ApacheKafkaProducerAdapter {
     public ApacheKafkaProducerWithNewerProtocolAdapter(VeniceProperties props) {
-      super(new ApacheKafkaProducerConfig(props, false));
+      super(new ApacheKafkaProducerConfig(props, null, false));
     }
   }
 
