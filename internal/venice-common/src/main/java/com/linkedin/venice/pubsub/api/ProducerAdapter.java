@@ -75,4 +75,6 @@ public interface ProducerAdapter {
   }
 
   Map<String, Double> getMeasurableProducerMetrics();
+
+  String getBrokerAddress();
 }

@@ -16,6 +16,7 @@ import com.linkedin.venice.utils.Time;
  */
 public class VeniceWriterOptions {
   private final String topicName;
+  // TODO: Update to use generic serializers
   private final VeniceKafkaSerializer keySerializer;
   private final VeniceKafkaSerializer valueSerializer;
   private final VeniceKafkaSerializer writeComputeSerializer;
@@ -24,10 +25,11 @@ public class VeniceWriterOptions {
   private final Integer partitionCount;
   private final boolean chunkingEnabled;
   private final boolean rmdChunkingEnabled;
-  private final String kafkaBootstrapServers;
+  // Set this field if you do not wish to use default broker address of producer factory
+  private final String brokerAddress;
 
-  public String getKafkaBootstrapServers() {
-    return kafkaBootstrapServers;
+  public String getBrokerAddress() {
+    return brokerAddress;
   }
 
   public String getTopicName() {
@@ -76,7 +78,7 @@ public class VeniceWriterOptions {
     partitionCount = builder.partitionCount;
     chunkingEnabled = builder.chunkingEnabled;
     rmdChunkingEnabled = builder.rmdChunkingEnabled;
-    kafkaBootstrapServers = builder.kafkaBootstrapServers;
+    brokerAddress = builder.brokerAddress;
   }
 
   @Override
@@ -84,8 +86,8 @@ public class VeniceWriterOptions {
     return new StringBuilder("VeniceWriterOptions:{").append("topic:")
         .append(topicName)
         .append(", ")
-        .append("kafkaBootstrapServers:")
-        .append(kafkaBootstrapServers)
+        .append("brokerAddress:")
+        .append(brokerAddress)
         .append(", ")
         .append("chunkingEnabled:")
         .append(chunkingEnabled)
@@ -107,7 +109,7 @@ public class VeniceWriterOptions {
     private boolean chunkingEnabled;
     private boolean rmdChunkingEnabled;
     private boolean useKafkaKeySerializer = false;
-    private String kafkaBootstrapServers = null;
+    private String brokerAddress = null;
 
     private void addDefaults() {
       if (keySerializer == null) {
@@ -132,12 +134,12 @@ public class VeniceWriterOptions {
       return new VeniceWriterOptions(this);
     }
 
-    public String getKafkaBootstrapServers() {
-      return kafkaBootstrapServers;
+    public String getBrokerAddress() {
+      return brokerAddress;
     }
 
-    public Builder setKafkaBootstrapServers(String kafkaBootstrapServers) {
-      this.kafkaBootstrapServers = kafkaBootstrapServers;
+    public Builder setBrokerAddress(String brokerAddress) {
+      this.brokerAddress = brokerAddress;
       return this;
     }
 

@@ -30,11 +30,13 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
+  private final ApacheKafkaProducerConfig producerConfig;
 
   /**
    * @param cfg contains producer configs
    */
   public ApacheKafkaProducerAdapter(ApacheKafkaProducerConfig cfg) {
+    this.producerConfig = cfg;
     LOGGER.info("Constructing KafkaProducer with the following properties: {}", cfg.getProducerProperties());
     producer = new KafkaProducer<>(cfg.getProducerProperties());
   }
@@ -147,5 +149,10 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       }
     }
     return extractedMetrics;
+  }
+
+  @Override
+  public String getBrokerAddress() {
+    return producerConfig.getBrokerAddress();
   }
 }
