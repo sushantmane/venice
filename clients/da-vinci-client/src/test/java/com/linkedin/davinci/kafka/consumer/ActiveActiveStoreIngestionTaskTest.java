@@ -1,7 +1,6 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import static com.linkedin.venice.utils.ByteUtils.SIZE_OF_INT;
-import static com.linkedin.venice.writer.VeniceWriter.ENABLE_CHUNKING;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -119,15 +118,13 @@ public class ActiveActiveStoreIngestionTaskTest {
               callback.onCompletion(produceResult, null);
               return mockedFuture;
             });
-    Properties writerProperties = new Properties();
-    writerProperties.put(ENABLE_CHUNKING, true);
-
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(testTopic).setPartitioner(new DefaultVenicePartitioner())
             .setTime(SystemTime.INSTANCE)
+            .setChunkingEnabled(true)
             .build();
     VeniceWriter<byte[], byte[], byte[]> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(new Properties()), mockedProducer);
     when(ingestionTask.getVeniceWriter()).thenReturn(Lazy.of(() -> writer));
     StringBuilder stringBuilder = new StringBuilder();
     for (int i = 0; i < 50000; i++) {
