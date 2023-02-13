@@ -33,12 +33,16 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
   private final ApacheKafkaProducerConfig producerConfig;
 
   /**
-   * @param cfg contains producer configs
+   * @param producerConfig contains producer configs
    */
-  public ApacheKafkaProducerAdapter(ApacheKafkaProducerConfig cfg) {
-    this.producerConfig = cfg;
+  public ApacheKafkaProducerAdapter(ApacheKafkaProducerConfig producerConfig) {
+    this(producerConfig, new KafkaProducer<>(producerConfig.getProducerProperties()));
+  }
+
+  ApacheKafkaProducerAdapter(ApacheKafkaProducerConfig cfg, KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer) {
     LOGGER.info("Constructing KafkaProducer with the following properties: {}", cfg.getProducerProperties());
-    producer = new KafkaProducer<>(cfg.getProducerProperties());
+    this.producerConfig = cfg;
+    this.producer = producer;
   }
 
   /**
@@ -82,8 +86,8 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     }
     try {
-      // TODO: evaluate if it makes sense to complete Future<ProduceResult> in callback itself or use producer
-      // interceptors
+      // TODO: evaluate if it makes sense to complete Future<ProduceResult> in callback itself or
+      // use producer interceptors
       return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {
       throw new VeniceException(
