@@ -1,5 +1,6 @@
 package com.linkedin.venice.writer;
 
+import static com.linkedin.venice.writer.VeniceWriter.ENABLE_CHUNKING;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
@@ -26,6 +27,8 @@ public class VeniceWriterUnitTest {
     ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
+    Properties writerProperties = new Properties();
+    writerProperties.put(ENABLE_CHUNKING, isChunkingEnabled);
 
     String stringSchema = "\"string\"";
     VeniceKafkaSerializer serializer = new VeniceAvroKafkaSerializer(stringSchema);
@@ -35,10 +38,9 @@ public class VeniceWriterUnitTest {
         .setWriteComputeSerializer(serializer)
         .setPartitioner(new DefaultVenicePartitioner())
         .setPartitionCount(partitionCount)
-        .setChunkingEnabled(isChunkingEnabled)
         .build();
     VeniceWriter<Object, Object, Object> writer =
-        new VeniceWriter(veniceWriterOptions, new VeniceProperties(new Properties()), mockedProducer);
+        new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
 
     String valueString = "value-string";
     String key = "test-key";

@@ -37,7 +37,12 @@ public class VeniceWriterFactory {
   }
 
   public <K, V, U> VeniceWriter<K, V, U> createVeniceWriter(VeniceWriterOptions options) {
-    VeniceProperties props = new VeniceProperties(this.properties);
+    Properties writerProperties = new Properties();
+    writerProperties.putAll(this.properties);
+    // TODO: extract chunking settings directly from VeniceWriterOptions in VeniceWriter
+    writerProperties.put(VeniceWriter.ENABLE_CHUNKING, options.isChunkingEnabled());
+    writerProperties.put(VeniceWriter.ENABLE_RMD_CHUNKING, options.isRmdChunkingEnabled());
+    VeniceProperties props = new VeniceProperties(writerProperties);
     return new VeniceWriter<>(
         options,
         props,

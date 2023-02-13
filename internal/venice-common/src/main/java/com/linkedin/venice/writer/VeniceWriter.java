@@ -274,19 +274,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     this.partitioner = params.getPartitioner();
     this.closeTimeOut = props.getInt(CLOSE_TIMEOUT_MS, DEFAULT_CLOSE_TIMEOUT_MS);
     this.checkSumType = CheckSumType.valueOf(props.getString(CHECK_SUM_TYPE, DEFAULT_CHECK_SUM_TYPE));
-    if (params.isChunkingSet()) {
-      // override factory chunking settings
-      this.isChunkingEnabled = params.isChunkingEnabled();
-      this.isChunkingSet = params.isChunkingSet();
-    } else {
-      this.isChunkingEnabled = props.getBoolean(ENABLE_CHUNKING, false);
-      this.isChunkingSet = props.containsKey(ENABLE_CHUNKING);
-    }
-    if (params.isRmdChunkingSet()) {
-      this.isRmdChunkingEnabled = params.isRmdChunkingEnabled();
-    } else {
-      this.isRmdChunkingEnabled = props.getBoolean(ENABLE_RMD_CHUNKING, false);
-    }
+    this.isChunkingEnabled = props.getBoolean(ENABLE_CHUNKING, false);
+    this.isChunkingSet = props.containsKey(ENABLE_CHUNKING);
+    this.isRmdChunkingEnabled = props.getBoolean(ENABLE_RMD_CHUNKING, false);
     this.maxSizeForUserPayloadPerMessageInBytes = props
         .getInt(MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES, DEFAULT_MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES);
     if (maxSizeForUserPayloadPerMessageInBytes > DEFAULT_MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES) {

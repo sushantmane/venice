@@ -24,10 +24,8 @@ public class VeniceWriterOptions {
   private final Time time;
   private final Integer partitionCount;
   private final boolean chunkingEnabled;
-  private final boolean isChunkingSet;
   private final boolean rmdChunkingEnabled;
-  private final boolean isRmdChunkingSet;
-  // Set this field if you want to use different broker address than the local broker address
+  // Set this field if you do not wish to use default broker address of producer factory
   private final String brokerAddress;
 
   public String getBrokerAddress() {
@@ -66,16 +64,8 @@ public class VeniceWriterOptions {
     return chunkingEnabled;
   }
 
-  public boolean isChunkingSet() {
-    return isChunkingSet;
-  }
-
   public boolean isRmdChunkingEnabled() {
     return rmdChunkingEnabled;
-  }
-
-  public boolean isRmdChunkingSet() {
-    return isRmdChunkingSet;
   }
 
   private VeniceWriterOptions(Builder builder) {
@@ -87,9 +77,7 @@ public class VeniceWriterOptions {
     time = builder.time;
     partitionCount = builder.partitionCount;
     chunkingEnabled = builder.chunkingEnabled;
-    isChunkingSet = builder.isChunkingSet;
     rmdChunkingEnabled = builder.rmdChunkingEnabled;
-    isRmdChunkingSet = builder.isRmdChunkingSet;
     brokerAddress = builder.brokerAddress;
   }
 
@@ -117,13 +105,11 @@ public class VeniceWriterOptions {
     private VeniceKafkaSerializer writeComputeSerializer = null;
     private VenicePartitioner partitioner = null;
     private Time time = null;
-    private Integer partitionCount = null; // default null
-    private boolean chunkingEnabled; // default false
-    private boolean isChunkingSet; // default false
-    private boolean rmdChunkingEnabled; // default false
-    private boolean isRmdChunkingSet; // default false
-    private boolean useKafkaKeySerializer = false; // default false
-    private String brokerAddress = null; // default null
+    private Integer partitionCount = null;
+    private boolean chunkingEnabled;
+    private boolean rmdChunkingEnabled;
+    private boolean useKafkaKeySerializer = false;
+    private String brokerAddress = null;
 
     private void addDefaults() {
       if (keySerializer == null) {
@@ -174,13 +160,11 @@ public class VeniceWriterOptions {
     }
 
     public Builder setChunkingEnabled(boolean chunkingEnabled) {
-      this.isChunkingSet = true;
       this.chunkingEnabled = chunkingEnabled;
       return this;
     }
 
     public boolean isRmdChunkingEnabled() {
-      this.isRmdChunkingSet = true;
       return rmdChunkingEnabled;
     }
 
