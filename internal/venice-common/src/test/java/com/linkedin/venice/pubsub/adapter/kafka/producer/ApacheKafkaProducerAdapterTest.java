@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 public class ApacheKafkaProducerAdapterTest {
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> mockKafkaProducer;
   private ApacheKafkaProducerConfig mockProducerConfig;
-  private final String topicName = "test-topic";
+  private static final String TOPIC_NAME = "test-topic";
   private final KafkaKey testKafkaKey = new KafkaKey(MessageType.DELETE, "key".getBytes());
   private final KafkaMessageEnvelope testKafkaValue = new KafkaMessageEnvelope();
 
@@ -38,22 +38,22 @@ public class ApacheKafkaProducerAdapterTest {
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
     Mockito.doNothing().when(mockKafkaProducer).close(any());
     producerAdapter.close(10, false);
-    producerAdapter.sendMessage(topicName, 0, testKafkaKey, testKafkaValue, null, null);
+    producerAdapter.sendMessage(TOPIC_NAME, 0, testKafkaKey, testKafkaValue, null, null);
   }
 
   @Test
   public void testGetNumberOfPartitions() {
     List<PartitionInfo> list = new ArrayList<>();
-    when(mockKafkaProducer.partitionsFor(topicName)).thenReturn(list);
+    when(mockKafkaProducer.partitionsFor(TOPIC_NAME)).thenReturn(list);
 
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
-    Assert.assertEquals(producerAdapter.getNumberOfPartitions(topicName), 0);
+    Assert.assertEquals(producerAdapter.getNumberOfPartitions(TOPIC_NAME), 0);
   }
 
   @Test(expectedExceptions = VeniceException.class, expectedExceptionsMessageRegExp = ".*Got an error while trying to produce message into Kafka.*")
   public void testSendMessageThrowsAnExceptionOnTimeout() {
     doThrow(TimeoutException.class).when(mockKafkaProducer).send(any(), any());
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
-    producerAdapter.sendMessage(topicName, 42, testKafkaKey, testKafkaValue, null, null);
+    producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
   }
 }
