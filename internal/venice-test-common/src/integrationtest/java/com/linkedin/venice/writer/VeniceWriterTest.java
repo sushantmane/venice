@@ -462,7 +462,7 @@ public class VeniceWriterTest {
       Future future = executor.submit(() -> {
         countDownLatch.countDown();
         // send to non-existent topic
-        producer.sendMessage("topic", new KafkaKey(MessageType.PUT, "key".getBytes()), null, null);
+        producer.sendMessage("topic", 42, new KafkaKey(MessageType.PUT, "key".getBytes()), null, null, null);
         fail("Should be blocking send");
       });
 

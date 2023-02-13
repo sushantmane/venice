@@ -37,23 +37,6 @@ public interface ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback);
 
-  default Future<ProduceResult> sendMessage(
-      String topic,
-      Integer partition,
-      KafkaKey key,
-      KafkaMessageEnvelope value,
-      PubsubProducerCallback callback) {
-    return sendMessage(topic, partition, key, value, null, callback);
-  }
-
-  default Future<ProduceResult> sendMessage(
-      String topic,
-      KafkaKey key,
-      KafkaMessageEnvelope value,
-      PubsubProducerCallback callback) {
-    return sendMessage(topic, null, key, value, null, callback);
-  }
-
   default Future<ProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
     return sendMessage(topic, null, key, value, null, null);
   }
