@@ -132,6 +132,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     return isRunning;
   }
 
+  // TODO: use topic + destination borker address combination for producerTaskName
   public synchronized SharedKafkaProducerAdapter acquireKafkaProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
