@@ -1,6 +1,7 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.pubsub.api.ProduceResult;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +13,7 @@ public class ApacheKafkaProduceResultFuture implements Future<ProduceResult> {
   private final Future<RecordMetadata> recordMetadataFuture;
 
   public ApacheKafkaProduceResultFuture(Future<RecordMetadata> recordMetadataFuture) {
-    this.recordMetadataFuture = recordMetadataFuture;
+    this.recordMetadataFuture = Objects.requireNonNull(recordMetadataFuture, "RecordMetadata future cannot be null");
   }
 
   @Override

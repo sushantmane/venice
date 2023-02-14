@@ -3,6 +3,9 @@ package com.linkedin.venice.pubsub.adapter;
 import com.linkedin.venice.pubsub.api.ProduceResult;
 
 
+/**
+ * A simple implementation of ProduceResult interface for testing purposes.
+ */
 public class SimpleProduceResultImpl implements ProduceResult {
   private final String topic;
   private final int partition;
