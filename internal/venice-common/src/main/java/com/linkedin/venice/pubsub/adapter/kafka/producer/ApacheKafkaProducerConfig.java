@@ -66,7 +66,7 @@ public class ApacheKafkaProducerConfig {
     return producerProperties;
   }
 
-  public static String getPubsubBrokerAddress(VeniceProperties properties) {
+  private static String getPubsubBrokerAddress(VeniceProperties properties) {
     if (Boolean.parseBoolean(properties.getString(SSL_TO_KAFKA, "false"))) {
       checkProperty(properties, SSL_KAFKA_BOOTSTRAP_SERVERS);
       return properties.getString(SSL_KAFKA_BOOTSTRAP_SERVERS);
