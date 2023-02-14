@@ -1,6 +1,7 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.pubsub.api.ProduceResult;
+import java.util.Objects;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
@@ -8,7 +9,7 @@ public class ApacheKafkaProduceResult implements ProduceResult {
   private final RecordMetadata recordMetadata;
 
   public ApacheKafkaProduceResult(RecordMetadata recordMetadata) {
-    this.recordMetadata = recordMetadata;
+    this.recordMetadata = Objects.requireNonNull(recordMetadata, "RecordMetadata cannot be null");
   }
 
   /**
