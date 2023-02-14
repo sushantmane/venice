@@ -116,11 +116,6 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
   }
 
   @Override
-  public void close(String topic, int closeTimeoutMs, boolean doFlush) {
-    close(closeTimeoutMs, doFlush);
-  }
-
-  @Override
   public void close(int closeTimeOutMs, boolean doFlush) {
     if (producer != null) {
       if (doFlush) {
