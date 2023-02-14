@@ -4,12 +4,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
@@ -19,7 +23,10 @@ import com.linkedin.venice.pubsub.adapter.SimplePubsubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.api.ProduceResult;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -27,31 +34,31 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.Metric;
+import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.errors.TimeoutException;
-import org.mockito.Mockito;
-import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 
 public class ApacheKafkaProducerAdapterTest {
-  private KafkaProducer<KafkaKey, KafkaMessageEnvelope> mockKafkaProducer;
-  private ApacheKafkaProducerConfig mockProducerConfig;
+  private KafkaProducer<KafkaKey, KafkaMessageEnvelope> kafkaProducerMock;
+  private ApacheKafkaProducerConfig producerConfigMock;
   private static final String TOPIC_NAME = "test-topic";
   private final KafkaKey testKafkaKey = new KafkaKey(MessageType.DELETE, "key".getBytes());
   private final KafkaMessageEnvelope testKafkaValue = new KafkaMessageEnvelope();
 
   @BeforeMethod
   public void setupMocks() {
-    mockKafkaProducer = mock(KafkaProducer.class);
-    mockProducerConfig = mock(ApacheKafkaProducerConfig.class);
+    kafkaProducerMock = mock(KafkaProducer.class);
+    producerConfigMock = mock(ApacheKafkaProducerConfig.class);
   }
 
   @Test(expectedExceptions = VeniceException.class, expectedExceptionsMessageRegExp = "The internal KafkaProducer has been closed")
   public void testEnsureProducerIsNotClosedThrowsExceptionWhenProducerIsClosed() {
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
-    Mockito.doNothing().when(mockKafkaProducer).close(any());
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    doNothing().when(kafkaProducerMock).close(any());
     producerAdapter.close(10, false);
     producerAdapter.sendMessage(TOPIC_NAME, 0, testKafkaKey, testKafkaValue, null, null);
   }
@@ -59,16 +66,15 @@ public class ApacheKafkaProducerAdapterTest {
   @Test
   public void testGetNumberOfPartitions() {
     List<PartitionInfo> list = new ArrayList<>();
-    when(mockKafkaProducer.partitionsFor(TOPIC_NAME)).thenReturn(list);
-
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
-    Assert.assertEquals(producerAdapter.getNumberOfPartitions(TOPIC_NAME), 0);
+    when(kafkaProducerMock.partitionsFor(TOPIC_NAME)).thenReturn(list);
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    assertEquals(producerAdapter.getNumberOfPartitions(TOPIC_NAME), 0);
   }
 
   @Test(expectedExceptions = VeniceException.class, expectedExceptionsMessageRegExp = ".*Got an error while trying to produce message into Kafka.*")
   public void testSendMessageThrowsAnExceptionOnTimeout() {
-    doThrow(TimeoutException.class).when(mockKafkaProducer).send(any(), any());
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
+    doThrow(TimeoutException.class).when(kafkaProducerMock).send(any(), any());
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
     producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
   }
 
@@ -76,43 +82,109 @@ public class ApacheKafkaProducerAdapterTest {
   public void testSendMessageThrowsExceptionWhenBlockingCallThrowsException()
       throws ExecutionException, InterruptedException {
     Future<RecordMetadata> recordMetadataFutureMock = mock(Future.class);
-    when(mockKafkaProducer.send(any(ProducerRecord.class), any(Callback.class))).thenReturn(recordMetadataFutureMock);
+    when(kafkaProducerMock.send(any(ProducerRecord.class), any())).thenReturn(recordMetadataFutureMock);
     when(recordMetadataFutureMock.get()).thenThrow(new InterruptedException("Failed to complete request"));
 
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
-    producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null).get(); // blocking produce
-                                                                                                 // call
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    // blocking produce call
+    producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null).get();
   }
 
   @Test
   public void testSendMessageInteractionWithInternalProducer() {
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
     Future<RecordMetadata> recordMetadataFutureMock = mock(Future.class);
 
     // interaction (1) when callback is null
-    when(mockKafkaProducer.send(any(ProducerRecord.class), isNull())).thenReturn(recordMetadataFutureMock);
+    when(kafkaProducerMock.send(any(ProducerRecord.class), isNull())).thenReturn(recordMetadataFutureMock);
     Future<ProduceResult> produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
-    Assert.assertNotNull(produceResultFuture);
-    verify(mockKafkaProducer, times(1)).send(any(ProducerRecord.class), isNull());
-    verify(mockKafkaProducer, never()).send(any(ProducerRecord.class), any(Callback.class));
+    assertNotNull(produceResultFuture);
+    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), isNull());
+    verify(kafkaProducerMock, never()).send(any(ProducerRecord.class), any(Callback.class));
 
     // interaction (1) when callback is non-null
     SimplePubsubProducerCallbackImpl producerCallback = new SimplePubsubProducerCallbackImpl();
-    when(mockKafkaProducer.send(any(ProducerRecord.class), any(Callback.class))).thenReturn(recordMetadataFutureMock);
+    when(kafkaProducerMock.send(any(ProducerRecord.class), any(Callback.class))).thenReturn(recordMetadataFutureMock);
     produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, producerCallback);
-    Assert.assertNotNull(produceResultFuture);
-    verify(mockKafkaProducer, times(1)).send(any(ProducerRecord.class), isNull()); // from interaction (1)
-    verify(mockKafkaProducer, times(1)).send(any(ProducerRecord.class), any(Callback.class));
+    assertNotNull(produceResultFuture);
+    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), isNull()); // from interaction (1)
+    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), any(Callback.class));
   }
 
   @Test
   public void testCloseInvokesProducerFlushAndClose() {
-    doNothing().when(mockKafkaProducer).flush(anyLong(), any(TimeUnit.class));
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(mockProducerConfig, mockKafkaProducer);
+    doNothing().when(kafkaProducerMock).flush(anyLong(), any(TimeUnit.class));
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
     producerAdapter.close(10);
-    verify(mockKafkaProducer, times(1)).flush(anyLong(), any(TimeUnit.class));
-    verify(mockKafkaProducer, times(1)).close(any(Duration.class));
+    verify(kafkaProducerMock, times(1)).flush(anyLong(), any(TimeUnit.class));
+    verify(kafkaProducerMock, times(1)).close(any(Duration.class));
+  }
+
+  @Test
+  public void testFlushInvokesInternalProducerFlushIfProducerIsNotClosed() {
+    doNothing().when(kafkaProducerMock).flush();
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    producerAdapter.flush();
+    verify(kafkaProducerMock, times(1)).flush();
+  }
+
+  @Test
+  public void testFlushDoesNotInvokeInternalProducerFlushIfProducerIs1Closed() {
+    doNothing().when(kafkaProducerMock).flush();
+    doNothing().when(kafkaProducerMock).close();
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    producerAdapter.close(10, false); // close without flushing
+    producerAdapter.flush();
+    verify(kafkaProducerMock, never()).flush();
+  }
+
+  @Test
+  public void testGetMeasurableProducerMetricsReturnsEmptyMapWhenProducerIsClosed() {
+    doNothing().when(kafkaProducerMock).close();
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    producerAdapter.close(10, false); // close without flushing
+    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
+    assertNotNull(metrics, "Returned metrics cannot be null");
+    assertEquals(metrics.size(), 0, "Should return empty metrics when producer is closed");
+  }
+
+  @Test
+  public void testGetMeasurableProducerMetricsReturnsMetricsOfTypeDouble() {
+    // for the following metric value is of type double and hence this metric should be extracted
+    Map<MetricName, Metric> metricsMap = new LinkedHashMap<>();
+    MetricName metricName1 = new MetricName("metric-1", "g1", "desc", new HashMap<>());
+    Metric kafkaMetric1 = mock(Metric.class);
+    doReturn(20.23d).when(kafkaMetric1).metricValue();
+    metricsMap.put(metricName1, kafkaMetric1);
+
+    // for the following metric value is of type int and hence this metric should be ignored
+    MetricName metricName2 = new MetricName("metric-2", "g1", "desc", new HashMap<>());
+    Metric kafkaMetric2 = mock(Metric.class);
+    doReturn(314).when(kafkaMetric2).metricValue();
+    metricsMap.put(metricName2, kafkaMetric2);
+
+    // when exception occurs during metric extraction it will be ignored
+    MetricName metricName3 = new MetricName("metric-3", "g1", "desc", new HashMap<>());
+    Metric kafkaMetric3 = mock(Metric.class);
+    doThrow(new NullPointerException("Failed to extract value of metric-3")).when(kafkaMetric3).metricValue();
+    metricsMap.put(metricName3, kafkaMetric3);
+
+    doReturn(metricsMap).when(kafkaProducerMock).metrics();
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
+    assertNotNull(metrics, "Returned metrics cannot be null");
+    assertEquals(metrics.size(), 1);
+    assertTrue(metrics.containsKey("metric-1"));
+    assertEquals(metrics.get("metric-1"), 20.23d);
+  }
+
+  @Test
+  public void testGetBrokerAddress() {
+    when(producerConfigMock.getBrokerAddress()).thenReturn("venice.kafka.db:2023");
+    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
+    assertEquals(producerAdapter.getBrokerAddress(), "venice.kafka.db:2023");
+    verify(producerConfigMock, times(1)).getBrokerAddress();
   }
 }
