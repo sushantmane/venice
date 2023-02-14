@@ -8,7 +8,6 @@ import static com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProdu
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
-import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
@@ -70,7 +69,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     this.internalProducerAdapterFactory = internalProducerAdapterFactory;
 
     // TODO: check and see if we can remove the duplicate logic
-    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ConfigKeys.SSL_TO_KAFKA, "false"));
+    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ApacheKafkaProducerConfig.SSL_TO_KAFKA, "false"));
     if (!sslToKafka) {
       localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
     } else {

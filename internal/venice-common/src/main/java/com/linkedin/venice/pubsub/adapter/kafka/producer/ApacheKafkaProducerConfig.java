@@ -1,6 +1,5 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
@@ -36,7 +35,8 @@ public class ApacheKafkaProducerConfig {
   public static final String KAFKA_PRODUCER_REQUEST_TIMEOUT_MS =
       KAFKA_CONFIG_PREFIX + ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG;
   public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = "ssl." + KAFKA_BOOTSTRAP_SERVERS;
-  // do not attempt to change spelling, kakfa, without carefully replacing all instances in all mps
+  // N.B. do not attempt to change spelling, "kakfa", without carefully replacing all instances in use and some
+  // of them may be external to this repo
   public static final String SSL_TO_KAFKA = "ssl.to.kakfa";
 
   private final Properties producerProperties;
@@ -54,6 +54,7 @@ public class ApacheKafkaProducerConfig {
     this.producerProperties = allVeniceProperties.clipAndFilterNamespace(KAFKA_CONFIG_PREFIX).toProperties();
     this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     validateAndUpdateProperties(this.producerProperties, strictConfigs);
+
     // Setup ssl config if needed.
     if (KafkaSSLUtils.validateAndCopyKafkaSSLConfig(allVeniceProperties, this.producerProperties)) {
       LOGGER.info("Will initialize an SSL Kafka producer");
@@ -83,7 +84,7 @@ public class ApacheKafkaProducerConfig {
   }
 
   public String getBrokerAddress() {
-    return producerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
+    return producerProperties.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
   }
 
   private void validateAndUpdateProperties(Properties kafkaProducerProperties, boolean strictConfigs) {
@@ -99,9 +100,13 @@ public class ApacheKafkaProducerConfig {
         KafkaValueSerializer.class.getName());
 
     // This is to guarantee ordering, even in the face of failures.
-    validateProp(kafkaProducerProperties, strictConfigs, ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "1");
+    validateOrPopulateProp(
+        kafkaProducerProperties,
+        strictConfigs,
+        ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
+        "1");
     // This will ensure the durability on Kafka broker side
-    validateProp(kafkaProducerProperties, strictConfigs, ProducerConfig.ACKS_CONFIG, "all");
+    validateOrPopulateProp(kafkaProducerProperties, strictConfigs, ProducerConfig.ACKS_CONFIG, "all");
 
     if (!kafkaProducerProperties.containsKey(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG)) {
       kafkaProducerProperties.setProperty(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, "300000"); // 5min
@@ -113,12 +118,12 @@ public class ApacheKafkaProducerConfig {
 
     if (!kafkaProducerProperties.contains(ProducerConfig.RETRY_BACKOFF_MS_CONFIG)) {
       // Hard-coded backoff config to be 1 sec
-      validateProp(kafkaProducerProperties, strictConfigs, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "1000");
+      validateOrPopulateProp(kafkaProducerProperties, strictConfigs, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "1000");
     }
 
     if (!kafkaProducerProperties.containsKey(ProducerConfig.MAX_BLOCK_MS_CONFIG)) {
       // Block if buffer is full
-      validateProp(
+      validateOrPopulateProp(
           kafkaProducerProperties,
           strictConfigs,
           ProducerConfig.MAX_BLOCK_MS_CONFIG,
@@ -147,7 +152,7 @@ public class ApacheKafkaProducerConfig {
    * Function which sets some required defaults. Also bubbles up an exception in
    * order to fail fast if any calling class tries to override these defaults.
    */
-  private void validateProp(
+  private void validateOrPopulateProp(
       Properties properties,
       boolean strictConfigs,
       String requiredConfigKey,
@@ -172,7 +177,7 @@ public class ApacheKafkaProducerConfig {
       boolean strictConfigs,
       String requiredConfigKey,
       String requiredConfigValue) {
-    validateProp(properties, strictConfigs, requiredConfigKey, requiredConfigValue);
+    validateOrPopulateProp(properties, strictConfigs, requiredConfigKey, requiredConfigValue);
     String className = properties.getProperty(requiredConfigKey);
     if (className == null) {
       return;
@@ -186,7 +191,7 @@ public class ApacheKafkaProducerConfig {
        */
       properties.put(requiredConfigKey, Class.forName(className));
     } catch (ClassNotFoundException e) {
-      throw new VeniceClientException(
+      throw new VeniceException(
           "Failed to load the specified class: " + className + " for key: " + requiredConfigKey,
           e);
     }
