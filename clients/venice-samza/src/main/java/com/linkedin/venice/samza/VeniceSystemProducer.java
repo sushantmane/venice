@@ -337,12 +337,18 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
         store.getPartitionerClass(),
         amplificationFactor,
         new VeniceProperties(partitionerProperties));
-    return new VeniceWriterFactory(veniceWriterProperties).createVeniceWriter(
+    return constructVeniceWriter(
+        veniceWriterProperties,
         new VeniceWriterOptions.Builder(store.getKafkaTopic()).setTime(time)
             .setPartitioner(venicePartitioner)
             .setPartitionCount(partitionCount)
             .setChunkingEnabled(isChunkingEnabled)
             .build());
+  }
+
+  // trickery for unit testing
+  VeniceWriter<byte[], byte[], byte[]> constructVeniceWriter(Properties properties, VeniceWriterOptions writerOptions) {
+    return new VeniceWriterFactory(properties).createVeniceWriter(writerOptions);
   }
 
   @Override
