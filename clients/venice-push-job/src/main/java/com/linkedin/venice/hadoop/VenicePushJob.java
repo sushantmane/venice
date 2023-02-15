@@ -3,6 +3,10 @@ package com.linkedin.venice.hadoop;
 import static com.linkedin.venice.CommonConfigKeys.SSL_FACTORY_CLASS_NAME;
 import static com.linkedin.venice.ConfigKeys.AMPLIFICATION_FACTOR;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
+import static com.linkedin.venice.ConfigKeys.KAFKA_CONFIG_PREFIX;
+import static com.linkedin.venice.ConfigKeys.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS;
+import static com.linkedin.venice.ConfigKeys.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS;
+import static com.linkedin.venice.ConfigKeys.KAFKA_PRODUCER_RETRIES_CONFIG;
 import static com.linkedin.venice.ConfigKeys.PARTITIONER_CLASS;
 import static com.linkedin.venice.ConfigKeys.VENICE_PARTITIONERS;
 import static com.linkedin.venice.VeniceConstants.DEFAULT_SSL_FACTORY_CLASS_NAME;
@@ -56,7 +60,6 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.schema.AvroSchemaParseUtils;
 import com.linkedin.venice.security.SSLFactory;
@@ -2258,31 +2261,22 @@ public class VenicePushJob implements AutoCloseable {
     if (sslToKafka) {
       veniceWriterProperties.putAll(this.sslProperties.get());
     }
-    if (props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS)) {
-      veniceWriterProperties.setProperty(
-          ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS,
-          props.getString(ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS));
-    } else {
-      veniceWriterProperties.setProperty(
-          ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS,
-          Integer.toString(Integer.MAX_VALUE));
-    }
-    if (props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG)) {
-      veniceWriterProperties.setProperty(
-          ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG,
-          props.getString(ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG));
-    } else {
+    if (props.containsKey(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS)) {
       veniceWriterProperties
-          .setProperty(ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
-    }
-    if (props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS)) {
-      veniceWriterProperties.setProperty(
-          ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS,
-          props.getString(ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS));
+          .setProperty(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS, props.getString(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS));
     } else {
-      veniceWriterProperties.setProperty(
-          ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS,
-          Integer.toString(Integer.MAX_VALUE));
+      veniceWriterProperties.setProperty(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
+    }
+    if (props.containsKey(KAFKA_PRODUCER_RETRIES_CONFIG)) {
+      veniceWriterProperties.setProperty(KAFKA_PRODUCER_RETRIES_CONFIG, props.getString(KAFKA_PRODUCER_RETRIES_CONFIG));
+    } else {
+      veniceWriterProperties.setProperty(KAFKA_PRODUCER_RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
+    }
+    if (props.containsKey(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS)) {
+      veniceWriterProperties
+          .setProperty(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS, props.getString(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS));
+    } else {
+      veniceWriterProperties.setProperty(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
     }
     return veniceWriterProperties;
   }
@@ -2522,7 +2516,7 @@ public class VenicePushJob implements AutoCloseable {
      **/
     List<String> passThroughPrefixList = Arrays.asList(
         VeniceWriter.VENICE_WRITER_CONFIG_PREFIX,
-        ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX,
+        KAFKA_CONFIG_PREFIX,
         KafkaInputRecordReader.KIF_RECORD_READER_KAFKA_CONFIG_PREFIX);
     int passThroughPrefixListSize = passThroughPrefixList.size();
     if (passThroughPrefixListSize > 1) {
@@ -2580,17 +2574,17 @@ public class VenicePushJob implements AutoCloseable {
     }
     conf.setBoolean(ENABLE_WRITE_COMPUTE, pushJobSetting.enableWriteCompute);
 
-    if (!props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS)) {
+    if (!props.containsKey(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS)) {
       // If the push job plug-in doesn't specify the request timeout config, default will be infinite
-      conf.set(ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
+      conf.set(KAFKA_PRODUCER_REQUEST_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
     }
-    if (!props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG)) {
+    if (!props.containsKey(KAFKA_PRODUCER_RETRIES_CONFIG)) {
       // If the push job plug-in doesn't specify the retries config, default will be infinite
-      conf.set(ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
+      conf.set(KAFKA_PRODUCER_RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
     }
-    if (!props.containsKey(ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS)) {
+    if (!props.containsKey(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS)) {
       // If the push job plug-in doesn't specify the delivery timeout config, default will be infinite
-      conf.set(ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
+      conf.set(KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS, Integer.toString(Integer.MAX_VALUE));
     }
 
     conf.set(TELEMETRY_MESSAGE_INTERVAL, props.getString(TELEMETRY_MESSAGE_INTERVAL, "10000"));

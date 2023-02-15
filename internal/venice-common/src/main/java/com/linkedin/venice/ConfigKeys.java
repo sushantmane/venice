@@ -26,10 +26,16 @@ public class ConfigKeys {
   // store specific properties
   public static final String PERSISTENCE_TYPE = "persistence.type";
 
+  public static final String KAFKA_CONFIG_PREFIX = ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
   public static final String KAFKA_BOOTSTRAP_SERVERS = ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
   public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
   public static final String KAFKA_LINGER_MS = ApacheKafkaProducerConfig.KAFKA_LINGER_MS;
   public static final String KAFKA_BATCH_SIZE = ApacheKafkaProducerConfig.KAFKA_BATCH_SIZE;
+  public static final String KAFKA_PRODUCER_REQUEST_TIMEOUT_MS =
+      ApacheKafkaProducerConfig.KAFKA_PRODUCER_REQUEST_TIMEOUT_MS;
+  public static final String KAFKA_PRODUCER_RETRIES_CONFIG = ApacheKafkaProducerConfig.KAFKA_PRODUCER_RETRIES_CONFIG;
+  public static final String KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS =
+      ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS;
   public static final String KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC =
       "kafka.admin.get.topic.config.max.retry.sec";
 
