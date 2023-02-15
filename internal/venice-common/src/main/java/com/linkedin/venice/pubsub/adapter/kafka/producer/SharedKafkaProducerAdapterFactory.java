@@ -1,9 +1,7 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CLIENT_ID;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerConfig.SHARED_KAFKA_PRODUCER_CONFIG_PREFIX;
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
@@ -35,7 +33,6 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   public static final String NAME = "ApacheKafkaSharedProducer";
   private final int numOfProducersPerKafkaCluster;
   private final Properties producerProperties;
-  private final String localKafkaBootstrapServers;
   private final int kafkaProducerCloseTimeout;
 
   private final SharedKafkaProducerAdapter[] producers;
@@ -67,27 +64,16 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       MetricsRepository metricsRepository,
       Set<String> producerMetricsToBeReported) {
     this.internalProducerAdapterFactory = internalProducerAdapterFactory;
-
-    // TODO: check and see if we can remove the duplicate logic
-    boolean sslToKafka = Boolean.parseBoolean(properties.getProperty(ApacheKafkaProducerConfig.SSL_TO_KAFKA, "false"));
-    if (!sslToKafka) {
-      localKafkaBootstrapServers = properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
-    } else {
-      localKafkaBootstrapServers = properties.getProperty(SSL_KAFKA_BOOTSTRAP_SERVERS);
-    }
-
-    producerProperties = new Properties();
-    producerProperties.putAll(properties);
-    producerProperties.put(KAFKA_BOOTSTRAP_SERVERS, localKafkaBootstrapServers);
-    VeniceProperties veniceWriterProperties = new VeniceProperties(producerProperties);
-    kafkaProducerCloseTimeout = veniceWriterProperties.getInt(CLOSE_TIMEOUT_MS, DEFAULT_CLOSE_TIMEOUT_MS);
+    this.producerProperties = new Properties();
+    this.producerProperties.putAll(properties);
+    VeniceProperties veniceWriterProperties = new VeniceProperties(this.producerProperties);
+    this.kafkaProducerCloseTimeout = veniceWriterProperties.getInt(CLOSE_TIMEOUT_MS, DEFAULT_CLOSE_TIMEOUT_MS);
 
     // replace all properties starting with SHARED_KAFKA_PRODUCER_CONFIG_PREFIX with KAFKA_CONFIG_PREFIX.
     Properties sharedProducerProperties =
         veniceWriterProperties.clipAndFilterNamespace(SHARED_KAFKA_PRODUCER_CONFIG_PREFIX).toProperties();
     for (Map.Entry<Object, Object> entry: sharedProducerProperties.entrySet()) {
-      String key = KAFKA_CONFIG_PREFIX + (String) entry.getKey();
-      producerProperties.put(key, entry.getValue());
+      this.producerProperties.put(KAFKA_CONFIG_PREFIX + entry.getKey(), entry.getValue());
     }
 
     this.numOfProducersPerKafkaCluster = sharedProducerPoolCount;
