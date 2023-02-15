@@ -7,6 +7,7 @@ import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;
+import java.util.Objects;
 
 
 /**
@@ -122,7 +123,6 @@ public class VeniceWriterOptions {
     private boolean isChunkingSet; // default false
     private boolean rmdChunkingEnabled; // default false
     private boolean isRmdChunkingSet; // default false
-    private boolean useKafkaKeySerializer = false; // default false
     private String brokerAddress = null; // default null
 
     private void addDefaults() {
@@ -148,29 +148,16 @@ public class VeniceWriterOptions {
       return new VeniceWriterOptions(this);
     }
 
-    public String getBrokerAddress() {
-      return brokerAddress;
-    }
-
     public Builder setBrokerAddress(String brokerAddress) {
       this.brokerAddress = brokerAddress;
       return this;
-    }
-
-    public boolean isUseKafkaKeySerializer() {
-      return useKafkaKeySerializer;
     }
 
     public Builder setUseKafkaKeySerializer(boolean useKafkaKeySerializer) {
       if (useKafkaKeySerializer) {
         this.keySerializer = new KafkaKeySerializer();
       }
-      this.useKafkaKeySerializer = useKafkaKeySerializer;
       return this;
-    }
-
-    public boolean isChunkingEnabled() {
-      return chunkingEnabled;
     }
 
     public Builder setChunkingEnabled(boolean chunkingEnabled) {
@@ -179,26 +166,14 @@ public class VeniceWriterOptions {
       return this;
     }
 
-    public boolean isRmdChunkingEnabled() {
-      this.isRmdChunkingSet = true;
-      return rmdChunkingEnabled;
-    }
-
     public Builder setRmdChunkingEnabled(boolean rmdChunkingEnabled) {
+      this.isRmdChunkingSet = true;
       this.rmdChunkingEnabled = rmdChunkingEnabled;
       return this;
     }
 
     public Builder(String topic) {
-      this.topicName = topic;
-    }
-
-    public String getTopicName() {
-      return topicName;
-    }
-
-    public VeniceKafkaSerializer getKeySerializer() {
-      return keySerializer;
+      this.topicName = Objects.requireNonNull(topic, "Topic name cannot be null for VeniceWriterOptions");
     }
 
     public Builder setKeySerializer(VeniceKafkaSerializer keySerializer) {
@@ -206,17 +181,9 @@ public class VeniceWriterOptions {
       return this;
     }
 
-    public VeniceKafkaSerializer getValueSerializer() {
-      return valueSerializer;
-    }
-
     public Builder setValueSerializer(VeniceKafkaSerializer valueSerializer) {
       this.valueSerializer = valueSerializer;
       return this;
-    }
-
-    public VeniceKafkaSerializer getWriteComputeSerializer() {
-      return writeComputeSerializer;
     }
 
     public Builder setWriteComputeSerializer(VeniceKafkaSerializer writeComputeSerializer) {
@@ -224,26 +191,14 @@ public class VeniceWriterOptions {
       return this;
     }
 
-    public VenicePartitioner getPartitioner() {
-      return partitioner;
-    }
-
     public Builder setPartitioner(VenicePartitioner partitioner) {
       this.partitioner = partitioner;
       return this;
     }
 
-    public Time getTime() {
-      return time;
-    }
-
     public Builder setTime(Time time) {
       this.time = time;
       return this;
-    }
-
-    public Integer getPartitionCount() {
-      return partitionCount;
     }
 
     public Builder setPartitionCount(Integer partitionCount) {
