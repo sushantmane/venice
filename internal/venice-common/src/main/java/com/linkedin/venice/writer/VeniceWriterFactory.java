@@ -44,33 +44,10 @@ public class VeniceWriterFactory {
         producerAdapterFactory.create(props, options.getTopicName(), options.getBrokerAddress()));
   }
 
-  /*
-   * Marking these classes as deprecated as they are used in other projects and may break them.
-   * Please DO NOT use the following deprecated methods. Instead, we should construct VeniceWriterOptions
-   * object and pass it to createVeniceWriter(VeniceWriterOptions options).
-   *
-   * If you happen to change the code in a file where Deprecated createBasicVeniceWriter/createVeniceWriter is used
-   * please replace it with the code found in the deprecated method: createVeniceWriter(VeniceWriterOptions)}.
-   *
-   * The following deprecated methods will be deleted once all clients are upgraded the release containing
-   * the new code.
-   */
-
   /** test-only */
   @Deprecated
   public VeniceWriter<byte[], byte[], byte[]> createBasicVeniceWriter(String topicName) {
     return createVeniceWriter(new VeniceWriterOptions.Builder(topicName).build());
-  }
-
-  @Deprecated
-  public <K, V> VeniceWriter<K, V, byte[]> createVeniceWriter(
-      String topicName,
-      VeniceKafkaSerializer<K> keySerializer,
-      VeniceKafkaSerializer<V> valueSerializer) {
-    VeniceWriterOptions options = new VeniceWriterOptions.Builder(topicName).setKeySerializer(keySerializer)
-        .setValueSerializer(valueSerializer)
-        .build();
-    return createVeniceWriter(options);
   }
 
   /**
