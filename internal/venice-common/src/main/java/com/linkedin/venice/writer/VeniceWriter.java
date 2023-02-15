@@ -1642,4 +1642,10 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return maxSizeForUserPayloadPerMessageInBytes;
   }
 
+  /**
+   * @return Returns a string of format: topicName@brokerAddress
+   */
+  public String getDestination() {
+    return topicName + "@" + producerAdapter.getBrokerAddress();
+  }
 }
