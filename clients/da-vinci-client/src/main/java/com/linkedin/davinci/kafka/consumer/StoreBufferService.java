@@ -595,7 +595,7 @@ public class StoreBufferService extends AbstractStoreBufferService {
 
     @Override
     public PubsubMessageHeaders getHeaders() {
-      return null;
+      return new PubsubMessageHeaders();
     }
   }
 }
