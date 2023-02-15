@@ -13,7 +13,7 @@ public class ApacheKafkaProducerAdapterFactory implements ProducerAdapterFactory
       String producerName,
       String brokerAddressToOverride) {
     return new ApacheKafkaProducerAdapter(
-        new ApacheKafkaProducerConfig(veniceProperties, brokerAddressToOverride, true));
+        new ApacheKafkaProducerConfig(veniceProperties, brokerAddressToOverride, producerName, true));
   }
 
   @Override

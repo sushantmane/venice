@@ -42,18 +42,22 @@ public class ApacheKafkaProducerConfig {
   private final Properties producerProperties;
 
   public ApacheKafkaProducerConfig(Properties allVeniceProperties) {
-    this(new VeniceProperties(allVeniceProperties), null, true);
+    this(new VeniceProperties(allVeniceProperties), null, null, true);
   }
 
   public ApacheKafkaProducerConfig(
       VeniceProperties allVeniceProperties,
       String brokerAddressToOverride,
+      String producerName,
       boolean strictConfigs) {
     String brokerAddress =
         brokerAddressToOverride != null ? brokerAddressToOverride : getPubsubBrokerAddress(allVeniceProperties);
     this.producerProperties = allVeniceProperties.clipAndFilterNamespace(KAFKA_CONFIG_PREFIX).toProperties();
     this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     validateAndUpdateProperties(this.producerProperties, strictConfigs);
+    if (producerName != null) {
+      this.producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, producerName);
+    }
 
     // Setup ssl config if needed.
     if (KafkaSSLUtils.validateAndCopyKafkaSSLConfig(allVeniceProperties, this.producerProperties)) {
