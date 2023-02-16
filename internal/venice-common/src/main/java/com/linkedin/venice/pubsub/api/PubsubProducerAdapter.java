@@ -12,7 +12,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-public interface ProducerAdapter {
+/**
+ * The pub-sub producer interface with which venice writer's interact to send messages to pub-sub topic.
+ *
+ * An implementation of this interface are required to provide the following guarantees:
+ *  1. At-least once delivery (ALOD): messages should not be dropped.
+ *  2. In order delivery (IOD): messages in the same partition should follow the order in which they were sent.
+ */
+public interface PubsubProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   /**
@@ -29,7 +36,7 @@ public interface ProducerAdapter {
     return future.get(timeout, timeUnit);
   }
 
-  Future<ProduceResult> sendMessage(
+  Future<PubsubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -37,7 +44,7 @@ public interface ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback);
 
-  default Future<ProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
+  default Future<PubsubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
     return sendMessage(topic, null, key, value, null, null);
   }
 

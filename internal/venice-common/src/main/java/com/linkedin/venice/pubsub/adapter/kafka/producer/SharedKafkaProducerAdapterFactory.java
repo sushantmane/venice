@@ -7,8 +7,8 @@ import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
-import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
@@ -25,12 +25,15 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
+ * Implementation of {@link PubsubProducerAdapterFactory} used to create Apache Kafka producers in shared mode. This
+ * means that a single producer may be used to send data to multiple topics concurrently.
+ *
  * This service maintains a pool of kafka producer. Ingestion task can acquire or release a producer on demand basis.
- * It does lazy initialization of producers. Also producers are assigned based on least loaded manner.
+ * It does lazy initialization of producers. Also, producers are assigned based on the least loaded manner.
  */
-public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory<SharedKafkaProducerAdapter> {
+public class SharedKafkaProducerAdapterFactory implements PubsubProducerAdapterFactory<SharedKafkaProducerAdapter> {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactory.class);
-  public static final String NAME = "ApacheKafkaSharedProducer";
+  private static final String NAME = "ApacheKafkaSharedProducer";
   private final int numOfProducersPerKafkaCluster;
   private final Properties producerProperties;
   private final int kafkaProducerCloseTimeout;
@@ -43,7 +46,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
   // stats
   private final MetricsRepository metricsRepository;
   private final Set<String> producerMetricsToBeReported;
-  private final SharedProducerServiceStats sharedProducerServiceStats;
+  private final SharedKafkaProducerStats sharedKafkaProducerStats;
   final AtomicLong activeSharedProducerTasksCount = new AtomicLong(0);
   final AtomicLong activeSharedProducerCount = new AtomicLong(0);
 
@@ -80,8 +83,8 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
     this.producers = new SharedKafkaProducerAdapter[numOfProducersPerKafkaCluster];
     this.metricsRepository = metricsRepository;
     this.producerMetricsToBeReported = producerMetricsToBeReported;
-    this.sharedProducerServiceStats =
-        metricsRepository != null ? new SharedProducerServiceStats(metricsRepository, this) : null;
+    this.sharedKafkaProducerStats =
+        metricsRepository != null ? new SharedKafkaProducerStats(metricsRepository, this) : null;
     LOGGER.info("SharedKafkaProducerAdapter: is initialized");
   }
 
@@ -140,7 +143,7 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + i);
-        ProducerAdapter producerAdapter = internalProducerAdapterFactory
+        PubsubProducerAdapter producerAdapter = internalProducerAdapterFactory
             .create(new VeniceProperties(producerProperties), "shared-producer-" + i, null);
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);
@@ -228,6 +231,11 @@ public class SharedKafkaProducerAdapterFactory implements ProducerAdapterFactory
       String topicName,
       String brokerAddressToOverride) {
     return acquireKafkaProducer(topicName);
+  }
+
+  @Override
+  public String getName() {
+    return NAME;
   }
 
   public long getActiveSharedProducerTasksCount() {

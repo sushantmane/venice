@@ -12,8 +12,8 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * This class holds all properties used to construct Kafka producer
- * (this class could be refactored to hold consumer properties as well).
+ * This class holds all properties used to construct {@link ApacheKafkaProducerAdapter}
+ * (This class could be refactored to hold consumer properties as well).
  *
  * Tune and adjust the configs in this class to control the behavior of Apache Kafka producer.
  */

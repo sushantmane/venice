@@ -31,8 +31,6 @@ public interface PubSubMessage<K, V, OFFSET> {
    */
   int getPayloadSize();
 
-  PubsubMessageHeaders getHeaders();
-
   default String getTopicName() {
     return getTopicPartition().getPubSubTopic().getName();
   }

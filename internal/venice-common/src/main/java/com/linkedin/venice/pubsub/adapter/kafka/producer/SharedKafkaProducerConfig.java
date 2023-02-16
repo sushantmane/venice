@@ -3,6 +3,9 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 
+/**
+ * A class containing shared kafka producer related configurations.
+ */
 public class SharedKafkaProducerConfig {
 
   // This helps override kafka config for shared producer separately than dedicated producer.

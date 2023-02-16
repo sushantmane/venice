@@ -7,7 +7,7 @@ import java.util.Map;
 
 
 /**
- * Set of key-value pairs to send with PubsubMessage
+ * Set of key-value pairs to tagged with messages produced to a topic.
  * In case of headers with the same key, only the most recently added headers value will be kept.
  */
 public class PubsubMessageHeaders {
@@ -18,7 +18,7 @@ public class PubsubMessageHeaders {
   private final Map<String, PubsubMessageHeader> headers = new LinkedHashMap<>();
 
   public PubsubMessageHeaders add(PubsubMessageHeader header) {
-    this.headers.put(header.key(), header);
+    headers.put(header.key(), header);
     return this;
   }
 
@@ -33,9 +33,9 @@ public class PubsubMessageHeaders {
   }
 
   /**
-   * Returns all headers as a List, in the order they were added in.
-   *
-   * @return the headers as a List<PubsubMessageHeader>, mutating this list will not affect the PubsubMessageHeaders, if NO headers are present an empty list is returned.
+   * @return the headers as a List<PubsubMessageHeader>.
+   *    Mutating this list will not affect the PubsubMessageHeaders.
+   *    If no headers are present an empty list is returned.
    */
   public List<PubsubMessageHeader> toList() {
     return new ArrayList<>(headers.values());

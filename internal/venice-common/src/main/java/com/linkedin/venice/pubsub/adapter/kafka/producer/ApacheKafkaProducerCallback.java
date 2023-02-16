@@ -5,6 +5,9 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
+/**
+ * A Kafka specific callback which wraps generic {@link PubsubProducerCallback}
+ */
 public class ApacheKafkaProducerCallback implements Callback {
   private final PubsubProducerCallback pubsubProducerCallback;
 

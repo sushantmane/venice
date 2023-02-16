@@ -35,7 +35,7 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
@@ -191,7 +191,7 @@ public class TopicManagerTest {
     props.put(ApacheKafkaProducerConfig.KAFKA_KEY_SERIALIZER, KafkaKeySerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafka.getAddress());
-    ProducerAdapter producer = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
+    PubsubProducerAdapter producer = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
 
     final byte[] randomBytes = new byte[] { 0, 1 };
 

@@ -19,7 +19,7 @@ import com.linkedin.venice.guid.GuidUtils;
 import com.linkedin.venice.hadoop.utils.HadoopUtils;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -584,7 +584,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     }
 
     @Override
-    public void onCompletion(ProduceResult produceResult, Exception e) {
+    public void onCompletion(PubsubProduceResult produceResult, Exception e) {
       if (e != null) {
         messageErrored.incrementAndGet();
         LOGGER.error("Exception thrown in send message callback. ", e);

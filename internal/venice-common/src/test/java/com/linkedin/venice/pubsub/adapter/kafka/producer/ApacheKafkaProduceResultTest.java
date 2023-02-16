@@ -3,7 +3,7 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.testng.annotations.Test;
@@ -18,7 +18,7 @@ public class ApacheKafkaProduceResultTest {
   @Test
   public void testApacheKafkaProduceResult() {
     RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), -1, -1, -1, -1L, -1, -1);
-    ProduceResult produceResult = new ApacheKafkaProduceResult(recordMetadata);
+    PubsubProduceResult produceResult = new ApacheKafkaProduceResult(recordMetadata);
     assertNotNull(produceResult);
     assertEquals(produceResult.topic(), recordMetadata.topic());
     assertEquals(produceResult.partition(), recordMetadata.partition());

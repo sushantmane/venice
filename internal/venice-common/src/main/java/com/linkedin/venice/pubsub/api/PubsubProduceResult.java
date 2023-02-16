@@ -1,9 +1,9 @@
 package com.linkedin.venice.pubsub.api;
 
 /**
- * An interface implemented by ProducerAdapters to return the result of produce action
+ * An interface implemented by specific PubsubProducerAdapters to return the result of a produce action.
  */
-public interface ProduceResult {
+public interface PubsubProduceResult {
   /**
    * The offset of the record in the topic/partition.
    */

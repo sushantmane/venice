@@ -5,9 +5,12 @@ import java.io.Closeable;
 
 
 /**
- * A producer factory interface that should be implemented to support writing venice data to a
+ * Generic producer factory interface.
+ *
+ * A pus-sub specific concrete implementation of this interface should be provided to be able to create
+ * and instantiate producers for that system.
  */
-public interface ProducerAdapterFactory<ADAPTER extends ProducerAdapter> extends Closeable {
+public interface PubsubProducerAdapterFactory<ADAPTER extends PubsubProducerAdapter> extends Closeable {
   /**
    *
    * @param veniceProperties     A copy of venice properties. Relevant producer configs will be extracted from
@@ -20,4 +23,6 @@ public interface ProducerAdapterFactory<ADAPTER extends ProducerAdapter> extends
    * @return                     Returns an instance of a producer adapter
    */
   ADAPTER create(VeniceProperties veniceProperties, String producerName, String targetBrokerAddress);
+
+  String getName();
 }

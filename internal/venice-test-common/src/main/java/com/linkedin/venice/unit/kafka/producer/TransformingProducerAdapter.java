@@ -2,26 +2,26 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.api.ProduceResult;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.util.Map;
 import java.util.concurrent.Future;
 
 
 /**
- * This {@link ProducerAdapter} implementation allows tests to perform
+ * This {@link PubsubProducerAdapter} implementation allows tests to perform
  * arbitrary transformations on the messages that are about to be written to
  * Kafka.
  *
  * This can be used in unit tests to inject corrupt data.
  */
-public class TransformingProducerAdapter implements ProducerAdapter {
-  private final ProducerAdapter baseProducer;
+public class TransformingProducerAdapter implements PubsubProducerAdapter {
+  private final PubsubProducerAdapter baseProducer;
   private final SendMessageParametersTransformer transformer;
 
-  public TransformingProducerAdapter(ProducerAdapter baseProducer, SendMessageParametersTransformer transformer) {
+  public TransformingProducerAdapter(PubsubProducerAdapter baseProducer, SendMessageParametersTransformer transformer) {
     this.baseProducer = baseProducer;
     this.transformer = transformer;
   }
@@ -32,7 +32,7 @@ public class TransformingProducerAdapter implements ProducerAdapter {
   }
 
   @Override
-  public Future<ProduceResult> sendMessage(
+  public Future<PubsubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,

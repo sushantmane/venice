@@ -19,7 +19,7 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -97,7 +97,7 @@ public class ApacheKafkaProducerAdapterTest {
 
     // interaction (1) when callback is null
     when(kafkaProducerMock.send(any(ProducerRecord.class), isNull())).thenReturn(recordMetadataFutureMock);
-    Future<ProduceResult> produceResultFuture =
+    Future<PubsubProduceResult> produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
     assertNotNull(produceResultFuture);
     verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), isNull());

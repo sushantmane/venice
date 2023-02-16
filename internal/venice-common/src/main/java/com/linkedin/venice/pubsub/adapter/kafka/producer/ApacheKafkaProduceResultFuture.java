@@ -1,6 +1,6 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -9,7 +9,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
-public class ApacheKafkaProduceResultFuture implements Future<ProduceResult> {
+public class ApacheKafkaProduceResultFuture implements Future<PubsubProduceResult> {
   private final Future<RecordMetadata> recordMetadataFuture;
 
   public ApacheKafkaProduceResultFuture(Future<RecordMetadata> recordMetadataFuture) {
@@ -32,12 +32,12 @@ public class ApacheKafkaProduceResultFuture implements Future<ProduceResult> {
   }
 
   @Override
-  public ProduceResult get() throws InterruptedException, ExecutionException {
+  public PubsubProduceResult get() throws InterruptedException, ExecutionException {
     return new ApacheKafkaProduceResult(recordMetadataFuture.get());
   }
 
   @Override
-  public ProduceResult get(long timeout, TimeUnit unit)
+  public PubsubProduceResult get(long timeout, TimeUnit unit)
       throws InterruptedException, ExecutionException, TimeoutException {
     return new ApacheKafkaProduceResult(recordMetadataFuture.get(timeout, unit));
   }

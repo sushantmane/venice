@@ -35,9 +35,7 @@ public class VeniceWriterOptionsTest {
     assertEquals(options.getTime(), SystemTime.INSTANCE);
     assertNull(options.getPartitionCount());
     assertFalse(options.isChunkingEnabled());
-    assertFalse(options.isChunkingSet());
     assertFalse(options.isRmdChunkingEnabled());
-    assertFalse(options.isRmdChunkingSet());
     assertNull(options.getBrokerAddress());
   }
 
@@ -68,9 +66,7 @@ public class VeniceWriterOptionsTest {
     assertEquals(options.getTime(), time);
     assertEquals((int) options.getPartitionCount(), 20);
     assertTrue(options.isChunkingEnabled());
-    assertTrue(options.isChunkingSet());
     assertTrue(options.isRmdChunkingEnabled());
-    assertTrue(options.isRmdChunkingSet());
     assertEquals(options.getBrokerAddress(), "kafka.broker.addr");
   }
 

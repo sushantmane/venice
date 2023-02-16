@@ -1,7 +1,7 @@
 package com.linkedin.venice.pushstatushelper;
 
 import com.linkedin.venice.common.PushStatusStoreUtils;
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pushstatus.PushStatusKey;
 import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.writer.VeniceWriter;
@@ -40,7 +40,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
    * N.B.: Currently used by tests only.
    * @return
    */
-  public Future<ProduceResult> deletePartitionIncrementalPushStatus(
+  public Future<PubsubProduceResult> deletePartitionIncrementalPushStatus(
       String storeName,
       int version,
       String incrementalPushVersion,
