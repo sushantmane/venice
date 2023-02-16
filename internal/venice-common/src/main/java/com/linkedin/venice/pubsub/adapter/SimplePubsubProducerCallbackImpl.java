@@ -8,14 +8,14 @@ import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
  * A simple implementation of PubsubProducerCallback interface for testing purposes.
  */
 public class SimplePubsubProducerCallbackImpl implements PubsubProducerCallback {
-  private PubsubProduceResult producerResult;
+  private PubsubProduceResult produceResult;
   private Exception exception;
   private boolean isInvoked;
 
   @Override
   public void onCompletion(PubsubProduceResult produceResult, Exception exception) {
     this.isInvoked = true;
-    this.producerResult = produceResult;
+    this.produceResult = produceResult;
     this.exception = exception;
   }
 
@@ -23,11 +23,11 @@ public class SimplePubsubProducerCallbackImpl implements PubsubProducerCallback 
     return isInvoked;
   }
 
-  public PubsubProduceResult producerResult() {
-    return producerResult;
+  public PubsubProduceResult getProduceResult() {
+    return produceResult;
   }
 
-  public Exception exception() {
+  public Exception getException() {
     return exception;
   }
 }

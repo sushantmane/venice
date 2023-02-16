@@ -23,8 +23,8 @@ public class ApacheKafkaProducerCallbackTest {
     kafkaProducerCallback.onCompletion(recordMetadata, null);
     assertTrue(internalCallback.isInvoked());
     assertNull(internalCallback.exception());
-    assertNotNull(internalCallback.producerResult());
-    PubsubProduceResult produceResult = internalCallback.producerResult();
+    assertNotNull(internalCallback.getProduceResult());
+    PubsubProduceResult produceResult = internalCallback.getProduceResult();
     assertEquals(produceResult.topic(), recordMetadata.topic());
     assertEquals(produceResult.partition(), recordMetadata.partition());
     assertEquals(produceResult.offset(), recordMetadata.offset());
@@ -43,8 +43,8 @@ public class ApacheKafkaProducerCallbackTest {
     assertNotNull(internalCallback.exception());
     assertEquals(internalCallback.exception(), exception);
 
-    assertNotNull(internalCallback.producerResult());
-    PubsubProduceResult produceResult = internalCallback.producerResult();
+    assertNotNull(internalCallback.getProduceResult());
+    PubsubProduceResult produceResult = internalCallback.getProduceResult();
     assertEquals(produceResult.topic(), recordMetadata.topic());
     assertEquals(produceResult.partition(), recordMetadata.partition());
     assertEquals(produceResult.offset(), recordMetadata.offset());

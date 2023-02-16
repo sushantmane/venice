@@ -1120,7 +1120,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
       try {
-        // todo: pack these in PubSubMessage?
         return producerAdapter.sendMessage(
             topicName,
             partition,
