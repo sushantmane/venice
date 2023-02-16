@@ -22,7 +22,7 @@ public class ApacheKafkaProducerCallbackTest {
 
     kafkaProducerCallback.onCompletion(recordMetadata, null);
     assertTrue(internalCallback.isInvoked());
-    assertNull(internalCallback.exception());
+    assertNull(internalCallback.getException());
     assertNotNull(internalCallback.getProduceResult());
     PubsubProduceResult produceResult = internalCallback.getProduceResult();
     assertEquals(produceResult.topic(), recordMetadata.topic());
@@ -40,8 +40,8 @@ public class ApacheKafkaProducerCallbackTest {
 
     kafkaProducerCallback.onCompletion(recordMetadata, exception);
     assertTrue(internalCallback.isInvoked());
-    assertNotNull(internalCallback.exception());
-    assertEquals(internalCallback.exception(), exception);
+    assertNotNull(internalCallback.getException());
+    assertEquals(internalCallback.getException(), exception);
 
     assertNotNull(internalCallback.getProduceResult());
     PubsubProduceResult produceResult = internalCallback.getProduceResult();
