@@ -1,13 +1,13 @@
 package com.linkedin.venice.pubsub.adapter;
 
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 
 
 /**
- * A simple implementation of PubsubProducerCallback interface for testing purposes.
+ * A simple implementation of PubSubProducerCallback interface for testing purposes.
  */
-public class SimplePubsubProducerCallbackImpl implements PubsubProducerCallback {
+public class SimplePubSubProducerCallbackImpl implements PubSubProducerCallback {
   private PubsubProduceResult produceResult;
   private Exception exception;
   private boolean isInvoked;

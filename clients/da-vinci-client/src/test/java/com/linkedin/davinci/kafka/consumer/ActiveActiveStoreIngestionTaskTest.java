@@ -31,9 +31,9 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -105,7 +105,7 @@ public class ActiveActiveStoreIngestionTaskTest {
             any())).thenAnswer((Answer<Future<PubsubProduceResult>>) invocation -> {
               KafkaKey kafkaKey = invocation.getArgument(2);
               KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(3);
-              PubsubProducerCallback callback = invocation.getArgument(5);
+              PubSubProducerCallback callback = invocation.getArgument(5);
               PubsubProduceResult produceResult = mock(PubsubProduceResult.class);
               offset.addAndGet(1);
               when(produceResult.offset()).thenReturn(offset.get());

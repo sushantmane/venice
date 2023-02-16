@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -11,9 +11,9 @@ import java.util.concurrent.CompletableFuture;
  * changed and the callback will be called. The caller can pass a {@code CompletableFutureCallback} to a function
  * accepting a {@code Callback} parameter to get a {@code CompletableFuture} after the function returns.
  */
-public class CompletableFutureCallback implements PubsubProducerCallback {
+public class CompletableFutureCallback implements PubSubProducerCallback {
   private final CompletableFuture<Void> completableFuture;
-  private PubsubProducerCallback callback = null;
+  private PubSubProducerCallback callback = null;
 
   public CompletableFutureCallback(CompletableFuture<Void> completableFuture) {
     this.completableFuture = completableFuture;
@@ -29,11 +29,11 @@ public class CompletableFutureCallback implements PubsubProducerCallback {
     }
   }
 
-  public PubsubProducerCallback getCallback() {
+  public PubSubProducerCallback getCallback() {
     return callback;
   }
 
-  public void setCallback(PubsubProducerCallback callback) {
+  public void setCallback(PubSubProducerCallback callback) {
     this.callback = callback;
   }
 }

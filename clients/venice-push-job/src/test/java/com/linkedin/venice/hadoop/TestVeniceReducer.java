@@ -23,8 +23,8 @@ import com.linkedin.venice.exceptions.TopicAuthorizationVeniceException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
 import com.linkedin.venice.writer.AbstractVeniceWriter;
 import com.linkedin.venice.writer.DeleteMetadata;
@@ -475,7 +475,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
       }
@@ -485,7 +485,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
@@ -494,7 +494,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       @Override
       public Future<PubsubProduceResult> delete(
           Object key,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           DeleteMetadata deleteMetadata) {
         return null;
       }
@@ -505,7 +505,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         // no-op
         return null;
       }
@@ -548,7 +548,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
@@ -557,7 +557,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       @Override
       public Future<PubsubProduceResult> delete(
           Object key,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           DeleteMetadata deleteMetadata) {
         return null;
       }
@@ -567,7 +567,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
       }
@@ -578,7 +578,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         // no-op
         return null;
       }

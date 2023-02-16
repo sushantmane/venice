@@ -3,9 +3,9 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
 import com.linkedin.venice.stats.StatsErrorCode;
@@ -76,7 +76,7 @@ public class SharedKafkaProducerAdapter implements PubsubProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders headers,
-      PubsubProducerCallback callback) {
+      PubSubProducerCallback callback) {
     long startNs = System.nanoTime();
     Future<PubsubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));

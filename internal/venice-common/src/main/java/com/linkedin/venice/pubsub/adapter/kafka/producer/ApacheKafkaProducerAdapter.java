@@ -5,9 +5,9 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,7 +73,7 @@ public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders pubsubMessageHeaders,
-      PubsubProducerCallback pubsubProducerCallback) {
+      PubSubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
         topic,

@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.Future;
@@ -31,18 +31,18 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
 
   public abstract void close(boolean gracefulClose) throws IOException;
 
-  public abstract Future<PubsubProduceResult> put(K key, V value, int valueSchemaId, PubsubProducerCallback callback);
+  public abstract Future<PubsubProduceResult> put(K key, V value, int valueSchemaId, PubSubProducerCallback callback);
 
   public abstract Future<PubsubProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
-      PubsubProducerCallback callback,
+      PubSubProducerCallback callback,
       PutMetadata putMetadata);
 
   public abstract Future<PubsubProduceResult> delete(
       K key,
-      PubsubProducerCallback callback,
+      PubSubProducerCallback callback,
       DeleteMetadata deleteMetadata);
 
   public abstract Future<PubsubProduceResult> update(
@@ -50,7 +50,7 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
       U update,
       int valueSchemaId,
       int derivedSchemaId,
-      PubsubProducerCallback callback);
+      PubSubProducerCallback callback);
 
   public abstract void flush();
 }

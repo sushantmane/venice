@@ -19,8 +19,8 @@ import com.linkedin.venice.guid.GuidUtils;
 import com.linkedin.venice.hadoop.utils.HadoopUtils;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.utils.ByteUtils;
@@ -91,7 +91,7 @@ public class VeniceReducer extends AbstractMapReduceTask
         byte[] keyBytes,
         byte[] valueBytes,
         int valueSchemaId,
-        PubsubProducerCallback callback,
+        PubSubProducerCallback callback,
         boolean enableWriteCompute,
         int derivedValueSchemaId) {
       this(keyBytes, valueBytes, valueSchemaId, -1, null, callback, enableWriteCompute, derivedValueSchemaId);
@@ -103,7 +103,7 @@ public class VeniceReducer extends AbstractMapReduceTask
         int valueSchemaId,
         int rmdVersionId,
         ByteBuffer rmdPayload,
-        PubsubProducerCallback callback,
+        PubSubProducerCallback callback,
         boolean enableWriteCompute,
         int derivedValueSchemaId) {
       this.keyBytes = keyBytes;
@@ -244,7 +244,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     updateExecutionTimeStatus(timeOfLastReduceFunctionStartInNS);
   }
 
-  protected PubsubProducerCallback getCallback() {
+  protected PubSubProducerCallback getCallback() {
     return callback;
   }
 
@@ -576,7 +576,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     this.exceedQuota = exceedQuota;
   }
 
-  protected class ReducerProducerCallback implements PubsubProducerCallback {
+  protected class ReducerProducerCallback implements PubSubProducerCallback {
     private final Reporter reporter;
 
     public ReducerProducerCallback(Reporter reporter) {

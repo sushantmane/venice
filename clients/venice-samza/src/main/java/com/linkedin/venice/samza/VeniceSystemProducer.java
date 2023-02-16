@@ -21,7 +21,7 @@ import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushmonitor.HybridStoreQuotaStatus;
 import com.linkedin.venice.pushmonitor.RouterBasedHybridStoreQuotaMonitor;
@@ -595,7 +595,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
     byte[] key = serializeObject(topicName, keyObject);
     final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-    final PubsubProducerCallback callback = new CompletableFutureCallback(completableFuture);
+    final PubSubProducerCallback callback = new CompletableFutureCallback(completableFuture);
 
     long logicalTimestamp = -1;
     if (valueObject instanceof VeniceObjectWithTimestamp) {

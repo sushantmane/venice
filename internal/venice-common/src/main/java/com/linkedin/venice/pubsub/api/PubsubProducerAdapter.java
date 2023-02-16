@@ -42,7 +42,7 @@ public interface PubsubProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders headers,
-      PubsubProducerCallback callback);
+      PubSubProducerCallback callback);
 
   default Future<PubsubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
     return sendMessage(topic, null, key, value, null, null);

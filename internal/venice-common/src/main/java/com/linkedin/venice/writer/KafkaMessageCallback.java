@@ -1,12 +1,12 @@
 package com.linkedin.venice.writer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import org.apache.logging.log4j.Logger;
 
 
-class KafkaMessageCallback implements PubsubProducerCallback {
+class KafkaMessageCallback implements PubSubProducerCallback {
   private final KafkaMessageEnvelope value;
   private final Logger logger;
 

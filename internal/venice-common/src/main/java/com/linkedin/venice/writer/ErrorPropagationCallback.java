@@ -1,16 +1,16 @@
 package com.linkedin.venice.writer;
 
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 
 
 /**
- * Wraps another {@link PubsubProducerCallback} and propagates exceptions to it, but swallows successful completions.
+ * Wraps another {@link PubSubProducerCallback} and propagates exceptions to it, but swallows successful completions.
  */
-class ErrorPropagationCallback implements PubsubProducerCallback {
-  private final PubsubProducerCallback callback;
+class ErrorPropagationCallback implements PubSubProducerCallback {
+  private final PubSubProducerCallback callback;
 
-  public ErrorPropagationCallback(PubsubProducerCallback callback) {
+  public ErrorPropagationCallback(PubSubProducerCallback callback) {
     this.callback = callback;
   }
 
