@@ -1,6 +1,6 @@
 package com.linkedin.venice.writer;
 
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 
 
@@ -15,7 +15,7 @@ class ErrorPropagationCallback implements PubsubProducerCallback {
   }
 
   @Override
-  public void onCompletion(ProduceResult produceResult, Exception exception) {
+  public void onCompletion(PubsubProduceResult produceResult, Exception exception) {
     if (exception != null) {
       callback.onCompletion(null, exception);
     } // else, no-op

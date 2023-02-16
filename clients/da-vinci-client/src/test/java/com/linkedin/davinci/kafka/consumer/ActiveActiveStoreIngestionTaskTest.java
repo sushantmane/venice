@@ -30,9 +30,9 @@ import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
-import com.linkedin.venice.pubsub.api.ProduceResult;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
@@ -87,7 +87,7 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] key = "foo".getBytes();
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
-    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
+    PubsubProducerAdapter mockedProducer = mock(PubsubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -102,11 +102,11 @@ public class ActiveActiveStoreIngestionTaskTest {
             kafkaKeyArgumentCaptor.capture(),
             kmeArgumentCaptor.capture(),
             any(),
-            any())).thenAnswer((Answer<Future<ProduceResult>>) invocation -> {
+            any())).thenAnswer((Answer<Future<PubsubProduceResult>>) invocation -> {
               KafkaKey kafkaKey = invocation.getArgument(2);
               KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(3);
               PubsubProducerCallback callback = invocation.getArgument(5);
-              ProduceResult produceResult = mock(ProduceResult.class);
+              PubsubProduceResult produceResult = mock(PubsubProduceResult.class);
               offset.addAndGet(1);
               when(produceResult.offset()).thenReturn(offset.get());
               when(produceResult.serializedKeySize()).thenReturn(kafkaKey.getKeyLength());

@@ -4,9 +4,9 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
-import com.linkedin.venice.pubsub.api.ProduceResult;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import java.time.Duration;
 import java.util.Collections;
@@ -24,9 +24,9 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Implementation of the Kafka Producer for sending messages to Kafka.
+ * A wrapper over Apache Kafka producer which implements {@link PubsubProducerAdapter}
  */
-public class ApacheKafkaProducerAdapter implements ProducerAdapter {
+public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
@@ -67,7 +67,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
    * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<ProduceResult> sendMessage(
+  public Future<PubsubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -86,7 +86,7 @@ public class ApacheKafkaProducerAdapter implements ProducerAdapter {
       kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     }
     try {
-      // TODO: evaluate if it makes sense to complete Future<ProduceResult> in callback itself or
+      // TODO: evaluate if it makes sense to complete Future<PubsubProduceResult> in callback itself or
       // use producer interceptors
       return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {

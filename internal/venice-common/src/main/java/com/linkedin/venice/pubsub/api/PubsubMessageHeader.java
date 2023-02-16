@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.Objects;
 
 
+/**
+ * A key-value pair that is associated with a message
+ */
 public class PubsubMessageHeader {
   private final String key;
   private final byte[] value;

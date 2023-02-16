@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import org.apache.logging.log4j.Logger;
 
@@ -16,7 +16,7 @@ class KafkaMessageCallback implements PubsubProducerCallback {
   }
 
   @Override
-  public void onCompletion(ProduceResult produceResult, Exception e) {
+  public void onCompletion(PubsubProduceResult produceResult, Exception e) {
     if (e != null) {
       logger.error(
           "Failed to send out message to Kafka producer: [value.messageType: {}, value.producerMetadata: {}]",

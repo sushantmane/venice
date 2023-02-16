@@ -14,7 +14,6 @@ import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -591,11 +590,6 @@ public class StoreBufferService extends AbstractStoreBufferService {
     @Override
     public int getPayloadSize() {
       return 0;
-    }
-
-    @Override
-    public PubsubMessageHeaders getHeaders() {
-      return new PubsubMessageHeaders();
     }
   }
 }

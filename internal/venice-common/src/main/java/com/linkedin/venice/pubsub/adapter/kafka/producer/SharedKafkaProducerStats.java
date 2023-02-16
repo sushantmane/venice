@@ -6,7 +6,10 @@ import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
 
 
-public class SharedProducerServiceStats extends AbstractVeniceStats {
+/**
+ * A stats class that registers and tracks shared producer related stats.
+ */
+public class SharedKafkaProducerStats extends AbstractVeniceStats {
   private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
 
   /**
@@ -19,10 +22,10 @@ public class SharedProducerServiceStats extends AbstractVeniceStats {
    */
   private Sensor sharedProducerActiveCountSensor;
 
-  public SharedProducerServiceStats(
+  public SharedKafkaProducerStats(
       MetricsRepository metricsRepository,
       SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory) {
-    super(metricsRepository, "SharedKafkaProducerServiceStats");
+    super(metricsRepository, "SharedKafkaProducerStats");
     this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
     sharedProducerActiveTasksCountSensor = registerSensor(
         "shared_producer_active_task_count",

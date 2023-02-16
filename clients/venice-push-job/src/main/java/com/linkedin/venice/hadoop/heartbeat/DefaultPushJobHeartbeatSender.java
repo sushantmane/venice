@@ -1,6 +1,6 @@
 package com.linkedin.venice.hadoop.heartbeat;
 
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
 import com.linkedin.venice.status.protocol.BatchJobHeartbeatKey;
@@ -180,7 +180,7 @@ class DefaultPushJobHeartbeatSender implements PushJobHeartbeatSender {
     byte[] valueBytes = valueSerializer.serialize(heartbeatKafkaTopicName, BatchJobHeartbeatValue);
     CountDownLatch sendComplete = new CountDownLatch(1);
     final Instant sendStartTime = Instant.now();
-    final PubsubProducerCallback callback = (ProduceResult produceResult, Exception exception) -> {
+    final PubsubProducerCallback callback = (PubsubProduceResult produceResult, Exception exception) -> {
       Duration sendDuration = Duration.between(sendStartTime, Instant.now());
       if (exception == null) {
         successfulHeartbeatCount++;

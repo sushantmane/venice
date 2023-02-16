@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
-import com.linkedin.venice.pubsub.api.ProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -14,7 +14,7 @@ import java.util.Properties;
  */
 public class VeniceWriterFactory {
   private final Properties properties;
-  private final ProducerAdapterFactory producerAdapterFactory;
+  private final PubsubProducerAdapterFactory producerAdapterFactory;
 
   public VeniceWriterFactory(Properties properties) {
     this(properties, null, null);
@@ -22,14 +22,14 @@ public class VeniceWriterFactory {
 
   public VeniceWriterFactory(
       Properties properties,
-      ProducerAdapterFactory producerAdapterFactory,
+      PubsubProducerAdapterFactory producerAdapterFactory,
       MetricsRepository metricsRepository) {
     this.properties = properties;
     if (metricsRepository != null) {
       new VeniceWriterStats(metricsRepository);
     }
-    // For now, if VeniceWriterFactory caller does not pass ProducerAdapterFactory, use Kafka factory as default.
-    // Eventually we'll force VeniceWriterFactory creators to inject ProducerAdapterFactory.
+    // For now, if VeniceWriterFactory caller does not pass PubsubProducerAdapterFactory, use Kafka factory as default.
+    // Eventually we'll force VeniceWriterFactory creators to inject PubsubProducerAdapterFactory.
     if (producerAdapterFactory == null) {
       producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }

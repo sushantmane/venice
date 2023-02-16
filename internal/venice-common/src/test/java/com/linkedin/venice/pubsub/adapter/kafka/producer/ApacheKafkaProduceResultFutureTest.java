@@ -5,7 +5,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.venice.pubsub.api.ProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -28,7 +28,7 @@ public class ApacheKafkaProduceResultFutureTest {
       throws ExecutionException, InterruptedException {
     RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), -1, -1, -1, -1L, -1, -1);
     CompletableFuture<RecordMetadata> completableFuture = new CompletableFuture<>();
-    Future<ProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
+    Future<PubsubProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
     assertEquals(produceResultFuture.isDone(), completableFuture.isDone());
     assertEquals(produceResultFuture.isCancelled(), completableFuture.isCancelled());
 
@@ -38,7 +38,7 @@ public class ApacheKafkaProduceResultFutureTest {
     assertEquals(produceResultFuture.isCancelled(), completableFuture.isCancelled());
     assertTrue(produceResultFuture.isDone());
     assertFalse(produceResultFuture.isCancelled());
-    ProduceResult produceResult = produceResultFuture.get();
+    PubsubProduceResult produceResult = produceResultFuture.get();
     assertNotNull(produceResult);
     assertEquals(produceResult.topic(), recordMetadata.topic());
   }
@@ -46,7 +46,7 @@ public class ApacheKafkaProduceResultFutureTest {
   @Test(expectedExceptions = CancellationException.class)
   public void testApacheKafkaProduceResultFutureCancel() throws ExecutionException, InterruptedException {
     CompletableFuture<RecordMetadata> completableFuture = new CompletableFuture<>();
-    Future<ProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
+    Future<PubsubProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
     assertEquals(produceResultFuture.isDone(), completableFuture.isDone());
     assertEquals(produceResultFuture.isCancelled(), completableFuture.isCancelled());
 
@@ -64,7 +64,7 @@ public class ApacheKafkaProduceResultFutureTest {
   public void testApacheKafkaProduceResultHonorsTimeoutOnGet()
       throws ExecutionException, InterruptedException, TimeoutException {
     CompletableFuture<RecordMetadata> completableFuture = new CompletableFuture<>();
-    Future<ProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
+    Future<PubsubProduceResult> produceResultFuture = new ApacheKafkaProduceResultFuture(completableFuture);
     assertEquals(produceResultFuture.isDone(), completableFuture.isDone());
     assertEquals(produceResultFuture.isCancelled(), completableFuture.isCancelled());
     produceResultFuture.get(10, TimeUnit.MICROSECONDS);

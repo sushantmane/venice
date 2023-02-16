@@ -3,9 +3,9 @@ package com.linkedin.venice.unit.kafka.producer;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.SimpleProduceResultImpl;
-import com.linkedin.venice.pubsub.api.ProduceResult;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
@@ -18,10 +18,10 @@ import java.util.concurrent.TimeoutException;
 
 
 /**
- * A {@link ProducerAdapter} implementation which interacts with the
+ * A {@link PubsubProducerAdapter} implementation which interacts with the
  * {@link InMemoryKafkaBroker} in order to make unit tests more lightweight.
  */
-public class MockInMemoryProducerAdapter implements ProducerAdapter {
+public class MockInMemoryProducerAdapter implements PubsubProducerAdapter {
   private final InMemoryKafkaBroker broker;
 
   public MockInMemoryProducerAdapter(InMemoryKafkaBroker broker) {
@@ -34,7 +34,7 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
   }
 
   @Override
-  public Future<ProduceResult> sendMessage(
+  public Future<PubsubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -42,9 +42,9 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
-    ProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);
+    PubsubProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);
     callback.onCompletion(produceResult, null);
-    return new Future<ProduceResult>() {
+    return new Future<PubsubProduceResult>() {
       @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
@@ -61,12 +61,12 @@ public class MockInMemoryProducerAdapter implements ProducerAdapter {
       }
 
       @Override
-      public ProduceResult get() throws InterruptedException, ExecutionException {
+      public PubsubProduceResult get() throws InterruptedException, ExecutionException {
         return produceResult;
       }
 
       @Override
-      public ProduceResult get(long timeout, TimeUnit unit)
+      public PubsubProduceResult get(long timeout, TimeUnit unit)
           throws InterruptedException, ExecutionException, TimeoutException {
         return produceResult;
       }

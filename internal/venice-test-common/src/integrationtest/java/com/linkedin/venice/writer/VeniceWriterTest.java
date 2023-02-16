@@ -26,7 +26,7 @@ import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -153,7 +153,7 @@ public class VeniceWriterTest {
 
   @Test
   public void testCloseSegmentBasedOnElapsedTime() throws InterruptedException, ExecutionException, TimeoutException {
-    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
+    PubsubProducerAdapter mockedProducer = mock(PubsubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -190,7 +190,7 @@ public class VeniceWriterTest {
   @Test
   public void testReplicationMetadataWrittenCorrectly()
       throws InterruptedException, ExecutionException, TimeoutException {
-    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
+    PubsubProducerAdapter mockedProducer = mock(PubsubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -287,7 +287,7 @@ public class VeniceWriterTest {
 
   @Test(timeOut = 10000)
   public void testReplicationMetadataChunking() throws ExecutionException, InterruptedException, TimeoutException {
-    ProducerAdapter mockedProducer = mock(ProducerAdapter.class);
+    PubsubProducerAdapter mockedProducer = mock(PubsubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -454,7 +454,7 @@ public class VeniceWriterTest {
             .setPartitionCount(partitionCount)
             .setPartitioner(new DefaultVenicePartitioner())
             .build());
-    ProducerAdapter producer = veniceWriter.getProducerAdapter();
+    PubsubProducerAdapter producer = veniceWriter.getProducerAdapter();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     CountDownLatch countDownLatch = new CountDownLatch(1);
 

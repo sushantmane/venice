@@ -16,7 +16,7 @@ import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -188,7 +188,7 @@ public abstract class ConsumerIntegrationTest {
   abstract VeniceWriterWithNewerProtocol getVeniceWriter(
       VeniceWriterOptions veniceWriterOptions,
       VeniceProperties props,
-      ProducerAdapter producerAdapter,
+      PubsubProducerAdapter producerAdapter,
       Schema overrideProtocolSchema);
 
   private void writeAndVerifyRecord(

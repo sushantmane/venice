@@ -2,9 +2,9 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.api.ProduceResult;
-import com.linkedin.venice.pubsub.api.ProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
@@ -25,15 +25,15 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Implementation of the shared Kafka Producer for sending messages to Kafka.
+ * Implementation of the shared Kafka Producer for sending messages to multiple Kafka topics concurrently.
  */
-public class SharedKafkaProducerAdapter implements ProducerAdapter {
+public class SharedKafkaProducerAdapter implements PubsubProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
   private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
   private final int id;
   private final Set<String> producerTasks;
-  private final ProducerAdapter producerAdapter;
+  private final PubsubProducerAdapter producerAdapter;
 
   private long lastStatUpdateTsMs = 0;
   private final Map<String, Double> kafkaProducerMetrics;
@@ -42,7 +42,7 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
   public SharedKafkaProducerAdapter(
       SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory,
       int id,
-      ProducerAdapter producerAdapter,
+      PubsubProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
     this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
@@ -70,7 +70,7 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
    * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<ProduceResult> sendMessage(
+  public Future<PubsubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -78,7 +78,7 @@ public class SharedKafkaProducerAdapter implements ProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<ProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
+    Future<PubsubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }

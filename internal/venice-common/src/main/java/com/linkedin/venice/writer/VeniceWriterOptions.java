@@ -25,9 +25,7 @@ public class VeniceWriterOptions {
   private final Time time;
   private final Integer partitionCount;
   private final boolean chunkingEnabled;
-  private final boolean isChunkingSet;
   private final boolean rmdChunkingEnabled;
-  private final boolean isRmdChunkingSet;
   // Set this field if you want to use different broker address than the local broker address
   private final String brokerAddress;
 
@@ -67,16 +65,8 @@ public class VeniceWriterOptions {
     return chunkingEnabled;
   }
 
-  public boolean isChunkingSet() {
-    return isChunkingSet;
-  }
-
   public boolean isRmdChunkingEnabled() {
     return rmdChunkingEnabled;
-  }
-
-  public boolean isRmdChunkingSet() {
-    return isRmdChunkingSet;
   }
 
   private VeniceWriterOptions(Builder builder) {
@@ -88,9 +78,7 @@ public class VeniceWriterOptions {
     time = builder.time;
     partitionCount = builder.partitionCount;
     chunkingEnabled = builder.chunkingEnabled;
-    isChunkingSet = builder.isChunkingSet;
     rmdChunkingEnabled = builder.rmdChunkingEnabled;
-    isRmdChunkingSet = builder.isRmdChunkingSet;
     brokerAddress = builder.brokerAddress;
   }
 
