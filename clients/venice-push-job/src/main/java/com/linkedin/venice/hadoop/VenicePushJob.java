@@ -523,7 +523,7 @@ public class VenicePushJob implements AutoCloseable {
    */
   public VenicePushJob(String jobId, Properties vanillaProps) {
     this.jobId = jobId;
-    this.props = getVenicePropsFromVanillaProps(vanillaProps);
+    this.props = getVenicePropsFromVanillaProps(Objects.requireNonNull(vanillaProps, "VPJ props cannot be null"));
     if (isSslEnabled()) {
       VPJSSLUtils.validateSslProperties(vanillaProps);
     }
@@ -551,6 +551,11 @@ public class VenicePushJob implements AutoCloseable {
   // Visible for testing
   PushJobSetting getPushJobSetting() {
     return this.pushJobSetting;
+  }
+
+  // Visible for testing
+  VeniceProperties getVeniceProperties() {
+    return this.props;
   }
 
   private VeniceProperties getVenicePropsFromVanillaProps(Properties vanillaProps) {
