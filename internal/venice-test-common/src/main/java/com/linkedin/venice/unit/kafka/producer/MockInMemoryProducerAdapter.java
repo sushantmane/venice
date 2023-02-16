@@ -2,7 +2,7 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.adapter.SimpleProduceResultImpl;
+import com.linkedin.venice.pubsub.adapter.SimplePubsubProduceResultImpl;
 import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
@@ -42,7 +42,7 @@ public class MockInMemoryProducerAdapter implements PubsubProducerAdapter {
       PubsubMessageHeaders headers,
       PubsubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
-    PubsubProduceResult produceResult = new SimpleProduceResultImpl(topic, partition, offset, -1, -1);
+    PubsubProduceResult produceResult = new SimplePubsubProduceResultImpl(topic, partition, offset, -1, -1);
     callback.onCompletion(produceResult, null);
     return new Future<PubsubProduceResult>() {
       @Override

@@ -9,6 +9,9 @@ import java.util.concurrent.TimeoutException;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
+/**
+ * A generic future ({@link Future<PubsubProduceResult>}) wrapper over {@link Future<RecordMetadata>}
+ */
 public class ApacheKafkaProduceResultFuture implements Future<PubsubProduceResult> {
   private final Future<RecordMetadata> recordMetadataFuture;
 

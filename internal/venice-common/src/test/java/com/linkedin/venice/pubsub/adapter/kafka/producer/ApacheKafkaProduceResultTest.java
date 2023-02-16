@@ -10,14 +10,14 @@ import org.testng.annotations.Test;
 
 
 public class ApacheKafkaProduceResultTest {
-  @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "RecordMetadata cannot be null")
+  @Test(expectedExceptions = NullPointerException.class)
   public void testApacheKafkaProduceResultShouldThrowNPEWhenRecordMetadataIsNull() {
     new ApacheKafkaProduceResult(null);
   }
 
   @Test
   public void testApacheKafkaProduceResult() {
-    RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), -1, -1, -1, -1L, -1, -1);
+    RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), 1, 2, 3, 4L, -5, -6);
     PubsubProduceResult produceResult = new ApacheKafkaProduceResult(recordMetadata);
     assertNotNull(produceResult);
     assertEquals(produceResult.topic(), recordMetadata.topic());

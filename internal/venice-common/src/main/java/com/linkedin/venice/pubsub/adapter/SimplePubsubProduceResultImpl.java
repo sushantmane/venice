@@ -6,14 +6,14 @@ import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 /**
  * A simple implementation of PubsubProduceResult interface for testing purposes.
  */
-public class SimpleProduceResultImpl implements PubsubProduceResult {
+public class SimplePubsubProduceResultImpl implements PubsubProduceResult {
   private final String topic;
   private final int partition;
   private final long offset;
   private final int serializedKeySize;
   private final int serializedValueSize;
 
-  public SimpleProduceResultImpl(
+  public SimplePubsubProduceResultImpl(
       String topic,
       int partition,
       long offset,
