@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
 import org.mockito.ArgumentCaptor;
@@ -18,8 +18,8 @@ import org.testng.annotations.Test;
 public class VeniceWriterFactoryTest {
   @Test
   public void testVeniceWriterFactory() {
-    PubsubProducerAdapterFactory<PubsubProducerAdapter> producerFactoryMack = mock(PubsubProducerAdapterFactory.class);
-    PubsubProducerAdapter producerAdapterMock = mock(PubsubProducerAdapter.class);
+    PubSubProducerAdapterFactory<PubSubProducerAdapter> producerFactoryMack = mock(PubSubProducerAdapterFactory.class);
+    PubSubProducerAdapter producerAdapterMock = mock(PubSubProducerAdapter.class);
     ArgumentCaptor<String> brokerAddrCapture = ArgumentCaptor.forClass(String.class);
     when(producerFactoryMack.create(any(VeniceProperties.class), eq("store_v1"), brokerAddrCapture.capture()))
         .thenReturn(producerAdapterMock);

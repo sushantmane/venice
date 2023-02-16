@@ -19,7 +19,7 @@ import java.util.concurrent.TimeoutException;
  *  1. At-least once delivery (ALOD): messages should not be dropped.
  *  2. In order delivery (IOD): messages in the same partition should follow the order in which they were sent.
  */
-public interface PubsubProducerAdapter {
+public interface PubSubProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   /**
@@ -36,15 +36,15 @@ public interface PubsubProducerAdapter {
     return future.get(timeout, timeUnit);
   }
 
-  Future<PubsubProduceResult> sendMessage(
+  Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubsubMessageHeaders headers,
-      PubsubProducerCallback callback);
+      PubSubMessageHeaders headers,
+      PubSubProducerCallback callback);
 
-  default Future<PubsubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
+  default Future<PubSubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
     return sendMessage(topic, null, key, value, null, null);
   }
 

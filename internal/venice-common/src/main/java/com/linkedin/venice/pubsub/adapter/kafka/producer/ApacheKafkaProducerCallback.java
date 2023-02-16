@@ -1,17 +1,21 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 /**
- * A Kafka specific callback which wraps generic {@link PubsubProducerCallback}
+ * A Kafka specific callback which wraps generic {@link PubSubProducerCallback}
  */
 public class ApacheKafkaProducerCallback implements Callback {
-  private final PubsubProducerCallback pubsubProducerCallback;
+  private final PubSubProducerCallback pubsubProducerCallback;
+  private final CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
 
-  public ApacheKafkaProducerCallback(PubsubProducerCallback pubsubProducerCallback) {
+  public ApacheKafkaProducerCallback(PubSubProducerCallback pubsubProducerCallback) {
     this.pubsubProducerCallback = pubsubProducerCallback;
   }
 
@@ -42,6 +46,16 @@ public class ApacheKafkaProducerCallback implements Callback {
    */
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
+    PubSubProduceResult produceResult = new ApacheKafkaProduceResult(metadata);
+    if (exception != null) {
+      produceResultFuture.completeExceptionally(exception);
+    } else {
+      produceResultFuture.complete(produceResult);
+    }
     pubsubProducerCallback.onCompletion(new ApacheKafkaProduceResult(metadata), exception);
+  }
+
+  Future<PubSubProduceResult> getProduceResultFuture() {
+    return produceResultFuture;
   }
 }

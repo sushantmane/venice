@@ -31,9 +31,9 @@ import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
@@ -276,7 +276,7 @@ public class KafkaConsumptionTest {
     props.put(ApacheKafkaProducerConfig.KAFKA_KEY_SERIALIZER, KafkaKeySerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER, KafkaValueSerializer.class.getName());
     props.put(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS, kafkaUrl);
-    PubsubProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
+    PubSubProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(new ApacheKafkaProducerConfig(props));
 
     final byte[] randomBytes = new byte[] { 0, 1 };
 

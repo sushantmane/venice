@@ -6,17 +6,17 @@ import static org.testng.Assert.assertNotEquals;
 import org.testng.annotations.Test;
 
 
-public class PubsubMessageHeaderTest {
+public class PubSubMessageHeaderTest {
   @Test(expectedExceptions = NullPointerException.class)
   public void testPubsubMessageHeaderThrowsNPEIfKeyIsNull() {
-    new PubsubMessageHeader(null, null);
+    new PubSubMessageHeader(null, null);
   }
 
   @Test
   public void testPubsubMessageHeaderTestEquals() {
-    PubsubMessageHeader header1 = new PubsubMessageHeader("key-0", "headers-value".getBytes());
-    PubsubMessageHeader header2 = new PubsubMessageHeader("key-0", "headers-value".getBytes());
-    PubsubMessageHeader header3 = new PubsubMessageHeader("key-1", "headers-value".getBytes());
+    PubSubMessageHeader header1 = new PubSubMessageHeader("key-0", "headers-value".getBytes());
+    PubSubMessageHeader header2 = new PubSubMessageHeader("key-0", "headers-value".getBytes());
+    PubSubMessageHeader header3 = new PubSubMessageHeader("key-1", "headers-value".getBytes());
 
     // reflexivity
     assertEquals(header1, header1);
@@ -35,9 +35,9 @@ public class PubsubMessageHeaderTest {
 
   @Test
   public void testPubsubMessageHeaderTestHashcode() {
-    PubsubMessageHeader header1 = new PubsubMessageHeader("key-0", "headers-value".getBytes());
-    PubsubMessageHeader header2 = new PubsubMessageHeader("key-0", "headers-value".getBytes());
-    PubsubMessageHeader header3 = new PubsubMessageHeader("key-1", "headers-value".getBytes());
+    PubSubMessageHeader header1 = new PubSubMessageHeader("key-0", "headers-value".getBytes());
+    PubSubMessageHeader header2 = new PubSubMessageHeader("key-0", "headers-value".getBytes());
+    PubSubMessageHeader header3 = new PubSubMessageHeader("key-1", "headers-value".getBytes());
     assertEquals(header2, header1);
     assertEquals(header1, header2);
     assertEquals(header1.hashCode(), header2.hashCode());

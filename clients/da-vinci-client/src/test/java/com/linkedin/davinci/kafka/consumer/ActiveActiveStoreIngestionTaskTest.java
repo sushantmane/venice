@@ -31,9 +31,9 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -87,7 +87,7 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] key = "foo".getBytes();
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
-    PubsubProducerAdapter mockedProducer = mock(PubsubProducerAdapter.class);
+    PubSubProducerAdapter mockedProducer = mock(PubSubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
@@ -102,19 +102,18 @@ public class ActiveActiveStoreIngestionTaskTest {
             kafkaKeyArgumentCaptor.capture(),
             kmeArgumentCaptor.capture(),
             any(),
-            any())).thenAnswer((Answer<Future<PubsubProduceResult>>) invocation -> {
+            any())).thenAnswer((Answer<Future<PubSubProduceResult>>) invocation -> {
               KafkaKey kafkaKey = invocation.getArgument(2);
               KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(3);
-              PubsubProducerCallback callback = invocation.getArgument(5);
-              PubsubProduceResult produceResult = mock(PubsubProduceResult.class);
+              PubSubProducerCallback callback = invocation.getArgument(5);
+              PubSubProduceResult produceResult = mock(PubSubProduceResult.class);
               offset.addAndGet(1);
-              when(produceResult.offset()).thenReturn(offset.get());
-              when(produceResult.serializedKeySize()).thenReturn(kafkaKey.getKeyLength());
+              when(produceResult.getOffset()).thenReturn(offset.get());
               MessageType messageType = MessageType.valueOf(kafkaMessageEnvelope.messageType);
-              when(produceResult.serializedValueSize()).thenReturn(
-                  messageType.equals(MessageType.PUT)
+              when(produceResult.getSerializedSize()).thenReturn(
+                  kafkaKey.getKeyLength() + (messageType.equals(MessageType.PUT)
                       ? ((Put) (kafkaMessageEnvelope.payloadUnion)).putValue.remaining()
-                      : 0);
+                      : 0));
               callback.onCompletion(produceResult, null);
               return mockedFuture;
             });

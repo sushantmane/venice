@@ -1,4 +1,4 @@
-package com.linkedin.venice.pubsub.adapter.kafka.producer;
+package com.linkedin.venice.pubsub.adapter;
 
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
@@ -9,9 +9,7 @@ import io.tehuti.metrics.Sensor;
 /**
  * A stats class that registers and tracks shared producer related stats.
  */
-public class SharedKafkaProducerStats extends AbstractVeniceStats {
-  private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
-
+public class PubSubSharedProducerStats extends AbstractVeniceStats {
   /**
    * Metric to keep track of number of currently active ingestion tasks that is using a shared producer instance.
    */
@@ -22,16 +20,15 @@ public class SharedKafkaProducerStats extends AbstractVeniceStats {
    */
   private Sensor sharedProducerActiveCountSensor;
 
-  public SharedKafkaProducerStats(
+  public PubSubSharedProducerStats(
       MetricsRepository metricsRepository,
-      SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory) {
-    super(metricsRepository, "SharedKafkaProducerStats");
-    this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
+      PubSubSharedProducerFactory sharedProducerFactory) {
+    super(metricsRepository, "PubSubSharedProducerStats");
     sharedProducerActiveTasksCountSensor = registerSensor(
         "shared_producer_active_task_count",
-        new Gauge(() -> sharedKafkaProducerAdapterFactory.getActiveSharedProducerTasksCount()));
+        new Gauge(() -> sharedProducerFactory.getActiveSharedProducerTasksCount()));
     sharedProducerActiveCountSensor = registerSensor(
         "shared_producer_active_count",
-        new Gauge(() -> sharedKafkaProducerAdapterFactory.getActiveSharedProducerCount()));
+        new Gauge(() -> sharedProducerFactory.getActiveSharedProducerCount()));
   }
 }

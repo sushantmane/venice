@@ -108,9 +108,7 @@ public class VeniceWriterOptions {
     private Time time = null;
     private Integer partitionCount = null; // default null
     private boolean chunkingEnabled; // default false
-    private boolean isChunkingSet; // default false
     private boolean rmdChunkingEnabled; // default false
-    private boolean isRmdChunkingSet; // default false
     private String brokerAddress = null; // default null
 
     private void addDefaults() {
@@ -149,13 +147,11 @@ public class VeniceWriterOptions {
     }
 
     public Builder setChunkingEnabled(boolean chunkingEnabled) {
-      this.isChunkingSet = true;
       this.chunkingEnabled = chunkingEnabled;
       return this;
     }
 
     public Builder setRmdChunkingEnabled(boolean rmdChunkingEnabled) {
-      this.isRmdChunkingSet = true;
       this.rmdChunkingEnabled = rmdChunkingEnabled;
       return this;
     }

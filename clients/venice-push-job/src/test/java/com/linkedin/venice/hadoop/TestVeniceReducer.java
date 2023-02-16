@@ -23,8 +23,9 @@ import com.linkedin.venice.exceptions.TopicAuthorizationVeniceException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
 import com.linkedin.venice.writer.AbstractVeniceWriter;
 import com.linkedin.venice.writer.DeleteMetadata;
@@ -122,8 +123,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<byte[]> valueCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Integer> schemaIdCaptor = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<PutMetadata> metadataArgumentCaptor = ArgumentCaptor.forClass(PutMetadata.class);
-    ArgumentCaptor<VeniceReducer.KafkaMessageCallback> callbackCaptor =
-        ArgumentCaptor.forClass(VeniceReducer.KafkaMessageCallback.class);
+    ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
+        ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
     verify(mockWriter).put(
         keyCaptor.capture(),
@@ -345,32 +346,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     reducer.configure(setupJobConf());
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, mockReporter);
-    PubsubProduceResult produceResult = new PubsubProduceResult() {
-      @Override
-      public long offset() {
-        return 1L;
-      }
-
-      @Override
-      public int serializedKeySize() {
-        return 1;
-      }
-
-      @Override
-      public int serializedValueSize() {
-        return 1;
-      }
-
-      @Override
-      public String topic() {
-        return "topic-name";
-      }
-
-      @Override
-      public int partition() {
-        return TASK_ID;
-      }
-    };
+    PubSubProduceResult produceResult = new SimplePubSubProduceResultImpl("topic-name", TASK_ID, 1, 1);
 
     reducer.callback.onCompletion(produceResult, null);
     reducer.close();
@@ -448,8 +424,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, mockReporter);
 
-    ArgumentCaptor<VeniceReducer.KafkaMessageCallback> callbackCaptor =
-        ArgumentCaptor.forClass(VeniceReducer.KafkaMessageCallback.class);
+    ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
+        ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
     verify(mockWriter).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), mockReporter);
@@ -471,41 +447,41 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubsubProduceResult> put(
+      public Future<PubSubProduceResult> put(
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> put(
+      public Future<PubSubProduceResult> put(
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> delete(
+      public Future<PubSubProduceResult> delete(
           Object key,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           DeleteMetadata deleteMetadata) {
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> update(
+      public Future<PubSubProduceResult> update(
           Object key,
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         // no-op
         return null;
       }
@@ -544,41 +520,41 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   public void testClosingReducerWithWriterException() throws IOException {
     AbstractVeniceWriter exceptionWriter = new AbstractVeniceWriter(TOPIC_NAME) {
       @Override
-      public Future<PubsubProduceResult> put(
+      public Future<PubSubProduceResult> put(
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> delete(
+      public Future<PubSubProduceResult> delete(
           Object key,
-          PubsubProducerCallback callback,
+          PubSubProducerCallback callback,
           DeleteMetadata deleteMetadata) {
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> put(
+      public Future<PubSubProduceResult> put(
           Object key,
           Object value,
           int valueSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
       }
 
       @Override
-      public Future<PubsubProduceResult> update(
+      public Future<PubSubProduceResult> update(
           Object key,
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubsubProducerCallback callback) {
+          PubSubProducerCallback callback) {
         // no-op
         return null;
       }

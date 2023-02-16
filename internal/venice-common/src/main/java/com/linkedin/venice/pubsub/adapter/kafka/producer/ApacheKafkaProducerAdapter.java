@@ -4,17 +4,17 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.Metric;
@@ -24,9 +24,9 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * A wrapper over Apache Kafka producer which implements {@link PubsubProducerAdapter}
+ * A wrapper over Apache Kafka producer which implements {@link PubSubProducerAdapter}
  */
-public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
+public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
@@ -67,13 +67,13 @@ public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
    * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<PubsubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubsubMessageHeaders pubsubMessageHeaders,
-      PubsubProducerCallback pubsubProducerCallback) {
+      PubSubMessageHeaders pubsubMessageHeaders,
+      PubSubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
         topic,
@@ -81,14 +81,10 @@ public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    Callback kafkaCallback = null;
-    if (pubsubProducerCallback != null) {
-      kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
-    }
+    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     try {
-      // TODO: evaluate if it makes sense to complete Future<PubsubProduceResult> in callback itself or
-      // use producer interceptors
-      return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
+      producer.send(record, kafkaCallback);
+      return kafkaCallback.getProduceResultFuture();
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
@@ -134,8 +130,9 @@ public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
     if (producer == null) {
       return Collections.emptyMap();
     }
-    Map<String, Double> extractedMetrics = new HashMap<>();
-    for (Map.Entry<MetricName, ? extends Metric> entry: producer.metrics().entrySet()) {
+    Set<? extends Map.Entry<MetricName, ? extends Metric>> metrics = producer.metrics().entrySet();
+    Map<String, Double> extractedMetrics = new HashMap<>(metrics.size());
+    for (Map.Entry<MetricName, ? extends Metric> entry: metrics) {
       try {
         Object value = entry.getValue().metricValue();
         if (value instanceof Double) {
