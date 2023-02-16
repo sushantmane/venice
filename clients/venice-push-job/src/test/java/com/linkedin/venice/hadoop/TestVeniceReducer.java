@@ -122,8 +122,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<byte[]> valueCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Integer> schemaIdCaptor = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<PutMetadata> metadataArgumentCaptor = ArgumentCaptor.forClass(PutMetadata.class);
-    ArgumentCaptor<VeniceReducer.KafkaMessageCallback> callbackCaptor =
-        ArgumentCaptor.forClass(VeniceReducer.KafkaMessageCallback.class);
+    ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
+        ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
     verify(mockWriter).put(
         keyCaptor.capture(),
@@ -448,8 +448,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, mockReporter);
 
-    ArgumentCaptor<VeniceReducer.KafkaMessageCallback> callbackCaptor =
-        ArgumentCaptor.forClass(VeniceReducer.KafkaMessageCallback.class);
+    ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
+        ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
     verify(mockWriter).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), mockReporter);

@@ -180,7 +180,7 @@ public class VeniceReducer extends AbstractMapReduceTask
    * IMPORTANT: Noticed that this callback is reused in different messages, do not put information that is coupled with
    *            each message inside this callback.
    */
-  protected KafkaMessageCallback callback = null;
+  protected ReducerProducerCallback callback = null;
   private Reporter previousReporter = null;
   /**
    * This doesn't need to be atomic since {@link #reduce(BytesWritable, Iterator, OutputCollector, Reporter)} will be called sequentially.
@@ -213,7 +213,7 @@ public class VeniceReducer extends AbstractMapReduceTask
       OutputCollector<BytesWritable, BytesWritable> output,
       Reporter reporter) {
     if (updatePreviousReporter(reporter)) {
-      callback = new KafkaMessageCallback(reporter);
+      callback = new ReducerProducerCallback(reporter);
     }
     final long timeOfLastReduceFunctionStartInNS = System.nanoTime();
     if (timeOfLastReduceFunctionEndInNS > 0) {
@@ -576,10 +576,10 @@ public class VeniceReducer extends AbstractMapReduceTask
     this.exceedQuota = exceedQuota;
   }
 
-  protected class KafkaMessageCallback implements PubsubProducerCallback {
+  protected class ReducerProducerCallback implements PubsubProducerCallback {
     private final Reporter reporter;
 
-    public KafkaMessageCallback(Reporter reporter) {
+    public ReducerProducerCallback(Reporter reporter) {
       this.reporter = reporter;
     }
 
