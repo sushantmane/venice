@@ -7,11 +7,11 @@ import java.util.Objects;
 /**
  * A key-value pair that is associated with a message
  */
-public class PubsubMessageHeader {
+public class PubSubMessageHeader {
   private final String key;
   private final byte[] value;
 
-  public PubsubMessageHeader(String key, byte[] value) {
+  public PubSubMessageHeader(String key, byte[] value) {
     this.key = Objects.requireNonNull(key, "PubsubMessage header key cannot be null");
     this.value = value;
   }
@@ -34,11 +34,11 @@ public class PubsubMessageHeader {
     if (this == otherObj) {
       return true;
     }
-    if (!(otherObj instanceof PubsubMessageHeader)) {
+    if (!(otherObj instanceof PubSubMessageHeader)) {
       return false;
     }
 
-    PubsubMessageHeader otherHeader = (PubsubMessageHeader) otherObj;
+    PubSubMessageHeader otherHeader = (PubSubMessageHeader) otherObj;
     return key.equals(otherHeader.key()) && Arrays.equals(value, otherHeader.value());
   }
 }

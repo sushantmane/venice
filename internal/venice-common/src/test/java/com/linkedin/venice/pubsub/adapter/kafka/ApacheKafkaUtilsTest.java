@@ -4,8 +4,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.venice.pubsub.api.PubsubMessageHeader;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeader;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.apache.kafka.common.header.Header;
@@ -27,9 +27,9 @@ public class ApacheKafkaUtilsTest {
     headerMap.put("key-0", "val-0");
     headerMap.put("key-1", "val-1");
     headerMap.put("key-2", "val-2");
-    PubsubMessageHeaders pubsubMessageHeaders = new PubsubMessageHeaders();
+    PubSubMessageHeaders pubsubMessageHeaders = new PubSubMessageHeaders();
     for (Map.Entry<String, String> entry: headerMap.entrySet()) {
-      pubsubMessageHeaders.add(new PubsubMessageHeader(entry.getKey(), entry.getValue().getBytes()));
+      pubsubMessageHeaders.add(new PubSubMessageHeader(entry.getKey(), entry.getValue().getBytes()));
     }
 
     RecordHeaders recordHeaders = ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders);

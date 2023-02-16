@@ -4,7 +4,7 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
@@ -72,7 +72,7 @@ public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubsubMessageHeaders pubsubMessageHeaders,
+      PubSubMessageHeaders pubsubMessageHeaders,
       PubsubProducerCallback pubsubProducerCallback) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(

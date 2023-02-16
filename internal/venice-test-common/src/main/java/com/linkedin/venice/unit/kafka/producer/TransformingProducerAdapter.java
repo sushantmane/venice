@@ -2,7 +2,7 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.api.PubsubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerCallback;
@@ -37,7 +37,7 @@ public class TransformingProducerAdapter implements PubsubProducerAdapter {
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubsubMessageHeaders headers,
+      PubSubMessageHeaders headers,
       PubsubProducerCallback callback) {
     SendMessageParameters parameters = transformer.transform(topic, key, value, partition);
     return baseProducer

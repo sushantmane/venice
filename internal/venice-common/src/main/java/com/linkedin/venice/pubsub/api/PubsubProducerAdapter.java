@@ -41,7 +41,7 @@ public interface PubsubProducerAdapter {
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubsubMessageHeaders headers,
+      PubSubMessageHeaders headers,
       PubsubProducerCallback callback);
 
   default Future<PubsubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
