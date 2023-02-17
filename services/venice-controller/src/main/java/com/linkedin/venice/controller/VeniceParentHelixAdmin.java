@@ -734,7 +734,7 @@ public class VeniceParentHelixAdmin implements Admin {
               .put(emptyKeyByteArr, serializedValue, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
           PubSubProduceResult produceResult = future.get();
 
-          LOGGER.info("Sent message: {} to kafka, offset: {}", message, produceResult.offset());
+          LOGGER.info("Sent message: {} to kafka, offset: {}", message, produceResult.getOffset());
         } catch (Exception e) {
           throw new VeniceException("Got exception during sending message to Kafka -- " + e.getMessage(), e);
         }

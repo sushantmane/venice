@@ -108,13 +108,12 @@ public class ActiveActiveStoreIngestionTaskTest {
               PubSubProducerCallback callback = invocation.getArgument(5);
               PubSubProduceResult produceResult = mock(PubSubProduceResult.class);
               offset.addAndGet(1);
-              when(produceResult.offset()).thenReturn(offset.get());
-              when(produceResult.serializedKeySize()).thenReturn(kafkaKey.getKeyLength());
+              when(produceResult.getOffset()).thenReturn(offset.get());
               MessageType messageType = MessageType.valueOf(kafkaMessageEnvelope.messageType);
-              when(produceResult.serializedValueSize()).thenReturn(
-                  messageType.equals(MessageType.PUT)
+              when(produceResult.getSerializedSize()).thenReturn(
+                  kafkaKey.getKeyLength() + (messageType.equals(MessageType.PUT)
                       ? ((Put) (kafkaMessageEnvelope.payloadUnion)).putValue.remaining()
-                      : 0);
+                      : 0));
               callback.onCompletion(produceResult, null);
               return mockedFuture;
             });

@@ -80,7 +80,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
       // when leaderSubPartition != recordMetadata.partition(), local StorageEngine will be written by
       // followers consuming from VTs. So it is safe to skip adding the record to leader's StorageBufferService
       if (partitionConsumptionState.getLeaderFollowerState() == LEADER
-          && produceResult.partition() != partitionConsumptionState.getPartition()) {
+          && produceResult.getPartition() != partitionConsumptionState.getPartition()) {
         leaderProducedRecordContext.completePersistedToDBFuture(null);
         return;
       }
@@ -131,7 +131,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
           if (key != null) {
             leaderProducedRecordContext.setKeyBytes(key);
           }
-          leaderProducedRecordContext.setProducedOffset(produceResult.offset());
+          leaderProducedRecordContext.setProducedOffset(produceResult.getOffset());
           ingestionTask.produceToStoreBufferService(
               sourceConsumerRecord,
               leaderProducedRecordContext,
@@ -140,8 +140,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
               beforeProcessingRecordTimestamp);
 
           producedRecordNum++;
-          producedRecordSize =
-              Math.max(0, produceResult.serializedKeySize()) + Math.max(0, produceResult.serializedValueSize());
+          producedRecordSize = Math.max(0, produceResult.getSerializedSize());
         } else {
           producedRecordSize += produceChunksToStoreBufferService(chunkedValueManifest, valueChunks, false);
           producedRecordNum += chunkedValueManifest.keysWithChunkIdSuffix.size();
@@ -167,7 +166,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
               key,
               manifestPut,
               leaderProducedRecordContext.getPersistedToDBFuture());
-          producedRecordForManifest.setProducedOffset(produceResult.offset());
+          producedRecordForManifest.setProducedOffset(produceResult.getOffset());
           ingestionTask.produceToStoreBufferService(
               sourceConsumerRecord,
               producedRecordForManifest,

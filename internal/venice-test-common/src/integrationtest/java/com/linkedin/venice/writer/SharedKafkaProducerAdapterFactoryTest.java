@@ -92,7 +92,7 @@ public class SharedKafkaProducerAdapterFactoryTest {
                   if (e != null) {
                     LOGGER.error("Error when producing to an existing topic: {}", existingTopic, e);
                   } else {
-                    LOGGER.info("produced offset test-topic-1: {}", metadata.offset());
+                    LOGGER.info("produced offset test-topic-1: {}", metadata.getOffset());
                     producedTopicPresent.countDown();
                   }
                 });

@@ -591,7 +591,7 @@ public class VeniceReducer extends AbstractMapReduceTask
         sendException = e;
       } else {
         messageCompleted.incrementAndGet();
-        int partition = produceResult.partition();
+        int partition = produceResult.getPartition();
         partitionSet.add(partition);
         if (partition != getTaskId()) {
           // Reducer input and output are not aligned!

@@ -14,7 +14,6 @@ public class ApacheKafkaProduceResult extends SimplePubSubProduceResultImpl {
         recordMetadata.topic(),
         recordMetadata.partition(),
         recordMetadata.offset(),
-        recordMetadata.serializedKeySize(),
-        recordMetadata.serializedValueSize());
+        recordMetadata.serializedKeySize() + recordMetadata.serializedValueSize());
   }
 }

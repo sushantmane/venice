@@ -526,7 +526,7 @@ public abstract class StoreIngestionTaskTest {
 
   private long getOffset(Future<PubSubProduceResult> produceResultFuture)
       throws ExecutionException, InterruptedException {
-    return produceResultFuture.get().offset();
+    return produceResultFuture.get().getOffset();
   }
 
   private void runTest(Set<Integer> partitions, Runnable assertions, boolean isActiveActiveReplicationEnabled)
@@ -1076,7 +1076,9 @@ public abstract class StoreIngestionTaskTest {
   }
 
   private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(PubSubProduceResult produceResult) {
-    return new Pair<>(new TopicPartition(produceResult.topic(), produceResult.partition()), produceResult.offset());
+    return new Pair<>(
+        new TopicPartition(produceResult.getTopic(), produceResult.getPartition()),
+        produceResult.getOffset());
   }
 
   private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(String topic, int partition, long offset) {
@@ -1113,7 +1115,7 @@ public abstract class StoreIngestionTaskTest {
       verify(mockStorageMetadataService, timeout(TEST_TIMEOUT_MS)).getLastOffset(topic, PARTITION_FOO);
       verifyPutAndDelete(1, isActiveActiveReplicationEnabled, true);
       // Verify it commits the offset to Offset Manager
-      OffsetRecord expectedOffsetRecordForDeleteMessage = getOffsetRecord(deleteMetadata.offset());
+      OffsetRecord expectedOffsetRecordForDeleteMessage = getOffsetRecord(deleteMetadata.getOffset());
       verify(mockStorageMetadataService, timeout(TEST_TIMEOUT_MS))
           .put(topic, PARTITION_FOO, expectedOffsetRecordForDeleteMessage);
 
@@ -1230,7 +1232,7 @@ public abstract class StoreIngestionTaskTest {
           .put(PARTITION_FOO, putKeyFoo2, ByteBuffer.wrap(ValueRecord.create(SCHEMA_ID, putValue).serialize()));
 
       // Verify it commits the offset to Offset Manager
-      OffsetRecord expectedOffsetRecordForLastMessage = getOffsetRecord(putMetadata4.offset());
+      OffsetRecord expectedOffsetRecordForLastMessage = getOffsetRecord(putMetadata4.getOffset());
       verify(mockStorageMetadataService, timeout(TEST_TIMEOUT_MS))
           .put(topic, PARTITION_FOO, expectedOffsetRecordForLastMessage);
     }, isActiveActiveReplicationEnabled);
@@ -1964,8 +1966,8 @@ public abstract class StoreIngestionTaskTest {
 
       PubSubProduceResult produceResult = (PubSubProduceResult) localVeniceWriter.put(key, value, SCHEMA_ID).get();
 
-      maxOffsetPerPartition.put(produceResult.partition(), produceResult.offset());
-      pushedRecords.put(new Pair(produceResult.partition(), new ByteArray(key)), new ByteArray(value));
+      maxOffsetPerPartition.put(produceResult.getPartition(), produceResult.getOffset());
+      pushedRecords.put(new Pair(produceResult.getPartition(), new ByteArray(key)), new ByteArray(value));
     }
     localVeniceWriter.broadcastEndOfPush(new HashMap<>());
 
@@ -2152,13 +2154,14 @@ public abstract class StoreIngestionTaskTest {
       verifyPutAndDelete(1, isActiveActiveReplicationEnabled, true);
 
       // Verify it commits the offset to Offset Manager after receiving EOP control message
-      OffsetRecord expectedOffsetRecordForDeleteMessage = getOffsetRecord(deleteMetadata.offset() + 1, true);
+      OffsetRecord expectedOffsetRecordForDeleteMessage = getOffsetRecord(deleteMetadata.getOffset() + 1, true);
       verify(mockStorageMetadataService, timeout(TEST_TIMEOUT_MS))
           .put(topic, PARTITION_FOO, expectedOffsetRecordForDeleteMessage);
       // Deferred write is not going to commit offset for every message, but will commit offset for every control
       // message
       // The following verification is for START_OF_PUSH control message
-      verify(mockStorageMetadataService, times(1)).put(topic, PARTITION_FOO, getOffsetRecord(putMetadata.offset() - 1));
+      verify(mockStorageMetadataService, times(1))
+          .put(topic, PARTITION_FOO, getOffsetRecord(putMetadata.getOffset() - 1));
       // Check database mode switches from deferred-write to transactional after EOP control message
       StoragePartitionConfig deferredWritePartitionConfig = new StoragePartitionConfig(topic, PARTITION_FOO);
       deferredWritePartitionConfig.setDeferredWrite(true);

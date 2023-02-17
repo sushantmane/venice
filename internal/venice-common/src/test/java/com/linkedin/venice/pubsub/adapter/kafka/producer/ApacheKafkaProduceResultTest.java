@@ -20,10 +20,11 @@ public class ApacheKafkaProduceResultTest {
     RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), 1, 2, 3, 4L, -5, -6);
     PubSubProduceResult produceResult = new ApacheKafkaProduceResult(recordMetadata);
     assertNotNull(produceResult);
-    assertEquals(produceResult.topic(), recordMetadata.topic());
-    assertEquals(produceResult.partition(), recordMetadata.partition());
-    assertEquals(produceResult.offset(), recordMetadata.offset());
-    assertEquals(produceResult.serializedKeySize(), recordMetadata.serializedKeySize());
-    assertEquals(produceResult.serializedValueSize(), recordMetadata.serializedValueSize());
+    assertEquals(produceResult.getTopic(), recordMetadata.topic());
+    assertEquals(produceResult.getPartition(), recordMetadata.partition());
+    assertEquals(produceResult.getOffset(), recordMetadata.offset());
+    assertEquals(
+        produceResult.getSerializedSize(),
+        recordMetadata.serializedKeySize() + recordMetadata.serializedValueSize());
   }
 }

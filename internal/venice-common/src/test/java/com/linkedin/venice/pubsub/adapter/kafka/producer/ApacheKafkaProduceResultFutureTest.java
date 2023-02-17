@@ -40,7 +40,7 @@ public class ApacheKafkaProduceResultFutureTest {
     assertFalse(produceResultFuture.isCancelled());
     PubSubProduceResult produceResult = produceResultFuture.get();
     assertNotNull(produceResult);
-    assertEquals(produceResult.topic(), recordMetadata.topic());
+    assertEquals(produceResult.getTopic(), recordMetadata.topic());
   }
 
   @Test(expectedExceptions = CancellationException.class)

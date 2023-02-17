@@ -23,6 +23,7 @@ import com.linkedin.venice.exceptions.TopicAuthorizationVeniceException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
@@ -345,32 +346,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     reducer.configure(setupJobConf());
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, mockReporter);
-    PubSubProduceResult produceResult = new PubSubProduceResult() {
-      @Override
-      public long offset() {
-        return 1L;
-      }
-
-      @Override
-      public int serializedKeySize() {
-        return 1;
-      }
-
-      @Override
-      public int serializedValueSize() {
-        return 1;
-      }
-
-      @Override
-      public String topic() {
-        return "topic-name";
-      }
-
-      @Override
-      public int partition() {
-        return TASK_ID;
-      }
-    };
+    PubSubProduceResult produceResult = new SimplePubSubProduceResultImpl("topic-name", TASK_ID, 1, 1);
 
     reducer.callback.onCompletion(produceResult, null);
     reducer.close();

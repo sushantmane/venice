@@ -10,44 +10,32 @@ public class SimplePubSubProduceResultImpl implements PubSubProduceResult {
   private final String topic;
   private final int partition;
   private final long offset;
-  private final int serializedKeySize;
-  private final int serializedValueSize;
+  private final int serializedSize;
 
-  public SimplePubSubProduceResultImpl(
-      String topic,
-      int partition,
-      long offset,
-      int serializedKeySize,
-      int serializedValueSize) {
+  public SimplePubSubProduceResultImpl(String topic, int partition, long offset, int serializedSize) {
     this.topic = topic;
     this.partition = partition;
     this.offset = offset;
-    this.serializedKeySize = serializedKeySize;
-    this.serializedValueSize = serializedValueSize;
+    this.serializedSize = serializedSize;
   }
 
   @Override
-  public long offset() {
+  public long getOffset() {
     return offset;
   }
 
   @Override
-  public int serializedKeySize() {
-    return serializedKeySize;
+  public int getSerializedSize() {
+    return serializedSize;
   }
 
   @Override
-  public int serializedValueSize() {
-    return serializedValueSize;
-  }
-
-  @Override
-  public String topic() {
+  public String getTopic() {
     return topic;
   }
 
   @Override
-  public int partition() {
+  public int getPartition() {
     return partition;
   }
 }

@@ -238,7 +238,9 @@ public class AdminConsumptionTaskTest {
   }
 
   private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(PubSubProduceResult produceResult) {
-    return new Pair<>(new TopicPartition(produceResult.topic(), produceResult.partition()), produceResult.offset());
+    return new Pair<>(
+        new TopicPartition(produceResult.getTopic(), produceResult.getPartition()),
+        produceResult.getOffset());
   }
 
   private long getLastOffset(String clusterName) {
@@ -375,7 +377,7 @@ public class AdminConsumptionTaskTest {
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
                 AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
-            .get()).offset();
+            .get()).getOffset();
     AdminConsumptionStats mockStats = mock(AdminConsumptionStats.class);
     doThrow(StringIndexOutOfBoundsException.class).when(mockStats).recordAdminMessageDelegateLatency(anyDouble());
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), false, mockStats, 10000);
@@ -584,7 +586,7 @@ public class AdminConsumptionTaskTest {
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
                 AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
-            .get()).offset();
+            .get()).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 3),
@@ -682,7 +684,7 @@ public class AdminConsumptionTaskTest {
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     adminTopicMetadataAccessor.updateMetadata(
         clusterName,
-        AdminTopicMetadataAccessor.generateMetadataMap(metadataForStoreName0Future.get().offset(), -1, 1));
+        AdminTopicMetadataAccessor.generateMetadataMap(metadataForStoreName0Future.get().getOffset(), -1, 1));
 
     // Write a message with a skipped execution id but a different producer metadata.
     veniceWriter.put(
@@ -1055,7 +1057,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).offset();
+    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     Map<String, Long> newMetadata = AdminTopicMetadataAccessor.generateMetadataMap(offset, -1, 4L);
     adminTopicMetadataAccessor.updateMetadata(clusterName, newMetadata);
     executionIdAccessor.updateLastSucceededExecutionIdMap(clusterName, storeName, 4L);
@@ -1090,7 +1092,7 @@ public class AdminConsumptionTaskTest {
                 emptyKeyBytes,
                 getAddVersionMessage(clusterName, storeName, mockPushJobId, 1, 1, 2L),
                 AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
-            .get()).offset();
+            .get()).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
@@ -1151,7 +1153,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    final long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).offset();
+    final long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     OffsetRecord offsetRecord = offsetManager.getLastOffset(topicName, AdminTopicUtils.ADMIN_TOPIC_PARTITION_ID);
     offsetRecord.setCheckpointLocalVersionTopicOffset(offset);
     offsetManager.put(topicName, AdminTopicUtils.ADMIN_TOPIC_PARTITION_ID, offsetRecord);
@@ -1175,7 +1177,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    final long latestOffset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).offset();
+    final long latestOffset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
         TimeUnit.MILLISECONDS,
@@ -1207,7 +1209,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).offset();
+    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
@@ -1262,7 +1264,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getAddVersionMessage(clusterName, storeName, mockPushJobId, versionNumber, numberOfPartitions, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).offset();
+    long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
         TimeUnit.MILLISECONDS,
