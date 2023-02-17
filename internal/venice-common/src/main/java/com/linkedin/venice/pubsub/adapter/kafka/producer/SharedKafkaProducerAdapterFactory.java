@@ -8,7 +8,7 @@ import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
@@ -25,13 +25,13 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Implementation of {@link PubsubProducerAdapterFactory} used to create Apache Kafka producers in shared mode. This
+ * Implementation of {@link PubSubProducerAdapterFactory} used to create Apache Kafka producers in shared mode. This
  * means that a single producer may be used to send data to multiple topics concurrently.
  *
  * This service maintains a pool of kafka producer. Ingestion task can acquire or release a producer on demand basis.
  * It does lazy initialization of producers. Also, producers are assigned based on the least loaded manner.
  */
-public class SharedKafkaProducerAdapterFactory implements PubsubProducerAdapterFactory<SharedKafkaProducerAdapter> {
+public class SharedKafkaProducerAdapterFactory implements PubSubProducerAdapterFactory<SharedKafkaProducerAdapter> {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactory.class);
   private static final String NAME = "ApacheKafkaSharedProducer";
   private final int numOfProducersPerKafkaCluster;

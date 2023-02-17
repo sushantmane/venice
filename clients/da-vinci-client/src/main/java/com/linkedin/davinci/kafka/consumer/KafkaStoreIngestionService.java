@@ -54,7 +54,7 @@ import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.schema.SchemaReader;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
@@ -168,7 +168,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
   // source. This could be a view of the data, or in our case a cache, or both potentially.
   private final Optional<ObjectCacheBackend> cacheBackend;
 
-  private final PubsubProducerAdapterFactory producerAdapterFactory;
+  private final PubSubProducerAdapterFactory producerAdapterFactory;
 
   private final InternalAvroSpecificSerializer<PartitionState> partitionStateSerializer;
 
@@ -243,7 +243,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     }
 
     // TODO: Once we start testing with other PubSub systems, we'll inject corresponding systems
-    // PubsubProducerAdapterFactory
+    // PubSubProducerAdapterFactory
     LOGGER.info(
         "Shared kafka producer service is {}",
         serverConfig.isSharedKafkaProducerEnabled() ? "enabled" : "disabled");

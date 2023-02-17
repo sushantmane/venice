@@ -1,15 +1,15 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 
 
 /**
- * Implementation of {@link PubsubProducerAdapterFactory} used to create Apache Kafka producers.
+ * Implementation of {@link PubSubProducerAdapterFactory} used to create Apache Kafka producers.
  *
  * A producer created using this factory is usually used to send data to a single pub-sub topic.
  */
-public class ApacheKafkaProducerAdapterFactory implements PubsubProducerAdapterFactory<ApacheKafkaProducerAdapter> {
+public class ApacheKafkaProducerAdapterFactory implements PubSubProducerAdapterFactory<ApacheKafkaProducerAdapter> {
   private static final String NAME = "ApacheKafkaProducer";
 
   @Override
