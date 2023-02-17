@@ -7,7 +7,7 @@ import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubsubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -143,7 +143,7 @@ public class SharedKafkaProducerAdapterFactory implements PubsubProducerAdapterF
       if (producers[i] == null) {
         LOGGER.info("SharedKafkaProducerAdapter: Creating Producer id: {}", i);
         producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + i);
-        PubsubProducerAdapter producerAdapter = internalProducerAdapterFactory
+        PubSubProducerAdapter producerAdapter = internalProducerAdapterFactory
             .create(new VeniceProperties(producerProperties), "shared-producer-" + i, null);
         sharedKafkaProducer =
             new SharedKafkaProducerAdapter(this, i, producerAdapter, metricsRepository, producerMetricsToBeReported);

@@ -1,8 +1,8 @@
 package com.linkedin.venice.pubsub.api;
 
 /**
- * A callback interface that users of PubsubProducerAdapter should implement if they want
- * to execute some code once PubsubProducerAdapter#sendMessage request is completed.
+ * A callback interface that users of PubSubProducerAdapter should implement if they want
+ * to execute some code once PubSubProducerAdapter#sendMessage request is completed.
  */
 public interface PubSubProducerCallback {
   /**

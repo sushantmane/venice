@@ -19,7 +19,7 @@ import java.util.concurrent.TimeoutException;
  *  1. At-least once delivery (ALOD): messages should not be dropped.
  *  2. In order delivery (IOD): messages in the same partition should follow the order in which they were sent.
  */
-public interface PubsubProducerAdapter {
+public interface PubSubProducerAdapter {
   ExecutorService timeOutExecutor = Executors.newSingleThreadExecutor();
 
   /**

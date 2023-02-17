@@ -5,9 +5,9 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,9 +24,9 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * A wrapper over Apache Kafka producer which implements {@link PubsubProducerAdapter}
+ * A wrapper over Apache Kafka producer which implements {@link PubSubProducerAdapter}
  */
-public class ApacheKafkaProducerAdapter implements PubsubProducerAdapter {
+public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapter.class);
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;

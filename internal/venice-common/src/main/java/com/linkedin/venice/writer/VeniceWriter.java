@@ -33,9 +33,9 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -205,7 +205,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   private final VeniceKafkaSerializer<K> keySerializer;
   private final VeniceKafkaSerializer<V> valueSerializer;
   private final VeniceKafkaSerializer<U> writeComputeSerializer;
-  private final PubsubProducerAdapter producerAdapter;
+  private final PubSubProducerAdapter producerAdapter;
   private final GUID producerGUID;
   private final Time time;
   private final VenicePartitioner partitioner;
@@ -251,7 +251,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
   private final boolean isRmdChunkingEnabled;
 
-  public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, PubsubProducerAdapter producerAdapter) {
+  public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, PubSubProducerAdapter producerAdapter) {
     this(params, props, producerAdapter, KafkaMessageEnvelope.SCHEMA$);
   }
 
@@ -264,7 +264,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   public VeniceWriter(
       VeniceWriterOptions params,
       VeniceProperties props,
-      PubsubProducerAdapter producerAdapter,
+      PubSubProducerAdapter producerAdapter,
       Schema overrideProtocolSchema) {
     super(params.getTopicName());
     this.keySerializer = params.getKeySerializer();
@@ -359,7 +359,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       if (gracefulClose) {
         endAllSegments(true);
       }
-      // DO NOT call the {@link #PubsubProducerAdapter.close(int) version from here.}
+      // DO NOT call the {@link #PubSubProducerAdapter.close(int) version from here.}
       // For non-shared producer mode gracefulClose will flush the producer
 
       producerAdapter.close(topicName, closeTimeOut, gracefulClose);
@@ -376,12 +376,12 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   /** Used in tests only */
-  PubsubProducerAdapter getProducerAdapter() {
+  PubSubProducerAdapter getProducerAdapter() {
     return producerAdapter;
   }
 
   /**
-   * Call flush on the internal {@link PubsubProducerAdapter}.
+   * Call flush on the internal {@link PubSubProducerAdapter}.
    */
   @Override
   public void flush() {

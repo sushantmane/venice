@@ -10,7 +10,7 @@ import java.io.Closeable;
  * A pus-sub specific concrete implementation of this interface should be provided to be able to create
  * and instantiate producers for that system.
  */
-public interface PubsubProducerAdapterFactory<ADAPTER extends PubsubProducerAdapter> extends Closeable {
+public interface PubsubProducerAdapterFactory<ADAPTER extends PubSubProducerAdapter> extends Closeable {
   /**
    *
    * @param veniceProperties     A copy of venice properties. Relevant producer configs will be extracted from

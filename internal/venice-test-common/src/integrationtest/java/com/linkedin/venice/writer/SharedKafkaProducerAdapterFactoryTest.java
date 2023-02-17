@@ -18,7 +18,7 @@ import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProducerAdapterFactory;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
@@ -169,11 +169,11 @@ public class SharedKafkaProducerAdapterFactoryTest {
           }, new MetricsRepository(), Collections.EMPTY_SET);
 
       // Create at least 8 tasks to assign each producer a task.
-      PubsubProducerAdapter producer1 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
+      PubSubProducerAdapter producer1 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task2");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task3");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task4");
-      PubsubProducerAdapter producer5 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task5");
+      PubSubProducerAdapter producer5 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task5");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task6");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task7");
       sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task8");

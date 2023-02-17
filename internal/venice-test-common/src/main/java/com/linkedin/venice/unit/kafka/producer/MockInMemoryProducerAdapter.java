@@ -4,9 +4,9 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.SimplePubsubProduceResultImpl;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
 import java.util.Collections;
@@ -18,10 +18,10 @@ import java.util.concurrent.TimeoutException;
 
 
 /**
- * A {@link PubsubProducerAdapter} implementation which interacts with the
+ * A {@link PubSubProducerAdapter} implementation which interacts with the
  * {@link InMemoryKafkaBroker} in order to make unit tests more lightweight.
  */
-public class MockInMemoryProducerAdapter implements PubsubProducerAdapter {
+public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
   private final InMemoryKafkaBroker broker;
 
   public MockInMemoryProducerAdapter(InMemoryKafkaBroker broker) {

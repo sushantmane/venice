@@ -118,10 +118,10 @@ import com.linkedin.venice.pubsub.ImmutablePubSubMessage;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.schema.rmd.RmdSchemaEntry;
@@ -468,7 +468,7 @@ public abstract class StoreIngestionTaskTest {
     setDefaultStoreVersionStateSupplier();
   }
 
-  private VeniceWriter getVeniceWriter(String topic, PubsubProducerAdapter producerAdapter, int amplificationFactor) {
+  private VeniceWriter getVeniceWriter(String topic, PubSubProducerAdapter producerAdapter, int amplificationFactor) {
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(topic).setKeySerializer(new DefaultSerializer())
             .setValueSerializer(new DefaultSerializer())
@@ -490,7 +490,7 @@ public abstract class StoreIngestionTaskTest {
     return partitioner;
   }
 
-  private VeniceWriter getVeniceWriter(PubsubProducerAdapter producerAdapter) {
+  private VeniceWriter getVeniceWriter(PubSubProducerAdapter producerAdapter) {
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(topic).setKeySerializer(new DefaultSerializer())
             .setValueSerializer(new DefaultSerializer())
@@ -507,7 +507,7 @@ public abstract class StoreIngestionTaskTest {
   }
 
   static class CorruptedKafkaProducerAdapter extends TransformingProducerAdapter {
-    public CorruptedKafkaProducerAdapter(PubsubProducerAdapter baseProducer, String topic, byte[] valueToCorrupt) {
+    public CorruptedKafkaProducerAdapter(PubSubProducerAdapter baseProducer, String topic, byte[] valueToCorrupt) {
       super(baseProducer, (topicName, key, value, partition) -> {
         KafkaMessageEnvelope transformedMessageEnvelope = value;
 

@@ -3,9 +3,9 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubsubProduceResult;
-import com.linkedin.venice.pubsub.api.PubsubProducerAdapter;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
 import com.linkedin.venice.stats.StatsErrorCode;
@@ -27,13 +27,13 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the shared Kafka Producer for sending messages to multiple Kafka topics concurrently.
  */
-public class SharedKafkaProducerAdapter implements PubsubProducerAdapter {
+public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
   private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
   private final int id;
   private final Set<String> producerTasks;
-  private final PubsubProducerAdapter producerAdapter;
+  private final PubSubProducerAdapter producerAdapter;
 
   private long lastStatUpdateTsMs = 0;
   private final Map<String, Double> kafkaProducerMetrics;
@@ -42,7 +42,7 @@ public class SharedKafkaProducerAdapter implements PubsubProducerAdapter {
   public SharedKafkaProducerAdapter(
       SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory,
       int id,
-      PubsubProducerAdapter producerAdapter,
+      PubSubProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
     this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
