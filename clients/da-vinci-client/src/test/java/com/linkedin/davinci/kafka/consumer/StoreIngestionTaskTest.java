@@ -503,11 +503,11 @@ public abstract class StoreIngestionTaskTest {
 
   private VeniceWriter getCorruptedVeniceWriter(byte[] valueToCorrupt, InMemoryKafkaBroker kafkaBroker) {
     return getVeniceWriter(
-        new CorruptedKafkaProducerAdapter(new MockInMemoryProducerAdapter(kafkaBroker), valueToCorrupt));
+        new CorruptedKafkaProducerAdapter(new MockInMemoryProducerAdapter(kafkaBroker), topic, valueToCorrupt));
   }
 
-  class CorruptedKafkaProducerAdapter extends TransformingProducerAdapter {
-    public CorruptedKafkaProducerAdapter(PubsubProducerAdapter baseProducer, byte[] valueToCorrupt) {
+  static class CorruptedKafkaProducerAdapter extends TransformingProducerAdapter {
+    public CorruptedKafkaProducerAdapter(PubsubProducerAdapter baseProducer, String topic, byte[] valueToCorrupt) {
       super(baseProducer, (topicName, key, value, partition) -> {
         KafkaMessageEnvelope transformedMessageEnvelope = value;
 
