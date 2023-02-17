@@ -5,11 +5,14 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 
 
 public class ApacheKafkaUtils {
+  public static final RecordHeaders EMPTY_RECORD_HEADERS = new RecordHeaders();
+
   public static RecordHeaders convertToKafkaSpecificHeaders(PubSubMessageHeaders headers) {
-    RecordHeaders recordHeaders = new RecordHeaders();
-    if (headers != null) {
-      headers.toList().forEach(header -> recordHeaders.add(header.key(), header.value()));
+    if (headers == null) {
+      return EMPTY_RECORD_HEADERS;
     }
+    RecordHeaders recordHeaders = new RecordHeaders();
+    headers.toList().forEach(header -> recordHeaders.add(header.key(), header.value()));
     return recordHeaders;
   }
 }
