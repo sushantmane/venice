@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.Metric;
@@ -82,14 +81,10 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    Callback kafkaCallback = null;
-    if (pubsubProducerCallback != null) {
-      kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
-    }
+    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     try {
-      // TODO: evaluate if it makes sense to complete Future<PubSubProduceResult> in callback itself or
-      // use producer interceptors
-      return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
+      producer.send(record, kafkaCallback);
+      return kafkaCallback.getProduceResultFuture();
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
