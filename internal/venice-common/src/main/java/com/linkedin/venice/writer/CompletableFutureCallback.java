@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -20,7 +20,7 @@ public class CompletableFutureCallback implements PubSubProducerCallback {
   }
 
   @Override
-  public void onCompletion(PubsubProduceResult produceResult, Exception e) {
+  public void onCompletion(PubSubProduceResult produceResult, Exception e) {
     callback.onCompletion(produceResult, e);
     if (e == null) {
       completableFuture.complete(null);

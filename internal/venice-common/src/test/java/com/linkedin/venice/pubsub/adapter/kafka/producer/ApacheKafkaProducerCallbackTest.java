@@ -6,7 +6,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
@@ -24,7 +24,7 @@ public class ApacheKafkaProducerCallbackTest {
     assertTrue(internalCallback.isInvoked());
     assertNull(internalCallback.getException());
     assertNotNull(internalCallback.getProduceResult());
-    PubsubProduceResult produceResult = internalCallback.getProduceResult();
+    PubSubProduceResult produceResult = internalCallback.getProduceResult();
     assertEquals(produceResult.topic(), recordMetadata.topic());
     assertEquals(produceResult.partition(), recordMetadata.partition());
     assertEquals(produceResult.offset(), recordMetadata.offset());
@@ -44,7 +44,7 @@ public class ApacheKafkaProducerCallbackTest {
     assertEquals(internalCallback.getException(), exception);
 
     assertNotNull(internalCallback.getProduceResult());
-    PubsubProduceResult produceResult = internalCallback.getProduceResult();
+    PubSubProduceResult produceResult = internalCallback.getProduceResult();
     assertEquals(produceResult.topic(), recordMetadata.topic());
     assertEquals(produceResult.partition(), recordMetadata.partition());
     assertEquals(produceResult.offset(), recordMetadata.offset());

@@ -5,9 +5,9 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,7 +67,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
    * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<PubsubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -86,7 +86,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
       kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
     }
     try {
-      // TODO: evaluate if it makes sense to complete Future<PubsubProduceResult> in callback itself or
+      // TODO: evaluate if it makes sense to complete Future<PubSubProduceResult> in callback itself or
       // use producer interceptors
       return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
     } catch (Exception e) {

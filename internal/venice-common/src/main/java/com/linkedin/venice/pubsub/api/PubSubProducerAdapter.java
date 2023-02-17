@@ -36,7 +36,7 @@ public interface PubSubProducerAdapter {
     return future.get(timeout, timeUnit);
   }
 
-  Future<PubsubProduceResult> sendMessage(
+  Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -44,7 +44,7 @@ public interface PubSubProducerAdapter {
       PubSubMessageHeaders headers,
       PubSubProducerCallback callback);
 
-  default Future<PubsubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
+  default Future<PubSubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
     return sendMessage(topic, null, key, value, null, null);
   }
 

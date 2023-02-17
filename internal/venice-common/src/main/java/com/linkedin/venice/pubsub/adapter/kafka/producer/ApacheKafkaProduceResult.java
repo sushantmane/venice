@@ -1,14 +1,14 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import com.linkedin.venice.pubsub.adapter.SimplePubsubProduceResultImpl;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
 /**
- * Converts RecordMetadata to {@link PubsubProduceResult}
+ * Converts RecordMetadata to {@link PubSubProduceResult}
  */
-public class ApacheKafkaProduceResult extends SimplePubsubProduceResultImpl {
+public class ApacheKafkaProduceResult extends SimplePubSubProduceResultImpl {
   public ApacheKafkaProduceResult(RecordMetadata recordMetadata) {
     super(
         recordMetadata.topic(),

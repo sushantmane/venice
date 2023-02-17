@@ -5,7 +5,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.writer.VeniceWriter;
 import java.nio.ByteBuffer;
 
@@ -33,7 +33,7 @@ public class ActiveActiveProducerCallback extends LeaderProducerCallback {
   }
 
   @Override
-  public void onCompletion(PubsubProduceResult produceResult, Exception exception) {
+  public void onCompletion(PubSubProduceResult produceResult, Exception exception) {
     this.onCompletionFunction.run();
     super.onCompletion(produceResult, exception);
   }

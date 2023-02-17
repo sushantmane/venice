@@ -8,5 +8,5 @@ public interface PubSubProducerCallback {
   /**
    * exception will be null if request was completed without an error.
    */
-  void onCompletion(PubsubProduceResult produceResult, Exception exception);
+  void onCompletion(PubSubProduceResult produceResult, Exception exception);
 }

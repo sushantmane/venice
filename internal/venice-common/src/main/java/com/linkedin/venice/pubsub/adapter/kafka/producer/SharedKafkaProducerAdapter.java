@@ -3,9 +3,9 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
 import com.linkedin.venice.stats.StatsErrorCode;
@@ -70,7 +70,7 @@ public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
    * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<PubsubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -78,7 +78,7 @@ public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
       PubSubMessageHeaders headers,
       PubSubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<PubsubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
+    Future<PubSubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
     sharedKafkaProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }

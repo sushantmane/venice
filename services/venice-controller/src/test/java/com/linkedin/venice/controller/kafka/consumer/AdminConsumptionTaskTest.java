@@ -72,7 +72,7 @@ import com.linkedin.venice.offsets.InMemoryOffsetManager;
 import com.linkedin.venice.offsets.OffsetManager;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.DefaultSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -237,7 +237,7 @@ public class AdminConsumptionTaskTest {
         pubSubMessageDeserializer);
   }
 
-  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(PubsubProduceResult produceResult) {
+  private Pair<TopicPartition, Long> getTopicPartitionOffsetPair(PubSubProduceResult produceResult) {
     return new Pair<>(new TopicPartition(produceResult.topic(), produceResult.partition()), produceResult.offset());
   }
 
@@ -370,7 +370,7 @@ public class AdminConsumptionTaskTest {
   @Test(timeOut = TIMEOUT)
   public void testDelegateExceptionSetsFailingOffset() throws ExecutionException, InterruptedException, IOException {
     long failingOffset =
-        ((PubsubProduceResult) veniceWriter
+        ((PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
@@ -457,8 +457,8 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testRunWithDuplicateMessagesWithSameOffset() throws Exception {
-    PubsubProduceResult killJobMetadata =
-        (PubsubProduceResult) veniceWriter
+    PubSubProduceResult killJobMetadata =
+        (PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
@@ -529,8 +529,8 @@ public class AdminConsumptionTaskTest {
     OffsetRecord offsetRecord = getOffsetRecordByOffsetAndSeqNum(firstAdminMessageOffset, firstAdminMessageSeqNum);
     offsetManager.put(topicName, AdminTopicUtils.ADMIN_TOPIC_PARTITION_ID, offsetRecord);
 
-    PubsubProduceResult killJobMetadata =
-        (PubsubProduceResult) veniceWriter
+    PubSubProduceResult killJobMetadata =
+        (PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
@@ -579,7 +579,7 @@ public class AdminConsumptionTaskTest {
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     long offsetToSkip =
-        ((PubsubProduceResult) veniceWriter
+        ((PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
@@ -676,7 +676,7 @@ public class AdminConsumptionTaskTest {
     String storeName3 = "test_store3";
 
     VeniceWriter oldVeniceWriter = getVeniceWriter(inMemoryKafkaBroker);
-    Future<PubsubProduceResult> metadataForStoreName0Future = oldVeniceWriter.put(
+    Future<PubSubProduceResult> metadataForStoreName0Future = oldVeniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName0, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1051,7 +1051,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    Future<PubsubProduceResult> future = veniceWriter.put(
+    Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1085,7 +1085,7 @@ public class AdminConsumptionTaskTest {
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     long failingOffset =
-        ((PubsubProduceResult) veniceWriter
+        ((PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getAddVersionMessage(clusterName, storeName, mockPushJobId, 1, 1, 2L),
@@ -1147,7 +1147,7 @@ public class AdminConsumptionTaskTest {
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    Future<PubsubProduceResult> future = veniceWriter.put(
+    Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1203,7 +1203,7 @@ public class AdminConsumptionTaskTest {
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     // New admin messages should fail with DIV error
-    Future<PubsubProduceResult> future = veniceWriter.put(
+    Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1258,7 +1258,7 @@ public class AdminConsumptionTaskTest {
             -1,
             1,
             false);
-    Future<PubsubProduceResult> future = veniceWriter.put(
+    Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getAddVersionMessage(clusterName, storeName, mockPushJobId, versionNumber, numberOfPartitions, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);

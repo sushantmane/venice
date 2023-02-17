@@ -33,9 +33,9 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
@@ -415,7 +415,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> delete(K key, PubSubProducerCallback callback) {
+  public Future<PubSubProduceResult> delete(K key, PubSubProducerCallback callback) {
     return delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
   }
 
@@ -429,7 +429,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> delete(K key, long logicalTs, PubSubProducerCallback callback) {
+  public Future<PubSubProduceResult> delete(K key, long logicalTs, PubSubProducerCallback callback) {
     return delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null);
   }
 
@@ -447,7 +447,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> delete(
+  public Future<PubSubProduceResult> delete(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper) {
@@ -469,7 +469,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> delete(
+  public Future<PubSubProduceResult> delete(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
@@ -492,7 +492,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> delete(
+  public Future<PubSubProduceResult> delete(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
@@ -501,7 +501,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public Future<PubsubProduceResult> delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
+  public Future<PubSubProduceResult> delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
     return delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, deleteMetadata);
   }
 
@@ -521,7 +521,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  private Future<PubsubProduceResult> delete(
+  private Future<PubSubProduceResult> delete(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
@@ -581,12 +581,12 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
   @Override
-  public Future<PubsubProduceResult> put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
+  public Future<PubSubProduceResult> put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
     return put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
   }
 
   @Override
-  public Future<PubsubProduceResult> put(
+  public Future<PubSubProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
@@ -614,7 +614,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> put(
+  public Future<PubSubProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
@@ -632,7 +632,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * >=0: Leader replica consumes a put message from real-time topic, VeniceWriter in leader
    *      is sending this message to version topic with extra info: offset in the real-time topic.
    */
-  public Future<PubsubProduceResult> put(
+  public Future<PubSubProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
@@ -661,7 +661,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubsubProduceResult> put(
+  public Future<PubSubProduceResult> put(
       K key,
       V value,
       int valueSchemaId,
@@ -734,7 +734,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * TODO: move pass-through supports into a server-specific extension of VeniceWriter
    */
   @Deprecated
-  public Future<PubsubProduceResult> put(
+  public Future<PubSubProduceResult> put(
       KafkaKey kafkaKey,
       KafkaMessageEnvelope kafkaMessageEnvelope,
       PubSubProducerCallback callback,
@@ -770,7 +770,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * DIV pass-through mode for delete
    */
-  public Future<PubsubProduceResult> delete(
+  public Future<PubSubProduceResult> delete(
       KafkaKey kafkaKey,
       KafkaMessageEnvelope kafkaMessageEnvelope,
       PubSubProducerCallback callback,
@@ -791,7 +791,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public Future<PubsubProduceResult> update(
+  public Future<PubSubProduceResult> update(
       K key,
       U update,
       int valueSchemaId,
@@ -800,7 +800,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return update(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
   }
 
-  public Future<PubsubProduceResult> update(
+  public Future<PubSubProduceResult> update(
       K key,
       U update,
       int valueSchemaId,
@@ -1031,7 +1031,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * Data message like PUT and DELETE should call this API to enable DIV check.
    */
-  private Future<PubsubProduceResult> sendMessage(
+  private Future<PubSubProduceResult> sendMessage(
       KeyProvider keyProvider,
       MessageType messageType,
       Object payload,
@@ -1051,7 +1051,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         logicalTs);
   }
 
-  private Future<PubsubProduceResult> sendMessage(
+  private Future<PubSubProduceResult> sendMessage(
       KeyProvider keyProvider,
       MessageType messageType,
       Object payload,
@@ -1094,7 +1094,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param updateDIV if true, the partition's segment's checksum will be updated and its sequence number incremented
    *                  if false, the checksum and seq# update are omitted, which is the right thing to do during retries
    */
-  private Future<PubsubProduceResult> sendMessage(
+  private Future<PubSubProduceResult> sendMessage(
       KeyProvider keyProvider,
       KafkaMessageEnvelopeProvider valueProvider,
       int partition,
@@ -1167,7 +1167,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * This function implements chunking of a large value into many small values.
    */
-  private Future<PubsubProduceResult> putLargeValue(
+  private Future<PubSubProduceResult> putLargeValue(
       byte[] serializedKey,
       byte[] serializedValue,
       int valueSchemaId,
@@ -1440,7 +1440,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * Producer DIV will be recalculated (not DIV pass-through mode); checksum for the input partition in this producer
    * will also be updated.
    */
-  public Future<PubsubProduceResult> asyncSendControlMessage(
+  public Future<PubSubProduceResult> asyncSendControlMessage(
       ControlMessage controlMessage,
       int partition,
       Map<String, String> debugInfo,

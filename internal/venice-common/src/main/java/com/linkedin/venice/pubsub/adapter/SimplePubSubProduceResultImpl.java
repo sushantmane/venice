@@ -1,19 +1,19 @@
 package com.linkedin.venice.pubsub.adapter;
 
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 
 
 /**
- * A simple implementation of PubsubProduceResult interface for testing purposes.
+ * A simple implementation of PubSubProduceResult interface for testing purposes.
  */
-public class SimplePubsubProduceResultImpl implements PubsubProduceResult {
+public class SimplePubSubProduceResultImpl implements PubSubProduceResult {
   private final String topic;
   private final int partition;
   private final long offset;
   private final int serializedKeySize;
   private final int serializedValueSize;
 
-  public SimplePubsubProduceResultImpl(
+  public SimplePubSubProduceResultImpl(
       String topic,
       int partition,
       long offset,

@@ -1,19 +1,19 @@
 package com.linkedin.venice.pubsub.adapter;
 
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 
 
 /**
  * A simple implementation of PubSubProducerCallback interface for testing purposes.
  */
 public class SimplePubSubProducerCallbackImpl implements PubSubProducerCallback {
-  private PubsubProduceResult produceResult;
+  private PubSubProduceResult produceResult;
   private Exception exception;
   private boolean isInvoked;
 
   @Override
-  public void onCompletion(PubsubProduceResult produceResult, Exception exception) {
+  public void onCompletion(PubSubProduceResult produceResult, Exception exception) {
     this.isInvoked = true;
     this.produceResult = produceResult;
     this.exception = exception;
@@ -23,7 +23,7 @@ public class SimplePubSubProducerCallbackImpl implements PubSubProducerCallback 
     return isInvoked;
   }
 
-  public PubsubProduceResult getProduceResult() {
+  public PubSubProduceResult getProduceResult() {
     return produceResult;
   }
 

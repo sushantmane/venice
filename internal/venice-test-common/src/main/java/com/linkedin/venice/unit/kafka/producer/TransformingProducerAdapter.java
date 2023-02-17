@@ -3,9 +3,9 @@ package com.linkedin.venice.unit.kafka.producer;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -32,7 +32,7 @@ public class TransformingProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Future<PubsubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,

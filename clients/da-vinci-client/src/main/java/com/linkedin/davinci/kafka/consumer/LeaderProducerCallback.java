@@ -8,7 +8,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.ChunkedValueManifestSerializer;
 import com.linkedin.venice.storage.protocol.ChunkedValueManifest;
@@ -66,7 +66,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
   }
 
   @Override
-  public void onCompletion(PubsubProduceResult produceResult, Exception e) {
+  public void onCompletion(PubSubProduceResult produceResult, Exception e) {
     if (e != null) {
       LOGGER.error(
           "Leader failed to send out message to version topic when consuming {}",

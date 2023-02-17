@@ -2,11 +2,11 @@ package com.linkedin.venice.unit.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.adapter.SimplePubsubProduceResultImpl;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import com.linkedin.venice.pubsub.api.PubsubProduceResult;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
 import java.util.Collections;
@@ -34,7 +34,7 @@ public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Future<PubsubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -42,9 +42,9 @@ public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
       PubSubMessageHeaders headers,
       PubSubProducerCallback callback) {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
-    PubsubProduceResult produceResult = new SimplePubsubProduceResultImpl(topic, partition, offset, -1, -1);
+    PubSubProduceResult produceResult = new SimplePubSubProduceResultImpl(topic, partition, offset, -1, -1);
     callback.onCompletion(produceResult, null);
-    return new Future<PubsubProduceResult>() {
+    return new Future<PubSubProduceResult>() {
       @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
@@ -61,12 +61,12 @@ public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
       }
 
       @Override
-      public PubsubProduceResult get() throws InterruptedException, ExecutionException {
+      public PubSubProduceResult get() throws InterruptedException, ExecutionException {
         return produceResult;
       }
 
       @Override
-      public PubsubProduceResult get(long timeout, TimeUnit unit)
+      public PubSubProduceResult get(long timeout, TimeUnit unit)
           throws InterruptedException, ExecutionException, TimeoutException {
         return produceResult;
       }
