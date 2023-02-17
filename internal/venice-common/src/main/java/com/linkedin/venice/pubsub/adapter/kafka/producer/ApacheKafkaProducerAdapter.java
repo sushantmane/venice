@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.Callback;
@@ -134,8 +135,9 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
     if (producer == null) {
       return Collections.emptyMap();
     }
-    Map<String, Double> extractedMetrics = new HashMap<>();
-    for (Map.Entry<MetricName, ? extends Metric> entry: producer.metrics().entrySet()) {
+    Set<? extends Map.Entry<MetricName, ? extends Metric>> metrics = producer.metrics().entrySet();
+    Map<String, Double> extractedMetrics = new HashMap<>(metrics.size());
+    for (Map.Entry<MetricName, ? extends Metric> entry: metrics) {
       try {
         Object value = entry.getValue().metricValue();
         if (value instanceof Double) {
