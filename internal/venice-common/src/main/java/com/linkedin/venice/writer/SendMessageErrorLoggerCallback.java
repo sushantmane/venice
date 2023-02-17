@@ -6,11 +6,11 @@ import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import org.apache.logging.log4j.Logger;
 
 
-class KafkaMessageCallback implements PubSubProducerCallback {
+class SendMessageErrorLoggerCallback implements PubSubProducerCallback {
   private final KafkaMessageEnvelope value;
   private final Logger logger;
 
-  public KafkaMessageCallback(KafkaMessageEnvelope value, Logger logger) {
+  public SendMessageErrorLoggerCallback(KafkaMessageEnvelope value, Logger logger) {
     this.value = value;
     this.logger = logger;
   }

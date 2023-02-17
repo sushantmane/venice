@@ -1112,11 +1112,11 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       }
       PubSubProducerCallback messageCallback = callback;
       if (callback == null) {
-        messageCallback = new KafkaMessageCallback(kafkaValue, logger);
+        messageCallback = new SendMessageErrorLoggerCallback(kafkaValue, logger);
       } else if (callback instanceof CompletableFutureCallback) {
         CompletableFutureCallback completableFutureCallBack = (CompletableFutureCallback) callback;
         if (completableFutureCallBack.getCallback() == null) {
-          completableFutureCallBack.setCallback(new KafkaMessageCallback(kafkaValue, logger));
+          completableFutureCallBack.setCallback(new SendMessageErrorLoggerCallback(kafkaValue, logger));
         }
       }
       try {
