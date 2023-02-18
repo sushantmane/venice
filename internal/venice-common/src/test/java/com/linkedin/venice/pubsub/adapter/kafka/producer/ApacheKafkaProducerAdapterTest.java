@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.Callback;
@@ -78,39 +77,27 @@ public class ApacheKafkaProducerAdapterTest {
     producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
   }
 
-  @Test(expectedExceptions = InterruptedException.class, expectedExceptionsMessageRegExp = "Failed to complete request")
-  public void testSendMessageThrowsExceptionWhenBlockingCallThrowsException()
-      throws ExecutionException, InterruptedException {
-    Future<RecordMetadata> recordMetadataFutureMock = mock(Future.class);
-    when(kafkaProducerMock.send(any(ProducerRecord.class), any())).thenReturn(recordMetadataFutureMock);
-    when(recordMetadataFutureMock.get()).thenThrow(new InterruptedException("Failed to complete request"));
-
-    ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
-    // blocking produce call
-    producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null).get();
-  }
-
   @Test
   public void testSendMessageInteractionWithInternalProducer() {
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
     Future<RecordMetadata> recordMetadataFutureMock = mock(Future.class);
 
-    // interaction (1) when callback is null
+    // interaction (1) when pubsub-callback is null
     when(kafkaProducerMock.send(any(ProducerRecord.class), isNull())).thenReturn(recordMetadataFutureMock);
     Future<PubSubProduceResult> produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
     assertNotNull(produceResultFuture);
-    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), isNull());
-    verify(kafkaProducerMock, never()).send(any(ProducerRecord.class), any(Callback.class));
+    verify(kafkaProducerMock, never()).send(any(ProducerRecord.class), isNull());
+    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), any(Callback.class));
 
-    // interaction (1) when callback is non-null
+    // interaction (1) when pubsub-callback is non-null
     PubSubProducerCallback producerCallbackMock = mock(PubSubProducerCallback.class);
     when(kafkaProducerMock.send(any(ProducerRecord.class), any(Callback.class))).thenReturn(recordMetadataFutureMock);
     produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, producerCallbackMock);
     assertNotNull(produceResultFuture);
-    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), isNull()); // from interaction (1)
-    verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), any(Callback.class));
+    verify(kafkaProducerMock, never()).send(any(ProducerRecord.class), isNull());
+    verify(kafkaProducerMock, times(2)).send(any(ProducerRecord.class), any(Callback.class));
   }
 
   @Test

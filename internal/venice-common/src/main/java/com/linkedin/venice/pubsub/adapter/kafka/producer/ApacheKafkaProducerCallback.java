@@ -55,7 +55,7 @@ public class ApacheKafkaProducerCallback implements Callback {
     pubsubProducerCallback.onCompletion(new ApacheKafkaProduceResult(metadata), exception);
   }
 
-  public Future<PubSubProduceResult> getProduceResultFuture() {
+  Future<PubSubProduceResult> getProduceResultFuture() {
     return produceResultFuture;
   }
 }
