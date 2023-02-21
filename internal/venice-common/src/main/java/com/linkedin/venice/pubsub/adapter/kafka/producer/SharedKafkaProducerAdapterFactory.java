@@ -8,7 +8,6 @@ import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
 import com.linkedin.venice.pubsub.adapter.PubSubSharedProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.PubSubSharedProducerFactory;
-import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
 import java.util.Map;
@@ -19,31 +18,21 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Implementation of {@link PubSubProducerAdapterFactory} used to create Apache Kafka producers in shared mode. This
- * means that a single producer may be used to send data to multiple topics concurrently.
- *
- * This service maintains a pool of kafka producer. Ingestion task can acquire or release a producer on demand basis.
- * It does lazy initialization of producers. Also, producers are assigned based on the least loaded manner.
+ * Implementation of {@link PubSubSharedProducerFactory} for creating Apache Kafka producers in shared mode.
  */
 public class SharedKafkaProducerAdapterFactory extends PubSubSharedProducerFactory {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactory.class);
   private static final String NAME = "ApacheKafkaSharedProducer";
-
   private final ApacheKafkaProducerAdapterFactory internalProducerAdapterFactory;
-
-  // stats
   private final MetricsRepository metricsRepository;
   private final Set<String> producerMetricsToBeReported;
 
   /**
-   *
    * @param properties -- List of properties to construct a kafka producer
    * @param sharedProducerPoolCount  -- producer pool sizes
-   * @param internalProducerAdapterFactory -- factory to create a KafkaProducerAdapter object
+   * @param internalProducerAdapterFactory -- factory to create a KafkaProducerAdapter instances
    * @param metricsRepository -- metric repository
-   * @param producerMetricsToBeReported -- a comma seperated list of KafkaProducer metrics that will exported as ingraph metrics
-   *
-   * Note: This producer will not work when target topic is in different fabric than the localKafkaBootstrapServers.
+   * @param producerMetricsToBeReported -- a comma separated list of KafkaProducer metrics that will export as ingraph metrics
    */
   public SharedKafkaProducerAdapterFactory(
       Properties properties,
@@ -70,10 +59,11 @@ public class SharedKafkaProducerAdapterFactory extends PubSubSharedProducerFacto
 
   @Override
   public PubSubSharedProducerAdapter createSharedProducer(int id) {
-    LOGGER.info("PubSubSharedProducerAdapter: Creating Producer id: {}", id);
-    producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + id);
+    String producerName = "shared-producer-" + id;
+    LOGGER.info("Creating a shared kafka producer: {}", producerName);
+    producerProperties.put(KAFKA_CLIENT_ID, producerName);
     ApacheKafkaProducerAdapter producerAdapter =
-        internalProducerAdapterFactory.create(new VeniceProperties(producerProperties), "shared-producer-" + id, null);
+        internalProducerAdapterFactory.create(new VeniceProperties(producerProperties), producerName, null);
     return new PubSubSharedProducerAdapter(this, producerAdapter, metricsRepository, producerMetricsToBeReported, id);
   }
 

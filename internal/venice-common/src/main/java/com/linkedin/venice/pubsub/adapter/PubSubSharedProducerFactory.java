@@ -19,8 +19,10 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * An abstract shared producer factory which should be extended by factories which intend
- * to provide shared producer functionality.
+ * This abstract class provides common functionality required to create and track shared producers.
+ *
+ * This service maintains a pool of shared producers. Ingestion task can acquire or release a producer on demand basis.
+ * It does lazy initialization of producers. Also, producers are assigned based on the least loaded manner.
  */
 public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapterFactory<PubSubSharedProducerAdapter> {
   private static final Logger LOGGER = LogManager.getLogger(PubSubSharedProducerFactory.class);

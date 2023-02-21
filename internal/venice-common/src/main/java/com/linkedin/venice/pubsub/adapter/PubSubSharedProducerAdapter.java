@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * A wrapper around a regular producer with a unique id. This producer may be
+ * A wrapper with a unique identifier around a regular producer. This producer may be
  * used to send data to multiple different topics.
  */
 public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
