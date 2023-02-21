@@ -100,7 +100,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
       return sharedProducerAdapter;
     }
 
-    int leaderLoadedProducerId = -1;
+    PubSubSharedProducerAdapter leastLoadedSharedProducer = null;
     int minProducerTaskCount = Integer.MAX_VALUE;
 
     // Do lazy creation of producers
@@ -109,7 +109,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
         // keep track of the least used producer
         if (producers[i].getProducerTaskCount() < minProducerTaskCount) {
           minProducerTaskCount = producers[i].getProducerTaskCount();
-          leaderLoadedProducerId = i;
+          leastLoadedSharedProducer = producers[i];
         }
         continue;
       }
@@ -121,12 +121,12 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
       break;
     }
 
-    // Find the least used producer instance
+    // Use the least used producer instance
     if (sharedProducerAdapter == null) {
-      if (leaderLoadedProducerId == 1) {
+      if (leastLoadedSharedProducer == null) {
         throw new VeniceException("No shared producer available");
       }
-      sharedProducerAdapter = producers[leaderLoadedProducerId];
+      sharedProducerAdapter = leastLoadedSharedProducer;
     }
 
     sharedProducerAdapter.addProducerTask(producerTaskName);
