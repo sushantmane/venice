@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.adapter.kafka.PubSubSharedProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
@@ -27,11 +28,10 @@ import org.apache.logging.log4j.Logger;
 /**
  * Implementation of the shared Kafka Producer for sending messages to multiple Kafka topics concurrently.
  */
-public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
+public class SharedKafkaProducerAdapter extends PubSubSharedProducerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapter.class);
 
   private final SharedKafkaProducerAdapterFactory sharedKafkaProducerAdapterFactory;
-  private final int id;
   private final Set<String> producerTasks;
   private final PubSubProducerAdapter producerAdapter;
 
@@ -45,8 +45,8 @@ public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
       PubSubProducerAdapter producerAdapter,
       MetricsRepository metricsRepository,
       Set<String> metricsToBeReported) {
+    super(id, sharedKafkaProducerAdapterFactory, producerAdapter, metricsRepository);
     this.sharedKafkaProducerAdapterFactory = sharedKafkaProducerAdapterFactory;
-    this.id = id;
     producerTasks = new HashSet<>();
     this.producerAdapter = producerAdapter;
     kafkaProducerMetrics = new HashMap<>();
@@ -123,26 +123,6 @@ public class SharedKafkaProducerAdapter implements PubSubProducerAdapter {
   @Override
   public String getBrokerAddress() {
     return producerAdapter.getBrokerAddress();
-  }
-
-  public int getId() {
-    return id;
-  }
-
-  public synchronized void addProducerTask(String producerTaskName) {
-    producerTasks.add(producerTaskName);
-  }
-
-  public synchronized void removeProducerTask(String producerTaskName) {
-    producerTasks.remove(producerTaskName);
-  }
-
-  public int getProducerTaskCount() {
-    return producerTasks.size();
-  }
-
-  public String toString() {
-    return "{Id: " + id + ", Task Count: " + getProducerTaskCount() + "}";
   }
 
   /**
