@@ -15,6 +15,7 @@ import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
 import io.tehuti.metrics.stats.Avg;
 import io.tehuti.metrics.stats.Max;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -114,7 +115,7 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Map<String, Double> getMeasurableProducerMetrics() {
+  public Object2DoubleMap<String> getMeasurableProducerMetrics() {
     return producerAdapter.getMeasurableProducerMetrics();
   }
 
@@ -149,12 +150,8 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
     }
 
     // measure
-    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
-    for (String metricName: producerMetrics.keySet()) {
-      producerMetrics
-          .put(metricName, metrics.getOrDefault(metricName, (double) StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
-    }
-
+    Object2DoubleMap<String> metrics = producerAdapter.getMeasurableProducerMetrics();
+    producerMetrics.replaceAll((n, v) -> metrics.getOrDefault(n, StatsErrorCode.KAFKA_CLIENT_METRICS_DEFAULT.code));
     lastStatUpdateTsMs = System.currentTimeMillis();
   }
 

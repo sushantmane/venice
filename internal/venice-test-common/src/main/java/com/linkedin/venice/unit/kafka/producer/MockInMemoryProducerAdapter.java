@@ -9,8 +9,8 @@ import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaMessage;
-import java.util.Collections;
-import java.util.Map;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -84,8 +84,8 @@ public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Map<String, Double> getMeasurableProducerMetrics() {
-    return Collections.emptyMap();
+  public Object2DoubleMap<String> getMeasurableProducerMetrics() {
+    return Object2DoubleMaps.emptyMap();
   }
 
   @Override

@@ -2,7 +2,7 @@ package com.linkedin.venice.pubsub.api;
 
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import java.util.Map;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -64,7 +64,7 @@ public interface PubSubProducerAdapter {
     close(closeTimeOutMs, true);
   }
 
-  Map<String, Double> getMeasurableProducerMetrics();
+  Object2DoubleMap<String> getMeasurableProducerMetrics();
 
   String getBrokerAddress();
 }

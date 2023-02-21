@@ -8,9 +8,10 @@ import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -126,17 +127,17 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Map<String, Double> getMeasurableProducerMetrics() {
+  public Object2DoubleMap<String> getMeasurableProducerMetrics() {
     if (producer == null) {
-      return Collections.emptyMap();
+      return Object2DoubleMaps.emptyMap();
     }
     Set<? extends Map.Entry<MetricName, ? extends Metric>> metrics = producer.metrics().entrySet();
-    Map<String, Double> extractedMetrics = new HashMap<>(metrics.size());
+    Object2DoubleMap<String> extractedMetrics = new Object2DoubleOpenHashMap<>(metrics.size());
     for (Map.Entry<MetricName, ? extends Metric> entry: metrics) {
       try {
         Object value = entry.getValue().metricValue();
         if (value instanceof Double) {
-          extractedMetrics.put(entry.getKey().name(), (Double) value);
+          extractedMetrics.put(entry.getKey().name(), (double) value);
         }
       } catch (Exception e) {
         LOGGER.warn(

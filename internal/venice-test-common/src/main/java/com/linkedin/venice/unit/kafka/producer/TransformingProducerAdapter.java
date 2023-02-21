@@ -6,7 +6,7 @@ import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
-import java.util.Map;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.util.concurrent.Future;
 
 
@@ -55,7 +55,7 @@ public class TransformingProducerAdapter implements PubSubProducerAdapter {
   }
 
   @Override
-  public Map<String, Double> getMeasurableProducerMetrics() {
+  public Object2DoubleMap<String> getMeasurableProducerMetrics() {
     return baseProducer.getMeasurableProducerMetrics();
   }
 

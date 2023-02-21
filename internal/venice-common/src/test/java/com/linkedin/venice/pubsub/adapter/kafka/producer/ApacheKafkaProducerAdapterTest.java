@@ -21,6 +21,7 @@ import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -132,7 +133,7 @@ public class ApacheKafkaProducerAdapterTest {
     doNothing().when(kafkaProducerMock).close();
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
     producerAdapter.close(10, false); // close without flushing
-    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
+    Object2DoubleMap<String> metrics = producerAdapter.getMeasurableProducerMetrics();
     assertNotNull(metrics, "Returned metrics cannot be null");
     assertEquals(metrics.size(), 0, "Should return empty metrics when producer is closed");
   }
@@ -160,7 +161,7 @@ public class ApacheKafkaProducerAdapterTest {
 
     doReturn(metricsMap).when(kafkaProducerMock).metrics();
     ApacheKafkaProducerAdapter producerAdapter = new ApacheKafkaProducerAdapter(producerConfigMock, kafkaProducerMock);
-    Map<String, Double> metrics = producerAdapter.getMeasurableProducerMetrics();
+    Object2DoubleMap<String> metrics = producerAdapter.getMeasurableProducerMetrics();
     assertNotNull(metrics, "Returned metrics cannot be null");
     assertEquals(metrics.size(), 1);
     assertTrue(metrics.containsKey("metric-1"));
