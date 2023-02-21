@@ -40,8 +40,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 
-public class SharedKafkaProducerAdapterFactoryTest {
-  private static final Logger LOGGER = LogManager.getLogger(SharedKafkaProducerAdapterFactoryTest.class);
+public class PubSubSharedProducerAdapterFactoryTest {
+  private static final Logger LOGGER = LogManager.getLogger(PubSubSharedProducerAdapterFactoryTest.class);
 
   private KafkaBrokerWrapper kafka;
   private TopicManager topicManager;

@@ -6,8 +6,8 @@ import static com.linkedin.venice.pubsub.adapter.kafka.producer.SharedKafkaProdu
 import static com.linkedin.venice.writer.VeniceWriter.CLOSE_TIMEOUT_MS;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
+import com.linkedin.venice.pubsub.adapter.PubSubSharedProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.PubSubSharedProducerFactory;
-import com.linkedin.venice.pubsub.adapter.kafka.PubSubSharedProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
@@ -74,7 +74,7 @@ public class SharedKafkaProducerAdapterFactory extends PubSubSharedProducerFacto
     producerProperties.put(KAFKA_CLIENT_ID, "shared-producer-" + id);
     ApacheKafkaProducerAdapter producerAdapter =
         internalProducerAdapterFactory.create(new VeniceProperties(producerProperties), "shared-producer-" + id, null);
-    return new SharedKafkaProducerAdapter(this, id, producerAdapter, metricsRepository, producerMetricsToBeReported);
+    return new PubSubSharedProducerAdapter(this, producerAdapter, metricsRepository, producerMetricsToBeReported, id);
   }
 
   @Override

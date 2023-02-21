@@ -3,7 +3,6 @@ package com.linkedin.venice.pubsub.adapter;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_CLOSE_TIMEOUT_MS;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.adapter.kafka.PubSubSharedProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterFactory;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -142,7 +141,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
     }
 
     if (!producerTaskToProducerMap.containsKey(producerTaskName)) {
-      LOGGER.error("SharedKafkaProducerAdapter: {} does not have a producer", producerTaskName);
+      LOGGER.error("PubSubSharedProducerAdapter: {} does not have a producer", producerTaskName);
       return;
     }
     PubSubSharedProducerAdapter sharedProducerAdapter = producerTaskToProducerMap.get(producerTaskName);
