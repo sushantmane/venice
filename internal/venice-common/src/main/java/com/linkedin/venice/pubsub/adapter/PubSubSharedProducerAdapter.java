@@ -99,7 +99,7 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
   @Override
   public void close(String topic, int closeTimeoutMs) {
     if (sharedProducerFactory.isRunning()) {
-      sharedProducerFactory.releaseKafkaProducer(topic);
+      sharedProducerFactory.releaseSharedProducer(topic);
     } else {
       LOGGER.info("Producer is already closed, can't release for topic: {}", topic);
     }
@@ -162,10 +162,10 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
     private final Sensor producerSendLatencySensor;
 
     public SharedProducerStats(MetricsRepository metricsRepository) {
-      super(metricsRepository, "PubSubSharedProducerAdapter");
+      super(metricsRepository, "PubSubSharedProducer");
       producerMetrics.keySet().forEach(metric -> {
         String metricName = "producer_" + id + "_" + metric;
-        LOGGER.info("PubSubSharedProducerAdapter: Registering metric: {}", metricName);
+        LOGGER.info("Registering metric: {}", metricName);
         registerSensorIfAbsent(metricName, new Gauge(() -> {
           mayBeCalculateAllProducerMetrics();
           return producerMetrics.get(metric);

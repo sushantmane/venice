@@ -18,6 +18,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
+/**
+ * An abstract shared producer factory which should be extended by factories which intend
+ * to provide shared producer functionality.
+ */
 public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapterFactory<PubSubSharedProducerAdapter> {
   private static final Logger LOGGER = LogManager.getLogger(PubSubSharedProducerFactory.class);
   private final PubSubSharedProducerAdapter[] producers;
@@ -37,8 +41,6 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
    * @param sharedProducerPoolCount  -- producer pool sizes
    * @param properties -- List of properties to construct a producer
    * @param metricsRepository -- metric repository
-   *
-   * Note: This producer will not work when target topic is in different fabric than the localKafkaBootstrapServers.
    */
   public PubSubSharedProducerFactory(
       int sharedProducerPoolCount,
@@ -54,7 +56,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
   @Override
   public synchronized void close() {
     isRunning = false;
-    LOGGER.info("Closing PubSubSharedProducerFactory");
+    LOGGER.info("Closing shared producer factory");
     // This map should be empty when this is called.
     if (!producerTaskToProducerMap.isEmpty()) {
       LOGGER.warn(
@@ -67,14 +69,14 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
       try {
         // Force close all the producer even if there are active producerTask assigned to it.
         LOGGER.info(
-            "PubSubSharedProducerAdapter: Closing producer: {}, Currently assigned task count: {}",
+            "Closing producer: {}, Currently assigned task count: {}",
             sharedProducerAdapter,
             sharedProducerAdapter.getProducerTaskCount());
         sharedProducerAdapter.close(producerCloseTimeout, false);
         producers[sharedProducerAdapter.getId()] = null;
         decrActiveSharedProducerCount();
       } catch (Exception e) {
-        LOGGER.warn("PubSubSharedProducerAdapter: Error in closing shared producer", e);
+        LOGGER.warn("Error in closing shared producer", e);
       }
     });
   }
@@ -83,7 +85,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
     return isRunning;
   }
 
-  public synchronized PubSubSharedProducerAdapter acquireKafkaProducer(String producerTaskName) {
+  public synchronized PubSubSharedProducerAdapter acquireSharedProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
           "Shared producer factory is already closed, can't assign new producer for task:" + producerTaskName);
@@ -134,14 +136,14 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
     return sharedProducerAdapter;
   }
 
-  public synchronized void releaseKafkaProducer(String producerTaskName) {
+  public synchronized void releaseSharedProducer(String producerTaskName) {
     if (!isRunning) {
       throw new VeniceException(
-          "PubSubSharedProducerFactory is already closed, can't release the producer for task:" + producerTaskName);
+          "Shared producer factory has been already closed, can't release the producer for task:" + producerTaskName);
     }
 
     if (!producerTaskToProducerMap.containsKey(producerTaskName)) {
-      LOGGER.error("PubSubSharedProducerAdapter: {} does not have a producer", producerTaskName);
+      LOGGER.error("Shared producer factory does not have a producer for:{}", producerTaskName);
       return;
     }
     PubSubSharedProducerAdapter sharedProducerAdapter = producerTaskToProducerMap.get(producerTaskName);
@@ -162,7 +164,7 @@ public abstract class PubSubSharedProducerFactory implements PubSubProducerAdapt
       VeniceProperties veniceProperties,
       String topicName,
       String brokerAddressToOverride) {
-    return acquireKafkaProducer(topicName);
+    return acquireSharedProducer(topicName);
   }
 
   /**

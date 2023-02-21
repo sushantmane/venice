@@ -169,24 +169,24 @@ public class PubSubSharedProducerAdapterFactoryTest {
           }, new MetricsRepository(), Collections.EMPTY_SET);
 
       // Create at least 8 tasks to assign each producer a task.
-      PubSubProducerAdapter producer1 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task2");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task3");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task4");
-      PubSubProducerAdapter producer5 = sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task5");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task6");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task7");
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task8");
+      PubSubProducerAdapter producer1 = sharedKafkaProducerAdapterFactory.acquireSharedProducer("task1");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task2");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task3");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task4");
+      PubSubProducerAdapter producer5 = sharedKafkaProducerAdapterFactory.acquireSharedProducer("task5");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task6");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task7");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task8");
 
       // verify same task acquires the same producer.
-      Assert.assertEquals(producer1, sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1"));
+      Assert.assertEquals(producer1, sharedKafkaProducerAdapterFactory.acquireSharedProducer("task1"));
 
       // release a producer and verify the last released producer is returned for a new task.
-      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task5");
-      Assert.assertEquals(producer5, sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task9"));
+      sharedKafkaProducerAdapterFactory.releaseSharedProducer("task5");
+      Assert.assertEquals(producer5, sharedKafkaProducerAdapterFactory.acquireSharedProducer("task9"));
 
       // already released producer should not cause any harm.
-      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task5");
+      sharedKafkaProducerAdapterFactory.releaseSharedProducer("task5");
     } finally {
       if (sharedKafkaProducerAdapterFactory != null) {
         sharedKafkaProducerAdapterFactory.close();
@@ -208,8 +208,8 @@ public class PubSubSharedProducerAdapterFactoryTest {
               return mock(ApacheKafkaProducerAdapter.class);
             }
           }, new MetricsRepository(), Collections.EMPTY_SET);
-      sharedKafkaProducerAdapterFactory.acquireKafkaProducer("task1");
-      sharedKafkaProducerAdapterFactory.releaseKafkaProducer("task1");
+      sharedKafkaProducerAdapterFactory.acquireSharedProducer("task1");
+      sharedKafkaProducerAdapterFactory.releaseSharedProducer("task1");
     } finally {
       if (sharedKafkaProducerAdapterFactory != null) {
         sharedKafkaProducerAdapterFactory.close();
