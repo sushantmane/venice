@@ -16,7 +16,6 @@ import com.linkedin.venice.kafka.protocol.VersionSwap;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionImpl;
-import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.schema.rmd.RmdSchemaGenerator;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.views.ChangeCaptureView;
@@ -31,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Future;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -86,10 +84,9 @@ public class ChangeCaptureViewWriterTest {
     urlMappingMap.put(LTX_1, 0);
     urlMappingMap.put(LVA_1, 1);
     urlMappingMap.put(LOR_1, 2);
-    Future<PubSubProduceResult> mockFuture = Mockito.mock(Future.class);
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.when(mockVeniceWriter.put(Mockito.any(), Mockito.any(), Mockito.anyInt())).thenReturn(mockFuture);
+    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
@@ -158,10 +155,9 @@ public class ChangeCaptureViewWriterTest {
 
     VeniceProperties props = new VeniceProperties();
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
-    Future<PubSubProduceResult> mockFuture = Mockito.mock(Future.class);
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.when(mockVeniceWriter.put(Mockito.any(), Mockito.any(), Mockito.anyInt())).thenReturn(mockFuture);
+    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
@@ -189,10 +185,9 @@ public class ChangeCaptureViewWriterTest {
     Store mockStore = Mockito.mock(Store.class);
     VeniceProperties props = new VeniceProperties();
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
-    Future<PubSubProduceResult> mockFuture = Mockito.mock(Future.class);
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.when(mockVeniceWriter.put(Mockito.any(), Mockito.any(), Mockito.anyInt())).thenReturn(mockFuture);
+    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);

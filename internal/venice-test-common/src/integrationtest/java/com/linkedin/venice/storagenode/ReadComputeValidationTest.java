@@ -398,7 +398,7 @@ public class ReadComputeValidationTest {
     for (Map.Entry<Integer, GenericRecord> keyValue: valuesByKey.entrySet()) {
       byte[] compressedValue = compressorFactory.getCompressor(CompressionStrategy.NO_OP)
           .compress(serializer.serialize(topic, keyValue.getValue()));
-      veniceWriter.put(keyValue.getKey(), compressedValue, valueSchemaId).get();
+      veniceWriter.putSync(keyValue.getKey(), compressedValue, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(Collections.emptyMap());
@@ -426,7 +426,7 @@ public class ReadComputeValidationTest {
       value.put("member_feature", MF_EMBEDDING);
       byte[] compressedValue =
           compressorFactory.getCompressor(CompressionStrategy.NO_OP).compress(serializer.serialize(topic, value));
-      veniceWriter.put(i, compressedValue, valueSchemaId).get();
+      veniceWriter.putSync(i, compressedValue, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

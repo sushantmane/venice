@@ -382,7 +382,7 @@ public class DaVinciClientTest {
       writer.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[KEY_COUNT];
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = writer.put(i, pushVersion, valueSchemaId);
+        writerFutures[i] = writer.putSync(i, pushVersion, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();
@@ -752,7 +752,7 @@ public class DaVinciClientTest {
       batchProducer.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[KEY_COUNT];
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = batchProducer.put(i, i, valueSchemaId);
+        writerFutures[i] = batchProducer.putSync(i, i, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();

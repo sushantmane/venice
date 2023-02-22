@@ -25,7 +25,11 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
     return this.topicName;
   }
 
-  public Future<PubSubProduceResult> put(K key, V value, int valueSchemaId) {
+  public void put(K key, V value, int valueSchemaId) {
+    put(key, value, valueSchemaId, null);
+  }
+
+  public Future<PubSubProduceResult> putSync(K key, V value, int valueSchemaId) {
     return putSync(key, value, valueSchemaId, null);
   }
 

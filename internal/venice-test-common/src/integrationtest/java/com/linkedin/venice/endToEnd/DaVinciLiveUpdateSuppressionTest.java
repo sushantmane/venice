@@ -124,7 +124,7 @@ public class DaVinciLiveUpdateSuppressionTest {
         vwFactory.createVeniceWriter(topic, keySerializer, valueSerializer, false)) {
       batchProducer.broadcastStartOfPush(Collections.emptyMap());
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = batchProducer.put(i, i, valueSchemaId);
+        writerFutures[i] = batchProducer.putSync(i, i, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();
@@ -149,7 +149,7 @@ public class DaVinciLiveUpdateSuppressionTest {
       client.subscribe(Collections.singleton(0)).get();
       writerFutures = new Future[KEY_COUNT];
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = realTimeProducer.put(i, i * 1000, valueSchemaId);
+        writerFutures[i] = realTimeProducer.putSync(i, i * 1000, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();

@@ -114,7 +114,7 @@ public class TestEarlyTermination {
     // Insert test record and wait synchronously for it to succeed
     for (int i = 0; i < 100; ++i) {
 
-      veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId).get();
+      veniceWriter.putSync(keyPrefix + i, valuePrefix + i, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

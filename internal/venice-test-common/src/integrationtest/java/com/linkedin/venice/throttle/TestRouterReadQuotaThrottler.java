@@ -66,7 +66,7 @@ public class TestRouterReadQuotaThrottler {
 
       writer.broadcastStartOfPush(new HashMap<>());
       // Insert test record and wait synchronously for it to succeed
-      writer.put(key, value, valueSchemaId).get();
+      writer.putSync(key, value, valueSchemaId).get();
       // Write end of push message to make node become ONLINE from BOOTSTRAP
       writer.broadcastEndOfPush(new HashMap<String, String>());
     }

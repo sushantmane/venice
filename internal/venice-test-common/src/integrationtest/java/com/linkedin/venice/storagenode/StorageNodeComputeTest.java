@@ -442,7 +442,7 @@ public class StorageNodeComputeTest {
     Future[] writerFutures = new Future[numOfRecords];
     for (int i = 0; i < numOfRecords; i++) {
       byte[] compressedValue = compressor.compress(values.get(i));
-      writerFutures[i] = veniceWriter.put(keyPrefix + i, compressedValue, valueSchemaId);
+      writerFutures[i] = veniceWriter.putSync(keyPrefix + i, compressedValue, valueSchemaId);
     }
 
     // wait synchronously for them to succeed

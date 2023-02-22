@@ -200,7 +200,7 @@ public class VeniceClusterInitializer implements Closeable {
       veniceWriter.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[ENTRY_COUNT];
       for (int i = 0; i < ENTRY_COUNT; i++) {
-        writerFutures[i] = veniceWriter.put(KEY_PREFIX + i, values.get(i), valueSchemaId);
+        writerFutures[i] = veniceWriter.putSync(KEY_PREFIX + i, values.get(i), valueSchemaId);
       }
 
       // wait synchronously for them to succeed
