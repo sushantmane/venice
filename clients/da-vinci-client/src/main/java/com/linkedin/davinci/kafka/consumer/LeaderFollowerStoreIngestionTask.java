@@ -2701,7 +2701,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         consumerRecord.getTopicPartition().getPartitionNumber(),
                         leaderMetadataWrapper);
               } else {
-                veniceWriter.get().delete(keyBytes, callback, leaderMetadataWrapper);
+                veniceWriter.get().deleteAsync(keyBytes, callback, leaderMetadataWrapper);
               }
             },
             subPartition,
