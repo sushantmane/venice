@@ -630,9 +630,9 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
       if (valueSchemaIdPair.getSecond() == -1) {
         if (logicalTimestamp > 0) {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
         } else {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), callback);
         }
       } else {
         if (!isWriteComputeEnabled) {

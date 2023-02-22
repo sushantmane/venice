@@ -2655,7 +2655,12 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                  * please check {@link com.linkedin.venice.partitioner.UserPartitionAwarePartitioner}
                  */
                 veniceWriter.get()
-                    .put(keyBytes, ByteUtils.extractByteArray(putValue), put.schemaId, callback, leaderMetadataWrapper);
+                    .putAsync(
+                        keyBytes,
+                        ByteUtils.extractByteArray(putValue),
+                        put.schemaId,
+                        callback,
+                        leaderMetadataWrapper);
               }
             },
             subPartition,
@@ -2824,7 +2829,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
       BiConsumer<ChunkAwareCallback, LeaderMetadataWrapper> produce =
           (callback, leaderMetadataWrapper) -> veniceWriter.get()
-              .put(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper);
+              .putAsync(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper);
 
       produceToLocalKafka(
           consumerRecord,

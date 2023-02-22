@@ -518,16 +518,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         produceResultFuture);
   }
 
-  /**
-   * Execute a standard "put" on the key.
-   *
-   * @param key   - The key to put in storage.
-   * @param value - The value to be associated with the given key
-   * @param valueSchemaId - value schema id for the given value
-   * @param callback - Callback function invoked by Kafka producer after sending the message
-   */
+  /* DELETE op convenience methods */
   @Override
-  public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
+  public void putAsync(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
     put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
@@ -546,7 +539,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback, PutMetadata putMetadata) {
+  public void putAsync(K key, V value, int valueSchemaId, PubSubProducerCallback callback, PutMetadata putMetadata) {
     put(
         key,
         value,
@@ -558,20 +551,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         null);
   }
 
-  /**
-   * Execute a standard "put" on the key.
-   *
-   * @param key   - The key to put in storage.
-   * @param value - The value to be associated with the given key
-   * @param valueSchemaId - value schema id for the given value
-   * @param logicalTs - A timestamp field to indicate when this record was produced from apps view.
-   * @param callback - Callback function invoked by Kafka producer after sending the message
-   * @param
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
-   */
-  public void put(K key, V value, int valueSchemaId, long logicalTs, PubSubProducerCallback callback) {
+  public void putAsync(K key, V value, int valueSchemaId, long logicalTs, PubSubProducerCallback callback) {
     put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
   }
 
@@ -586,16 +566,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return produceResultFuture;
   }
 
-  /**
-   * VeniceWriter in the leader replica should call this API to fulfill extra metadata information --- upstreamOffset.
-   *
-   * UpstreamOffset is the offset of PUT message in the source topic:
-   * -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
-   *      sending the message in VPJ plugin to the version topic;
-   * >=0: Leader replica consumes a put message from real-time topic, VeniceWriter in leader
-   *      is sending this message to version topic with extra info: offset in the real-time topic.
-   */
-  public void put(
+  public void putAsync(
       K key,
       V value,
       int valueSchemaId,
@@ -620,9 +591,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    *         is sending this message to version topic with extra info: offset in the real-time topic.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps view.
    * @param putMetadata - a PutMetadata containing replication metadata related fields (can be null).
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
+   * @param produceResultFuture - If not null, this CompletableFuture is used to return the result of async call.
    */
   public void put(
       K key,
@@ -632,7 +601,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       LeaderMetadataWrapper leaderMetadataWrapper,
       long logicalTs,
       PutMetadata putMetadata,
-      CompletableFuture<PubSubProduceResult> produceResult) {
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     byte[] serializedKey = keySerializer.serialize(topicName, key);
     byte[] serializedValue = valueSerializer.serialize(topicName, value);
     int partition = getPartition(serializedKey);
@@ -651,7 +620,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
             leaderMetadataWrapper,
             logicalTs,
             putMetadata,
-            produceResult);
+            produceResultFuture);
         return;
       } else {
         throw new RecordTooLargeException(
@@ -690,7 +659,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         callback,
         leaderMetadataWrapper,
         logicalTs,
-        produceResult);
+        produceResultFuture);
   }
 
   /**

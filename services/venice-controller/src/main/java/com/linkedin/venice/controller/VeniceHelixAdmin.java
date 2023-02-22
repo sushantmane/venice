@@ -1090,7 +1090,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               .build());
     });
 
-    pushJobDetailsWriter.put(key, value, pushJobDetailsSchemaId, null);
+    pushJobDetailsWriter.putAsync(key, value, pushJobDetailsSchemaId, null);
   }
 
   /**

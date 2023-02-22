@@ -42,7 +42,7 @@ public class VeniceWriterUnitTest {
     String key = "test-key";
 
     ArgumentCaptor<Integer> putPartitionArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    writer.put(key, valueString, 1, null);
+    writer.putAsync(key, valueString, 1, null);
     verify(mockedProducer, atLeast(2))
         .sendMessage(anyString(), putPartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 

@@ -121,12 +121,12 @@ public class VeniceReducer extends AbstractMapReduceTask
             writer.deleteAsync(keyBytes, callback, deleteMetadata);
           } else {
             PutMetadata putMetadata = (new PutMetadata(rmdVersionId, rmdPayload));
-            writer.put(keyBytes, valueBytes, valueSchemaId, callback, putMetadata);
+            writer.putAsync(keyBytes, valueBytes, valueSchemaId, callback, putMetadata);
           }
         } else if (enableWriteCompute && derivedValueSchemaId > 0) {
           writer.update(keyBytes, valueBytes, valueSchemaId, derivedValueSchemaId, callback);
         } else {
-          writer.put(keyBytes, valueBytes, valueSchemaId, callback, null);
+          writer.putAsync(keyBytes, valueBytes, valueSchemaId, callback, null);
         }
       };
     }

@@ -70,7 +70,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   public void testReducerPutWithTooLargeValueAndChunkingDisabled() {
     AbstractVeniceWriter mockWriter = mock(AbstractVeniceWriter.class);
     doThrow(new RecordTooLargeException("expected exception")).when(mockWriter)
-        .put(any(), any(), anyInt(), any(), any());
+        .putAsync(any(), any(), anyInt(), any(), any());
     testReduceWithTooLargeValueAndChunkingDisabled(mockWriter, setupJobConf());
   }
 
@@ -127,7 +127,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
         ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
-    verify(mockWriter).put(
+    verify(mockWriter).putAsync(
         keyCaptor.capture(),
         valueCaptor.capture(),
         schemaIdCaptor.capture(),
@@ -300,7 +300,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
         Arrays.asList(new BytesWritable("test_value_0".getBytes()), new BytesWritable("test_value_1".getBytes()));
     OutputCollector mockCollector = mock(OutputCollector.class);
     reducer.reduce(new BytesWritable(keyBytes), values.iterator(), mockCollector, mockReporter);
-    verify(mockWriter).put(any(), any(), anyInt(), any(), any()); // Expect the writer to be invoked
+    verify(mockWriter).putAsync(any(), any(), anyInt(), any(), any()); // Expect the writer to be invoked
     Assert.assertFalse(reducer.hasReportedFailure(mockReporter, isDuplicateKeyAllowed));
   }
 
@@ -316,7 +316,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     OutputCollector mockCollector = mock(OutputCollector.class);
     AbstractVeniceWriter mockVeniceWriter = mock(AbstractVeniceWriter.class);
     doThrow(new TopicAuthorizationVeniceException("No ACL permission")).when(mockVeniceWriter)
-        .put(any(), any(), anyInt(), any(), any());
+        .putAsync(any(), any(), anyInt(), any(), any());
     VeniceReducer reducer = new VeniceReducer();
     reducer.setVeniceWriter(mockVeniceWriter);
     reducer.configure(setupJobConf());
@@ -403,8 +403,9 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     reducer.configure(setupJobConf());
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, mockReporter);
-    verify(mockVeniceWriter, never()).put(any(), any(), anyInt(), any()); // Not expected to be invoked due to early
-                                                                          // termination
+    verify(mockVeniceWriter, never()).putAsync(any(), any(), anyInt(), any()); // Not expected to be invoked due to
+                                                                               // early
+    // termination
     verify(mockCollector, never()).collect(any(), any());
   }
 
@@ -428,14 +429,14 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<VeniceReducer.ReducerProducerCallback> callbackCaptor =
         ArgumentCaptor.forClass(VeniceReducer.ReducerProducerCallback.class);
 
-    verify(mockWriter).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
+    verify(mockWriter).putAsync(any(), any(), anyInt(), callbackCaptor.capture(), any());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), mockReporter);
 
     // test with different reporter
     Reporter newMockReporter = createZeroCountReporterMock();
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, newMockReporter);
-    verify(mockWriter, times(2)).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
+    verify(mockWriter, times(2)).putAsync(any(), any(), anyInt(), callbackCaptor.capture(), any());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), newMockReporter);
   }
 
@@ -448,7 +449,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public void put(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
+      public void putAsync(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
       }
 
@@ -462,7 +463,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public void put(
+      public void putAsync(
           Object key,
           Object value,
           int valueSchemaId,
@@ -519,7 +520,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   public void testClosingReducerWithWriterException() throws IOException {
     AbstractVeniceWriter exceptionWriter = new AbstractVeniceWriter(TOPIC_NAME) {
       @Override
-      public void put(
+      public void putAsync(
           Object key,
           Object value,
           int valueSchemaId,
@@ -533,7 +534,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public void put(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
+      public void putAsync(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
       }
 
