@@ -303,6 +303,6 @@ public class KafkaConsumptionTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    producerAdapter.sendMessage(topic, recordKey, recordValue).get();
+    producerAdapter.sendMessage(topic, null, recordKey, recordValue, null, null).get();
   }
 }

@@ -44,10 +44,6 @@ public interface PubSubProducerAdapter {
       PubSubMessageHeaders headers,
       PubSubProducerCallback callback);
 
-  default Future<PubSubProduceResult> sendMessage(String topic, KafkaKey key, KafkaMessageEnvelope value) {
-    return sendMessage(topic, null, key, value, null, null);
-  }
-
   void flush();
 
   void close(int closeTimeOutMs);
