@@ -1322,7 +1322,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
               callback,
               leaderMetadataWrapper,
               VeniceWriter.APP_DEFAULT_LOGICAL_TS,
-              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes));
+              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes),
+              null);
     };
   }
 

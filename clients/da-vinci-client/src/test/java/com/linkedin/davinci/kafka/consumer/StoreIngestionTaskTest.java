@@ -1095,10 +1095,10 @@ public abstract class StoreIngestionTaskTest {
   public void testVeniceMessagesProcessing(boolean isActiveActiveReplicationEnabled) throws Exception {
     localVeniceWriter.broadcastStartOfPush(new HashMap<>());
     PubSubProduceResult putMetadata = (PubSubProduceResult) localVeniceWriter
-        .put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
+        .putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
         .get();
     PubSubProduceResult deleteMetadata =
-        (PubSubProduceResult) localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
+        (PubSubProduceResult) localVeniceWriter.deleteSync(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
 
     Queue<AbstractPollStrategy> pollStrategies = new LinkedList<>();
     pollStrategies.add(new RandomPollStrategy());
@@ -1173,8 +1173,8 @@ public abstract class StoreIngestionTaskTest {
           fooTopicPartition,
           new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(1, new AtomicLong(1)));
       try {
-        rtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
-        rtWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
+        rtWriter.putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+        rtWriter.deleteSync(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
 
         verifyPutAndDelete(amplificationFactor, isActiveActiveReplicationEnabled, false);
       } catch (Exception e) {
@@ -2144,7 +2144,7 @@ public abstract class StoreIngestionTaskTest {
     localVeniceWriter.broadcastStartOfPush(true, new HashMap<>());
     PubSubProduceResult putMetadata =
         (PubSubProduceResult) localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID).get();
-    PubSubProduceResult deleteMetadata = (PubSubProduceResult) localVeniceWriter.delete(deleteKeyFoo, null).get();
+    PubSubProduceResult deleteMetadata = (PubSubProduceResult) localVeniceWriter.deleteSync(deleteKeyFoo, null).get();
     localVeniceWriter.broadcastEndOfPush(new HashMap<>());
 
     runTest(Utils.setOf(PARTITION_FOO), () -> {
@@ -2598,11 +2598,11 @@ public abstract class StoreIngestionTaskTest {
 
     long recordsNum = 5L;
     for (int i = 0; i < recordsNum; i++) {
-      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      localRtWriter.putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
     }
 
     for (int i = 0; i < recordsNum; i++) {
-      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      remoteRtWriter.putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
     }
 
     waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
@@ -2613,11 +2613,11 @@ public abstract class StoreIngestionTaskTest {
     // Pause remote kafka consumption
     remoteKafkaQuota.set(0);
     for (int i = 0; i < recordsNum; i++) {
-      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      localRtWriter.putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
     }
 
     for (int i = 0; i < recordsNum; i++) {
-      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      remoteRtWriter.putSync(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
     }
 
     Long doubleRecordsNum = recordsNum * 2;

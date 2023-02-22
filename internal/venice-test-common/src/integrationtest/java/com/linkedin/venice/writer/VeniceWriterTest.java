@@ -221,6 +221,7 @@ public class VeniceWriterTest {
         null,
         VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
         ctime,
+        null,
         null);
     writer.put(
         Integer.toString(2),
@@ -229,7 +230,8 @@ public class VeniceWriterTest {
         null,
         VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
         APP_DEFAULT_LOGICAL_TS,
-        putMetadata);
+        putMetadata,
+        null);
     writer.update(Integer.toString(3), Integer.toString(2), 1, 1, null, ctime);
     writer.delete(Integer.toString(4), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, ctime);
     writer.delete(Integer.toString(5), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, deleteMetadata);
@@ -322,7 +324,8 @@ public class VeniceWriterTest {
         null,
         VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
         APP_DEFAULT_LOGICAL_TS,
-        putMetadata);
+        putMetadata,
+        null);
     ArgumentCaptor<KafkaKey> keyArgumentCaptor = ArgumentCaptor.forClass(KafkaKey.class);
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
     verify(mockedProducer, atLeast(2))
