@@ -837,7 +837,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       if (existingStore != null) {
         /*
          * We already check the pre-condition before, so if we could find a store with the same name,
-         * it means the store is a reprocessing store which is left by a failed deletion. So we should delete it.
+         * it means the store is a reprocessing store which is left by a failed deletion. So we should deleteAsync it.
          */
         deleteStore(clusterName, storeName, existingStore.getLargestUsedVersionNumber(), true);
       }
@@ -887,7 +887,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   /**
-   * This method will delete store data, metadata, version and rt topics
+   * This method will deleteAsync store data, metadata, version and rt topics
    * One exception is for stores with isMigrating flag set. In that case, the corresponding kafka topics and storeConfig
    * will not be deleted so that they are still available for the cloned store.
    */
@@ -919,7 +919,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         setLargestUsedVersionForStoreDeletion(store, largestUsedVersionNumber);
         storeRepository.updateStore(store);
       } catch (VeniceNoStoreException e) {
-        // It's possible for a store to partially exist due to partial delete/creation failures.
+        // It's possible for a store to partially exist due to partial deleteAsync/creation failures.
         LOGGER
             .warn("Store object is missing for store: " + storeName + " will proceed with the rest of store deletion");
       }
@@ -1007,7 +1007,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     } else if (store != null && store.isMigrating()) {
       // Cluster discovery is correct but store migration flag has not been set.
       // This is most likely a direct deletion command from admin-tool sent to the wrong cluster.
-      // i.e. instead of using the proper --end-migration command, a --delete-store command was issued AND sent to the
+      // i.e. instead of using the proper --end-migration command, a --deleteAsync-store command was issued AND sent to
+      // the
       // wrong cluster
       LOGGER.warn(
           "Skipping storeConfig deletion for store {} in cluster {} because this is either the cloned store "
@@ -1019,7 +1020,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       // could be deleted later after controller is recovered.
       // A worse case is deletion succeeded in parent controller but failed in production controller. After skip
       // the admin message offset, a store was left in some prod colos. While user re-create the store, we will
-      // delete this reprocessing store if isDeleting is true for this store.
+      // deleteAsync this reprocessing store if isDeleting is true for this store.
       storeConfig.setDeleting(true);
     }
   }
@@ -1047,7 +1048,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   /**
    * Lazy initialize a Venice writer for an internal real time topic store of push job details records.
-   * Use this writer to put a pair of push job detail record (<code>key</code> and <code>value</code>).
+   * Use this writer to putAsync a pair of push job detail record (<code>key</code> and <code>value</code>).
    * @param key key with which the specified value is to be associated.
    * @param value value to be associated with the specified key.
    */
@@ -1090,7 +1091,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               .build());
     });
 
-    pushJobDetailsWriter.put(key, value, pushJobDetailsSchemaId, null);
+    pushJobDetailsWriter.putAsync(key, value, pushJobDetailsSchemaId, null);
   }
 
   /**
@@ -1288,16 +1289,16 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     for (Map.Entry<String, StoreInfo> entry: srcStoresInChildColos.get(storeName).entrySet()) {
       UpdateStoreQueryParams paramsInChildColo = new UpdateStoreQueryParams(entry.getValue(), true);
       if (params.isDifferent(paramsInChildColo)) {
-        // Src parent controller calls dest parent controller to update store with store configs in child colo.
+        // Src parent controller calls dest parent controller to updateAsync store with store configs in child colo.
         paramsInChildColo.setRegionsFilter(entry.getKey());
-        LOGGER.info("Sending update-store request {} to {}", paramsInChildColo, entry.getKey());
+        LOGGER.info("Sending updateAsync-store request {} to {}", paramsInChildColo, entry.getKey());
         destControllerClient.updateStore(storeName, paramsInChildColo);
       } else {
         remainingRegions.add(entry.getKey());
       }
     }
     params.setRegionsFilter(String.join(",", remainingRegions));
-    LOGGER.info("Sending update-store request {} to {}", params, remainingRegions);
+    LOGGER.info("Sending updateAsync-store request {} to {}", params, remainingRegions);
     destControllerClient.updateStore(storeName, params);
 
     Consumer<String> versionMigrationConsumer = migratingStoreName -> {
@@ -1462,7 +1463,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     this.setStoreConfigForMigration(storeName, srcClusterName, srcClusterName);
 
     /**
-     * Force update cluster discovery so that it will always point to the source cluster.
+     * Force updateAsync cluster discovery so that it will always point to the source cluster.
      * Whichever cluster it currently belongs to do not matter.
      */
     String clusterDiscovered = this.discoverCluster(storeName).getFirst();
@@ -1532,7 +1533,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     // Before creating store, check the global stores configs at first.
     // TODO As some store had already been created before we introduced global store config
     // TODO so we need a way to sync up the data. For example, while we loading all stores from ZK for a cluster,
-    // TODO put them into global store configs.
+    // TODO putAsync them into global store configs.
     boolean isLegacyStore = false;
     /**
      * In the following situation, we will skip the lingering resource check for the new store request:
@@ -1551,17 +1552,17 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       } else {
         /**
          * Store config could exist with deleting flag in the following situations:
-         * 1. Controller of the same cluster tried to delete the store but failed. In this case, store will be
+         * 1. Controller of the same cluster tried to deleteAsync the store but failed. In this case, store will be
          *    deleted again in {@link VeniceHelixAdmin#createStore}.
          * 2. Controller of another cluster is deleting the store but has not removed storeConfig yet. In this
          *    case, since there is no lock between controllers of the two clusters, the other controller might
-         *    delete the storeConfig when current controller is creating the store. To avoid the race condition,
+         *    deleteAsync the storeConfig when current controller is creating the store. To avoid the race condition,
          *    throw an exception to wait for storeConfig deletion.
          */
         if (!clusterName.equals(storeConfig.getCluster())) {
           throw new VeniceStoreAlreadyExistsException(
               "StoreConfig points to a different cluster " + storeConfig.getCluster()
-                  + ". Please wait for storeConfig deletion or use delete-store command to remove storeConfig.");
+                  + ". Please wait for storeConfig deletion or use deleteAsync-store command to remove storeConfig.");
         }
         isLegacyStore = true;
         skipLingeringResourceCheck = true;
@@ -1615,7 +1616,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       return;
     }
     if (store.isEnableReads() || store.isEnableWrites()) {
-      String errorMsg = "Unable to delete the entire store or versions for store: " + storeName
+      String errorMsg = "Unable to deleteAsync the entire store or versions for store: " + storeName
           + ". Store has not been disabled. Both read and write need to be disabled before deleting.";
       LOGGER.error(errorMsg);
       throw new VeniceException(errorMsg);
@@ -1638,12 +1639,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     if (store == null) {
       throwStoreDoesNotExist(clusterName, storeName);
     }
-    // The cannot delete current version restriction is only applied to non-system stores.
+    // The cannot deleteAsync current version restriction is only applied to non-system stores.
     if (!store.isSystemStore() && store.getCurrentVersion() == versionNum) {
-      String errorMsg = "Unable to delete the version: " + versionNum
+      String errorMsg = "Unable to deleteAsync the version: " + versionNum
           + ". The current version could not be deleted from store: " + storeName;
       LOGGER.error(errorMsg);
-      throw new VeniceUnsupportedOperationException("delete single version", errorMsg);
+      throw new VeniceUnsupportedOperationException("deleteAsync single version", errorMsg);
     }
   }
 
@@ -2392,14 +2393,14 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               strategy,
               clusterConfig.getOffLineJobWaitTimeInMilliseconds(),
               replicationFactor);
-          // Early delete backup version on start of a push, controlled by store config earlyDeleteBackupEnabled
+          // Early deleteAsync backup version on start of a push, controlled by store config earlyDeleteBackupEnabled
           if (backupStrategy == BackupStrategy.DELETE_ON_NEW_PUSH_START
               && multiClusterConfigs.getControllerConfig(clusterName).isEarlyDeleteBackUpEnabled()) {
             try {
               retireOldStoreVersions(clusterName, storeName, true, currentVersionBeforePush);
             } catch (Throwable t) {
               LOGGER.error(
-                  "Failed to delete previous backup version while pushing {} to store {} in cluster {}",
+                  "Failed to deleteAsync previous backup version while pushing {} to store {} in cluster {}",
                   versionNumber,
                   storeName,
                   clusterName,
@@ -2816,11 +2817,11 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       ReadWriteStoreRepository repository = resources.getStoreMetadataRepository();
       Store store = repository.getStore(storeName);
       // Here we do not require the store be disabled. So it might impact reads
-      // The thing is a new version is just online, now we delete the old version. So some of routers
+      // The thing is a new version is just online, now we deleteAsync the old version. So some of routers
       // might still use the old one as the current version, so when they send the request to that version,
       // they will get error response.
       // TODO the way to solve this could be: Introduce a timestamp to represent when the version is online.
-      // TOOD And only allow to delete the old version that the newer version has been online for a while.
+      // TOOD And only allow to deleteAsync the old version that the newer version has been online for a while.
       checkPreConditionForSingleVersionDeletion(clusterName, storeName, store, versionNum);
       if (!store.containsVersion(versionNum)) {
         LOGGER.warn(
@@ -2867,7 +2868,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       stopMonitorOfflinePush(clusterName, resourceName, true, isForcedDelete);
       Optional<Version> deletedVersion = deleteVersionFromStoreRepository(clusterName, storeName, versionNumber);
       if (deletedVersion.isPresent()) {
-        // Do not delete topic during store migration
+        // Do not deleteAsync topic during store migration
         // In such case, the topic will be deleted after store migration, triggered by a new push job
         if (!store.isMigrating()) {
           // Not using deletedVersion.get().kafkaTopicName() because it's incorrect for Zk shared stores.
@@ -2926,7 +2927,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   /**
-   * For a given store, determine its versions to delete based on the {@linkplain BackupStrategy} settings and execute
+   * For a given store, determine its versions to deleteAsync based on the {@linkplain BackupStrategy} settings and execute
    * the deletion in the cluster (including all its resources). It also truncates Kafka topics and Helix resources.
    * @param clusterName name of a cluster.
    * @param storeName name of the store to retire.
@@ -2968,7 +2969,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           deleteOneStoreVersion(clusterName, storeName, version.getNumber());
         } catch (VeniceException e) {
           LOGGER.warn(
-              "Could not delete store {} version number {} in cluster {}",
+              "Could not deleteAsync store {} version number {} in cluster {}",
               storeName,
               version.getNumber(),
               clusterName,
@@ -3081,7 +3082,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   /**
-   * We don't actually truncate any Kafka topic here; we just update the retention time.
+   * We don't actually truncate any Kafka topic here; we just updateAsync the retention time.
    * @param kafkaTopicName
    * @return
    */
@@ -3089,7 +3090,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   public boolean truncateKafkaTopic(String kafkaTopicName) {
     /**
      * Topic truncation doesn't care about whether the topic actually exists in Kafka Broker or not since
-     * the truncation will only update the topic metadata in Kafka Zookeeper.
+     * the truncation will only updateAsync the topic metadata in Kafka Zookeeper.
      * This logic is used to avoid the scenario that the topic exists in Kafka Zookeeper, but not fully ready in
      * Kafka Broker yet.
      */
@@ -3132,7 +3133,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       }
     } catch (TopicDoesNotExistException e) {
       LOGGER.warn(
-          "Unable to update the retention for topic {} in Kafka cluster {} since the topic doesn't exist in "
+          "Unable to updateAsync the retention for topic {} in Kafka cluster {} since the topic doesn't exist in "
               + "Kafka anymore, will skip the truncation",
           kafkaTopicName,
           topicManager.getKafkaBootstrapServers());
@@ -3344,7 +3345,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
         if (!store.isEnableWrites()) {
           throw new VeniceException(
-              "Unable to update store:" + storeName + " current version since store writeability is false");
+              "Unable to updateAsync store:" + storeName + " current version since store writeability is false");
         }
       }
       int previousVersion = store.getCurrentVersion();
@@ -3362,7 +3363,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     storeMetadataUpdate(clusterName, storeName, store -> {
       if (!store.isEnableWrites()) {
         throw new VeniceException(
-            "Unable to update store:" + storeName + " current version since store does not enable write");
+            "Unable to updateAsync store:" + storeName + " current version since store does not enable write");
       }
       int backupVersion = getBackupVersionNumber(store.getVersions(), store.getCurrentVersion());
       if (backupVersion == Store.NON_EXISTING_VERSION) {
@@ -3419,7 +3420,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     VeniceControllerClusterConfig clusterConfig = getHelixVeniceClusterResources(clusterName).getConfig();
     storeMetadataUpdate(clusterName, storeName, store -> {
       preCheckStorePartitionCountUpdate(clusterName, store, partitionCount);
-      // Do not update the partitionCount on the store.version as version config is immutable. The
+      // Do not updateAsync the partitionCount on the store.version as version config is immutable. The
       // version.getPartitionCount()
       // is read only in getRealTimeTopic and createInternalStore creation, so modifying currentVersion should not have
       // any effect.
@@ -3434,10 +3435,11 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   void preCheckStorePartitionCountUpdate(String clusterName, Store store, int newPartitionCount) {
-    String errorMessagePrefix = "Store update error for " + store.getName() + " in cluster: " + clusterName + ": ";
+    String errorMessagePrefix = "Store updateAsync error for " + store.getName() + " in cluster: " + clusterName + ": ";
     VeniceControllerClusterConfig clusterConfig = getHelixVeniceClusterResources(clusterName).getConfig();
     if (store.isHybrid() && store.getPartitionCount() != newPartitionCount) {
-      // Allow the update if partition count is not configured and the new partition count matches RT partition count
+      // Allow the updateAsync if partition count is not configured and the new partition count matches RT partition
+      // count
       if (store.getPartitionCount() == 0) {
         TopicManager topicManager;
         if (isParent()) {
@@ -3815,7 +3817,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   /**
    * Update the {@linkplain LiveClusterConfig} at runtime for a specified cluster.
    * @param clusterName name of the Venice cluster.
-   * @param params parameters to update.
+   * @param params parameters to updateAsync.
    */
   @Override
   public void updateClusterConfig(String clusterName, UpdateClusterConfigQueryParams params) {
@@ -3956,7 +3958,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         setStorePartitionCount(clusterName, storeName, partitionCount.get());
       }
 
-      // Amplification factor is a Leader-Follower only feature. Block the update if the store is in O/O model.
+      // Amplification factor is a Leader-Follower only feature. Block the updateAsync if the store is in O/O model.
       String amplificationFactorNotSupportedErrorMessage =
           "amplificationFactor is not supported in Online/Offline state model";
       if (amplificationFactor.isPresent() && amplificationFactor.get() != 1) {
@@ -3996,7 +3998,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
         if (Math.max(defaultReadQuotaPerRouter, routerCount * defaultReadQuotaPerRouter) < readQuotaInCU.get()) {
           throw new VeniceException(
-              "Cannot update read quota for store " + storeName + " in cluster " + clusterName + ". Read quota "
+              "Cannot updateAsync read quota for store " + storeName + " in cluster " + clusterName + ". Read quota "
                   + readQuotaInCU.get() + " requested is more than the cluster quota.");
         }
         setStoreReadQuota(clusterName, storeName, readQuotaInCU.get());
@@ -4301,7 +4303,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           ControllerResponse response = sourceClusterControllerClient.updateStore(storeName, params);
           if (response.isError()) {
             LOGGER.warn(
-                "Replicate new update endpoint call to source cluster: {} failed for store: {}. Error: {}",
+                "Replicate new updateAsync endpoint call to source cluster: {} failed for store: {}. Error: {}",
                 sourceCluster,
                 storeName,
                 response.getError());
@@ -4313,15 +4315,17 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         ControllerResponse response = destClusterControllerClient.updateStore(storeName, params);
         if (response.isError()) {
           LOGGER.warn(
-              "Replicate update store endpoint call to destination cluster: {} failed for store: {}. Error: {}",
+              "Replicate updateAsync store endpoint call to destination cluster: {} failed for store: {}. Error: {}",
               destinationCluster,
               storeName,
               response.getError());
         }
       }
     } catch (Exception e) {
-      LOGGER
-          .warn("Exception thrown when replicating new update for store: {} as part of store migration", storeName, e);
+      LOGGER.warn(
+          "Exception thrown when replicating new updateAsync for store: {} as part of store migration",
+          storeName,
+          e);
     }
   }
 
@@ -4429,7 +4433,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    * Update the store metadata by applying provided operation.
    * @param clusterName name of the cluster.
    * @param storeName name of the to be updated store.
-   * @param operation the defined operation that update the store.
+   * @param operation the defined operation that updateAsync the store.
    */
   public void storeMetadataUpdate(String clusterName, String storeName, StoreMetadataOperation operation) {
     checkPreConditionForUpdateStore(clusterName, storeName);
@@ -4806,7 +4810,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    * Add a new superset schema for the given store with all specified properties.
    * <p>
    *   Generate the superset schema off the current schema and latest superset schema (if any, if not pick the latest value schema) existing in the store.
-   *   If the newly generated superset schema is unique add it to the store and update latestSuperSetValueSchemaId of the store.
+   *   If the newly generated superset schema is unique add it to the store and updateAsync latestSuperSetValueSchemaId of the store.
    */
   @Override
   public SchemaEntry addSupersetSchema(
@@ -5966,14 +5970,14 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   /**
-   * Compose a <code>ParticipantMessageKey</code> message and execute a delete operation on the key to the cluster's participant store.
+   * Compose a <code>ParticipantMessageKey</code> message and execute a deleteAsync operation on the key to the cluster's participant store.
    */
   public void deleteParticipantStoreKillMessage(String clusterName, String kafkaTopic) {
     VeniceWriter writer = getParticipantStoreWriter(clusterName);
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.resourceName = kafkaTopic;
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     writer.flush();
   }
 
@@ -5988,7 +5992,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     ParticipantMessageValue value = new ParticipantMessageValue();
     value.messageType = killPushJobType.getValue();
     value.messageUnion = message;
-    writer.put(key, value, PARTICIPANT_MESSAGE_STORE_SCHEMA_ID);
+    writer.putAsync(key, value, PARTICIPANT_MESSAGE_STORE_SCHEMA_ID);
   }
 
   private VeniceWriter getParticipantStoreWriter(String clusterName) {
@@ -6068,7 +6072,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         .setLongField(ClusterConfig.ClusterConfigProperty.DELAY_REBALANCE_TIME.name(), delayedTime);
     helixManager.getHelixDataAccessor().setProperty(keyBuilder.clusterConfig(), clusterConfig);
     // TODO use the helix new config API below once it's ready. Right now helix has a bug that controller would not get
-    // the update from the new config.
+    // the updateAsync from the new config.
     /* ConfigAccessor configAccessor = new ConfigAccessor(zkClient);
     HelixConfigScope clusterScope =
         new HelixConfigScopeBuilder(HelixConfigScope.ConfigScopeProperty.CLUSTER).forCluster(clusterName).build();
@@ -6188,7 +6192,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       executionIdAccessor.updateLastSucceededExecutionIdMap(clusterName, storeName.get(), executionId);
     } else {
       if (!offset.isPresent() || !upstreamOffset.isPresent()) {
-        throw new VeniceException("Offsets must be provided to update cluster-level admin topic metadata");
+        throw new VeniceException("Offsets must be provided to updateAsync cluster-level admin topic metadata");
       }
       adminConsumerServices.get(clusterName)
           .updateAdminTopicMetadata(clusterName, executionId, offset.get(), upstreamOffset.get());
@@ -6422,7 +6426,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   public interface StoreMetadataOperation {
     /**
-     * define the operation that update a store. Return the store after metadata being updated so that it could
+     * define the operation that updateAsync a store. Return the store after metadata being updated so that it could
      * be updated by metadataRepository
      */
     Store update(Store store);
@@ -6580,7 +6584,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       }
     } else {
       /**
-       * The batch update command hits child controller directly; all stores in the cluster will be updated
+       * The batch updateAsync command hits child controller directly; all stores in the cluster will be updated
        */
       List<Store> storesToBeConfigured;
       switch (storeType) {
@@ -6729,7 +6733,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       }
     } else {
       /**
-       * The batch update command hits child controller directly; all stores in the cluster will be updated
+       * The batch updateAsync command hits child controller directly; all stores in the cluster will be updated
        */
       List<Store> storesToBeConfigured;
       switch (storeType) {
@@ -6875,7 +6879,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   /**
    * Delete stores from the cluster including both store data and metadata.
-   * <p>The API provides the flexibility to delete a single store or a single version.
+   * <p>The API provides the flexibility to deleteAsync a single store or a single version.
    * Cluster name and fabric are required parameters, but store name and version number are optional.
    * If store name is empty, all stores in the cluster are deleted.
    * @param clusterName name of the Venice cluster.
@@ -6901,7 +6905,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     } else {
       try (AutoCloseableLock ignore = resources.getClusterLockManager().createClusterWriteLock()) {
         for (Store store: resources.getStoreMetadataRepository().getAllStores()) {
-          // Do not delete system stores as some are initialized when controller starts and will not be copied from
+          // Do not deleteAsync system stores as some are initialized when controller starts and will not be copied from
           // source fabric
           if (store.isSystemStore()) {
             continue;

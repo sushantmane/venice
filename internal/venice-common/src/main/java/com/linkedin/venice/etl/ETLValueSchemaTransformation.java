@@ -5,8 +5,8 @@ import org.apache.avro.Schema;
 
 
 /**
- * In ETL jobs, when a "delete" record is seen, "value" is set to "null" and "DELETED_TS" is set to the offset where
- * this delete record was seen. To allow the value field to be set as "null", the schema may need to be modified if it
+ * In ETL jobs, when a "deleteAsync" record is seen, "value" is set to "null" and "DELETED_TS" is set to the offset where
+ * this deleteAsync record was seen. To allow the value field to be set as "null", the schema may need to be modified if it
  * doesn't already allow for a "null" value. For "union" schemas, "null" must be added to the union if it is not already
  * one of the allowed types. For all other avro types, the value schema is set to a union schema of "null" and the
  * original value schema.

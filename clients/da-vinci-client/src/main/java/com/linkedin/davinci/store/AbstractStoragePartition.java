@@ -120,7 +120,7 @@ public abstract class AbstractStoragePartition {
   }
 
   /**
-   * This API takes in value and metadata as ByteBuffer format and put it into RocksDB.
+   * This API takes in value and metadata as ByteBuffer format and putAsync it into RocksDB.
    * Only {@link ReplicationMetadataRocksDBStoragePartition} will execute this method,
    * other storage partition implementation will UnsupportedOperationException.
    */
@@ -129,7 +129,7 @@ public abstract class AbstractStoragePartition {
   }
 
   /**
-   * This API takes in value and metadata as byte array format and put it into RocksDB.
+   * This API takes in value and metadata as byte array format and putAsync it into RocksDB.
    * Only {@link ReplicationMetadataRocksDBStoragePartition} will execute this method,
    * other storage partition implementation will VeniceUnsupportedOperationException.
    */

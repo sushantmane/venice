@@ -153,7 +153,7 @@ public abstract class ConsumerIntegrationTest {
 
   @Test(timeOut = 60 * Time.MS_PER_SECOND)
   public void testForwardCompatibility() throws ExecutionException, InterruptedException {
-    // Verify that the regular writer can update the store
+    // Verify that the regular writer can updateAsync the store
     try (VeniceWriter<String, String, byte[]> regularVeniceWriter = cluster.getVeniceWriter(topicName)) {
       writeAndVerifyRecord(regularVeniceWriter, client, "value1");
     }

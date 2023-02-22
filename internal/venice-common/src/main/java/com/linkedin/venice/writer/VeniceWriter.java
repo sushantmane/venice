@@ -243,7 +243,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * been used in non pass-through mode yet; once VW starts referring to the chunking setting in non pass-through mode,
    * the chunking setting will become immutable.
    *
-   * The only way to update chunking config is when a START_OF_PUSH message is processed in pass-through mode, chunking
+   * The only way to updateAsync chunking config is when a START_OF_PUSH message is processed in pass-through mode, chunking
    * setting will be updated to {@link StartOfPush#chunked}.
    */
   private volatile boolean isChunkingEnabled;
@@ -408,122 +408,122 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param callback - callback will be executed after Kafka producer completes on sending the message.
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void delete(K key, PubSubProducerCallback callback) {
-    delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
+  public void deleteAsync(K key, PubSubProducerCallback callback) {
+    deleteAsync(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
   public Future<PubSubProduceResult> deleteSync(K key, PubSubProducerCallback callback) {
     CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
-    delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, produceResultFuture);
+    deleteAsync(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, produceResultFuture);
     return produceResultFuture;
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
    * @param callback - callback will be executed after Kafka producer completes on sending the message.
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void delete(K key, long logicalTs, PubSubProducerCallback callback) {
-    delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
+  public void deleteAsync(K key, long logicalTs, PubSubProducerCallback callback) {
+    deleteAsync(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
   }
 
   public Future<PubSubProduceResult> deleteSync(K key, long logicalTs, PubSubProducerCallback callback) {
     CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
-    delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, produceResultFuture);
+    deleteAsync(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, produceResultFuture);
     return produceResultFuture;
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param callback - Callback function invoked by Kafka producer after sending the message.
    * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
    *                         -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *                              sending the message in VPJ plugin to the version topic;
-   *                         >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
+   *                         >=0: Leader replica consumes a deleteAsync message from real-time topic, VeniceWriter in leader
    *                              is sending this message to version topic with extra info: offset in the real-time topic.
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void delete(K key, PubSubProducerCallback callback, LeaderMetadataWrapper leaderMetadataWrapper) {
-    delete(key, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, null, null);
+  public void deleteAsync(K key, PubSubProducerCallback callback, LeaderMetadataWrapper leaderMetadataWrapper) {
+    deleteAsync(key, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param callback - callback will be executed after Kafka producer completes on sending the message.
    * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
    *                             -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *                                  sending the message in VPJ plugin to the version topic;
-   *                             >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
+   *                             >=0: Leader replica consumes a deleteAsync message from real-time topic, VeniceWriter in leader
    *                                  is sending this message to version topic with extra info: offset in the real-time topic.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void delete(
+  public void deleteAsync(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
       long logicalTs) {
-    delete(key, callback, leaderMetadataWrapper, logicalTs, null, null);
+    deleteAsync(key, callback, leaderMetadataWrapper, logicalTs, null, null);
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param callback - callback will be executed after Kafka producer completes on sending the message.
    * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
    *                             -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *                                  sending the message in VPJ plugin to the version topic;
-   *                             >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
+   *                             >=0: Leader replica consumes a deleteAsync message from real-time topic, VeniceWriter in leader
    *                                  is sending this message to version topic with extra info: offset in the real-time topic.
    * @param deleteMetadata - a DeleteMetadata containing replication metadata related fields.
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void delete(
+  public void deleteAsync(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
       DeleteMetadata deleteMetadata) {
-    delete(key, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, deleteMetadata, null);
+    deleteAsync(key, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, deleteMetadata, null);
   }
 
   @Override
   public void delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
-    delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, deleteMetadata, null);
+    deleteAsync(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, deleteMetadata, null);
   }
 
   /**
-   * Execute a standard "delete" on the key.
+   * Execute a standard "deleteAsync" on the key.
    *
-   * @param key - The key to delete in storage.
+   * @param key - The key to deleteAsync in storage.
    * @param callback - Callback function invoked by Kafka producer after sending the message.
    * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
    *                         -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *                              sending the message in VPJ plugin to the version topic;
-   *                         >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
+   *                         >=0: Leader replica consumes a deleteAsync message from real-time topic, VeniceWriter in leader
    *                              is sending this message to version topic with extra info: offset in the real-time topic.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
    * @param deleteMetadata - a DeleteMetadata containing replication metadata related fields (can be null).
@@ -531,7 +531,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  private void delete(
+  private void deleteAsync(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
@@ -582,9 +582,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   /**
-   * Execute a standard "put" on the key.
+   * Execute a standard "putAsync" on the key.
    *
-   * @param key   - The key to put in storage.
+   * @param key   - The key to putAsync in storage.
    * @param value - The value to be associated with the given key
    * @param valueSchemaId - value schema id for the given value
    * @param callback - Callback function invoked by Kafka producer after sending the message
@@ -593,13 +593,13 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
   @Override
-  public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
-    put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
+  public void putAsync(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
+    putAsync(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
   public Future<PubSubProduceResult> putSync(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
     CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
-    put(
+    putAsync(
         key,
         value,
         valueSchemaId,
@@ -612,8 +612,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback, PutMetadata putMetadata) {
-    put(
+  public void putAsync(K key, V value, int valueSchemaId, PubSubProducerCallback callback, PutMetadata putMetadata) {
+    putAsync(
         key,
         value,
         valueSchemaId,
@@ -625,9 +625,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   /**
-   * Execute a standard "put" on the key.
+   * Execute a standard "putAsync" on the key.
    *
-   * @param key   - The key to put in storage.
+   * @param key   - The key to putAsync in storage.
    * @param value - The value to be associated with the given key
    * @param valueSchemaId - value schema id for the given value
    * @param logicalTs - A timestamp field to indicate when this record was produced from apps view.
@@ -636,8 +636,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void put(K key, V value, int valueSchemaId, long logicalTs, PubSubProducerCallback callback) {
-    put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
+  public void putAsync(K key, V value, int valueSchemaId, long logicalTs, PubSubProducerCallback callback) {
+    putAsync(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
   }
 
   public Future<PubSubProduceResult> putSync(
@@ -647,7 +647,15 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       long logicalTs,
       PubSubProducerCallback callback) {
     CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
-    put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, produceResultFuture);
+    putAsync(
+        key,
+        value,
+        valueSchemaId,
+        callback,
+        DEFAULT_LEADER_METADATA_WRAPPER,
+        logicalTs,
+        null,
+        produceResultFuture);
     return produceResultFuture;
   }
 
@@ -657,31 +665,31 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * UpstreamOffset is the offset of PUT message in the source topic:
    * -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *      sending the message in VPJ plugin to the version topic;
-   * >=0: Leader replica consumes a put message from real-time topic, VeniceWriter in leader
+   * >=0: Leader replica consumes a putAsync message from real-time topic, VeniceWriter in leader
    *      is sending this message to version topic with extra info: offset in the real-time topic.
    */
-  public void put(
+  public void putAsync(
       K key,
       V value,
       int valueSchemaId,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper) {
-    put(key, value, valueSchemaId, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, null, null);
+    putAsync(key, value, valueSchemaId, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
   /**
-   * Execute a standard "put" on the key.
+   * Execute a standard "putAsync" on the key.
    *
    * VeniceReducer and VeniceSystemProducer should call this API.
    *
-   * @param key   - The key to put in storage.
+   * @param key   - The key to putAsync in storage.
    * @param value - The value to be associated with the given key
    * @param valueSchemaId - value schema id for the given value
    * @param callback - Callback function invoked by Kafka producer after sending the message
    * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
    *    -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
    *         sending the message in VPJ plugin to the version topic;
-   *    >=0: Leader replica consumes a put message from real-time topic, VeniceWriter in leader
+   *    >=0: Leader replica consumes a putAsync message from real-time topic, VeniceWriter in leader
    *         is sending this message to version topic with extra info: offset in the real-time topic.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps view.
    * @param putMetadata - a PutMetadata containing replication metadata related fields (can be null).
@@ -689,7 +697,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public void put(
+  public void putAsync(
       K key,
       V value,
       int valueSchemaId,
@@ -766,7 +774,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * TODO: move pass-through supports into a server-specific extension of VeniceWriter
    */
   @Deprecated
-  public void put(
+  public void putAsync(
       KafkaKey kafkaKey,
       KafkaMessageEnvelope kafkaMessageEnvelope,
       PubSubProducerCallback callback,
@@ -800,9 +808,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   /**
-   * DIV pass-through mode for delete
+   * DIV pass-through mode for deleteAsync
    */
-  public void delete(
+  public void deleteAsync(
       KafkaKey kafkaKey,
       KafkaMessageEnvelope kafkaMessageEnvelope,
       PubSubProducerCallback callback,
@@ -823,11 +831,11 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public void update(K key, U update, int valueSchemaId, int derivedSchemaId, PubSubProducerCallback callback) {
-    update(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
+  public void updateAsync(K key, U update, int valueSchemaId, int derivedSchemaId, PubSubProducerCallback callback) {
+    updateAsync(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
   }
 
-  public void update(
+  public void updateAsync(
       K key,
       U update,
       int valueSchemaId,
@@ -836,16 +844,16 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       long logicalTs) {
     isChunkingFlagInvoked = true;
     if (isChunkingEnabled) {
-      throw new VeniceException("Chunking is not supported for update operation in VeniceWriter");
+      throw new VeniceException("Chunking is not supported for updateAsync operation in VeniceWriter");
     }
     byte[] serializedKey = keySerializer.serialize(topicName, key);
     byte[] serializedUpdate = writeComputeSerializer.serialize(topicName, update);
     int partition = getPartition(serializedKey);
 
-    // large value is not supported for "update" yet
+    // large value is not supported for "updateAsync" yet
     if (serializedKey.length + serializedUpdate.length > DEFAULT_MAX_SIZE_FOR_USER_PAYLOAD_PER_MESSAGE_IN_BYTES) {
       throw new RecordTooLargeException(
-          "This partial update exceeds the maximum size. "
+          "This partial updateAsync exceeds the maximum size. "
               + getSizeReport(serializedKey.length, serializedUpdate.length, 0));
     }
 
@@ -1007,12 +1015,12 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * IMPORTANT: Only invoke this function in pass-through mode.
    *
-   * 1. If the isChunkingEnabled flag has never been used in the VeniceWriter (regular put will use this flag;
-   *    pass-though mode doesn't use this flag), it's okay to update this chunking flag;
-   * 2. If the isChunkingEnabled flag has been used, it's not allowed to update this flag anymore.
+   * 1. If the isChunkingEnabled flag has never been used in the VeniceWriter (regular putAsync will use this flag;
+   *    pass-though mode doesn't use this flag), it's okay to updateAsync this chunking flag;
+   * 2. If the isChunkingEnabled flag has been used, it's not allowed to updateAsync this flag anymore.
    *
    * If Start_of_Push message is produced through pass-through mode, check whether chunking config in SOP is different
-   * from the chunking setting in the VeniceWriter; if so, update the chunking setting in this VW.
+   * from the chunking setting in the VeniceWriter; if so, updateAsync the chunking setting in this VW.
    *
    * Reason behind this check: in batch native replication, VeniceWriter might be created in leaders without reading
    * the chunking config in SOP message yet, so VW needs to self-adjust if SOP is produced in pass-through mode (pass-through
@@ -1123,7 +1131,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    *         locking is per-partition, which would also be correct as far as DIV is concerned.
    *
    * @param updateDIV if true, the partition's segment's checksum will be updated and its sequence number incremented
-   *                  if false, the checksum and seq# update are omitted, which is the right thing to do during retries
+   *                  if false, the checksum and seq# updateAsync are omitted, which is the right thing to do during retries
    */
   private void sendMessage(
       KeyProvider keyProvider,
@@ -1479,7 +1487,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * Producer DIV will be recalculated (not DIV pass-through mode); checksum for the input partition in this producer
    * will also be updated.
    */
-  public void asyncSendControlMessage(
+  public void sendControlMessageAsync(
       ControlMessage controlMessage,
       int partition,
       Map<String, String> debugInfo,

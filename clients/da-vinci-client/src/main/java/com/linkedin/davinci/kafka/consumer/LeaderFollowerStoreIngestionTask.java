@@ -103,7 +103,7 @@ import org.apache.logging.log4j.Logger;
  *        of the consumer actions in the queue, check whether there is any partition
  *        is in the transition progress, if so:
  *        (i)   consume the latest messages from version topic;
- *        (ii)  drain all the messages in drainer queue in order to update the latest
+ *        (ii)  drain all the messages in drainer queue in order to updateAsync the latest
  *              consumed message replication metadata;
  *        (iii) check whether there has been at least 5 minutes (configurable) of
  *              inactivity for this partition (meaning no new messages); if so,
@@ -116,7 +116,7 @@ import org.apache.logging.log4j.Logger;
  *           all the messages in the drainer queue for this leader topic/partition
  *           so that it can get the last producer callback for the last message it
  *           produces to VT; block on getting the result from the callback to
- *           update the corresponding offset in version topic, so that the new
+ *           updateAsync the corresponding offset in version topic, so that the new
  *           follower can subscribe back to VT using the recently updated VT offset.
  */
 public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
@@ -597,7 +597,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
           /**
            * Otherwise, execute the TopicSwitch message stored in metadata store if one of the below conditions is true:
-           * 1. it has been 5 minutes since the last update in the current topic
+           * 1. it has been 5 minutes since the last updateAsync in the current topic
            * 2. leader is consuming SR topic right now and TS wants leader to switch to another topic.
            */
           long lastTimestamp = getLastConsumedMessageTimestamp(partition);
@@ -647,7 +647,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
      * 3. User system store switches to RT so quickly that has not yet fully consumed data from local VT.
      *
      * When all above conditions happen together, user system stores switch to RT, but subscribe to a stale offset and
-     * cannot consume anything from it (empty) nor update, thus
+     * cannot consume anything from it (empty) nor updateAsync, thus
      *    RT end offset - offset in leader replica > threshold
      * and replica cannot become online {@link StoreIngestionTask#isReadyToServe}.
      */
@@ -919,7 +919,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
   private long getLastConsumedMessageTimestamp(int partition) {
 
     /**
-     * Ingestion thread would update the last consumed message timestamp for the corresponding partition.
+     * Ingestion thread would updateAsync the last consumed message timestamp for the corresponding partition.
      */
     PartitionConsumptionState partitionConsumptionState = partitionConsumptionStateMap.get(partition);
     return partitionConsumptionState.getLatestMessageConsumptionTimestampInMs();
@@ -1122,7 +1122,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
        *
        * Besides, if there is re-balance, leader should finish consuming the everything in VT before switching topics;
        * there could be more than one TopicSwitch message in VT, we should honor the last one during re-balance; so
-       * don't update the consumption state like leader topic until actually switching topic. The leaderTopic field
+       * don't updateAsync the consumption state like leader topic until actually switching topic. The leaderTopic field
        * should be used to track the topic that leader is actually consuming.
        */
       partitionConsumptionState.getOffsetRecord()
@@ -1197,9 +1197,9 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
    * A helper function to the latest in-memory offsets processed by drainers in {@link PartitionConsumptionState},
    * after processing the given {@link PubSubMessage}.
    *
-   * When using this helper function to update the latest in-memory offsets processed by drainers in {@link PartitionConsumptionState}:
-   * "updateVersionTopicOffsetFunction" should try to update the VT offset in {@link PartitionConsumptionState}
-   * "updateRealtimeTopicOffsetFunction" should try to update the latest processed upstream offset map in {@link PartitionConsumptionState}
+   * When using this helper function to updateAsync the latest in-memory offsets processed by drainers in {@link PartitionConsumptionState}:
+   * "updateVersionTopicOffsetFunction" should try to updateAsync the VT offset in {@link PartitionConsumptionState}
+   * "updateRealtimeTopicOffsetFunction" should try to updateAsync the latest processed upstream offset map in {@link PartitionConsumptionState}
    *
    * In LeaderFollowerStoreIngestionTask, "sourceKafkaUrlSupplier" should always return {@link OffsetRecord#NON_AA_REPLICATION_UPSTREAM_OFFSET_MAP_KEY};
    * in ActiveActiveStoreIngestionTask, "sourceKafkaUrlSupplier" should return the actual source Kafka url of the "consumerRecordWrapper"
@@ -1213,12 +1213,12 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       GetLastKnownUpstreamTopicOffset lastKnownUpstreamTopicOffsetSupplier,
       Supplier<String> sourceKafkaUrlSupplier) {
 
-    // Only update the metadata if this replica should NOT produce to version topic.
+    // Only updateAsync the metadata if this replica should NOT produce to version topic.
     if (!shouldProduceToVersionTopic(partitionConsumptionState)) {
       /**
        * If either (1) this is a follower replica or (2) this is a leader replica who is consuming from version topic
-       * in a local Kafka cluster, we can update the offset metadata in offset record right after consuming a message;
-       * otherwise, if the leader is consuming from real-time topic or reprocessing topic, it should update offset
+       * in a local Kafka cluster, we can updateAsync the offset metadata in offset record right after consuming a message;
+       * otherwise, if the leader is consuming from real-time topic or reprocessing topic, it should updateAsync offset
        * metadata after successfully produce a corresponding message.
        */
       KafkaMessageEnvelope kafkaValue = consumerRecord.getValue();
@@ -1227,7 +1227,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       OffsetRecord offsetRecord = partitionConsumptionState.getOffsetRecord();
       // DaVinci clients don't need to maintain leader production states
       if (!isDaVinciClient) {
-        // also update the leader topic offset using the upstream offset in ProducerMetadata
+        // also updateAsync the leader topic offset using the upstream offset in ProducerMetadata
         if (shouldUpdateUpstreamOffset(consumerRecord)) {
           final String sourceKafkaUrl = sourceKafkaUrlSupplier.get();
           final long newUpstreamOffset = kafkaValue.leaderMetadataFooter.upstreamOffset;
@@ -1248,7 +1248,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
            */
           updateUpstreamTopicOffsetFunction.apply(sourceKafkaUrl, upstreamTopic, newUpstreamOffset);
         }
-        // update leader producer GUID
+        // updateAsync leader producer GUID
         partitionConsumptionState.setLeaderGUID(kafkaValue.producerMetadata.producerGUID);
         if (kafkaValue.leaderMetadataFooter != null) {
           partitionConsumptionState.setLeaderHostId(kafkaValue.leaderMetadataFooter.hostName.toString());
@@ -1294,7 +1294,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> consumerRecord,
       UpdateVersionTopicOffset updateVersionTopicOffsetFunction,
       UpdateUpstreamTopicOffset updateUpstreamTopicOffsetFunction) {
-    // Leader will only update the offset from leaderProducedRecordContext in VT.
+    // Leader will only updateAsync the offset from leaderProducedRecordContext in VT.
     if (leaderProducedRecordContext != null) {
       if (leaderProducedRecordContext.hasCorrespondingUpstreamMessage()) {
         updateVersionTopicOffsetFunction.apply(leaderProducedRecordContext.getProducedOffset());
@@ -1818,7 +1818,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
   /**
    * The goal of this function is to possibly produce the incoming kafka message consumed from local VT, remote VT, RT or SR topic to
    * local VT if needed. It's decided based on the function output of {@link #shouldProduceToVersionTopic} and message type.
-   * It also perform any necessary additional computation operation such as for write-compute/update message.
+   * It also perform any necessary additional computation operation such as for write-compute/updateAsync message.
    * It returns a boolean indicating if it was produced to kafka or not.
    *
    * This function should be called as one of the first steps in processing pipeline for all messages consumed from any kafka topic.
@@ -1938,7 +1938,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
              *       which will be called when this message gets processed in drainer thread after successfully producing
              *       to kafka.
              *
-             * Note update: the first time we call {@link veniceWriter#get()} is different in various use cases:
+             * Note updateAsync: the first time we call {@link veniceWriter#get()} is different in various use cases:
              * 1. For hybrid store with L/F enabled, the first time a VeniceWriter is created is after leader switches to RT and
              *    consumes the first message; potential message type: SOS, EOS, data message.
              * 2. For store version generated by stream reprocessing push type, the first time is after leader switches to
@@ -1956,7 +1956,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                 partitionConsumptionState,
                 leaderProducedRecordContext,
                 (callback, leaderMetadataWrapper) -> veniceWriter.get()
-                    .put(
+                    .putAsync(
                         consumerRecord.getKey(),
                         consumerRecord.getValue(),
                         callback,
@@ -1988,7 +1988,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                   partitionConsumptionState,
                   leaderProducedRecordContext,
                   (callback, leaderMetadataWrapper) -> veniceWriter.get()
-                      .put(
+                      .putAsync(
                           consumerRecord.getKey(),
                           consumerRecord.getValue(),
                           callback,
@@ -2011,8 +2011,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                *    3. stats maintenance as in {@link StoreIngestionTask#processKafkaDataMessage(PubSubMessage, PartitionConsumptionState, LeaderProducedRecordContext)}
                *
                * For #1 Since we have moved the DIV validation in this function, We are good with DIV part which is the most critical one.
-               * For #2 Leader will not update the offset for SOS/EOS. From Server restart point of view this is tolerable. This was the case in previous design also. So there is no change in behaviour.
-               * For #3 stat counter update will not happen for SOS/EOS message. This should not be a big issue. If needed we can copy some of the stats maintenance
+               * For #2 Leader will not updateAsync the offset for SOS/EOS. From Server restart point of view this is tolerable. This was the case in previous design also. So there is no change in behaviour.
+               * For #3 stat counter updateAsync will not happen for SOS/EOS message. This should not be a big issue. If needed we can copy some of the stats maintenance
                *   work here.
                *
                * So in summary NO further processing is needed SOS/EOS received from RT topics. Just silently drop the message here.
@@ -2038,7 +2038,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                 partitionConsumptionState,
                 leaderProducedRecordContext,
                 (callback, leaderMetadataWrapper) -> veniceWriter.get()
-                    .asyncSendControlMessage(
+                    .sendControlMessageAsync(
                         controlMessage,
                         versionTopicPartitionToBeProduced,
                         new HashMap<>(),
@@ -2051,7 +2051,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
             break;
           case TOPIC_SWITCH:
             /**
-             * For TOPIC_SWITCH message we should use -1 as consumedOffset. This will ensure that it does not update the
+             * For TOPIC_SWITCH message we should use -1 as consumedOffset. This will ensure that it does not updateAsync the
              * setLeaderUpstreamOffset in:
              * {@link #updateOffsetsAsRemoteConsumeLeader(PartitionConsumptionState, LeaderProducedRecordContext, String, PubSubMessage, UpdateVersionTopicOffset, UpdateUpstreamTopicOffset)}
              * The leaderUpstreamOffset is set from the TS message config itself. We should not override it.
@@ -2068,7 +2068,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                 partitionConsumptionState,
                 leaderProducedRecordContext,
                 (callback, leaderMetadataWrapper) -> veniceWriter.get()
-                    .asyncSendControlMessage(
+                    .sendControlMessageAsync(
                         controlMessage,
                         consumerRecord.getTopicPartition().getPartitionNumber(),
                         new HashMap<>(),
@@ -2513,7 +2513,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       return;
     }
     /**
-     * When the node works as a leader, it does not update leader topic when processing TS. When the node demotes to
+     * When the node works as a leader, it does not updateAsync leader topic when processing TS. When the node demotes to
      * follower after leadership handover or becomes follower after restart, it should track the topic that leader will
      * consume. Otherwise, for hybrid stores: 1. If the node remains as follower, it might never become online because
      * hybrid lag measurement will return a large value for VT. 2. If the node promotes to leader, it will subscribe to
@@ -2546,7 +2546,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       int partition,
       ByteBuffer data,
       PartitionConsumptionState partitionConsumptionState) {
-    // To handle delete operations
+    // To handle deleteAsync operations
     if (data == null) {
       return null;
     }
@@ -2600,7 +2600,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
         ByteBuffer putValue = put.putValue;
 
         /**
-         * For WC enabled stores update the transient record map with the latest {key,value}. This is needed only for messages
+         * For WC enabled stores updateAsync the transient record map with the latest {key,value}. This is needed only for messages
          * received from RT. Messages received from VT have been persisted to disk already before switching to RT topic.
          */
         if (isWriteComputationEnabled && partitionConsumptionState.isEndOfPushReceived()) {
@@ -2641,7 +2641,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
               if (!partitionConsumptionState.isEndOfPushReceived()) {
                 veniceWriter.get()
-                    .put(
+                    .putAsync(
                         kafkaKey,
                         kafkaValue,
                         callback,
@@ -2655,7 +2655,12 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                  * please check {@link com.linkedin.venice.partitioner.UserPartitionAwarePartitioner}
                  */
                 veniceWriter.get()
-                    .put(keyBytes, ByteUtils.extractByteArray(putValue), put.schemaId, callback, leaderMetadataWrapper);
+                    .putAsync(
+                        keyBytes,
+                        ByteUtils.extractByteArray(putValue),
+                        put.schemaId,
+                        callback,
+                        leaderMetadataWrapper);
               }
             },
             subPartition,
@@ -2677,7 +2682,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
       case DELETE:
         /**
-         * For WC enabled stores update the transient record map with the latest {key,null} for similar reason as mentioned in PUT above.
+         * For WC enabled stores updateAsync the transient record map with the latest {key,null} for similar reason as mentioned in PUT above.
          */
         if (isWriteComputationEnabled && partitionConsumptionState.isEndOfPushReceived()) {
           partitionConsumptionState.setTransientRecord(kafkaClusterId, consumerRecord.getOffset(), keyBytes, -1, null);
@@ -2694,14 +2699,14 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                */
               if (!partitionConsumptionState.isEndOfPushReceived()) {
                 veniceWriter.get()
-                    .delete(
+                    .deleteAsync(
                         kafkaKey,
                         kafkaValue,
                         callback,
                         consumerRecord.getTopicPartition().getPartitionNumber(),
                         leaderMetadataWrapper);
               } else {
-                veniceWriter.get().delete(keyBytes, callback, leaderMetadataWrapper);
+                veniceWriter.get().deleteAsync(keyBytes, callback, leaderMetadataWrapper);
               }
             },
             subPartition,
@@ -2725,7 +2730,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
    *     {@link ChunkingAdapter#constructValue}
    *
    *  2. We always use the latest value schema to deserialize stored value bytes.
-   *  3. We always use the write compute schema with an ID combination of latest value schema ID + update schema ID
+   *  3. We always use the write compute schema with an ID combination of latest value schema ID + updateAsync schema ID
    *     to deserialize the incoming Update request payload bytes.
    *
    *  The reason for 2 and 3 is that we depend on the fact that the latest value schema must be a superset schema
@@ -2788,7 +2793,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       if (currValue != null) {
         throw new IllegalStateException(
             "Detect a situation where the current value exists and the Write Compute request"
-                + "deletes the current value. It is unexpected because Write Compute only supports partial update and does "
+                + "deletes the current value. It is unexpected because Write Compute only supports partial updateAsync and does "
                 + "not support record value deletion.");
       } else {
         // No-op. The fact that currValue does not exist on the leader means currValue does not exist on the follower
@@ -2824,7 +2829,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
       BiConsumer<ChunkAwareCallback, LeaderMetadataWrapper> produce =
           (callback, leaderMetadataWrapper) -> veniceWriter.get()
-              .put(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper);
+              .putAsync(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper);
 
       produceToLocalKafka(
           consumerRecord,
@@ -2912,7 +2917,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
   }
 
   /**
-   * A function to update version topic offset.
+   * A function to updateAsync version topic offset.
    */
   @FunctionalInterface
   interface UpdateVersionTopicOffset {
@@ -2920,7 +2925,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
   }
 
   /**
-   * A function to update realtime topic offset.
+   * A function to updateAsync realtime topic offset.
    */
   @FunctionalInterface
   interface UpdateUpstreamTopicOffset {

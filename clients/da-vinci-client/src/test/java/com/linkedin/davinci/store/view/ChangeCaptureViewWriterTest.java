@@ -86,7 +86,7 @@ public class ChangeCaptureViewWriterTest {
     urlMappingMap.put(LOR_1, 2);
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
+    Mockito.doNothing().when(mockVeniceWriter).putAsync(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
@@ -157,7 +157,7 @@ public class ChangeCaptureViewWriterTest {
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
+    Mockito.doNothing().when(mockVeniceWriter).putAsync(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
@@ -187,7 +187,7 @@ public class ChangeCaptureViewWriterTest {
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
+    Mockito.doNothing().when(mockVeniceWriter).putAsync(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
@@ -221,7 +221,7 @@ public class ChangeCaptureViewWriterTest {
 
     // Verify and capture input
     Mockito.verify(mockVeniceWriter, Mockito.atLeastOnce())
-        .put(keyCaptor.capture(), eventCaptor.capture(), Mockito.eq(1));
+        .putAsync(keyCaptor.capture(), eventCaptor.capture(), Mockito.eq(1));
 
     List<RecordChangeEvent> changeEvents = eventCaptor.getAllValues();
     List<byte[]> keys = keyCaptor.getAllValues();
@@ -240,7 +240,7 @@ public class ChangeCaptureViewWriterTest {
     Assert.assertEquals(changeEvents.get(1).currentValue.value, NEW_VALUE);
     Assert.assertNull(changeEvents.get(1).previousValue);
 
-    // Verify delete
+    // Verify deleteAsync
     Assert.assertEquals(keys.get(2), KEY);
     Assert.assertEquals(changeEvents.get(2).key.array(), KEY);
     Assert.assertEquals(changeEvents.get(2).replicationCheckpointVector, vectors);

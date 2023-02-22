@@ -88,7 +88,7 @@ public class AdminTopicMetadataRoutes extends AbstractRoute {
           }
         } else {
           if (!offset.isPresent() || !upstreamOffset.isPresent()) {
-            throw new VeniceException("Offsets must be provided to update cluster-level admin topic metadata");
+            throw new VeniceException("Offsets must be provided to updateAsync cluster-level admin topic metadata");
           }
         }
 

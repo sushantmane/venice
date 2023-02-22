@@ -72,7 +72,7 @@ public interface Merge<T> {
    * @param newValueSourceBrokerID The ID of the broker from which the new value originates.  ID's should correspond
    *                                 to the kafkaClusterUrlIdMap configured in the LeaderFollowerIngestionTask.  Used to build
    *                                 the ReplicationMetadata for the newly inserted record.
-   * @return the resulting {@link ValueAndRmd} after merging the old one with the incoming delete operation.
+   * @return the resulting {@link ValueAndRmd} after merging the old one with the incoming deleteAsync operation.
    *         The returned object is guaranteed to be "==" to the input oldValueAndReplicationMetadata object and the internal
    *         members of the object are possibly mutated.
    */

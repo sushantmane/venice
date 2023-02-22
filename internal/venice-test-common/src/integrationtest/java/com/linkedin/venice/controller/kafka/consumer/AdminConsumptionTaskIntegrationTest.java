@@ -69,7 +69,7 @@ public class AdminConsumptionTaskIntegrationTest {
                 .getOffset();
 
         byte[] goodMessage = getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 2);
-        writer.put(new byte[0], goodMessage, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        writer.putAsync(new byte[0], goodMessage, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
 
         Thread.sleep(5000); // Non-deterministic, but whatever. This should never fail.
         Assert.assertFalse(controller.getVeniceAdmin().hasStore(clusterName, storeName));

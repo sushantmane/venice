@@ -97,7 +97,7 @@ public class HelixExternalViewRepository extends HelixBaseRoutingRepository {
       resourceAssignment
           .setPartitionAssignment(resource, convertExternalViewToPartitionAssignment(resourceExternalView));
     }
-    // Notify listeners of this routing update.
+    // Notify listeners of this routing updateAsync.
     listenerManager.trigger(
         resource,
         listener -> listener.onExternalViewChange(resourceAssignment.getPartitionAssignment(resource)));
@@ -139,7 +139,7 @@ public class HelixExternalViewRepository extends HelixBaseRoutingRepository {
         LOGGER.info("Ideal state of cluster: {} is updated from zk.", manager.getClusterName());
       } catch (HelixMetaDataAccessException e) {
         LOGGER.error(
-            "Failed to update the ideal state of cluster: {}, because we could not access to zk.",
+            "Failed to updateAsync the ideal state of cluster: {}, because we could not access to zk.",
             manager.getClusterName(),
             e);
         return;
@@ -151,7 +151,7 @@ public class HelixExternalViewRepository extends HelixBaseRoutingRepository {
       if (!resourceToPartitionCountMapSnapshot.containsKey(resourceName)) {
         LOGGER.warn(
             "Could not find resource: {} in ideal state. Ideal state is up to date, so the resource has been "
-                + "deleted from ideal state or could not read from zk. Ignore its external view update.",
+                + "deleted from ideal state or could not read from zk. Ignore its external view updateAsync.",
             resourceName);
         continue;
       }

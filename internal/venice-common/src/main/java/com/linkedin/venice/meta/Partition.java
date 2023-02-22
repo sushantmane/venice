@@ -20,7 +20,7 @@ import org.apache.logging.log4j.Logger;
  * multiple replica which hold the same data in ideal.
  * <p>
  * In Helix Full-auto model, Helix manager is responsible to assign partitions to nodes. So here partition is read-only.
- * In the future, if Venice need more flexibility to manage cluster, some update/delete methods could be added here.
+ * In the future, if Venice need more flexibility to manage cluster, some updateAsync/deleteAsync methods could be added here.
  */
 public class Partition {
   private static final Logger LOGGER = LogManager.getLogger(Partition.class);

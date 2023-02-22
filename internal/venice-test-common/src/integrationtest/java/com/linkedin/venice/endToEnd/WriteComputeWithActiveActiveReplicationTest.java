@@ -164,7 +164,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
       parentControllerClient.disableAndDeleteStore(storeName);
     } catch (Exception e) {
       // ignore... this is just best-effort.
-      LOGGER.info("Failed to delete the store during cleanup with message: {}", e.getLocalizedMessage());
+      LOGGER.info("Failed to deleteAsync the store during cleanup with message: {}", e.getLocalizedMessage());
     }
   }
 
@@ -206,7 +206,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
   }
 
   /*
-   * Verify write-compute/partial-update on field level in Active-Active replication setup
+   * Verify write-compute/partial-updateAsync on field level in Active-Active replication setup
    */
   @Test(timeOut = TEST_TIMEOUT)
   public void testAAReplicationForPartialUpdateOnFields() throws IOException {
@@ -279,10 +279,10 @@ public class WriteComputeWithActiveActiveReplicationTest {
     /*
      * Case: Updates with lower timestamps should be ignored && updates with higher timestamps should be applied
      * Steps:
-     * 1. Put full record containing two fields and timestamp t2. Outcome: full update applied
-     * 2. Update the first field with timestamp t1; here t1 < t2 and hence the update should be ignored
-     * 3. Update the second field with timestamp t3; here t3 > t2 and hence the update should be applied
-     * 4. Update the first field with timestamp t2; since t2 == t2 update should be applied?
+     * 1. Put full record containing two fields and timestamp t2. Outcome: full updateAsync applied
+     * 2. Update the first field with timestamp t1; here t1 < t2 and hence the updateAsync should be ignored
+     * 3. Update the second field with timestamp t3; here t3 > t2 and hence the updateAsync should be applied
+     * 4. Update the first field with timestamp t2; since t2 == t2 updateAsync should be applied?
      */
     String key2 = "key2";
     GenericRecord val2 = new GenericData.Record(valueSchemaV1);
@@ -293,13 +293,15 @@ public class WriteComputeWithActiveActiveReplicationTest {
     validatePersonV1Record(storeName, dc0RouterUrl, key2, "val2f1_b", 20);
     validatePersonV1Record(storeName, dc1RouterUrl, key2, "val2f1_b", 20);
 
-    // val2T1 update should be ignored since its timestamp t1 is lower than the existing timestamp t2 for name field
+    // val2T1 updateAsync should be ignored since its timestamp t1 is lower than the existing timestamp t2 for name
+    // field
     UpdateBuilder ub2 = new UpdateBuilderImpl(wcSchemaV1);
     ub2.setNewFieldValue(PERSON_F1_NAME, "val2f1_a");
     VeniceObjectWithTimestamp val2T1 = new VeniceObjectWithTimestamp(ub2.build(), 1);
     sendStreamingRecord(systemProducerMap.get(childDatacenters.get(1)), storeName, key2, val2T1);
 
-    // val2T3 update should be applied since its timestamp t3 is greater than the existing timestamp t2 for age field
+    // val2T3 updateAsync should be applied since its timestamp t3 is greater than the existing timestamp t2 for age
+    // field
     UpdateBuilder ub3 = new UpdateBuilderImpl(wcSchemaV1);
     ub3.setNewFieldValue(PERSON_F2_NAME, 40);
     VeniceObjectWithTimestamp val2T3 = new VeniceObjectWithTimestamp(ub3.build(), 3);
@@ -307,8 +309,9 @@ public class WriteComputeWithActiveActiveReplicationTest {
     validatePersonV1Record(storeName, dc0RouterUrl, key2, "val2f1_b", 40);
     validatePersonV1Record(storeName, dc1RouterUrl, key2, "val2f1_b", 40);
 
-    // val2T2Prime update should be applied since its timestamp t2 is equal to the existing timestamp t2 for name field
-    // For the field level updates with matching timestamp, winning update is decided using data type comparator
+    // val2T2Prime updateAsync should be applied since its timestamp t2 is equal to the existing timestamp t2 for name
+    // field
+    // For the field level updates with matching timestamp, winning updateAsync is decided using data type comparator
     // (specifically GenericData.compare for non-map types). Since in this case "val2f1_b" < "val2f1_b_prime"
     // "val2f1_b_prime" should win DCR.
     UpdateBuilder ub2Prime = new UpdateBuilderImpl(wcSchemaV1);
@@ -347,7 +350,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     validatePersonV1Record(storeName, dc0RouterUrl, key3, "val3f1", 30);
     validatePersonV1Record(storeName, dc1RouterUrl, key3, "val3f1", 30);
 
-    // update value schema that removes one old field adds one new field
+    // updateAsync value schema that removes one old field adds one new field
     assertCommand(parentControllerClient.addValueSchema(storeName, valueSchemaV2.toString()));
 
     UpdateBuilder ubKv3 = new UpdateBuilderImpl(wcSchemaV2);
@@ -443,7 +446,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
   }
 
   /*
-   * Verify write-compute/partial-update on Map-field level in Active-Active replication setup
+   * Verify write-compute/partial-updateAsync on Map-field level in Active-Active replication setup
    */
   @Test(timeOut = TEST_TIMEOUT, invocationCount = 1)
   public void testAAReplicationForPartialUpdateOnMapField() throws IOException {
@@ -508,7 +511,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc0RouterUrl, key1, regularFieldValue, arrayFieldValue, mapFieldValue);
 
     // AddToMap: add a previously deleted key in the map
-    // RemoveFromMap: delete existing and not-existing key
+    // RemoveFromMap: deleteAsync existing and not-existing key
     // Adding and removing the same key in a single wc op should not change the map
     ub = new UpdateBuilderImpl(wcSchemaV1);
     updateToMapField = new HashMap<>();
@@ -685,14 +688,14 @@ public class WriteComputeWithActiveActiveReplicationTest {
 
     // todo: We need to have tie-breaking mechanism based on value when timestamps of modifications are the same
     // AddToMap: Key four's current (AddToMap) timestamp is 3 and the following operations is trying to add a new
-    // value for the key four again. Currently this second update is ignored. However, tie breaking should not be
+    // value for the key four again. Currently this second updateAsync is ignored. However, tie breaking should not be
     // first come first server based as that leads to non-deterministic output. To keep this consistent with our
     // approach we should use value-based tie breaking in case of concurrent AddToMap for the same key with the same
     // timestamp
     /*
     ub = new UpdateBuilderImpl(wcSchemaV1);
     mapFieldValue = new HashMap<>();
-    mapFieldValue.put("four", 40);
+    mapFieldValue.putAsync("four", 40);
     ub.setEntriesToAddToMapField(MAP_FIELD, mapFieldValue);
     timestampedOp = new VeniceObjectWithTimestamp(ub.build(), 3);
     sendStreamingRecord(systemProducerMap.get(childDatacenters.get(1)), storeName, key2, timestampedOp);
@@ -701,7 +704,8 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc0RouterUrl, key2, regularFieldValue, arrayFieldValue, expectedMapFieldValue);
     */
 
-    // AddToMap: Update should be ignored since as PUT takes precedence over partial update when timestamps are the same
+    // AddToMap: Update should be ignored since as PUT takes precedence over partial updateAsync when timestamps are the
+    // same
     // Let's try for the k-v which existed before full-PUT
     ub = new UpdateBuilderImpl(wcSchemaV1);
     mapFieldValue = new HashMap<>();
@@ -714,7 +718,8 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc1RouterUrl, key2, regularFieldValue, arrayFieldValue, expectedMapFieldValue);
     verifyFLMRecord(storeName, dc0RouterUrl, key2, regularFieldValue, arrayFieldValue, expectedMapFieldValue);
 
-    // AddToMap: Update should be ignored since as PUT takes precedence over partial update with when timestamps are the
+    // AddToMap: Update should be ignored since as PUT takes precedence over partial updateAsync with when timestamps
+    // are the
     // same
     // Let's try for the k-v which didn't exist before full-PUT
     ub = new UpdateBuilderImpl(wcSchemaV1);
@@ -778,8 +783,8 @@ public class WriteComputeWithActiveActiveReplicationTest {
     /*
     ub = new UpdateBuilderImpl(wcSchemaV1);
     mapFieldValue = new HashMap<>();
-    mapFieldValue.put("four", 404);
-    mapFieldValue.put("one", 101);
+    mapFieldValue.putAsync("four", 404);
+    mapFieldValue.putAsync("one", 101);
     ub.setEntriesToAddToMapField(MAP_FIELD, mapFieldValue);
     regularFieldValue = "AddBack";
     ub.setNewFieldValue(REGULAR_FIELD, regularFieldValue);
@@ -809,8 +814,8 @@ public class WriteComputeWithActiveActiveReplicationTest {
     /*
     ub = new UpdateBuilderImpl(wcSchemaV1);
     mapFieldValue = new HashMap<>();
-    mapFieldValue.put("six", 6);
-    mapFieldValue.put("seven", 7);
+    mapFieldValue.putAsync("six", 6);
+    mapFieldValue.putAsync("seven", 7);
     ub.setNewFieldValue(MAP_FIELD, mapFieldValue);
     timestampedOp = new VeniceObjectWithTimestamp(ub.build(), 2);
     sendStreamingRecord(systemProducerMap.get(childDatacenters.get(0)), storeName, key2, timestampedOp);
@@ -842,8 +847,8 @@ public class WriteComputeWithActiveActiveReplicationTest {
     /*
     ub = new UpdateBuilderImpl(wcSchemaV1);
     mapFieldValue = new HashMap<>();
-    mapFieldValue.put("eight", 88);
-    mapFieldValue.put("seven", 77);
+    mapFieldValue.putAsync("eight", 88);
+    mapFieldValue.putAsync("seven", 77);
     ub.setNewFieldValue(MAP_FIELD, mapFieldValue);
     timestampedOp = new VeniceObjectWithTimestamp(ub.build(), 3);
     sendStreamingRecord(systemProducerMap.get(childDatacenters.get(0)), storeName, key2, timestampedOp);
@@ -854,7 +859,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
   }
 
   /*
-   * Verify write-compute/partial-update on List-field level in Active-Active replication setup
+   * Verify write-compute/partial-updateAsync on List-field level in Active-Active replication setup
    */
   @Test(timeOut = TEST_TIMEOUT, invocationCount = 1)
   public void testAAReplicationForPartialUpdateOnListField() throws IOException {
@@ -1032,7 +1037,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc0RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
     verifyFLMRecord(storeName, dc1RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
 
-    // AddToSet: update with higher timestamp should be applied since t3 > t1
+    // AddToSet: updateAsync with higher timestamp should be applied since t3 > t1
     ubV1 = new UpdateBuilderImpl(wcSchemaV1);
     ubV1.setElementsToAddToListField(INT_ARRAY_FIELD, Arrays.asList(44, 55));
     expectedArrayFieldVal = Arrays.asList(11, 22, 33, 44, 55);
@@ -1041,7 +1046,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc0RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
     verifyFLMRecord(storeName, dc1RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
 
-    // RemoveFromSet: update with the same timestamp should be applied if incoming operation is DELETE
+    // RemoveFromSet: updateAsync with the same timestamp should be applied if incoming operation is DELETE
     // existingEntry: [11:2, 22:2, 33:2, 44:3, 55:3] & incomingUpdate removeFromList[44:3].
     // Here existing and incoming op timestamps for element 44 is the same. As DELETE takes precedence
     // when timestamps match, 44 should be removed from the set.
@@ -1066,13 +1071,13 @@ public class WriteComputeWithActiveActiveReplicationTest {
     verifyFLMRecord(storeName, dc0RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
     verifyFLMRecord(storeName, dc1RouterUrl, key2, "", expectedArrayFieldVal, Collections.emptyMap());
 
-    // RemoveFromSet: update with lower timestamp should be ignored.
+    // RemoveFromSet: updateAsync with lower timestamp should be ignored.
     // Incoming op has timestamp 2 for removeFromList(55) but its timestamp in the entry is 3.
     ubV1 = new UpdateBuilderImpl(wcSchemaV1);
     ubV1.setElementsToRemoveFromListField(INT_ARRAY_FIELD, Collections.singletonList(55));
     timestampedOp = new VeniceObjectWithTimestamp(ubV1.build(), 2);
     sendStreamingRecord(systemProducerMap.get(childDatacenters.get(0)), storeName, key2, timestampedOp);
-    // send another update from the same region to ensure that previous update was indeed ignored
+    // send another updateAsync from the same region to ensure that previous updateAsync was indeed ignored
     ubV1 = new UpdateBuilderImpl(wcSchemaV1);
     ubV1.setElementsToAddToListField(INT_ARRAY_FIELD, Collections.singletonList(66));
     timestampedOp = new VeniceObjectWithTimestamp(ubV1.build(), 4);

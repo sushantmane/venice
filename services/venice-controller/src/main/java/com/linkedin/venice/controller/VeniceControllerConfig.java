@@ -923,7 +923,7 @@ public class VeniceControllerConfig extends VeniceControllerClusterConfig {
   }
 
   /**
-   * A function that would put a k/v pair into a map with some processing works.
+   * A function that would putAsync a k/v pair into a map with some processing works.
    */
   @FunctionalInterface
   interface PutToMap {

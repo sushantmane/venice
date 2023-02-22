@@ -1641,7 +1641,7 @@ public class VenicePushJob implements AutoCloseable {
 
   private void updatePushJobDetailsWithMRCounters() {
     if (runningJob == null) {
-      LOGGER.info("No running job to update push job details with MR counters");
+      LOGGER.info("No running job to updateAsync push job details with MR counters");
       return;
     }
     try {
@@ -2351,7 +2351,7 @@ public class VenicePushJob implements AutoCloseable {
       previousOverallDetails = printJobStatus(response, previousOverallDetails, previousExtraDetails);
       ExecutionStatus overallStatus = ExecutionStatus.valueOf(response.getStatus());
       Map<String, String> regionSpecificInfo = response.getExtraInfo();
-      // Note that it's intended to update the push job details before updating the completed datacenter set.
+      // Note that it's intended to updateAsync the push job details before updating the completed datacenter set.
       updatePushJobDetailsWithColoStatus(regionSpecificInfo, completedDatacenters);
       regionSpecificInfo.forEach((region, regionStatus) -> {
         ExecutionStatus datacenterStatus = ExecutionStatus.valueOf(regionStatus);
@@ -2857,7 +2857,7 @@ public class VenicePushJob implements AutoCloseable {
         currentRetryAttempt++;
       }
       if (StringUtils.isEmpty(topicInfo.topic)) {
-        LOGGER.error("Could not find a store version to delete for store: {}", pushJobSetting.storeName);
+        LOGGER.error("Could not find a store version to deleteAsync for store: {}", pushJobSetting.storeName);
       } else {
         ControllerClient.retryableRequest(
             controllerClient,

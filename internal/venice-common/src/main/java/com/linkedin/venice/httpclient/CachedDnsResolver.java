@@ -109,7 +109,7 @@ public class CachedDnsResolver implements DnsResolver, Closeable {
             InetAddress[] cachedSocketAddresses = cachedDnsEntries.get(host);
             if (cachedSocketAddresses == null) {
               LOGGER.error(
-                  "Get null entry from DNS cache for host: {}, which is impossible.. But DnsCacheRefreshingTask will update it by address: {}",
+                  "Get null entry from DNS cache for host: {}, which is impossible.. But DnsCacheRefreshingTask will updateAsync it by address: {}",
                   host,
                   Arrays.toString(socketAddresses));
               cachedDnsEntries.put(host, socketAddresses);

@@ -29,7 +29,7 @@ public class HelixStoreGraveyard implements StoreGraveyard {
   public static final String STORE_GRAVEYARD_PATH = "/StoreGraveyard";
 
   protected ZkBaseDataAccessor<Store> dataAccessor;
-  // TODO we could put the Store gravyard znode to upper level to make it non-cluster-specific.
+  // TODO we could putAsync the Store gravyard znode to upper level to make it non-cluster-specific.
   private final Set<String> clusterNames;
 
   public HelixStoreGraveyard(
@@ -103,11 +103,11 @@ public class HelixStoreGraveyard implements StoreGraveyard {
        * P: C1:v3, C2:v4*
        * C: C1:v4, C2:v4*
        *
-       * Suppose I accidentally delete the store in the wrong cluster C2 using the wrong command --delete-store
+       * Suppose I accidentally deleteAsync the store in the wrong cluster C2 using the wrong command --deleteAsync-store
        * P: C1:v3, C2:null*
        * C: C1:v4, C2:null*
        *
-       * Then I realized the error and want to delete the other store as well, but now I can't delete it because the largest
+       * Then I realized the error and want to deleteAsync the other store as well, but now I can't deleteAsync it because the largest
        * version number (3) doesn't match with the one retrived from graveyard (4).
        * This check will address to this situation, and keep the largest version number in both graveyards the same.
        */
@@ -128,7 +128,7 @@ public class HelixStoreGraveyard implements StoreGraveyard {
     }
 
     // Store does not exist in graveyard OR store already exists but the re-created store is deleted again so we need to
-    // update the ZNode.
+    // updateAsync the ZNode.
     HelixUtils.update(dataAccessor, getStoreGraveyardPath(clusterName, store.getName()), store);
     LOGGER.info(
         "Put store: {} into graveyard with largestUsedVersionNumber {}.",

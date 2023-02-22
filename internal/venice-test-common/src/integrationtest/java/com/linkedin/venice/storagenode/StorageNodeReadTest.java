@@ -322,7 +322,7 @@ public class StorageNodeReadTest {
         response = sendHeartbeatRequest(client, testServerAddr);
         Assert.assertEquals(response.getStatusLine().getStatusCode(), 200);
 
-        // delete the db path
+        // deleteAsync the db path
         FileUtils.deleteDirectory(serverWrapper.getDataDirectory());
 
         Thread.sleep(TimeUnit.SECONDS.toMillis(5));

@@ -91,7 +91,7 @@ public class AdminConsumptionTask implements Runnable, Closeable {
         return false;
       }
       if (incomingProducerMetadata.messageSequenceNumber == sequenceNumber + 1) {
-        // Expected behavior, update the sequenceNumber.
+        // Expected behavior, updateAsync the sequenceNumber.
         sequenceNumber = incomingProducerMetadata.messageSequenceNumber;
       }
       // Duplicate message is acceptable.
@@ -198,7 +198,7 @@ public class AdminConsumptionTask implements Runnable, Closeable {
   /**
    * The local offset value in ZK during initialization phase; the value will not be updated during admin topic consumption.
    *
-   * Currently, there are two potential offset: local offset and upstream offset, and we only update and
+   * Currently, there are two potential offset: local offset and upstream offset, and we only updateAsync and
    * maintain one of them. While persisting the offset to ZK, we would like to keep the original value
    * for the other one, so that rollback/roll-forward of the remote consumption feature can be faster.
    */
@@ -206,7 +206,7 @@ public class AdminConsumptionTask implements Runnable, Closeable {
   /**
    * The upstream offset value in ZK during initialization phase; the value will not be updated during admin topic consumption.
    *
-   * Currently, there are two potential offset: local offset and upstream offset, and we only update and
+   * Currently, there are two potential offset: local offset and upstream offset, and we only updateAsync and
    * maintain one of them. While persisting the offset to ZK, we would like to keep the original value
    * for the other one, so that rollback/roll-forward of the remote consumption feature can be faster.
    */
@@ -640,7 +640,8 @@ public class AdminConsumptionTask implements Runnable, Closeable {
    */
   private long delegateMessage(PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record) {
     if (checkOffsetToSkip(record.getOffset(), true) || !shouldProcessRecord(record)) {
-      // Return lastDelegatedExecutionId to update the offset without changing the execution id. Skip DIV should/can be
+      // Return lastDelegatedExecutionId to updateAsync the offset without changing the execution id. Skip DIV
+      // should/can be
       // used if the skip requires executionId to be reset because this skip here is skipping the message without doing
       // any processing. This may be the case when a message cannot be deserialized properly therefore we don't know
       // what's the right execution id and producer info to set moving forward.
@@ -795,17 +796,17 @@ public class AdminConsumptionTask implements Runnable, Closeable {
       case CONFIGURE_NATIVE_REPLICATION_FOR_CLUSTER:
         throw new VeniceException(
             "Operation " + AdminMessageType.CONFIGURE_NATIVE_REPLICATION_FOR_CLUSTER + " is a batch "
-                + "update that affects all existing store in cluster " + clusterName
+                + "updateAsync that affects all existing store in cluster " + clusterName
                 + ". Cannot extract a specific store name.");
       case CONFIGURE_ACTIVE_ACTIVE_REPLICATION_FOR_CLUSTER:
         throw new VeniceException(
             "Operation " + AdminMessageType.CONFIGURE_ACTIVE_ACTIVE_REPLICATION_FOR_CLUSTER + " is a batch "
-                + "update that affects all existing store in cluster " + clusterName
+                + "updateAsync that affects all existing store in cluster " + clusterName
                 + ". Cannot extract a specific store name.");
       case CONFIGURE_INCREMENTAL_PUSH_FOR_CLUSTER:
         throw new VeniceException(
             "Operation " + AdminMessageType.CONFIGURE_INCREMENTAL_PUSH_FOR_CLUSTER + " is a batch "
-                + "update that affects all existing store in cluster " + clusterName
+                + "updateAsync that affects all existing store in cluster " + clusterName
                 + ". Cannot extract a specific store name.");
       default:
         try {

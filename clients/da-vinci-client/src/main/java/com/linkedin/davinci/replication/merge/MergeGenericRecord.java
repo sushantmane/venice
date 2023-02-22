@@ -152,8 +152,8 @@ public class MergeGenericRecord extends AbstractMerge<GenericRecord> {
       int newValueSourceBrokerID) {
     if (RUNTIME_AVRO_VERSION.earlierThan(AvroVersion.AVRO_1_7)) {
       throw new VeniceException(
-          "'delete' operation won't work properly with Avro version before 1.7 and" + " the runtime Avro version is: "
-              + RUNTIME_AVRO_VERSION);
+          "'deleteAsync' operation won't work properly with Avro version before 1.7 and"
+              + " the runtime Avro version is: " + RUNTIME_AVRO_VERSION);
     }
 
     final GenericRecord oldReplicationMetadata = oldValueAndRmd.getRmd();
@@ -178,7 +178,7 @@ public class MergeGenericRecord extends AbstractMerge<GenericRecord> {
             deleteOperationColoID);
 
         if (recordDeleteResultStatus == UpdateResultStatus.COMPLETELY_UPDATED) {
-          // Full delete
+          // Full deleteAsync
           oldValueAndRmd.setValue(null);
           oldReplicationMetadata.put(TIMESTAMP_FIELD_NAME, deleteOperationTimestamp);
         } else if (recordDeleteResultStatus == UpdateResultStatus.NOT_UPDATED_AT_ALL) {

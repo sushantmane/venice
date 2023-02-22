@@ -120,7 +120,7 @@ public class StoreInfo {
 
   /**
    * Whether a hybrid store will bypass being added db overhead ratio when updating storage quota
-   * should only be true when using AdminTool to update storage quota for hybrid stores.
+   * should only be true when using AdminTool to updateAsync storage quota for hybrid stores.
    */
   private boolean hybridStoreOverheadBypass;
 
@@ -223,7 +223,7 @@ public class StoreInfo {
 
   /**
    * Whether or not native replication should be enabled for this store.  Will only successfully
-   * apply if leaderFollowerModelEnabled is also true either in this update or a previous version of the store
+   * apply if leaderFollowerModelEnabled is also true either in this updateAsync or a previous version of the store
    */
   private boolean nativeReplicationEnabled = false;
 

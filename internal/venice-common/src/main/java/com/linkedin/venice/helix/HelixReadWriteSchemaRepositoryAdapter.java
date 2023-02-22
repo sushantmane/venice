@@ -15,7 +15,7 @@ import java.util.Collection;
  * This repository supports the following operations:
  * 1. For the regular stores, read/write operations are supported as {@link HelixReadWriteSchemaRepository}.
  * 2. For system stores, only read operations are supported via {@link HelixReadOnlyZKSharedSchemaRepository},
- *    and if you want to update the schemas for system stores, you will need to update the corresponding
+ *    and if you want to updateAsync the schemas for system stores, you will need to updateAsync the corresponding
  *    zk shared store instead.
  */
 public class HelixReadWriteSchemaRepositoryAdapter implements ReadWriteSchemaRepository {
@@ -38,7 +38,7 @@ public class HelixReadWriteSchemaRepositoryAdapter implements ReadWriteSchemaRep
         .append(storeName)
         .append(" with system store type: ")
         .append(systemStoreType)
-        .append(" directly, please update the corresponding zk shared store: ")
+        .append(" directly, please updateAsync the corresponding zk shared store: ")
         .append(systemStoreType.getZkSharedStoreName())
         .append(" instead if necessary")
         .toString();

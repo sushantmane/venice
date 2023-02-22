@@ -81,7 +81,7 @@ public class TestMergeUpdateWithFieldLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus update should be ignored.
+        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus updateAsync should be ignored.
         1,
         1,
         1);
@@ -266,7 +266,7 @@ public class TestMergeUpdateWithFieldLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus update is NOT ignored.
+        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus updateAsync is NOT ignored.
         1,
         1,
         newColoID);

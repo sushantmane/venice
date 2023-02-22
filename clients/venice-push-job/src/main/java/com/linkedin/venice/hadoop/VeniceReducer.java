@@ -121,12 +121,12 @@ public class VeniceReducer extends AbstractMapReduceTask
             writer.delete(keyBytes, callback, deleteMetadata);
           } else {
             PutMetadata putMetadata = (new PutMetadata(rmdVersionId, rmdPayload));
-            writer.put(keyBytes, valueBytes, valueSchemaId, callback, putMetadata);
+            writer.putAsync(keyBytes, valueBytes, valueSchemaId, callback, putMetadata);
           }
         } else if (enableWriteCompute && derivedValueSchemaId > 0) {
-          writer.update(keyBytes, valueBytes, valueSchemaId, derivedValueSchemaId, callback);
+          writer.updateAsync(keyBytes, valueBytes, valueSchemaId, derivedValueSchemaId, callback);
         } else {
-          writer.put(keyBytes, valueBytes, valueSchemaId, callback, null);
+          writer.putAsync(keyBytes, valueBytes, valueSchemaId, callback, null);
         }
       };
     }
@@ -177,7 +177,7 @@ public class VeniceReducer extends AbstractMapReduceTask
   /**
    * Visible for testing purpose
    *
-   * IMPORTANT: Noticed that this callback is reused in different messages, do not put information that is coupled with
+   * IMPORTANT: Noticed that this callback is reused in different messages, do not putAsync information that is coupled with
    *            each message inside this callback.
    */
   protected ReducerProducerCallback callback = null;
@@ -622,7 +622,7 @@ public class VeniceReducer extends AbstractMapReduceTask
    * of them so that it won't pollute Reducer's log.
    *
    * N.B. We assume that this is an Avro record here. (Vson is considered as
-   * Avro as well from Reducer's perspective) We should update this method once
+   * Avro as well from Reducer's perspective) We should updateAsync this method once
    * Venice supports other format in the future
    */
   public static class DuplicateKeyPrinter implements AutoCloseable, Closeable {

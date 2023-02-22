@@ -48,7 +48,7 @@ public class TestAdminSparkServerAcl extends AbstractTestAdminSparkServer {
     Assert.assertFalse(aclResponse.isError(), aclResponse.getError());
     Assert.assertEquals(accessPerm, aclResponse.getAccessPermissions());
 
-    // update acl
+    // updateAsync acl
     String newAccessPerm =
         "{\"AccessPermissions\":{\"Read\":[\"user:user2\",\"group:group1\",\"service:app1\"],\"Write\":[\"user:user2\",\"group:group1\",\"service:app1\"]}}";
     aclResponse = controllerClient.updateAclForStore(storeName, newAccessPerm);
@@ -57,7 +57,7 @@ public class TestAdminSparkServerAcl extends AbstractTestAdminSparkServer {
     Assert.assertFalse(aclResponse.isError(), aclResponse.getError());
     Assert.assertEquals(newAccessPerm, aclResponse.getAccessPermissions());
 
-    // delete acl
+    // deleteAsync acl
     aclResponse = controllerClient.deleteAclForStore(storeName);
     Assert.assertFalse(aclResponse.isError(), aclResponse.getError());
     aclResponse = controllerClient.getAclForStore(storeName);

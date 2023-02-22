@@ -118,7 +118,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -222,7 +222,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -259,7 +259,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -301,7 +301,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -324,7 +324,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -371,7 +371,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -392,7 +392,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -416,7 +416,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
     try {
       /**
        * {@link #fetchStoreSchemaIfNotInCache(String)} must be wrapped inside the read lock scope since it is possible
-       * that some other thread could update the schema map asynchronously in between,
+       * that some other thread could updateAsync the schema map asynchronously in between,
        * such as clearing the map during {@link #refresh()},
        * which could cause this function throw {@link VeniceNoStoreException}.
        */
@@ -461,7 +461,7 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
       getSchemaLock().readLock().unlock();
     }
     // When superset schema exist, but corresponding schema is not ready, we will force refresh the schema and retrieve
-    // the update.
+    // the updateAsync.
     return forceRefreshSupersetSchemaWithRetry(storeName);
   }
 
@@ -620,8 +620,8 @@ public class HelixReadOnlySchemaRepository implements ReadOnlySchemaRepository, 
   }
 
   /**
-   * For store deletion, we need to delete the local cache entry right way,
-   * otherwise the local cache may contain the stale entries for store-delete-and-add scenario.
+   * For store deletion, we need to deleteAsync the local cache entry right way,
+   * otherwise the local cache may contain the stale entries for store-deleteAsync-and-add scenario.
    */
   @Override
   public void handleStoreDeleted(String storeName) {

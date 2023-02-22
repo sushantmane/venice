@@ -38,11 +38,11 @@ public enum Arg {
   STORAGE_QUOTA("storage-quota", "sq", true, "maximum capacity a store version or storage persona could have"),
   DISABLE_META_STORE(
       "disable-meta-store", "dms", false,
-      "disable meta system store. This command sets storeMetaSystemStoreEnabled flag to false but does not delete any resources associated with the meta store. Please use this option with caution"
+      "disable meta system store. This command sets storeMetaSystemStoreEnabled flag to false but does not deleteAsync any resources associated with the meta store. Please use this option with caution"
   ),
   DISABLE_DAVINCI_PUSH_STATUS_STORE(
       "disable-davinci-push-status-store", "ddvc", false,
-      "disable davinci push status store. This command sets daVinciPushStatusStoreEnabled flag to false but does not delete any resources associated with the push status store. Please use this option with caution"
+      "disable davinci push status store. This command sets daVinciPushStatusStoreEnabled flag to false but does not deleteAsync any resources associated with the push status store. Please use this option with caution"
   ),
   HYBRID_STORE_DISK_QUOTA_ENABLED(
       "hybrid-store-disk-quota-enabled", "hsq", true, "whether or not enable disk quota for a hybrid store"
@@ -84,7 +84,7 @@ public enum Arg {
   ),
   RMD_CHUNKING_ENABLED(
       "rmd-chunking-enabled", "rce", true,
-      "Enable/Disable replication metadata chunking, mostly for Active/Active replication enabled store with partial update requirement support"
+      "Enable/Disable replication metadata chunking, mostly for Active/Active replication enabled store with partial updateAsync requirement support"
   ),
   INCREMENTAL_PUSH_ENABLED(
       "incremental-push-enabled", "ipe", true, "a flag to see if the store supports incremental push or not"
@@ -182,7 +182,7 @@ public enum Arg {
   NATIVE_REPLICATION_SOURCE_FABRIC(
       "native-replication-source-fabric", "nrsf", true,
       "The source fabric name to be used in native replication. Remote consumption will happen from kafka in this fabric."
-  ), PRINCIPAL("principal", "p", true, "Principal to add/modify/delete ACLs"),
+  ), PRINCIPAL("principal", "p", true, "Principal to add/modify/deleteAsync ACLs"),
   REPLICATE_ALL_CONFIGS(
       "replicate-all-configs", "rac", false,
       "Whether all unchanged store configs in parent controller will be replicated to child controllers"

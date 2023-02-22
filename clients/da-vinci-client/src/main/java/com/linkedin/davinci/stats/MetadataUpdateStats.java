@@ -8,21 +8,21 @@ import io.tehuti.metrics.Sensor;
 
 
 /**
- * MetadataUpdateStats records metrics related to storage metadata update via {@link MainIngestionStorageMetadataService}
+ * MetadataUpdateStats records metrics related to storage metadata updateAsync via {@link MainIngestionStorageMetadataService}
  */
 public class MetadataUpdateStats extends AbstractVeniceStats {
   private static final String METRICS_PREFIX = "ingestion_isolation_metadata_updates";
 
-  // Number of remaining elements inside metadata update queue.
+  // Number of remaining elements inside metadata updateAsync queue.
   private final Sensor metadataUpdateQueueLengthSensor;
-  // If we encountered unknown exception during metadata update, we will set the Gauge value to 1
+  // If we encountered unknown exception during metadata updateAsync, we will set the Gauge value to 1
   private final Sensor metadataUpdateQueueErrorSensor;
 
   public MetadataUpdateStats(MetricsRepository metricsRepository) {
     super(metricsRepository, METRICS_PREFIX);
     metadataUpdateQueueLengthSensor = registerSensor("queue_length", new Gauge());
     metadataUpdateQueueErrorSensor = registerSensor("queue_update_error", new Gauge());
-    // Reset metadata update queue error Gauge.
+    // Reset metadata updateAsync queue error Gauge.
     recordMetadataQueueUpdateError(0.0);
   }
 

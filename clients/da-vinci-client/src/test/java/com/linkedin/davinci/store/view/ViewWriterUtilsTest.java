@@ -28,7 +28,7 @@ public class ViewWriterUtilsTest {
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.doNothing().when(mockVeniceWriter).put(Mockito.any(), Mockito.any(), Mockito.anyInt());
+    Mockito.doNothing().when(mockVeniceWriter).putAsync(Mockito.any(), Mockito.any(), Mockito.anyInt());
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);

@@ -267,7 +267,7 @@ public abstract class AbstractPushMonitorTest {
     });
 
     monitor.loadAllPushes();
-    // Make sure we delete old error pushes from accessor.
+    // Make sure we deleteAsync old error pushes from accessor.
     verify(mockAccessor, times(statusCount - MAX_PUSH_TO_KEEP)).deleteOfflinePushStatusAndItsPartitionStatuses(any());
 
     // the first push should be persisted since it succeeded. But the next 5 pushes should be purged.
@@ -684,7 +684,7 @@ public abstract class AbstractPushMonitorTest {
     Assert.assertEquals(
         monitor.getOfflinePushOrThrow(topic).getCurrentStatus(),
         ExecutionStatus.END_OF_PUSH_RECEIVED,
-        "At least one replica already received end_of_push, so we send SOBR and update push status to END_OF_PUSH_RECEIVED");
+        "At least one replica already received end_of_push, so we send SOBR and updateAsync push status to END_OF_PUSH_RECEIVED");
 
     // Another replica received end of push
     replicaStatuses.get(1).updateStatus(ExecutionStatus.END_OF_PUSH_RECEIVED);
@@ -753,7 +753,7 @@ public abstract class AbstractPushMonitorTest {
     Assert.assertEquals(
         monitor.getOfflinePushOrThrow(topic).getCurrentStatus(),
         ExecutionStatus.END_OF_PUSH_RECEIVED,
-        "At least one replica already received end_of_push, so we send SOBR and update push status to END_OF_PUSH_RECEIVED");
+        "At least one replica already received end_of_push, so we send SOBR and updateAsync push status to END_OF_PUSH_RECEIVED");
   }
 
   protected class MockStoreCleaner implements StoreCleaner {

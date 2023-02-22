@@ -211,7 +211,7 @@ public abstract class ProcessWrapper implements Closeable {
         FileUtils.deleteDirectory(dataDirectory);
       }
     } catch (IOException e) {
-      LOGGER.error("Failed to delete {}'s data directory: {}", serviceName, dataDirectory.getAbsolutePath(), e);
+      LOGGER.error("Failed to deleteAsync {}'s data directory: {}", serviceName, dataDirectory.getAbsolutePath(), e);
     }
   }
 

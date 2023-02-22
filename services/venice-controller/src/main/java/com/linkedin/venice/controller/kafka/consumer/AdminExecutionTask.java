@@ -533,7 +533,7 @@ public class AdminExecutionTask implements Callable<Void> {
       }
     }
     /**
-     * Pass the region filter to the final update store params
+     * Pass the region filter to the final updateAsync store params
      */
     params.getRegionsFilter().ifPresent(finalParams::setRegionsFilter);
 
@@ -560,9 +560,9 @@ public class AdminExecutionTask implements Callable<Void> {
       /** Ignore largest used version in original store in parent.
        * This is necessary if client pushes a new version during store migration, in which case the original store "largest used version"
        * in parent controller will not increase, but cloned store in parent and both original and cloned stores in child ontrollers will.
-       * Without this change the "delete store" message will not be processed in child controller due to version mismatch.
+       * Without this change the "deleteAsync store" message will not be processed in child controller due to version mismatch.
        *
-       * It will also allow Venice admin to issue delete store command to parent controller,
+       * It will also allow Venice admin to issue deleteAsync store command to parent controller,
        * in case something goes wrong during store migration
        *
        * TODO: revise this logic when store migration is redesigned, new design should avoid this edge case altogether.
@@ -583,7 +583,7 @@ public class AdminExecutionTask implements Callable<Void> {
       // Src and dest parent controllers communicate
       admin.migrateStore(srcClusterName, destClusterName, storeName);
     } else {
-      // Child controllers need to update migration src and dest cluster in storeConfig
+      // Child controllers need to updateAsync migration src and dest cluster in storeConfig
       // Otherwise, storeConfig in the fabric won't have src and dest cluster info
       admin.setStoreConfigForMigration(storeName, srcClusterName, destClusterName);
     }

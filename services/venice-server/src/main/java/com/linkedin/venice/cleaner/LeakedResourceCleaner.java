@@ -104,7 +104,7 @@ public class LeakedResourceCleaner extends AbstractVeniceService {
               long currentTime = System.currentTimeMillis();
               if (nonExistentStoreToCheckedTimestamp.containsKey(storeName)) {
                 long timestamp = nonExistentStoreToCheckedTimestamp.get(storeName);
-                // If store is reported missing for more than a day by the store repo, delete the resources.
+                // If store is reported missing for more than a day by the store repo, deleteAsync the resources.
                 if (timestamp + nonExistentStoreCleanupInterval < currentTime) {
                   LOGGER.info("Store: {} is not hosted by this host, it's resources will be cleaned up.", storeName);
                   storageService.removeStorageEngine(resourceName);

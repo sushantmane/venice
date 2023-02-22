@@ -324,7 +324,7 @@ public class VeniceParentHelixAdminTest {
         Assert.assertEquals(hybridStoreConfig.getRewindTimeInSeconds(), 600);
         Assert.assertEquals(hybridStoreConfig.getOffsetLagThresholdToGoOnline(), 10000);
 
-        // Try to update the hybrid store with different hybrid configs
+        // Try to updateAsync the hybrid store with different hybrid configs
         params = new UpdateStoreQueryParams().setHybridRewindSeconds(172800);
         assertCommand(controllerClient.updateStore(storeName, params));
         hybridStoreConfig = assertCommand(controllerClient.getStore(storeName)).getStore().getHybridStoreConfig();
@@ -449,10 +449,11 @@ public class VeniceParentHelixAdminTest {
         storeName,
         new UpdateStoreQueryParams().setBackupVersionRetentionMs(backupVersionRetentionMs).setReadQuotaInCU(10000));
     Assert.assertNotNull(controllerResponse);
-    Assert
-        .assertFalse(controllerResponse.isError(), "Error in store update response: " + controllerResponse.getError());
+    Assert.assertFalse(
+        controllerResponse.isError(),
+        "Error in store updateAsync response: " + controllerResponse.getError());
 
-    // Verify the update in Parent Controller
+    // Verify the updateAsync in Parent Controller
     StoreResponse storeResponseFromParentController = parentControllerClient.getStore(storeName);
     Assert.assertFalse(
         storeResponseFromParentController.isError(),
@@ -461,7 +462,7 @@ public class VeniceParentHelixAdminTest {
         storeResponseFromParentController.getStore().getBackupVersionRetentionMs(),
         backupVersionRetentionMs);
     Assert.assertEquals(storeResponseFromParentController.getStore().getReadQuotaInCU(), 10000);
-    // Verify the update in Child Controller
+    // Verify the updateAsync in Child Controller
     waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> {
       StoreResponse storeResponseFromChildController = childControllerClient.getStore(storeName);
       Assert.assertFalse(

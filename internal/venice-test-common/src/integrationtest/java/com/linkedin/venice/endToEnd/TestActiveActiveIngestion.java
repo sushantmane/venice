@@ -286,7 +286,7 @@ public class TestActiveActiveIngestion {
     try (
         VeniceSystemProducer veniceProducer = factory.getClosableProducer("venice", new MapConfig(samzaConfig), null)) {
       veniceProducer.start();
-      // run samza to stream put and delete
+      // run samza to stream putAsync and deleteAsync
       runSamzaStreamJob(veniceProducer, storeName, mockTime, 10, 10, 20);
     }
 
@@ -490,7 +490,7 @@ public class TestActiveActiveIngestion {
     try (
         VeniceSystemProducer veniceProducer = factory.getClosableProducer("venice", new MapConfig(samzaConfig), null)) {
       veniceProducer.start();
-      // run samza to stream put and delete
+      // run samza to stream putAsync and deleteAsync
       runSamzaStreamJob(veniceProducer, storeName, mockTime, 10, 10, 20);
     }
 
@@ -593,7 +593,7 @@ public class TestActiveActiveIngestion {
           clusterWrapper.stopVeniceServer(serverWrapper.getPort());
           clusterWrapper.restartVeniceServer(serverWrapper.getPort());
         }
-        veniceWriter.put(entry.getKey(), entry.getValue(), 1, null);
+        veniceWriter.putAsync(entry.getKey(), entry.getValue(), 1, null);
       }
       veniceWriter.broadcastEndOfPush(Collections.emptyMap());
     }

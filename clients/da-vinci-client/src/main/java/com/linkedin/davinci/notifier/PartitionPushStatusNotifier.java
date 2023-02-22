@@ -6,7 +6,7 @@ import com.linkedin.venice.pushmonitor.HybridStoreQuotaStatus;
 
 
 /**
- * Notifier used to update replica status by Helix partition push status accessor.
+ * Notifier used to updateAsync replica status by Helix partition push status accessor.
  */
 public class PartitionPushStatusNotifier implements VeniceNotifier {
   private HelixPartitionStatusAccessor accessor;

@@ -93,7 +93,7 @@ public class HelixOfflinePushMonitorAccessorTest {
       accessor.updateReplicaStatus(topic, partitionId, "i1", ExecutionStatus.COMPLETED, 0, "");
       Assert.assertNull(accessor.getPartitionStatus(topic, partitionId));
     } catch (ZkDataAccessException e) {
-      Assert.fail("Should skip the update instead of throw a exception here.");
+      Assert.fail("Should skip the updateAsync instead of throw a exception here.");
     }
   }
 

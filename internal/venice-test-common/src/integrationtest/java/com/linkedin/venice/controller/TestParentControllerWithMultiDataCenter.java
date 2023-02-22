@@ -96,7 +96,7 @@ public class TestParentControllerWithMultiDataCenter {
           "The NewStoreResponse returned an error: " + newStoreResponse.getError());
 
       /**
-       * Send UpdateStore to parent controller to update a store config
+       * Send UpdateStore to parent controller to updateAsync a store config
        */
       final long expectedHybridRewindSeconds = 100;
       final long expectedHybridOffsetLagThreshold = 100;
@@ -107,7 +107,7 @@ public class TestParentControllerWithMultiDataCenter {
               .setHybridBufferReplayPolicy(expectedHybridBufferReplayPolicy)
               .setChunkingEnabled(true)
               .setRmdChunkingEnabled(true)
-              .setLeaderFollowerModel(true) // Enable L/F to update amplification factor.
+              .setLeaderFollowerModel(true) // Enable L/F to updateAsync amplification factor.
               .setAmplificationFactor(2);
 
       TestWriteUtils.updateStore(storeName, parentControllerClient, updateStoreParams);
@@ -144,7 +144,7 @@ public class TestParentControllerWithMultiDataCenter {
         }
       });
 
-      // Turn off hybrid config so we can update the partitioner config.
+      // Turn off hybrid config so we can updateAsync the partitioner config.
       final UpdateStoreQueryParams updateStoreParams2 =
           new UpdateStoreQueryParams().setHybridRewindSeconds(-1).setHybridOffsetLagThreshold(-1);
       TestWriteUtils.updateStore(storeName, parentControllerClient, updateStoreParams2);
@@ -157,7 +157,8 @@ public class TestParentControllerWithMultiDataCenter {
         }
       });
 
-      // Update partitioner parameters make sure new update is in and other fields of partitioner config is not reset.
+      // Update partitioner parameters make sure new updateAsync is in and other fields of partitioner config is not
+      // reset.
       final UpdateStoreQueryParams updateStoreParams3 =
           new UpdateStoreQueryParams().setPartitionerParams(Collections.singletonMap("key", "val"));
       TestWriteUtils.updateStore(storeName, parentControllerClient, updateStoreParams3);
@@ -215,7 +216,7 @@ public class TestParentControllerWithMultiDataCenter {
           "The NewStoreResponse returned an error: " + newStoreResponse.getError());
 
       /**
-       * Send UpdateStore to child controller in the first data center; update 3 configs:
+       * Send UpdateStore to child controller in the first data center; updateAsync 3 configs:
        * 1. Storage quota set to 9527;
        * 2. L/F set to true;
        * 3. NR set to true.
@@ -241,7 +242,7 @@ public class TestParentControllerWithMultiDataCenter {
       });
 
       /**
-       * Send UpdateStore to parent controller to update a store config that is irrelevant to the above 3 configs
+       * Send UpdateStore to parent controller to updateAsync a store config that is irrelevant to the above 3 configs
        */
       long expectedReadQuota = 2021;
       UpdateStoreQueryParams updateStoreParamsOnParent =

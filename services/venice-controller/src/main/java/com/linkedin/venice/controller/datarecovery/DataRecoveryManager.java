@@ -29,7 +29,7 @@ import java.util.Optional;
  * This class contains all the logics to:
  *   1. Validate a Venice store version for data recovery. i.e. make sure the destination fabric is capable of data
  *   recovery and its previous sates are reset/cleared properly.
- *   2. Prepare a Venice store version for data recovery. i.e. delete the existing version, Helix resources and kafka
+ *   2. Prepare a Venice store version for data recovery. i.e. deleteAsync the existing version, Helix resources and kafka
  *   topic.
  *   3. Initiate the data recovery by recreating the version, kafka topic and Helix resources accordingly.
  */

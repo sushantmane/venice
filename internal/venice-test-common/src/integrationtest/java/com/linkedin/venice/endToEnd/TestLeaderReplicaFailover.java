@@ -158,7 +158,7 @@ public class TestLeaderReplicaFailover {
       veniceWriter.broadcastStartOfPush(true, Collections.emptyMap());
       Map<byte[], byte[]> sortedInputRecords = generateData(1000, true, 0, serializer);
       for (Map.Entry<byte[], byte[]> entry: sortedInputRecords.entrySet()) {
-        veniceWriter.put(entry.getKey(), entry.getValue(), 1, null);
+        veniceWriter.putAsync(entry.getKey(), entry.getValue(), 1, null);
       }
       veniceWriter.broadcastEndOfPush(Collections.emptyMap());
     }

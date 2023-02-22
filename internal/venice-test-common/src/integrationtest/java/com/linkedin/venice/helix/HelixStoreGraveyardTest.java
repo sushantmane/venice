@@ -41,13 +41,13 @@ public class HelixStoreGraveyardTest {
     store.setLargestUsedVersionNumber(largestUsedVersionNumber);
     graveyard.putStoreIntoGraveyard(clusterNames[0], store);
     largestUsedVersionNumber++;
-    // put the second cluster.
+    // putAsync the second cluster.
     store.setLargestUsedVersionNumber(largestUsedVersionNumber);
     graveyard.putStoreIntoGraveyard(clusterNames[1], store);
     Assert.assertEquals(
         graveyard.getLargestUsedVersionNumber(storeName),
         largestUsedVersionNumber,
-        "Store should be put in to graveyard with the updated largestUsedVersionNumber.");
+        "Store should be putAsync in to graveyard with the updated largestUsedVersionNumber.");
 
     // Store already exists in graveyard.
     largestUsedVersionNumber++;
@@ -56,14 +56,14 @@ public class HelixStoreGraveyardTest {
     Assert.assertEquals(
         graveyard.getLargestUsedVersionNumber(storeName),
         largestUsedVersionNumber,
-        "Store should be put in to graveyard with the updated largestUsedVersionNumber.");
+        "Store should be putAsync in to graveyard with the updated largestUsedVersionNumber.");
 
     // Store already exists and the largestUsedVersionNumber is smaller than the one in graveyard.
     largestUsedVersionNumber--;
     store.setLargestUsedVersionNumber(largestUsedVersionNumber);
     try {
       graveyard.putStoreIntoGraveyard(clusterNames[0], store);
-      Assert.fail("Invalid largestUsedVersionNumber, put operation should fail.");
+      Assert.fail("Invalid largestUsedVersionNumber, putAsync operation should fail.");
     } catch (VeniceException e) {
       // expected
     }
@@ -82,6 +82,6 @@ public class HelixStoreGraveyardTest {
     Assert.assertEquals(
         graveyard.getLargestUsedVersionNumber(storeName),
         largestUsedVersionNumber,
-        "Store should be put in to graveyard with the updated largestUsedVersionNumber.");
+        "Store should be putAsync in to graveyard with the updated largestUsedVersionNumber.");
   }
 }

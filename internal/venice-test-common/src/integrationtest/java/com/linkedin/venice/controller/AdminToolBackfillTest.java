@@ -111,9 +111,9 @@ public class AdminToolBackfillTest {
 
     /* Test - disable meta store */
 
-    // try some random update store operation, and it shouldn't disable meta store
+    // try some random updateAsync store operation, and it shouldn't disable meta store
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--bootstrap-to-online-timeout", "1", };
+        "--store", testStoreName, "--updateAsync-store", "--bootstrap-to-online-timeout", "1", };
     AdminTool.main(adminToolArgs);
 
     verifyMetaSystemStoreStatus(parentControllerClient, "parentController", testStoreName, true);
@@ -122,7 +122,7 @@ public class AdminToolBackfillTest {
 
     // replicate all configs shouldn't disable davinci push status store
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--replicate-all-configs", "true" };
+        "--store", testStoreName, "--updateAsync-store", "--replicate-all-configs", "true" };
     AdminTool.main(adminToolArgs);
 
     verifyMetaSystemStoreStatus(parentControllerClient, "parentController", testStoreName, true);
@@ -130,7 +130,7 @@ public class AdminToolBackfillTest {
     verifyMetaSystemStoreStatus(dc1Client, "dc1ControllerClient", testStoreName, true);
 
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--disable-meta-store", };
+        "--store", testStoreName, "--updateAsync-store", "--disable-meta-store", };
     AdminTool.main(adminToolArgs);
 
     verifyMetaSystemStoreStatus(parentControllerClient, "parentController", testStoreName, false);
@@ -180,9 +180,9 @@ public class AdminToolBackfillTest {
 
     /* Test - disable push status store */
 
-    // try some random update store operation, and it shouldn't disable davinci push status store
+    // try some random updateAsync store operation, and it shouldn't disable davinci push status store
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--bootstrap-to-online-timeout", "1", };
+        "--store", testStoreName, "--updateAsync-store", "--bootstrap-to-online-timeout", "1", };
     AdminTool.main(adminToolArgs);
 
     verifyPushStatusStoreStatus(parentControllerClient, "parentController", testStoreName, true);
@@ -191,7 +191,7 @@ public class AdminToolBackfillTest {
 
     // replicate all configs shouldn't disable davinci push status store
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--replicate-all-configs", "true" };
+        "--store", testStoreName, "--updateAsync-store", "--replicate-all-configs", "true" };
     AdminTool.main(adminToolArgs);
 
     verifyPushStatusStoreStatus(parentControllerClient, "parentController", testStoreName, true);
@@ -199,7 +199,7 @@ public class AdminToolBackfillTest {
     verifyPushStatusStoreStatus(dc1Client, "dc1ControllerClient", testStoreName, true);
 
     adminToolArgs = new String[] { "--url", parentControllerClient.getLeaderControllerUrl(), "--cluster", clusterName,
-        "--store", testStoreName, "--update-store", "--disable-davinci-push-status-store", };
+        "--store", testStoreName, "--updateAsync-store", "--disable-davinci-push-status-store", };
     AdminTool.main(adminToolArgs);
 
     verifyPushStatusStoreStatus(parentControllerClient, "parentController", testStoreName, false);

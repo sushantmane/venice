@@ -149,7 +149,7 @@ public class MetaDataHandler extends SimpleChannelInboundHandler<HttpRequest> {
       handleValueSchemaLookup(ctx, helper);
     } else if (TYPE_UPDATE_SCHEMA.equals(resourceType)) {
       // URI: /update_schema/{$storeName}/{$valueSchemaId}
-      // The request could fetch the latest derived update schema of a specific value schema
+      // The request could fetch the latest derived updateAsync schema of a specific value schema
       handleUpdateSchemaLookup(ctx, helper);
     } else if (TYPE_CLUSTER_DISCOVERY.equals(resourceType)) {
       // URI: /discover_cluster/${storeName}
@@ -258,7 +258,7 @@ public class MetaDataHandler extends SimpleChannelInboundHandler<HttpRequest> {
       setupResponseAndFlush(BAD_REQUEST, errBody, false, ctx);
     } else {
       // URI: /update_schema/{$storeName}/{$valueSchemaId}
-      // Get latest update schema by value schema id
+      // Get latest updateAsync schema by value schema id
       int valueSchemaId = Integer.parseInt(valueSchemaIdStr);
       Optional<DerivedSchemaEntry> updateSchemaOptional =
           getLatestUpdateSchemaWithValueSchemaId(storeName, valueSchemaId);

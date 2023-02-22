@@ -18,7 +18,7 @@ public interface StoreGraveyard {
   int getLargestUsedVersionNumber(String storeName);
 
   /**
-   * Put the given store into graveyard. If the store has already existed in the graveyard, update it by this given
+   * Put the given store into graveyard. If the store has already existed in the graveyard, updateAsync it by this given
    * store.
    */
   void putStoreIntoGraveyard(String clusterName, Store store);

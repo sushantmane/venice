@@ -131,7 +131,7 @@ public enum StatsErrorCode {
   WRITE_COMPUTE_DESERIALIZATION_FAILURE(-21),
 
   /**
-   * This is bubbled up when write compute adapter fails to perform update
+   * This is bubbled up when write compute adapter fails to perform updateAsync
    * operations on top of the current value.
    */
   WRITE_COMPUTE_UPDATE_FAILURE(-22),

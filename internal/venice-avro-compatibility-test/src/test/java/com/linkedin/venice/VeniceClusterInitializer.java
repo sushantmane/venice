@@ -108,7 +108,7 @@ public class VeniceClusterInitializer implements Closeable {
     ControllerResponse updateStoreResponse = controllerClient.updateStore(storeName, params);
     if (updateStoreResponse.isError()) {
       throw new VeniceException(
-          "Failed to update store: " + storeName + ", and the error: " + updateStoreResponse.getError());
+          "Failed to updateAsync store: " + storeName + ", and the error: " + updateStoreResponse.getError());
     }
     VersionCreationResponse newVersion = controllerClient.requestTopicForWrites(
         storeName,

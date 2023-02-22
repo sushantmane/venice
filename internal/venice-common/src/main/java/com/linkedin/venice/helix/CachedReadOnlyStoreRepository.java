@@ -196,8 +196,8 @@ public class CachedReadOnlyStoreRepository implements ReadOnlyStoreRepository {
 
   /**
    * {@link HelixReadOnlyZKSharedSystemStoreRepository} is overriding this function to filter out
-   * stores, which are not necessary to put a watch against during {@link #refresh()}, and if this logic to refresh the zk
-   * store repository gets changed in the future, we need to update {@link HelixReadOnlyZKSharedSystemStoreRepository}
+   * stores, which are not necessary to putAsync a watch against during {@link #refresh()}, and if this logic to refresh the zk
+   * store repository gets changed in the future, we need to updateAsync {@link HelixReadOnlyZKSharedSystemStoreRepository}
    * accordingly.
    */
   protected List<Store> getStoresFromZk() {

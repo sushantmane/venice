@@ -105,7 +105,7 @@ public class TestDeleteStoreDeletesRealtimeTopic {
         controllerClient
             .updateStore(storeName, new UpdateStoreQueryParams().setEnableReads(false).setEnableWrites(false)));
 
-    // wait on delete store as it blocks on deletion of RT topic
+    // wait on deleteAsync store as it blocks on deletion of RT topic
     TestUtils.waitForNonDeterministicCompletion(10, TimeUnit.SECONDS, () -> {
       return !controllerClient.deleteStore(storeName).isError(); // error because store no longer exists
     });

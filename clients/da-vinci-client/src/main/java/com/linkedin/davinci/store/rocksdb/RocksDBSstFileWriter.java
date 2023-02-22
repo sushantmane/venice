@@ -38,7 +38,7 @@ public class RocksDBSstFileWriter {
 
   /**
    * This class will be used in {@link #put(byte[], ByteBuffer)} to improve GC.
-   * Since the only update is from {@literal com.linkedin.venice.kafka.consumer.StoreBufferService.StoreBufferDrainer}, the
+   * Since the only updateAsync is from {@literal com.linkedin.venice.kafka.consumer.StoreBufferService.StoreBufferDrainer}, the
    * total amount of memory pre-allocated is limited.
    */
   private static class ReusableObjects {
@@ -244,7 +244,7 @@ public class RocksDBSstFileWriter {
         String fullPathForSSTFile = fullPathForTempSSTFileDir + File.separator + sstFile;
         boolean ret = new File(fullPathForSSTFile).delete();
         if (!ret) {
-          throw new VeniceException("Failed to delete file: " + fullPathForSSTFile);
+          throw new VeniceException("Failed to deleteAsync file: " + fullPathForSSTFile);
         }
       }
     }

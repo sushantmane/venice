@@ -6,7 +6,7 @@ import org.apache.avro.generic.GenericRecord;
 
 /**
  * An object to encapsulate the results of conflict resolution to denote how the operation and value that should be
- * applied or if the current update should be ignored.
+ * applied or if the current updateAsync should be ignored.
  */
 public class MergeConflictResult {
   private static final MergeConflictResult IGNORED_RESULT = new MergeConflictResult();

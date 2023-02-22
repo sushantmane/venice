@@ -188,7 +188,7 @@ public class TestHybridQuota {
       String topicForStoreVersion3 = Version.composeKafkaTopic(storeName, 3);
       long storageQuotaInByte = 60000; // A small quota, easily violated.
 
-      // Need to update store with quota here.
+      // Need to updateAsync store with quota here.
       controllerClient.updateStore(
           storeName,
           new UpdateStoreQueryParams().setPartitionCount(2)

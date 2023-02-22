@@ -41,7 +41,7 @@ public class TestMigrationPushStrategyZKAccessor {
     Assert.assertTrue(pushStrategies.containsKey(voldemortStore));
     Assert
         .assertEquals(pushStrategies.get(voldemortStore), MigrationPushStrategy.RunBnPAndVPJWaitForBothStrategy.name());
-    // update
+    // updateAsync
     accessor.setPushStrategy(voldemortStore, MigrationPushStrategy.RunBnPOnlyStrategy.name());
     pushStrategies = accessor.getAllPushStrategies();
     Assert.assertTrue(pushStrategies.containsKey(voldemortStore));

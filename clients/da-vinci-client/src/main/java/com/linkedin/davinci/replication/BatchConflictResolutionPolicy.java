@@ -11,13 +11,13 @@ public enum BatchConflictResolutionPolicy {
    */
   BATCH_WRITE_LOSES(0),
   /**
-   * Start-Of-Push Control message's timestamp should be treated as the last update replication timestamp for all batch
+   * Start-Of-Push Control message's timestamp should be treated as the last updateAsync replication timestamp for all batch
    * records, and hybrid writes wins only when their own logicalTimestamp are higher.
    */
   USE_START_OF_PUSH_TIMESTAMP(1),
   /**
    * Per-record replication metadata is provided by the push job and stored for each key, enabling full conflict
-   * resolution granularity on a per field basis, just like when merging concurrent update operations.
+   * resolution granularity on a per field basis, just like when merging concurrent updateAsync operations.
    */
   USE_PER_RECORD_LOGICAL_TIMESTAMP(2);
 

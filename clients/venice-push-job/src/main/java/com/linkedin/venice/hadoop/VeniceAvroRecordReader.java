@@ -135,7 +135,7 @@ public class VeniceAvroRecordReader extends AbstractVeniceRecordReader<AvroWrapp
 
       for (Schema.Field fileField: fileSchema.getFields()) {
         Schema fieldSchema = fileField.schema();
-        // In our ETL jobs, when we see a "delete" record, we set the value as "null" and set the DELETED_TS to the
+        // In our ETL jobs, when we see a "deleteAsync" record, we set the value as "null" and set the DELETED_TS to the
         // timestamp when this record was deleted. To allow the value field to be set as "null", we make the schema of
         // the value field as a union schema of "null" and the original value schema. To push back to Venice from ETL
         // data, we strip the schema of the value field of the union type, leaving just the original value schema thus

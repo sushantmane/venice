@@ -19,8 +19,8 @@ import org.apache.logging.log4j.Logger;
 /**
  * PushStatusStoreWriter is a helper class for Da Vinci to write PushStatus and heartbeat message into PushStatus store
  * real-time topic.
- * Heartbeat update is a normal Venice write.
- * PushStatus update is via a map-merge of Write-Compute.
+ * Heartbeat updateAsync is a normal Venice write.
+ * PushStatus updateAsync is via a map-merge of Write-Compute.
  */
 public class PushStatusStoreWriter implements AutoCloseable {
   private static final Logger LOGGER = LogManager.getLogger(PushStatusStoreWriter.class);
@@ -50,7 +50,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
     pushStatusValue.reportTimestamp = System.currentTimeMillis();
     pushStatusValue.instances = Collections.emptyMap();
     LOGGER.info("Sending heartbeat of {}", instanceName);
-    writer.put(
+    writer.putAsync(
         pushStatusKey,
         pushStatusValue,
         AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion());
@@ -92,14 +92,14 @@ public class PushStatusStoreWriter implements AutoCloseable {
         storeName,
         version,
         partitionId);
-    writer.update(
+    writer.updateAsync(
         pushStatusKey,
         writeComputeRecord,
         AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
         derivedSchemaId,
         null);
 
-    // If this is a server side SOIP status update then add this incremental
+    // If this is a server side SOIP status updateAsync then add this incremental
     // push to the ongoing incremental pushes in push status store.
     if (status == ExecutionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED && incrementalPushVersion.isPresent()
         && incrementalPushPrefix.isPresent()) {
@@ -126,7 +126,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
         storeName,
         instanceName);
     veniceWriterCache.prepareVeniceWriter(storeName)
-        .update(
+        .updateAsync(
             pushStatusKey,
             writeComputeRecord,
             AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
@@ -151,7 +151,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
         storeName,
         instanceName);
     veniceWriterCache.prepareVeniceWriter(storeName)
-        .update(
+        .updateAsync(
             pushStatusKey,
             writeComputeRecord,
             AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),

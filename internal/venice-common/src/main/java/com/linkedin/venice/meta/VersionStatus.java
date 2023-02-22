@@ -68,7 +68,7 @@ public enum VersionStatus {
   /**
    * Check if the Version has completed the bootstrap. We need to make sure that Kafka topic for uncompleted offline
    * job should NOT be deleted. Otherwise Kafka MM would crash. Attention: For streaming case, even version is ONLINE
-   * or PUSHED, it might be not safe to delete kafka topic.
+   * or PUSHED, it might be not safe to deleteAsync kafka topic.
    */
   public static boolean isBootstrapCompleted(VersionStatus status) {
     return status.equals(ONLINE) || status.equals(PUSHED);

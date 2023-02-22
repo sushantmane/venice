@@ -7,7 +7,7 @@ import org.apache.avro.io.OptimizedBinaryDecoderFactory;
 
 
 /**
- * This class is to reuse the original array for put payload of each message
+ * This class is to reuse the original array for putAsync payload of each message
  * to reduce the unnecessary byte array allocation.
  */
 public class OptimizedKafkaValueSerializer extends KafkaValueSerializer {

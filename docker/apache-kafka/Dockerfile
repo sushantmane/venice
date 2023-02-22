@@ -8,7 +8,7 @@ ENV KAFKA_TAR="kafka_2.13-3.3.1.tgz"
 ENV KAFKA_DIR=/opt/kafka
 ENV ZOOKEEPER_ADDRESS="${ZOOKEEPER_ADDRESS}"
 RUN mkdir -p ${KAFKA_DIR}
-RUN apt-get update
+RUN apt-get updateAsync
 RUN apt-get install wget -y
 RUN wget https://downloads.apache.org/kafka/3.3.1/"${KAFKA_TAR}"
 RUN tar -xzf ${KAFKA_TAR} -C /opt/kafka --strip-components=1

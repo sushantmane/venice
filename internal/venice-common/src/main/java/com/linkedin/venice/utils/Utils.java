@@ -231,7 +231,7 @@ public class Utils {
    * that the hostname for the machine should resolve to "localhost".  We can call this method at the start of any
    * tests that require hostnames to resolve to "localhost"
    *
-   * It's not ideal to put this as state in a Utils class, we can revisit if we come up with a better way to do it
+   * It's not ideal to putAsync this as state in a Utils class, we can revisit if we come up with a better way to do it
    */
   public static void thisIsLocalhost() {
     localhost = true;

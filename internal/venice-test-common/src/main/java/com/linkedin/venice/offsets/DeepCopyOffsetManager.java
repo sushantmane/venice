@@ -27,7 +27,7 @@ public class DeepCopyOffsetManager implements OffsetManager {
   @Override
   public void put(String topicName, int partitionId, OffsetRecord record) throws VeniceException {
     LOGGER.info(
-        "OffsetManager.put(OffsetRecord) called with topicName: {}, partitionId: {}, record: {}",
+        "OffsetManager.putAsync(OffsetRecord) called with topicName: {}, partitionId: {}, record: {}",
         topicName,
         partitionId,
         record);

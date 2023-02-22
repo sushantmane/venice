@@ -387,7 +387,7 @@ public abstract class NativeMetadataRepository
   }
 
   /**
-   * Get the store cluster config from system store and update the local cache with it. Different implementation will
+   * Get the store cluster config from system store and updateAsync the local cache with it. Different implementation will
    * get the data differently but should all populate the store cluster config map.
    */
   protected void getAndSetStoreConfigFromSystemStore(String storeName) {

@@ -1811,7 +1811,7 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     Assert.assertTrue(store.getReplicationFactor() > 0, "The replication factor for a new store should be positive.");
     veniceAdmin.updateStore(clusterName, storeName, new UpdateStoreQueryParams().setReplicationFactor(0));
     store = veniceAdmin.getStore(clusterName, storeName);
-    Assert.assertEquals(store.getReplicationFactor(), 0, "The replication factor should be 0 after the update.");
+    Assert.assertEquals(store.getReplicationFactor(), 0, "The replication factor should be 0 after the updateAsync.");
     veniceAdmin.getHelixVeniceClusterResources(clusterName).refresh();
     store = veniceAdmin.getStore(clusterName, storeName);
     Assert.assertTrue(

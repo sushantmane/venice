@@ -56,7 +56,8 @@ abstract class AbstractMerge<T> implements Merge<T> {
     // Delete wins when old and new write operation timestamps are equal.
     if (oldTimestamp <= deleteOperationTimestamp) {
       oldValueAndRmd.setValue(null);
-      // Still need to track the delete timestamp in order to reject future PUT record with lower replication timestamp
+      // Still need to track the deleteAsync timestamp in order to reject future PUT record with lower replication
+      // timestamp
       final GenericRecord oldRmd = oldValueAndRmd.getRmd();
       oldRmd.put(TIMESTAMP_FIELD_NAME, deleteOperationTimestamp);
       updateReplicationCheckpointVector(oldRmd, newValueSourceOffset, newValueSourceBrokerID);

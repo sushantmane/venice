@@ -61,13 +61,13 @@ public class TestRestartController {
 
     // push some data
     veniceWriter.broadcastStartOfPush(new HashMap<>());
-    veniceWriter.put("1", "1", 1);
+    veniceWriter.putAsync("1", "1", 1);
 
     // Stop the original leader
     int port = cluster.stopLeaderVeniceController();
 
     // Push rest of data.
-    veniceWriter.put("2", "2", 1);
+    veniceWriter.putAsync("2", "2", 1);
     veniceWriter.broadcastEndOfPush(new HashMap<>());
 
     // After stopping origin leader, the new leader could handle the push status report correctly.
@@ -132,7 +132,7 @@ public class TestRestartController {
   }
 
   /**
-   * Objective of the test is to verify on controller restart the new leader controller is able to update the
+   * Objective of the test is to verify on controller restart the new leader controller is able to updateAsync the
    * successful_push_duration_sec_gauge metrics with the last successful push duration for the store.
    */
   @Test(timeOut = 60 * Time.MS_PER_SECOND)
@@ -150,9 +150,9 @@ public class TestRestartController {
     Assert.assertEquals(controllerClient.queryJobStatus(topicName).getStatus(), ExecutionStatus.STARTED.toString());
     // push some data
     veniceWriter.broadcastStartOfPush(new HashMap<>());
-    veniceWriter.put("1", "1", 1);
+    veniceWriter.putAsync("1", "1", 1);
     // Push rest of data.
-    veniceWriter.put("2", "2", 1);
+    veniceWriter.putAsync("2", "2", 1);
     veniceWriter.broadcastEndOfPush(new HashMap<>());
 
     // After stopping origin leader, the new leader could handle the push status report correctly.

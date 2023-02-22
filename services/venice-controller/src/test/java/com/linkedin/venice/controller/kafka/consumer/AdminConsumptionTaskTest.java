@@ -312,11 +312,11 @@ public class AdminConsumptionTaskTest {
     // The store doesn't exist
     doReturn(false).when(admin).hasStore(clusterName, storeName);
 
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -341,7 +341,7 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testRunWhenStoreCreationGotExceptionForTheFirstTime() throws InterruptedException, IOException {
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -395,11 +395,11 @@ public class AdminConsumptionTaskTest {
   @Test(timeOut = TIMEOUT)
   public void testConsumeFailedStats() throws IOException, InterruptedException {
     doReturn(false).when(admin).hasStore(clusterName, storeName);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -427,7 +427,7 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testSkipMessageCommand() throws IOException, InterruptedException {
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -576,7 +576,7 @@ public class AdminConsumptionTaskTest {
     String storeName1 = "test_store1";
     String storeName2 = "test_store2";
     String storeName3 = "test_store3";
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -587,7 +587,7 @@ public class AdminConsumptionTaskTest {
                 getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
                 AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
             .get()).getOffset();
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 3),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -636,16 +636,16 @@ public class AdminConsumptionTaskTest {
     String storeName1 = "test_store1";
     String storeName2 = "test_store2";
     String storeName3 = "test_store3";
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     // Write a message with a skipped execution id but valid producer metadata.
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 3),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 4),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -687,16 +687,16 @@ public class AdminConsumptionTaskTest {
         AdminTopicMetadataAccessor.generateMetadataMap(metadataForStoreName0Future.get().getOffset(), -1, 1));
 
     // Write a message with a skipped execution id but a different producer metadata.
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 3),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     // Write a message with a skipped execution id but valid producer metadata.
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 4),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 5),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -725,11 +725,11 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testRunWithDuplicateMessagesWithDifferentOffset() throws InterruptedException, IOException {
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -757,13 +757,13 @@ public class AdminConsumptionTaskTest {
   public void testRunWithBiggerStartingOffset() throws InterruptedException, IOException {
     String storeName1 = "test_store1";
     String storeName2 = "test_store2";
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     // This scenario mostly happens when leader controller fails over
     veniceWriter = getVeniceWriter(inMemoryKafkaBroker);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -792,7 +792,7 @@ public class AdminConsumptionTaskTest {
 
   @Test(timeOut = TIMEOUT)
   public void testParentControllerSkipKillOfflinePushJobMessage() throws InterruptedException, IOException {
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -819,7 +819,7 @@ public class AdminConsumptionTaskTest {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), true);
     executor.submit(task);
     for (long i = 1; i <= 3; i++) {
-      veniceWriter.put(
+      veniceWriter.putAsync(
           emptyKeyBytes,
           getKillOfflinePushJobMessage(clusterName, storeTopicName, i),
           AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -845,7 +845,7 @@ public class AdminConsumptionTaskTest {
   public void testSetStore(boolean replicateAllConfigs) throws Exception {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), true);
     executor.submit(task);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -923,7 +923,7 @@ public class AdminConsumptionTaskTest {
     adminMessage.executionId = 2;
     byte[] message = adminOperationSerializer.serialize(adminMessage);
 
-    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+    veniceWriter.putAsync(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
 
     TestUtils.waitForNonDeterministicAssertion(TIMEOUT, TimeUnit.MILLISECONDS, () -> {
       Assert.assertEquals(getLastOffset(clusterName), 2L);
@@ -956,19 +956,19 @@ public class AdminConsumptionTaskTest {
     String storeName2 = "test_store2";
     String storeTopicName1 = storeName1 + "_v1";
     String storeTopicName2 = storeName2 + "_v1";
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName1, 3),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName2, 4),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1030,11 +1030,11 @@ public class AdminConsumptionTaskTest {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), false);
     executor.submit(task);
     // Let the admin consumption task process some admin messages
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1049,7 +1049,7 @@ public class AdminConsumptionTaskTest {
         TimeUnit.MILLISECONDS,
         () -> Assert.assertEquals((long) task.getLastSucceededExecutionId(), -1));
     // Mimic the behavior where another controller has processed some admin messages
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1065,7 +1065,7 @@ public class AdminConsumptionTaskTest {
     doReturn(true).when(admin).isLeaderControllerFor(clusterName);
     // Let the admin task to stay idle for at least one cycle
     Utils.sleep(2000);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1082,7 +1082,7 @@ public class AdminConsumptionTaskTest {
   public void testResubscribeWithFailedAdminMessages() throws ExecutionException, InterruptedException, IOException {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), false);
     String mockPushJobId = "test";
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1093,7 +1093,7 @@ public class AdminConsumptionTaskTest {
                 getAddVersionMessage(clusterName, storeName, mockPushJobId, 1, 1, 2L),
                 AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
             .get()).getOffset();
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1141,11 +1141,11 @@ public class AdminConsumptionTaskTest {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), false);
     // Populate the topic with message and mimic the behavior where some message were processed when offset manager was
     // in use.
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1169,7 +1169,7 @@ public class AdminConsumptionTaskTest {
         TIMEOUT,
         TimeUnit.MILLISECONDS,
         () -> Assert.assertEquals(getLastExecutionId(clusterName), 3L));
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1192,15 +1192,15 @@ public class AdminConsumptionTaskTest {
   @Test(timeOut = TIMEOUT)
   public void testSkipDIV() throws InterruptedException, ExecutionException, TimeoutException, IOException {
     // Let the admin consumption task process some admin messages
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1210,7 +1210,7 @@ public class AdminConsumptionTaskTest {
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1288,12 +1288,12 @@ public class AdminConsumptionTaskTest {
     int i = 0;
     for (int id = 1; id < 11; id++) {
       messages[i] = getKillOfflinePushJobMessage(clusterName, topicName, id);
-      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+      veniceWriter.putAsync(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
       i++;
     }
     // Mimic rewind.
     for (i = 4; i < 10; i++) {
-      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+      veniceWriter.putAsync(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
     }
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
@@ -1312,7 +1312,7 @@ public class AdminConsumptionTaskTest {
   public void testAddingDerivedSchema() throws Exception {
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), true);
     executor.submit(task);
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
@@ -1334,7 +1334,7 @@ public class AdminConsumptionTaskTest {
     adminMessage.executionId = 2;
     byte[] message = adminOperationSerializer.serialize(adminMessage);
 
-    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+    veniceWriter.putAsync(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
 
     TestUtils.waitForNonDeterministicAssertion(TIMEOUT, TimeUnit.MILLISECONDS, () -> {
       Assert.assertEquals(getLastOffset(clusterName), 2L);

@@ -348,7 +348,7 @@ public class ConfigKeys {
   public static final String CONTROLLER_STORE_GRAVEYARD_CLEANUP_ENABLED = "controller.store.graveyard.cleanup.enabled";
 
   /**
-   * When store graveyard cleanup is enabled, delete the graveyard znode if it has not been changed for a specific time.
+   * When store graveyard cleanup is enabled, deleteAsync the graveyard znode if it has not been changed for a specific time.
    * Default is 0 min.
    */
   public static final String CONTROLLER_STORE_GRAVEYARD_CLEANUP_DELAY_MINUTES =
@@ -403,7 +403,7 @@ public class ConfigKeys {
   /**
    * Database sync per bytes for transactional mode.
    * This parameter will impact the sync frequency of database after batch push.
-   * For BDB-JE transactional mode, it won't matter since BDB-JE will persist every update in the database right away;
+   * For BDB-JE transactional mode, it won't matter since BDB-JE will persist every updateAsync in the database right away;
    * For RocksDB transactional mode, it will impact the flush frequency of memtable to SST file, and normally we would
    * like to have this config to be comparable to the memtable size;
    *
@@ -426,7 +426,7 @@ public class ConfigKeys {
   /**
    * When load balance happens, a replica could be moved to another storage node.
    * When dropping the existing replica through Helix state transition: 'ONLINE' -> 'OFFLINE' and 'OFFLINE' -> 'DROPPED',
-   * a race condition could happen since Router in-memory partition assignment update through Zookeeper
+   * a race condition could happen since Router in-memory partition assignment updateAsync through Zookeeper
    * is independent from database drop in storage node, so Router could possibly forward the request to the storage node,
    * which has just dropped the partition.
    *
@@ -704,7 +704,7 @@ public class ConfigKeys {
       "server.shared.cosnumer.non.existing.topic.cleanup.delay.ms";
 
   /**
-   * This config will determine whether live update will be suppressed. When the feature is turned on, ingestion will stop
+   * This config will determine whether live updateAsync will be suppressed. When the feature is turned on, ingestion will stop
    * once a partition is ready to serve; after Da Vinci client restarts or server restarts, if local data exists, ingestion
    * will not start in Da Vinci or report ready-to-serve immediately without ingesting new data in Venice.
    */
@@ -851,7 +851,7 @@ public class ConfigKeys {
   /**
    * This config is used to bound the pending request.
    * Without this config, the accumulated requests in Http Async Client could grow unlimitedly,
-   * which would put Router in a non-recoverable state because of long GC pause introduced
+   * which would putAsync Router in a non-recoverable state because of long GC pause introduced
    * by the increasing memory usage.
    *
    * If the incoming request exceeds this configured threshold, Router will return 503 (Service Unavailable).
@@ -912,7 +912,7 @@ public class ConfigKeys {
   /**
    * Netty graceful shutdown period considering the following factors:
    * 1. D2 de-announcement could take some time;
-   * 2. Client could take some  time to receive/apply the zk update event from D2 server about router shutdown;
+   * 2. Client could take some  time to receive/apply the zk updateAsync event from D2 server about router shutdown;
    * 3. Router needs some time to handle already-received client requests;
    */
   public static final String ROUTER_NETTY_GRACEFUL_SHUTDOWN_PERIOD_SECONDS =
@@ -985,7 +985,7 @@ public class ConfigKeys {
 
   /**
    * For the new instance (Storage Node) detected by Router, the following config defines how much delay because of connection warming it could tolerate.
-   * If the connection warming takes longer than it, Router will put it in to serve online traffic by creating a new client without connection warming.
+   * If the connection warming takes longer than it, Router will putAsync it in to serve online traffic by creating a new client without connection warming.
    */
   public static final String ROUTER_HTTPASYNCCLIENT_CONNECTION_WARMING_NEW_INSTANCE_DELAY_JOIN_MS =
       "router.httpasyncclient.connection.warming.new.instance.delay.join.ms";
@@ -1019,7 +1019,7 @@ public class ConfigKeys {
    */
   public static final String TOPIC_CREATION_THROTTLING_TIME_WINDOW_MS = "topic.creation.throttling.time.window.ms";
 
-  /** Timeout for create topic and delete topic operations. */
+  /** Timeout for create topic and deleteAsync topic operations. */
   public static final String TOPIC_MANAGER_KAFKA_OPERATION_TIMEOUT_MS = "topic.manager.kafka.operation.timeout.ms";
 
   /**
@@ -1304,7 +1304,7 @@ public class ConfigKeys {
    */
   public static final String CONTROLLER_ADD_VERSION_VIA_ADMIN_PROTOCOL = "controller.add.version.via.admin.protocol";
 
-  public static final String CONTROLLER_EARLY_DELETE_BACKUP_ENABLED = "controller.early.delete.backup.enabled";
+  public static final String CONTROLLER_EARLY_DELETE_BACKUP_ENABLED = "controller.early.deleteAsync.backup.enabled";
 
   /**
    * Flag to indicate which push monitor controller will pick up for an upcoming push

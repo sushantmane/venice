@@ -50,7 +50,7 @@ public class LeakedPushStatusCleanUpServiceTest {
     doReturn(false).when(mockStore).containsVersion(leakedVersion2);
 
     /**
-     * The actual test; the clean up service will try to delete the leaked push status
+     * The actual test; the clean up service will try to deleteAsync the leaked push status
      */
     try (LeakedPushStatusCleanUpService cleanUpService = new LeakedPushStatusCleanUpService(
         clusterName,

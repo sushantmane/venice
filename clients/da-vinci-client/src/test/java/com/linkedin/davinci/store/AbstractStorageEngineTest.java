@@ -160,7 +160,7 @@ public abstract class AbstractStorageEngineTest extends AbstractStoreTest {
     byte[] key = RandomGenUtils.getRandomBytes(keySize);
     byte[] value = RandomGenUtils.getRandomBytes(valueSize);
 
-    // test put
+    // test putAsync
     try {
       testStoreEngine.put(partitionId, key, value);
     } catch (VeniceException e) {
@@ -197,14 +197,14 @@ public abstract class AbstractStorageEngineTest extends AbstractStoreTest {
           }
         }));
 
-    // test delete
+    // test deleteAsync
     try {
       testStoreEngine.delete(partitionId, key);
     } catch (VeniceException e) {
       // This is expected
       return;
     }
-    // If we reach here it means delete succeeded unfortunately.
+    // If we reach here it means deleteAsync succeeded unfortunately.
     Assert
         .fail("DELETE on key: " + Hex.encodeHexString(key) + " in an invalid partition: " + partitionId + " succeeded");
   }

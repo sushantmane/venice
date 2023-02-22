@@ -46,7 +46,7 @@ public class LeaderProducedRecordContext {
   private byte[] keyBytes;
 
   /**
-   * can refer to {@link com.linkedin.venice.kafka.protocol.Put} for PUT or {@link com.linkedin.venice.kafka.protocol.ControlMessage} or NULL for delete
+   * can refer to {@link com.linkedin.venice.kafka.protocol.Put} for PUT or {@link com.linkedin.venice.kafka.protocol.ControlMessage} or NULL for deleteAsync
    */
   private final Object valueUnion;
 

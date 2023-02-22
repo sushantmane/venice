@@ -24,7 +24,7 @@ import org.apache.logging.log4j.Logger;
  * LeakedPushStatusCleanUpService will wake up regularly (interval is determined by controller config
  * {@link com.linkedin.venice.ConfigKeys#LEAKED_PUSH_STATUS_CLEAN_UP_SERVICE_SLEEP_INTERVAL_MS}), get all existing push
  * status ZNodes on Zookeeper that belong to the specified cluster, without scanning through the replica statuses, find
- * all leaked push status and delete them on Zookeeper.
+ * all leaked push status and deleteAsync them on Zookeeper.
  *
  * The life cycle of LeakedPushStatusCleanUpService matches the life cycle of {@link HelixVeniceClusterResources},
  * meaning that there is one clean up service for each cluster, and it's built when the controller is promoted to leader

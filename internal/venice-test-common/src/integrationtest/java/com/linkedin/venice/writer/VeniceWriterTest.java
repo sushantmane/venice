@@ -149,7 +149,8 @@ public class VeniceWriterTest {
   public void testThreadSafetyForPutMessages() throws ExecutionException, InterruptedException {
     testThreadSafety(
         100,
-        veniceWriter -> veniceWriter.put(new KafkaKey(MessageType.PUT, "blah".getBytes()), "blah".getBytes(), 1, null));
+        veniceWriter -> veniceWriter
+            .putAsync(new KafkaKey(MessageType.PUT, "blah".getBytes()), "blah".getBytes(), 1, null));
   }
 
   @Test
@@ -172,7 +173,7 @@ public class VeniceWriterTest {
     VeniceWriter<Object, Object, Object> writer =
         new VeniceWriter(veniceWriterOptions, new VeniceProperties(writerProperties), mockedProducer);
     for (int i = 0; i < 1000; i++) {
-      writer.put(Integer.toString(i), Integer.toString(i), 1, null);
+      writer.putAsync(Integer.toString(i), Integer.toString(i), 1, null);
     }
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
     verify(mockedProducer, atLeast(1000))
@@ -214,7 +215,7 @@ public class VeniceWriterTest {
     PutMetadata putMetadata = new PutMetadata(1, replicationMetadata);
     DeleteMetadata deleteMetadata = new DeleteMetadata(1, 1, replicationMetadata);
 
-    writer.put(
+    writer.putAsync(
         Integer.toString(1),
         Integer.toString(1),
         1,
@@ -223,7 +224,7 @@ public class VeniceWriterTest {
         ctime,
         null,
         null);
-    writer.put(
+    writer.putAsync(
         Integer.toString(2),
         Integer.toString(2),
         1,
@@ -232,10 +233,10 @@ public class VeniceWriterTest {
         APP_DEFAULT_LOGICAL_TS,
         putMetadata,
         null);
-    writer.update(Integer.toString(3), Integer.toString(2), 1, 1, null, ctime);
-    writer.delete(Integer.toString(4), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, ctime);
-    writer.delete(Integer.toString(5), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, deleteMetadata);
-    writer.put(Integer.toString(6), Integer.toString(1), 1, null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
+    writer.updateAsync(Integer.toString(3), Integer.toString(2), 1, 1, null, ctime);
+    writer.deleteAsync(Integer.toString(4), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, ctime);
+    writer.deleteAsync(Integer.toString(5), null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER, deleteMetadata);
+    writer.putAsync(Integer.toString(6), Integer.toString(1), 1, null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
 
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
     verify(mockedProducer, atLeast(2))
@@ -317,7 +318,7 @@ public class VeniceWriterTest {
     }
     String valueString = stringBuilder.toString();
 
-    writer.put(
+    writer.putAsync(
         Integer.toString(1),
         valueString,
         1,

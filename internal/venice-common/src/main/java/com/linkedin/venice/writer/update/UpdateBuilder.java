@@ -9,10 +9,10 @@ import org.apache.avro.generic.GenericRecord;
 
 
 /**
- *  This class applies the builder pattern to build a partial update record. Note that to-be-updated value
+ *  This class applies the builder pattern to build a partial updateAsync record. Note that to-be-updated value
  *  must be of type {@link Schema.Type#RECORD}.
  *
- *  It provides below ways to update a value record.
+ *  It provides below ways to updateAsync a value record.
  *      1. Set a new value to a field.
  *      2. Add elements to a List/Array field.
  *      3. Remove elements from a List/Array field.

@@ -156,7 +156,7 @@ public class TestPushJobWithEmergencySourceRegionSelection {
         ControllerClient dc2Client =
             new ControllerClient(clusterName, childDatacenters.get(2).getControllerConnectString())) {
       /**
-       * Check the update store command in parent controller has been propagated into child controllers, before
+       * Check the updateAsync store command in parent controller has been propagated into child controllers, before
        * sending any commands directly into child controllers, which can help avoid race conditions.
        */
       TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, true);

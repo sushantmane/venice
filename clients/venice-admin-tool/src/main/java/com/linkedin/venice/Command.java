@@ -144,7 +144,7 @@ public enum Command {
       "new-store", "", new Arg[] { URL, CLUSTER, STORE, KEY_SCHEMA, VALUE_SCHEMA }, new Arg[] { OWNER, VSON_STORE }
   ),
   DELETE_STORE(
-      "delete-store", "Delete the given store including both metadata and all versions in this store",
+      "deleteAsync-store", "Delete the given store including both metadata and all versions in this store",
       new Arg[] { URL, CLUSTER, STORE }
   ),
   BACKFILL_SYSTEM_STORES(
@@ -185,9 +185,11 @@ public enum Command {
       "query", "Query a store that has a simple key schema", new Arg[] { URL, CLUSTER, STORE, KEY },
       new Arg[] { VSON_STORE, VENICE_CLIENT_SSL_CONFIG_FILE }
   ), SHOW_SCHEMAS("schemas", "Show the key and value schemas for a store", new Arg[] { URL, CLUSTER, STORE }),
-  DELETE_ALL_VERSIONS("delete-all-versions", "Delete all versions in given store", new Arg[] { URL, CLUSTER, STORE }),
+  DELETE_ALL_VERSIONS(
+      "deleteAsync-all-versions", "Delete all versions in given store", new Arg[] { URL, CLUSTER, STORE }
+  ),
   DELETE_OLD_VERSION(
-      "delete-old-version", "Delete the given version(non current version) in the given store",
+      "deleteAsync-old-version", "Delete the given version(non current version) in the given store",
       new Arg[] { URL, CLUSTER, STORE, VERSION }
   ),
   GET_EXECUTION(
@@ -198,7 +200,7 @@ public enum Command {
       new Arg[] { URL, CLUSTER, STORE, PARTITION_COUNT }
   ),
   UPDATE_STORE(
-      "update-store", "update store metadata", new Arg[] { URL, CLUSTER, STORE },
+      "updateAsync-store", "updateAsync store metadata", new Arg[] { URL, CLUSTER, STORE },
       new Arg[] { OWNER, VERSION, LARGEST_USED_VERSION_NUMBER, PARTITION_COUNT, PARTITIONER_CLASS, PARTITIONER_PARAMS,
           AMPLIFICATION_FACTOR, READABILITY, WRITEABILITY, STORAGE_QUOTA, HYBRID_STORE_OVERHEAD_BYPASS, READ_QUOTA,
           HYBRID_REWIND_SECONDS, HYBRID_OFFSET_LAG, HYBRID_TIME_LAG, HYBRID_DATA_REPLICATION_POLICY,
@@ -213,7 +215,7 @@ public enum Command {
           STORAGE_PERSONA, STORE_VIEW_CONFIGS }
   ),
   UPDATE_CLUSTER_CONFIG(
-      "update-cluster-config", "Update live cluster configs", new Arg[] { URL, CLUSTER },
+      "updateAsync-cluster-config", "Update live cluster configs", new Arg[] { URL, CLUSTER },
       new Arg[] { FABRIC, SERVER_KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND, ALLOW_STORE_MIGRATION,
           CHILD_CONTROLLER_ADMIN_TOPIC_CONSUMPTION_ENABLED }
   ),
@@ -271,7 +273,7 @@ public enum Command {
       new Arg[] { URL, CLUSTER }
   ),
   DELETE_KAFKA_TOPIC(
-      "delete-kafka-topic", "Delete a Kafka topic directly (without interaction with the Venice Controller",
+      "deleteAsync-kafka-topic", "Delete a Kafka topic directly (without interaction with the Venice Controller",
       new Arg[] { KAFKA_BOOTSTRAP_SERVERS, KAFKA_ZOOKEEPER_CONNECTION_URL, KAFKA_TOPIC_NAME },
       new Arg[] { KAFKA_OPERATION_TIMEOUT, KAFKA_CONSUMER_CONFIG_FILE }
   ),
@@ -312,7 +314,7 @@ public enum Command {
       new Arg[] { URL, STORE, CLUSTER_SRC, CLUSTER_DEST }, new Arg[] { FORCE }
   ),
   END_MIGRATION(
-      "end-migration", "Send this command to delete the original store",
+      "end-migration", "Send this command to deleteAsync the original store",
       new Arg[] { URL, STORE, CLUSTER_SRC, CLUSTER_DEST }
   ),
   SEND_END_OF_PUSH(
@@ -332,9 +334,9 @@ public enum Command {
       new Arg[] { URL, CLUSTER, STORE, KEY_SCHEMA, VALUE_SCHEMA, ACL_PERMS }, new Arg[] { OWNER, VSON_STORE }
   ),
   UPDATE_STORE_ACL(
-      "update-store-acl", "Update ACL's for an existing store", new Arg[] { URL, CLUSTER, STORE, ACL_PERMS }
+      "updateAsync-store-acl", "Update ACL's for an existing store", new Arg[] { URL, CLUSTER, STORE, ACL_PERMS }
   ), GET_STORE_ACL("get-store-acl", "Get ACL's for an existing store", new Arg[] { URL, CLUSTER, STORE }),
-  DELETE_STORE_ACL("delete-store-acl", "Delete ACL's for an existing store", new Arg[] { URL, CLUSTER, STORE }),
+  DELETE_STORE_ACL("deleteAsync-store-acl", "Delete ACL's for an existing store", new Arg[] { URL, CLUSTER, STORE }),
   ADD_TO_STORE_ACL(
       "add-to-store-acl", "Add a principal to ACL's for an existing store",
       new Arg[] { URL, CLUSTER, STORE, PRINCIPAL }, new Arg[] { READABILITY, WRITEABILITY }
@@ -392,11 +394,11 @@ public enum Command {
       new Arg[] { URL, CLUSTER, STORE }, new Arg[] { PARTITION_DETAIL_ENABLED }
   ),
   UPDATE_KAFKA_TOPIC_LOG_COMPACTION(
-      "update-kafka-topic-log-compaction", "Update log compaction config of a topic through controllers",
+      "updateAsync-kafka-topic-log-compaction", "Update log compaction config of a topic through controllers",
       new Arg[] { URL, KAFKA_TOPIC_NAME, KAFKA_TOPIC_LOG_COMPACTION_ENABLED }, new Arg[] { CLUSTER }
   ),
   UPDATE_KAFKA_TOPIC_RETENTION(
-      "update-kafka-topic-retention", "Update retention config of a topic through controllers",
+      "updateAsync-kafka-topic-retention", "Update retention config of a topic through controllers",
       new Arg[] { URL, KAFKA_TOPIC_NAME, KAFKA_TOPIC_RETENTION_IN_MS }, new Arg[] { CLUSTER }
   ),
   START_FABRIC_BUILDOUT(
@@ -421,10 +423,10 @@ public enum Command {
       new Arg[] { URL, CLUSTER, STORAGE_PERSONA }
   ),
   DELETE_STORAGE_PERSONA(
-      "delete-storage-persona", "Deletes an existing storage persona", new Arg[] { URL, CLUSTER, STORAGE_PERSONA }
+      "deleteAsync-storage-persona", "Deletes an existing storage persona", new Arg[] { URL, CLUSTER, STORAGE_PERSONA }
   ),
   UPDATE_STORAGE_PERSONA(
-      "update-storage-persona", "Updates an existing storage persona", new Arg[] { URL, CLUSTER, STORAGE_PERSONA },
+      "updateAsync-storage-persona", "Updates an existing storage persona", new Arg[] { URL, CLUSTER, STORAGE_PERSONA },
       new Arg[] { STORAGE_QUOTA, STORE, OWNER }
   ),
   GET_STORAGE_PERSONA_FOR_STORE(

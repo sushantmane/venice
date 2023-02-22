@@ -126,7 +126,7 @@ public class StorePartitionDataReceiver
   }
 
   /**
-   * @return Number of data records put in the receiver, for testing purpose.
+   * @return Number of data records putAsync in the receiver, for testing purpose.
    */
   public long receivedRecordsCount() {
     return receivedRecordsCount;

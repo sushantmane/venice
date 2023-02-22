@@ -41,7 +41,7 @@ import org.apache.logging.log4j.Logger;
  * (1) {@link IngestionAction#COMMAND}: Different kinds of ingestion commands to control the ingestion of a topic (partition).
  * (2) {@link IngestionAction#METRIC}: Request to collect metrics from child process and report to InGraph service.
  * (3) {@link IngestionAction#HEARTBEAT}: Request to check the health of child process for monitoring purpose.
- * (4) {@link IngestionAction#UPDATE_METADATA}: A special kind of request to update metadata of topic partitions opened
+ * (4) {@link IngestionAction#UPDATE_METADATA}: A special kind of request to updateAsync metadata of topic partitions opened
  * in main process. As of current ingestion isolation design, metadata partition of a topic will always be opened in child process.
  * {@link MainIngestionStorageMetadataService} maintains in-memory cache of metadata in main process, and it will persist
  * metadata updates via this requests.
@@ -194,7 +194,7 @@ public class IsolatedIngestionServerHandler extends SimpleChannelInboundHandler<
              * Here we do not allow storage service to clean up "empty" storage engine. When ingestion isolation is turned on,
              * storage partition will be re-opened in main process after COMPLETED is announced by StoreIngestionTask. Although
              * it might indicate there is no remaining data partitions in the forked process storage engine, it still holds the
-             * metadata partition. Cleaning up the "empty storage engine" will (1) delete metadata partition (2) remove storage
+             * metadata partition. Cleaning up the "empty storage engine" will (1) deleteAsync metadata partition (2) remove storage
              * engine from the map. When a new ingestion request comes in, it will create another metadata partition, but all
              * the metadata stored previously is gone forever...
              */

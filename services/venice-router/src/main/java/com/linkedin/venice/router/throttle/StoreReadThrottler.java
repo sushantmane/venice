@@ -37,7 +37,7 @@ public class StoreReadThrottler {
   /**
    * The map which's is storage node Id and value is a reads throttler.
    * <p>
-   * This class is thread safe. Only one thread could access to the method to update storage nodes' throttlers.
+   * This class is thread safe. Only one thread could access to the method to updateAsync storage nodes' throttlers.
    */
   private ConcurrentMap<String, EventThrottler> storageNodesThrottlers;
 

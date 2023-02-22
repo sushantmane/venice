@@ -392,9 +392,9 @@ public class ControllerClient implements Closeable {
   // TODO: Refactor this to work in the controller once system store has become available.
 
   /**
-   * Simplified API that wraps together the store create and update functionalities with some clean up functionality
+   * Simplified API that wraps together the store create and updateAsync functionalities with some clean up functionality
    *
-   * @param storeName the store name to create and update
+   * @param storeName the store name to create and updateAsync
    * @param owner the owner of this store to be created
    * @param keySchema Schema of the key for row retrieval for this store
    * @param valueSchema Schema of the value for rows in this new store
@@ -417,7 +417,7 @@ public class ControllerClient implements Closeable {
     try {
       updateResponse = updateStore(storeName, updateStoreQueryParams);
       if (updateResponse.isError()) {
-        // update failed. Let's clean up and return the error
+        // updateAsync failed. Let's clean up and return the error
         if (!this.getStore(storeName).isError()) {
           return updateResponse;
         }

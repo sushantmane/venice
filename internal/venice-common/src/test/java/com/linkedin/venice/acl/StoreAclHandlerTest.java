@@ -188,7 +188,7 @@ public class StoreAclHandlerTest {
       for (int j = 0; j < len; j++) {
         conditions[j][0] = ((i >> j) & 1) == 1;
       }
-      // New metadataRepo mock and aclHandler every update since thenThrow cannot be re-mocked.
+      // New metadataRepo mock and aclHandler every updateAsync since thenThrow cannot be re-mocked.
       metadataRepo = mock(HelixReadOnlyStoreRepository.class);
       aclHandler = spy(new StoreAclHandler(accessController, metadataRepo));
       update();

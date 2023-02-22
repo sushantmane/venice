@@ -456,7 +456,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
       long earliestOffset = getEarliestOffset(topicPartition.topic(), topicPartition.partition());
       if (earliestOffset == latestOffset) {
         /**
-         * This topic/partition is empty or retention delete the entire partition
+         * This topic/partition is empty or retention deleteAsync the entire partition
          */
         logger.info(
             "Both beginning offset and end offset is {} for topic {}; it's empty; return offset {}",

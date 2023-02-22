@@ -18,7 +18,7 @@ import org.testng.Assert;
 
 /**
  * Test the operations of the Store Interface
- * 1. put, get, delete and overwriting put operations
+ * 1. putAsync, get, deleteAsync and overwriting putAsync operations
  * 2. Test non existent Keys
  * 3. Test null keys
  * 4.
@@ -98,7 +98,7 @@ public abstract class AbstractStoreTest {
         keyValuePairsToPut.add(new Pair(keys_ABC.get(i).get(), values.get(i).get()));
       }
 
-      // shuffle keyValuePairsToPut to ensure key value pairs get put into db in random order
+      // shuffle keyValuePairsToPut to ensure key value pairs get putAsync into db in random order
       Collections.shuffle(keyValuePairsToPut);
 
       for (Pair<byte[], byte[]> kvp: keyValuePairsToPut) {

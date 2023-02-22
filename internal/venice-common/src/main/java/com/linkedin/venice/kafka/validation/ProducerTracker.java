@@ -466,7 +466,7 @@ public class ProducerTracker {
     boolean update = true;
     try {
       /**
-       * We update the checksum successfully if this returns true
+       * We updateAsync the checksum successfully if this returns true
        */
       update = segment.addToCheckSum(consumerRecord.getKey(), consumerRecord.getValue());
     } catch (IncomingDataAfterSegmentEndedException e) {
@@ -547,7 +547,7 @@ public class ProducerTracker {
       /**
        * A gap is detected in sequence number. If the data are fresh, data are within the Kafka log compaction
        * delay threshold, it indicates a clear data loss signal; if the broker timestamp of the data are older
-       * than the log compaction point, log compaction might delete the data before this message, so missing
+       * than the log compaction point, log compaction might deleteAsync the data before this message, so missing
        * message is expected.
        */
       long lastRecordTimestamp = segment.getLastRecordTimestamp();

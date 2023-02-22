@@ -6,7 +6,7 @@ public enum RocksDBBlockCacheImplementations {
    * A clock handle runs over the circular list looking for unpinned entries to evict, but also giving each entry a
    * second chance to stay in cache if it has been used since last scan.  The benefit over LRUCache is it has
    * finer-granularity locking. In case of LRU cache, the per-shard mutex has to be locked even on lookup,
-   * since it needs to update its LRU-list. Looking up from a clock cache won't require locking per-shard mutex,
+   * since it needs to updateAsync its LRU-list. Looking up from a clock cache won't require locking per-shard mutex,
    * but only looking up the concurrent hash map, which has fine-granularity locking. Only inserts needs to lock the
    * per-shard mutex.
    */

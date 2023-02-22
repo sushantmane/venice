@@ -49,7 +49,7 @@ import org.testng.annotations.Test;
 
 
 /**
- * Create this class to isolate the live update suppression test as it could lead to unknown writer creation failure.
+ * Create this class to isolate the live updateAsync suppression test as it could lead to unknown writer creation failure.
  */
 public class DaVinciLiveUpdateSuppressionTest {
   private static final Logger LOGGER = LogManager.getLogger(DaVinciLiveUpdateSuppressionTest.class);
@@ -112,7 +112,7 @@ public class DaVinciLiveUpdateSuppressionTest {
     VeniceKafkaSerializer keySerializer = new VeniceAvroKafkaSerializer(DEFAULT_KEY_SCHEMA);
     VeniceKafkaSerializer valueSerializer = new VeniceAvroKafkaSerializer(DEFAULT_VALUE_SCHEMA);
 
-    // Enable live update suppression
+    // Enable live updateAsync suppression
     Map<String, Object> extraBackendConfigMap =
         (ingestionMode.equals(IngestionMode.ISOLATED)) ? TestUtils.getIngestionIsolationPropertyMap() : new HashMap<>();
     extraBackendConfigMap.put(FREEZE_INGESTION_IF_READY_TO_SERVE_OR_LOCAL_DATA_EXISTS, true);
@@ -156,7 +156,7 @@ public class DaVinciLiveUpdateSuppressionTest {
       }
 
       /**
-       * Since live update suppression is enabled, once the partition is ready to serve, da vinci client will stop ingesting
+       * Since live updateAsync suppression is enabled, once the partition is ready to serve, da vinci client will stop ingesting
        * new messages and also ignore any new message
        */
       try {
@@ -177,7 +177,7 @@ public class DaVinciLiveUpdateSuppressionTest {
     }
 
     /**
-     * After restarting da-vinci client, since live update suppression is enabled and there is local data, ingestion
+     * After restarting da-vinci client, since live updateAsync suppression is enabled and there is local data, ingestion
      * will not start.
      *
      * da-vinci client restart is done by building a new factory and a new client

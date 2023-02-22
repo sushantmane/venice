@@ -308,7 +308,7 @@ public class TestProducerTracker {
     producerTracker.validateMessage(controlMessageConsumerRecord, true, true);
     Assert.assertEquals(producerTracker.segments.get(partitionId).getSequenceNumber(), 5);
 
-    // Send a put msg following EOS
+    // Send a putAsync msg following EOS
     Put firstPut = getPutMessage("first_message".getBytes());
     KafkaMessageEnvelope firstMessage =
         getKafkaMessageEnvelope(MessageType.PUT, guid, firstSegment, Optional.of(1), firstPut); // sequence number is 1
@@ -356,7 +356,7 @@ public class TestProducerTracker {
     producerTracker.updateOffsetRecord(partitionId, record);
     Assert.assertEquals(record.getProducerPartitionState(guid).checksumType, CheckSumType.MD5.getValue());
 
-    // The msg is a put msg without check sum type
+    // The msg is a putAsync msg without check sum type
     Put firstPut = getPutMessage("first_message".getBytes());
     KafkaMessageEnvelope firstMessage =
         getKafkaMessageEnvelope(MessageType.PUT, guid, secondSegment, Optional.empty(), firstPut);

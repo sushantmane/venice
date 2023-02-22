@@ -151,12 +151,12 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       /**
        * The below flow must be executed in a critical session for the same key:
        * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
-       * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
+       * -> updateAsync transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
        *
        * Otherwise, there could be race conditions:
        * [fabric A thread]Read from transient record cache -> [fabric A thread]perform DCR and decide incoming value wins
        * -> [fabric B thread]read from transient record cache -> [fabric B thread]perform DCR and decide incoming value wins
-       * -> [fabric B thread]update transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]update transient record cache
+       * -> [fabric B thread]updateAsync transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]updateAsync transient record cache
        * -> [fabric A thread]produce to VT
        */
       final long delegateRealTimeTopicRecordStartTimeInNs = System.nanoTime();
@@ -437,7 +437,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     } else {
       validatePostOperationResultsAndRecord(mergeConflictResult, offsetSumPreOperation, recordTimestampsPreOperation);
 
-      // Apply this update to any views for this store
+      // Apply this updateAsync to any views for this store
       // TODO: It'd be good to be able to do this in LeaderFollowerStoreIngestionTask instead, however, AA currently is
       // the
       // only extension of IngestionTask which does a read from disk before applying the record. This makes the
@@ -560,7 +560,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   }
 
   /**
-   * This function parses the {@link MergeConflictResult} and decides if the update should be ignored or emit a PUT or a
+   * This function parses the {@link MergeConflictResult} and decides if the updateAsync should be ignored or emit a PUT or a
    * DELETE record to VT.
    *
    * This function may modify the original record in KME and it is unsafe to use the payload from KME directly after this function.
@@ -592,7 +592,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     final ByteBuffer updatedRmdBytes =
         rmdSerDe.serializeRmdRecord(mergeConflictResult.getValueSchemaId(), mergeConflictResult.getRmdRecord());
 
-    // finally produce and update the transient record map.
+    // finally produce and updateAsync the transient record map.
     if (updatedValueBytes == null) {
       hostLevelIngestionStats.recordTombstoneCreatedDCR();
       aggVersionedIngestionStats.recordTombStoneCreationDCR(storeName, versionNumber);
@@ -604,7 +604,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       deletePayload.replicationMetadataPayload = updatedRmdBytes;
       BiConsumer<ChunkAwareCallback, LeaderMetadataWrapper> produceToTopicFunction =
           (callback, sourceTopicOffset) -> veniceWriter.get()
-              .delete(
+              .deleteAsync(
                   key,
                   callback,
                   sourceTopicOffset,
@@ -1315,7 +1315,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
                 true));
       }
       getVeniceWriter().get()
-          .put(
+          .putAsync(
               key,
               ByteUtils.extractByteArray(updatedValueBytes),
               valueSchemaId,

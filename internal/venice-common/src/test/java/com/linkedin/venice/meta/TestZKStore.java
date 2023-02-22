@@ -119,13 +119,14 @@ public class TestZKStore {
     Assert.assertEquals(
         store.retrieveVersionsToDelete(1).size(),
         0,
-        "one version is active and the last version should be preserved, nothing to delete.");
+        "one version is active and the last version should be preserved, nothing to deleteAsync.");
 
     version2.setStatus(VersionStatus.ONLINE);
     store.setCurrentVersion(2);
 
     assertVersionsEquals(store, 1, Arrays.asList(version1), "two version active, one should be deleted");
-    Assert.assertEquals(store.retrieveVersionsToDelete(2).size(), 0, "Only two active versions, nothing to delete");
+    Assert
+        .assertEquals(store.retrieveVersionsToDelete(2).size(), 0, "Only two active versions, nothing to deleteAsync");
 
     // Add one more version in error.
     Version version3 = new VersionImpl(store.getName(), 3);
@@ -153,8 +154,12 @@ public class TestZKStore {
     store.setCurrentVersion(5);
     version5.setStatus(VersionStatus.ONLINE);
 
-    assertVersionsEquals(store, 2, Arrays.asList(version1, version3, version4), "delete all but 2 active versions");
-    assertVersionsEquals(store, 5, Arrays.asList(version3, version4), "delete all error versions");
+    assertVersionsEquals(
+        store,
+        2,
+        Arrays.asList(version1, version3, version4),
+        "deleteAsync all but 2 active versions");
+    assertVersionsEquals(store, 5, Arrays.asList(version3, version4), "deleteAsync all error versions");
   }
 
   @Test
@@ -277,7 +282,7 @@ public class TestZKStore {
     // Disable store to read.
     store.setEnableReads(false);
     Assert.assertFalse(store.isEnableReads(), "Store has been disabled to read");
-    // Only disable read, store could continue to increase version and update version status.
+    // Only disable read, store could continue to increase version and updateAsync version status.
     version = new VersionImpl(store.getName(), store.getLargestUsedVersionNumber() + 1, "pushJobId2");
     store.addVersion(version);
     store.updateVersionStatus(version.getNumber(), VersionStatus.ONLINE);

@@ -77,7 +77,7 @@ public class RocksDBServerConfig {
   public static final String ROCKSDB_BLOCK_CACHE_STRICT_CAPACITY_LIMIT = "rocksdb.block.cache.strict.capacity.limit";
 
   /**
-   * If set to true, we will put index/filter blocks to the block cache. Otherwise, each "table reader" object will
+   * If set to true, we will putAsync index/filter blocks to the block cache. Otherwise, each "table reader" object will
    * pre-load index/filter block during table initialization.
    */
   public static final String ROCKSDB_SET_CACHE_INDEX_AND_FILTER_BLOCKS = "rocksdb.set.cache.index.and.filter.blocks";
@@ -185,7 +185,7 @@ public class RocksDBServerConfig {
   public static final String ROCKSDB_LEVEL0_STOPS_WRITES_TRIGGER_WRITE_ONLY_VERSION =
       "rocksdb.level0.stops.writes.trigger.write.only.version";
 
-  public static final String ROCKSDB_PUT_REUSE_BYTE_BUFFER = "rocksdb.put.reuse.byte.buffer";
+  public static final String ROCKSDB_PUT_REUSE_BYTE_BUFFER = "rocksdb.putAsync.reuse.byte.buffer";
 
   /**
    * Every time, when RocksDB tries to open a database, it will spin up multiple threads to load the file metadata

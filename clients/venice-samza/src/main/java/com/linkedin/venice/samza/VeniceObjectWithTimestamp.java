@@ -4,10 +4,10 @@ import org.apache.samza.system.OutgoingMessageEnvelope;
 
 
 /**
- * This class defines a wrapper object to wrap up the actual object and the corresponding update timestamp.
+ * This class defines a wrapper object to wrap up the actual object and the corresponding updateAsync timestamp.
  *
- * For the users who need to specify the logical update timestamp, you will need to wrap up your update and
- * the corresponding update timestamp and pass it to {@link VeniceSystemProducer}.
+ * For the users who need to specify the logical updateAsync timestamp, you will need to wrap up your updateAsync and
+ * the corresponding updateAsync timestamp and pass it to {@link VeniceSystemProducer}.
  * Specifically, for the users who are using {@link VeniceSystemProducer#send(String, OutgoingMessageEnvelope)},
  * the wrapper will replace {@link OutgoingMessageEnvelope#message}.
  */

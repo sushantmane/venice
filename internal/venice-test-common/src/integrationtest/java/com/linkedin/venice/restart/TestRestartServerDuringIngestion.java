@@ -138,7 +138,7 @@ public abstract class TestRestartServerDuringIngestion {
           });
           cluster.restartVeniceServer(serverWrapper.getPort());
         }
-        veniceWriter.put(entry.getKey(), entry.getValue(), 1, null);
+        veniceWriter.putAsync(entry.getKey(), entry.getValue(), 1, null);
       }
 
       veniceWriter.broadcastEndOfPush(Collections.emptyMap());
@@ -197,7 +197,7 @@ public abstract class TestRestartServerDuringIngestion {
               });
               cluster.restartVeniceServer(serverWrapper.getPort());
             }
-            streamingWriter.put(entry.getKey(), entry.getValue(), 1, null);
+            streamingWriter.putAsync(entry.getKey(), entry.getValue(), 1, null);
           }
         }
 
@@ -267,7 +267,7 @@ public abstract class TestRestartServerDuringIngestion {
       veniceWriter.broadcastStartOfPush(false, Collections.emptyMap());
 
       Map<byte[], byte[]> sortedInputRecords = generateInput(1000, false, 0, serializer);
-      sortedInputRecords.forEach((key, value) -> veniceWriter.put(key, value, 1, null));
+      sortedInputRecords.forEach((key, value) -> veniceWriter.putAsync(key, value, 1, null));
 
       veniceWriter.broadcastEndOfPush(Collections.emptyMap());
 

@@ -607,8 +607,8 @@ public interface Admin extends AutoCloseable, Closeable {
    * @param storeName of the store.
    * @param oldCluster for the store.
    * @param newCluster for the store.
-   * @param initiatingCluster that is making the update. This is needed because in the case of store migration
-   *                          sometimes the update is not made by the leader of the current cluster but instead the
+   * @param initiatingCluster that is making the updateAsync. This is needed because in the case of store migration
+   *                          sometimes the updateAsync is not made by the leader of the current cluster but instead the
    *                          leader of the source cluster.
    */
   void updateClusterDiscovery(String storeName, String oldCluster, String newCluster, String initiatingCluster);

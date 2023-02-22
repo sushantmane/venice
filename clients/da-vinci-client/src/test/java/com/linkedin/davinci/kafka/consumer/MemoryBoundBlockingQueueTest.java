@@ -100,7 +100,7 @@ public class MemoryBoundBlockingQueueTest {
       });
 
       int previousQueueSize = queue.size();
-      // Here we need to take out some objects to allow more put
+      // Here we need to take out some objects to allow more putAsync
       double objectCntTakenAtLeast = Math.ceil(
           (double) notifyDelta / (MemoryBoundBlockingQueue.LINKED_QUEUE_NODE_OVERHEAD_IN_BYTE + MeasurableObject.SIZE));
       for (int i = 1; i < objectCntTakenAtLeast; ++i) {

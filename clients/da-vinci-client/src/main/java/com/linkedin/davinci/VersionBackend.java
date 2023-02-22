@@ -369,7 +369,8 @@ public class VersionBackend {
         LOGGER.info("Partition {} of {}  is subscribed, ignoring subscribe request.", partition, this);
       } else if (suppressLiveUpdates && engine != null
           && engine.containsPartition(partition, version.getPartitionerConfig())) {
-        // If live update suppression is enabled and local data exists, don't start ingestion and report ready to serve.
+        // If live updateAsync suppression is enabled and local data exists, don't start ingestion and report ready to
+        // serve.
         partitionFutures.computeIfAbsent(partition, k -> CompletableFuture.completedFuture(null));
       } else {
         partitionFutures.computeIfAbsent(partition, k -> new CompletableFuture<>());

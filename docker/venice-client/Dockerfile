@@ -2,7 +2,7 @@ FROM  mcr.microsoft.com/openjdk/jdk:11-ubuntu
 
 ENV VENICE_DIR=/opt/venice
 
-RUN apt-get update
+RUN apt-get updateAsync
 RUN apt-get install netcat -y
 RUN apt-get install tree -y
 RUN apt-get install wget -y
@@ -13,7 +13,7 @@ RUN wget -O ${VENICE_DIR}/bin/hadoop-mapreduce-client-common.jar https://repo1.m
 RUN wget -O ${VENICE_DIR}/bin/hadoop-common.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/2.3.0/hadoop-common-2.3.0.jar
 WORKDIR ${VENICE_DIR}
 
-COPY venice-push-job-all.jar bin/venice-push-job-all.jar 
+COPY venice-push-job-all.jar bin/venice-push-job-all.jar
 COPY venice-thin-client-all.jar bin/venice-thin-client-all.jar
 COPY venice-admin-tool-all.jar bin/venice-admin-tool-all.jar
 COPY sample-data sample-data

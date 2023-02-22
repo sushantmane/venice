@@ -117,7 +117,7 @@ public class TestMultiDataCenterAdminOperations {
         new UpdateStoreQueryParams().setHybridRewindSeconds(259200).setHybridOffsetLagThreshold(1000));
     assertFalse(response.isError(), "There is error in setting hybrid config");
 
-    // Try to update partitioner config on hybrid store, expect to fail.
+    // Try to updateAsync partitioner config on hybrid store, expect to fail.
     response =
         controllerClient.updateStore(storeName, new UpdateStoreQueryParams().setPartitionerClass("testClassName"));
     Assert.assertTrue(response.isError(), "There should be error in setting partitioner config in hybrid store");
@@ -131,7 +131,7 @@ public class TestMultiDataCenterAdminOperations {
     // Make sure store is not hybrid.
     Assert.assertNull(controllerClient.getStore(storeName).getStore().getHybridStoreConfig());
 
-    // Try to update partitioner config on batch store, it should succeed now.
+    // Try to updateAsync partitioner config on batch store, it should succeed now.
     response = controllerClient.updateStore(
         storeName,
         new UpdateStoreQueryParams().setPartitionerClass("com.linkedin.venice.partitioner.DefaultVenicePartitioner"));
@@ -150,7 +150,7 @@ public class TestMultiDataCenterAdminOperations {
     AdminOperationSerializer adminOperationSerializer = new AdminOperationSerializer();
     long executionId = parentController.getVeniceAdmin().getLastSucceedExecutionId(clusterName) + 1;
     // send a bad admin message
-    veniceWriter.put(
+    veniceWriter.putAsync(
         emptyKeyBytes,
         getStoreUpdateMessage(clusterName, "store-not-exist", "store-owner", executionId, adminOperationSerializer),
         AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);

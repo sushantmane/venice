@@ -100,9 +100,9 @@ value=null
 
 
 #### Step 8: Update and add some new records using Incremental Push
-Venice supports incremental push which allows us to update values of existing rows or to add new rows in an existing store.
+Venice supports incremental push which allows us to updateAsync values of existing rows or to add new rows in an existing store.
 In this example, we will
-1. update values for keys from `51-100`. For example, the new value of `100` will be `test_name_100_v1`
+1. updateAsync values for keys from `51-100`. For example, the new value of `100` will be `test_name_100_v1`
 2. add new rows (key: `101-150`)
 
 ```

@@ -75,7 +75,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus update should be ignored.
+        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus updateAsync should be ignored.
         1,
         1,
         1);
@@ -88,7 +88,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
   @Test
   public void testUpdateIgnoredFieldUpdateWithEvolvedSchema() {
     /**
-     * When the Write Compute request is generated from an evolved value schema, as long as it does not try to update
+     * When the Write Compute request is generated from an evolved value schema, as long as it does not try to updateAsync
      * any field that does not exist in the current value, it could still be ignored.
      */
     final int incomingValueSchemaId = 4;
@@ -125,7 +125,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus update should be ignored.
+        valueLevelTimestamp - 1, // Slightly lower than existing timestamp. Thus updateAsync should be ignored.
         1,
         1,
         1);
@@ -153,7 +153,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
     ByteBuffer oldValueBytes =
         ByteBuffer.wrap(MapOrderingPreservingSerDeFactory.getSerializer(personSchemaV1).serialize(oldValueRecord));
 
-    // Set up partial update request.
+    // Set up partial updateAsync request.
     Schema partialUpdateSchema = WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(personSchemaV1);
     UpdateBuilder updateBuilder = new UpdateBuilderImpl(partialUpdateSchema);
     updateBuilder.setNewFieldValue("age", 66);
@@ -192,7 +192,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus update is NOT ignored.
+        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus updateAsync is NOT ignored.
         1,
         1,
         1);
@@ -262,7 +262,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
     ByteBuffer oldValueBytes =
         ByteBuffer.wrap(MapOrderingPreservingSerDeFactory.getSerializer(personSchemaV1).serialize(oldValueRecord));
 
-    // Set up partial update request.
+    // Set up partial updateAsync request.
     Schema partialUpdateSchema = WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(personSchemaV1);
     UpdateBuilder updateBuilder = new UpdateBuilderImpl(partialUpdateSchema);
     updateBuilder.setNewFieldValue("age", 99);
@@ -301,7 +301,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus update is NOT ignored.
+        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus updateAsync is NOT ignored.
         1,
         1,
         newColoID);
@@ -367,7 +367,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
     Assert.assertEquals(updatedMapField.get("2").toString(), "two");
     Assert.assertEquals(updatedMapField.get("3").toString(), "three");
 
-    // Create another partial update request to remove one of the map key-value pair.
+    // Create another partial updateAsync request to remove one of the map key-value pair.
     updateBuilder = new UpdateBuilderImpl(partialUpdateSchema);
     updateBuilder.setKeysToRemoveFromMapField("stringMap", Collections.singletonList("1"));
     updateFieldRecord = updateBuilder.build();
@@ -463,7 +463,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus update is NOT ignored.
+        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus updateAsync is NOT ignored.
         1,
         1,
         newValueColoID);
@@ -607,7 +607,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
         writeComputeBytes,
         incomingValueSchemaId,
         incomingWriteComputeSchemaId,
-        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus update is NOT ignored.
+        valueLevelTimestamp + 1, // Slightly higher than existing timestamp. Thus updateAsync is NOT ignored.
         1,
         1,
         newValueColoID);
@@ -643,7 +643,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
     Assert.assertEquals(
         (int) collectionFieldTimestampRecord.get(PUT_ONLY_PART_LENGTH_FIELD_NAME),
         0,
-        "The map in this field does not a put-only part.");
+        "The map in this field does not a putAsync-only part.");
     Assert.assertEquals((int) collectionFieldTimestampRecord.get(TOP_LEVEL_COLO_ID_FIELD_NAME), -1);
     Assert
         .assertEquals((List<?>) collectionFieldTimestampRecord.get(ACTIVE_ELEM_TS_FIELD_NAME), Collections.emptyList());
@@ -660,7 +660,7 @@ public class TestMergeUpdateWithValueLevelTimestamp extends TestMergeConflictRes
     Assert.assertEquals(
         (int) collectionFieldTimestampRecord.get(PUT_ONLY_PART_LENGTH_FIELD_NAME),
         0,
-        "This list field does not have a put-only part because all elements are added by collection merge.");
+        "This list field does not have a putAsync-only part because all elements are added by collection merge.");
     Assert.assertEquals(
         (int) collectionFieldTimestampRecord.get(TOP_LEVEL_COLO_ID_FIELD_NAME),
         -1,

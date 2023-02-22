@@ -104,7 +104,7 @@ public class ZkExecutionIdAccessor implements ExecutionIdAccessor {
    * Using AtomicLong here only as a workaround to get next execution id from
    * {@link HelixUtils#compareAndUpdate(ZkBaseDataAccessor, String, int, DataUpdater)}
    *
-   * @throws ZkDataAccessException will be thrown if it fails to update the data
+   * @throws ZkDataAccessException will be thrown if it fails to updateAsync the data
    */
   @Override
   public Long incrementAndGetExecutionId(String clusterName) {
@@ -185,12 +185,12 @@ public class ZkExecutionIdAccessor implements ExecutionIdAccessor {
         zkclient.writeData(path, executionId.toString());
       } catch (Exception e) {
         e.printStackTrace();
-        LOGGER.warn("Could not update the execution id to ZK in: {}. Will retry the query.", path, e);
+        LOGGER.warn("Could not updateAsync the execution id to ZK in: {}. Will retry the query.", path, e);
         retry--;
       }
     }
     throw new VeniceException(
-        "After retry " + ZK_RETRY_COUNT + " times, could not update the execution id to ZK in: " + path);
+        "After retry " + ZK_RETRY_COUNT + " times, could not updateAsync the execution id to ZK in: " + path);
   }
 
   private static String getLastSucceededExecutionIdPath(String clusterName) {

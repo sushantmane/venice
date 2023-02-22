@@ -126,7 +126,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
          * Otherwise queue the chunks and manifest individually to drainer service.
          */
         if (chunkedValueManifest == null) {
-          // update the keyBytes for the ProducedRecord in case it was changed due to isChunkingEnabled flag in
+          // updateAsync the keyBytes for the ProducedRecord in case it was changed due to isChunkingEnabled flag in
           // VeniceWriter.
           if (key != null) {
             leaderProducedRecordContext.setKeyBytes(key);
@@ -152,7 +152,7 @@ class LeaderProducerCallback implements ChunkAwareCallback {
           ByteBuffer manifest = CHUNKED_VALUE_MANIFEST_SERIALIZER.serialize(chunkedValueManifest);
           /**
            * The byte[] coming out of the {@link CHUNKED_VALUE_MANIFEST_SERIALIZER} is padded in front, so
-           * that the put to the storage engine can avoid a copy, but we need to set the position to skip
+           * that the putAsync to the storage engine can avoid a copy, but we need to set the position to skip
            * the padding in order for this trick to work.
            */
           manifest.position(ValueRecord.SCHEMA_HEADER_LENGTH);

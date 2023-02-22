@@ -68,7 +68,7 @@ public class TestMergeDeleteWithFieldLevelTimestamp extends TestMergeConflictRes
             new RmdSerDe(schemaRepository, storeName, RMD_VERSION_ID),
             storeName);
 
-    // Case 1: Delete one field with the same delete timestamp.
+    // Case 1: Delete one field with the same deleteAsync timestamp.
     long deleteOperationTimestamp = 10L;
     MergeConflictResult result = mergeConflictResolver
         .delete(Lazy.of(() -> oldValueBytes), oldRmdWithValueSchemaID, deleteOperationTimestamp, 1L, 0, 0);
@@ -86,7 +86,7 @@ public class TestMergeDeleteWithFieldLevelTimestamp extends TestMergeConflictRes
     Assert.assertEquals(updatedValueRecord.get("name").toString(), "James"); // Not updated
     Assert.assertEquals(updatedValueRecord.get("age"), 32); // Not updated
 
-    // Case 2: Delete two fields with the a higher delete timestamp.
+    // Case 2: Delete two fields with the a higher deleteAsync timestamp.
     deleteOperationTimestamp = 25L;
     result = mergeConflictResolver
         .delete(Lazy.of(() -> oldValueBytes), oldRmdWithValueSchemaID, deleteOperationTimestamp, 1L, 0, 0);
@@ -104,7 +104,7 @@ public class TestMergeDeleteWithFieldLevelTimestamp extends TestMergeConflictRes
     Assert.assertEquals(updatedValueRecord.get("name").toString(), "default_name"); // Deleted and has the default value
     Assert.assertEquals(updatedValueRecord.get("age"), 32); // Not updated
 
-    // Case 3: Delete all three fields with the a higher delete timestamp.
+    // Case 3: Delete all three fields with the a higher deleteAsync timestamp.
     deleteOperationTimestamp = 99L;
     result = mergeConflictResolver
         .delete(Lazy.of(() -> oldValueBytes), oldRmdWithValueSchemaID, deleteOperationTimestamp, 1L, 0, 0);

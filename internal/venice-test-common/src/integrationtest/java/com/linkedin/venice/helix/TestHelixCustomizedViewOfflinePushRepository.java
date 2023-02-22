@@ -78,7 +78,7 @@ public class TestHelixCustomizedViewOfflinePushRepository {
         IdealState.RebalanceMode.FULL_AUTO.toString());
     admin.rebalance(clusterName, resourceName, 2);
 
-    // Build customized state config and update to Zookeeper
+    // Build customized state config and updateAsync to Zookeeper
     HelixUtils.setupCustomizedStateConfig(admin, clusterName);
 
     partitionId0 = 0;

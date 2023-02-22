@@ -168,7 +168,7 @@ public abstract class KafkaClientFactory {
   abstract protected String getKafkaAdminClass();
 
   /**
-   * Get the class name of an admin client that is used for "write-only" tasks such as create topics, update topic configs,
+   * Get the class name of an admin client that is used for "write-only" tasks such as create topics, updateAsync topic configs,
    * etc. "Write-only" means that it only modifies the Kafka cluster state and does not read it.
    *
    * @return Fully-qualified name name. For example: "com.linkedin.venice.kafka.admin.KafkaAdminClient"

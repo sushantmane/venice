@@ -14,7 +14,7 @@ public class InMemoryKafkaMessage {
   public final KafkaMessageEnvelope value;
   /**
    * This field indicates that whether {@link com.linkedin.venice.kafka.protocol.Put#putValue} has been changed or not.
-   * Essentially, we only want to concat schema id with the actual put value once.
+   * Essentially, we only want to concat schema id with the actual putAsync value once.
    */
   private boolean putValueChanged = false;
 

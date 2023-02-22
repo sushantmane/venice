@@ -848,7 +848,7 @@ public class TestHybrid {
           TestUtils.getVeniceWriterFactory(veniceWriterProperties).createBasicVeniceWriter(tmpTopic1)) {
         // Write 10 records
         for (int i = 0; i < 10; ++i) {
-          tmpWriter1.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
+          tmpWriter1.putAsync(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
         }
       }
 
@@ -859,7 +859,7 @@ public class TestHybrid {
           TestUtils.getVeniceWriterFactory(veniceWriterProperties).createBasicVeniceWriter(tmpTopic2)) {
         // Write 10 records
         for (int i = 10; i < 20; ++i) {
-          tmpWriter2.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
+          tmpWriter2.putAsync(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
         }
       }
 
@@ -1258,7 +1258,7 @@ public class TestHybrid {
               100,
               1,
               -1);
-          realTimeTopicWriter.put(
+          realTimeTopicWriter.putAsync(
               record.getFirst(),
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
@@ -1274,7 +1274,7 @@ public class TestHybrid {
               100,
               2,
               -1);
-          realTimeTopicWriter.put(
+          realTimeTopicWriter.putAsync(
               record.getFirst(),
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
@@ -1290,7 +1290,7 @@ public class TestHybrid {
               100,
               1,
               -1);
-          realTimeTopicWriter.put(
+          realTimeTopicWriter.putAsync(
               record.getFirst(),
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
@@ -1306,7 +1306,7 @@ public class TestHybrid {
               100,
               3,
               -1);
-          realTimeTopicWriter.put(
+          realTimeTopicWriter.putAsync(
               record.getFirst(),
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
@@ -1433,7 +1433,7 @@ public class TestHybrid {
                 .createBasicVeniceWriter(Version.composeRealTimeTopic(storeName))) {
           for (int j = i * 50 + 1; j <= i * 50 + 50; j++) {
             realTimeTopicWriter
-                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
+                .putAsync(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
           }
         }
       }
@@ -1502,7 +1502,7 @@ public class TestHybrid {
                 .createBasicVeniceWriter(Version.composeRealTimeTopic(storeName))) {
           for (int j = i * 50 + 1; j <= i * 50 + 50; j++) {
             realTimeTopicWriter
-                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
+                .putAsync(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
           }
         }
       }

@@ -92,11 +92,11 @@ public class ValidateSchemaAndBuildDictMapperOutputReader implements Closeable {
     Utils.closeQuietlyWithErrorLogged(avroDataFileStream);
     Utils.closeQuietlyWithErrorLogged(inputStream);
 
-    // delete the output directory: It should not affect other VPJs as this is unique
+    // deleteAsync the output directory: It should not affect other VPJs as this is unique
     try {
       fs.delete(new Path(outputDir), true);
     } catch (IOException e) {
-      LOGGER.error("Failed to delete directory: {}", outputDir, e);
+      LOGGER.error("Failed to deleteAsync directory: {}", outputDir, e);
     }
   }
 }

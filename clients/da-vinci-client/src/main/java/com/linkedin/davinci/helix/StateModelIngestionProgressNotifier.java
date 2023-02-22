@@ -55,10 +55,10 @@ public abstract class StateModelIngestionProgressNotifier implements VeniceNotif
         storeIngestionService.getStoreIngestionTask(resourceName).reportError(errorMsg, partitionId, veniceException);
       }
       stateModelToIngestionCompleteFlagMap.remove(stateModelId);
-      // If consumption is failed, throw an exception here, Helix will put this replica to ERROR state.
+      // If consumption is failed, throw an exception here, Helix will putAsync this replica to ERROR state.
       if (stateModelToSuccessMap.containsKey(stateModelId) && !stateModelToSuccessMap.get(stateModelId)) {
         throw new VeniceException(
-            "Consumption is failed. Thrown an exception to put this replica:" + stateModelId + " to ERROR state.");
+            "Consumption is failed. Thrown an exception to putAsync this replica:" + stateModelId + " to ERROR state.");
       }
     }
   }

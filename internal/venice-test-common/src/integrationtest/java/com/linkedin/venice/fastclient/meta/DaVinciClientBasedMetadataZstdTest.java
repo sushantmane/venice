@@ -36,7 +36,7 @@ public class DaVinciClientBasedMetadataZstdTest extends DaVinciClientBasedMetada
     List<Double> version_update_failure = clusterStats.getMetricValues("version_update_failure", "OccurrenceRate");
     List<Double> current_version = clusterStats.getMetricValues("current_version", "Gauge");
     assertEquals(version_update_failure.size(), 1, "Unexpected statistic size");
-    assertEquals(version_update_failure.get(0), 0.0, "Unexpected version update failure");
+    assertEquals(version_update_failure.get(0), 0.0, "Unexpected version updateAsync failure");
     assertEquals(current_version.size(), 1, "Unexpected statistic size");
     assertEquals(current_version.get(0), 1.0, "Unexpected version number");
   }

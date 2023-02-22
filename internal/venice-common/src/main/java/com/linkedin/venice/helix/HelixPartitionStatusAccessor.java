@@ -46,22 +46,22 @@ public class HelixPartitionStatusAccessor extends HelixPartitionStateAccessor {
   }
 
   /**
-   * When a replica is gone from an instance due to partition movement or resource drop, we need to call this delete
-   * function to explicitly delete the customized state for that replica. Otherwise, customized state will still stay there.
+   * When a replica is gone from an instance due to partition movement or resource drop, we need to call this deleteAsync
+   * function to explicitly deleteAsync the customized state for that replica. Otherwise, customized state will still stay there.
    * Usually this should happen during state transition.
    *
    * If the partition state is the last partition state in the resource znode, the znode will also be deleted.
    */
   public void deleteReplicaStatus(String topic, int partitionId) {
     /**
-     * We don't want to do the two delete operations atomically; Even if one delete fails,
-     * the other delete operation should still continue.
+     * We don't want to do the two deleteAsync operations atomically; Even if one deleteAsync fails,
+     * the other deleteAsync operation should still continue.
      */
     try {
       super.deleteReplicaStatus(HelixPartitionState.OFFLINE_PUSH, topic, getPartitionNameFromId(topic, partitionId));
     } catch (NullPointerException e) {
       LOGGER.warn(
-          "The partition {} doesn't exist in resource {}, cannot delete a non-existent partition state for {}.",
+          "The partition {} doesn't exist in resource {}, cannot deleteAsync a non-existent partition state for {}.",
           partitionId,
           topic,
           HelixPartitionState.OFFLINE_PUSH.name());
@@ -74,7 +74,7 @@ public class HelixPartitionStatusAccessor extends HelixPartitionStateAccessor {
             getPartitionNameFromId(topic, partitionId));
       } catch (NullPointerException e) {
         LOGGER.warn(
-            "The partition {} doesn't exist in resource {}, cannot delete a non-existent partition state for {}.",
+            "The partition {} doesn't exist in resource {}, cannot deleteAsync a non-existent partition state for {}.",
             partitionId,
             topic,
             HelixPartitionState.HYBRID_STORE_QUOTA.name());

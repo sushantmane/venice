@@ -307,7 +307,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
   /**
    * This method is overridden and not used by LinkedIn internally.
-   * Please update the overridden method accordingly after modifying this method.
+   * Please updateAsync the overridden method accordingly after modifying this method.
    */
   protected VeniceWriter<byte[], byte[], byte[]> getVeniceWriter(VersionCreationResponse store) {
     Properties veniceWriterProperties = new Properties();
@@ -611,9 +611,9 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
     if (valueObject == null) {
       if (logicalTimestamp > 0) {
-        veniceWriter.delete(key, logicalTimestamp, callback);
+        veniceWriter.deleteAsync(key, logicalTimestamp, callback);
       } else {
-        veniceWriter.delete(key, callback);
+        veniceWriter.deleteAsync(key, callback);
       }
     } else {
       Schema valueObjectSchema = getSchemaFromObject(valueObject);
@@ -630,18 +630,18 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
       if (valueSchemaIdPair.getSecond() == -1) {
         if (logicalTimestamp > 0) {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
         } else {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), callback);
         }
       } else {
         if (!isWriteComputeEnabled) {
           throw new SamzaException(
-              "Cannot write partial update record to Venice store " + storeName + " "
+              "Cannot write partial updateAsync record to Venice store " + storeName + " "
                   + "because write-compute is not enabled for it. Please contact Venice team to configure it.");
         }
         if (logicalTimestamp > 0) {
-          veniceWriter.update(
+          veniceWriter.updateAsync(
               key,
               value,
               valueSchemaIdPair.getFirst(),
@@ -649,7 +649,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
               callback,
               logicalTimestamp);
         } else {
-          veniceWriter.update(key, value, valueSchemaIdPair.getFirst(), valueSchemaIdPair.getSecond(), callback);
+          veniceWriter.updateAsync(key, value, valueSchemaIdPair.getFirst(), valueSchemaIdPair.getSecond(), callback);
         }
       }
     }

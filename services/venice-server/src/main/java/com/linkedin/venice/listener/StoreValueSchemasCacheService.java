@@ -40,7 +40,7 @@ import org.apache.logging.log4j.Logger;
  * Here how it works in this class:
  * 1. It maintains a mapping between stores and their value schemas and latest value schema;
  * 2. It will try to reuse the same {@link Schema} object for the same Schema Id within a store since value schema is immutable;
- * 3. It maintains a refresh thread to update the local cache periodically;
+ * 3. It maintains a refresh thread to updateAsync the local cache periodically;
  *
  * In theory, all the schema lookups shouldn't be blocked by invoking the underlying {@link HelixReadOnlySchemaRepository} since in reality,
  * it will take a fair long time to register a new value schema/latest value schema and start using it in prod, so the periodical schema

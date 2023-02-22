@@ -12,11 +12,11 @@ import java.util.Map;
 
 /**
  * This class is a wrapper schema repository class, which is only used by merge conflict resolver in A/A store ingestion
- * task. This class will annotate value schema and partial update schema so when performing Map collection merging,
+ * task. This class will annotate value schema and partial updateAsync schema so when performing Map collection merging,
  * Map field's key can be deserialized into String type and thus is comparable for DCR purpose. Without this wrapper or
  * user annotation, map fields will have key in UTF-8 type which is not comparable.
  * This wrapper class only implements retrieval of the value schema (including the latest value schema and superset schema)
- * and partial update schema as they are the only usage in merge conflict resolver. Other operations are not supported
+ * and partial updateAsync schema as they are the only usage in merge conflict resolver. Other operations are not supported
  * intentionally to avoid unexpected behavior.
  */
 public class MapKeyStringAnnotatedStoreSchemaCache {
@@ -73,7 +73,7 @@ public class MapKeyStringAnnotatedStoreSchemaCache {
   }
 
   /**
-   * Retrieve partial update schema of a store and annotate its map fields.
+   * Retrieve partial updateAsync schema of a store and annotate its map fields.
    * The annotation will only be done once in the repository's lifetime as the result is cached.
    */
   public DerivedSchemaEntry getDerivedSchema(int valueSchemaId, int partialUpdateProtocolId) {

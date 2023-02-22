@@ -20,14 +20,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * Current use case of this lock manager is inside Active/Active write path:
  * During Active/Active ingestion, the below data flow must be in a critical session for the same key:
  * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
- * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
+ * -> updateAsync transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
  *
- * Therefore, put the above critical session in key level locking will have the minimum lock contention; to avoid creating
+ * Therefore, putAsync the above critical session in key level locking will have the minimum lock contention; to avoid creating
  * too much locks, we can build a pool of locks. Theoretically, the pool size doesn't need to exceed the number of potential
  * real-time topic partitions from different source regions --- let's assume the number of RT source regions is x, the number
  * of topic partitions are y, the Active/Active write-path could at most handle x * y different keys at the same time.
  *
- * If there are more use cases that could leverage this key level lock manager in future, feel free to do so, and extend/update
+ * If there are more use cases that could leverage this key level lock manager in future, feel free to do so, and extend/updateAsync
  * the class if necessary.
  */
 public class KeyLevelLocksManager {

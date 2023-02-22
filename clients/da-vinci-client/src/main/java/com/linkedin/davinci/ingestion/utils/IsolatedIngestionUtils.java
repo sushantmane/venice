@@ -492,9 +492,9 @@ public class IsolatedIngestionUtils {
         Paths.get(configBasePath, ISOLATED_INGESTION_KAFKA_CLUSTER_MAP_FILENAME).toAbsolutePath().toString();
     File configFile = new File(configFilePath);
     if (configFile.exists()) {
-      LOGGER.info("Kafka cluster map file already exists, will delete existing file: {}", configFilePath);
+      LOGGER.info("Kafka cluster map file already exists, will deleteAsync existing file: {}", configFilePath);
       if (!configFile.delete()) {
-        throw new VeniceException("Unable to delete config file: " + configFilePath);
+        throw new VeniceException("Unable to deleteAsync config file: " + configFilePath);
       }
     }
     try {
@@ -655,9 +655,9 @@ public class IsolatedIngestionUtils {
     String configFilePath = Paths.get(basePath, fileName).toAbsolutePath().toString();
     File configFile = new File(configFilePath);
     if (configFile.exists()) {
-      LOGGER.warn("Config file already exists, will delete existing file: {}", configFilePath);
+      LOGGER.warn("Config file already exists, will deleteAsync existing file: {}", configFilePath);
       if (!configFile.delete()) {
-        throw new VeniceException("Unable to delete config file: " + configFilePath);
+        throw new VeniceException("Unable to deleteAsync config file: " + configFilePath);
       }
     }
     // Store properties into config file.

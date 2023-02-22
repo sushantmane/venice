@@ -145,17 +145,17 @@ public class TestHelixReadWriteStoreRepositoryAdapter {
       assertEquals(readOnlyRepo.getStore(anotherRegularStoreName).getBatchGetLimit(), -1);
     });
 
-    // Try to update a regular store
+    // Try to updateAsync a regular store
     testStore.setBatchGetLimit(1000);
     writeRepoAdapter.updateStore(testStore);
     TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, () -> {
       assertEquals(readOnlyRepo.getStore(anotherRegularStoreName).getBatchGetLimit(), 1000);
     });
 
-    // System stores should be empty before any system store update
+    // System stores should be empty before any system store updateAsync
     assertTrue(readOnlyRepo.getStore(anotherRegularStoreName).getSystemStores().isEmpty());
 
-    // Test to update a system store
+    // Test to updateAsync a system store
     Store systemStore = writeRepoAdapter.getStore(systemStoreType.getSystemStoreName(anotherRegularStoreName));
     systemStore.addVersion(new VersionImpl(systemStore.getName(), 1, "test_push_id_1"));
     writeRepoAdapter.updateStore(systemStore);

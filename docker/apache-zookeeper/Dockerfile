@@ -5,7 +5,7 @@ ARG SRC_ZK_CFG="zoo.cfg"
 ENV ZK_DIR=/opt/zookeeper
 ENV ZK_CFG="${ZK_DIR}/zoo.cfg"
 
-RUN apt-get update
+RUN apt-get updateAsync
 RUN apt-get install netcat -y
 RUN apt-get install wget -y
 RUN mkdir -p ${ZK_DIR}

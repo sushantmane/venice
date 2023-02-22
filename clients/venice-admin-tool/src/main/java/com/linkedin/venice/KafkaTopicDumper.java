@@ -285,7 +285,7 @@ public class KafkaTopicDumper implements AutoCloseable {
 
       switch (MessageType.valueOf(kafkaMessageEnvelope)) {
         case PUT:
-          // put message
+          // putAsync message
           Put put = (Put) kafkaMessageEnvelope.payloadUnion;
           ByteBuffer putValue = put.putValue;
           int schemaId = put.schemaId;
@@ -297,7 +297,7 @@ public class KafkaTopicDumper implements AutoCloseable {
           convertedRecord.put(VENICE_ETL_DELETED_TS_FIELD, record.offset());
           break;
         case UPDATE:
-          LOGGER.info("Found update message! continue");
+          LOGGER.info("Found updateAsync message! continue");
           break;
         default:
           throw new VeniceException("How come?");

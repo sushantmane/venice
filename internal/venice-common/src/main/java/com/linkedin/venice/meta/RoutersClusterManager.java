@@ -67,7 +67,7 @@ public interface RoutersClusterManager {
   void enableThrottling(boolean enable);
 
   /**
-   * Enable or disable read quota re-balance feature on router. If this feature is disabled, router will not update
+   * Enable or disable read quota re-balance feature on router. If this feature is disabled, router will not updateAsync
    * store's read quota while a router is removed from or added into the cluster.
    */
   void enableQuotaRebalance(boolean enable, int expectRouterCount);

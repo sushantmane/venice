@@ -70,7 +70,7 @@ public class MergeGenericRecordTest {
     // Verify that the same object is returned
     Assert.assertTrue(deletedValueAndRmd1 == valueAndRmd);
 
-    // full delete. expect null value
+    // full deleteAsync. expect null value
     timeStampRecord.put(0, 20L);
     valueAndRmd.setRmd(timeStampRecord);
     ValueAndRmd<GenericRecord> deletedValueAndRmd2 = genericRecordMerge.delete(valueAndRmd, 30, -1, 1, 0);
@@ -78,7 +78,7 @@ public class MergeGenericRecordTest {
     // Verify that the same object is returned
     Assert.assertTrue(deletedValueAndRmd2 == valueAndRmd);
 
-    // full delete based on field timestamp values
+    // full deleteAsync based on field timestamp values
     ts.put("id", 10L);
     ts.put("name", 10L);
     ts.put("age", 20L);
@@ -89,7 +89,7 @@ public class MergeGenericRecordTest {
     Assert.assertNull(valueAndRmd.getValue());
     Assert.assertEquals(valueAndRmd.getRmd().get(TIMESTAMP_FIELD_NAME), 30L);
 
-    // no delete, return same object
+    // no deleteAsync, return same object
     timeStampRecord.put(0, ts);
     valueAndRmd.setRmd(timeStampRecord);
     valueAndRmd.setValue(valueRecord);

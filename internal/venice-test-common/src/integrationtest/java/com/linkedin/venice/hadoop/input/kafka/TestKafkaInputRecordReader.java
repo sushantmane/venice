@@ -64,11 +64,11 @@ public class TestKafkaInputRecordReader {
         byte[] keyBytes = (KAFKA_MESSAGE_KEY_PREFIX + i).getBytes();
         byte[] valueBytes = (KAFKA_MESSAGE_VALUE_PREFIX + i).getBytes();
         if (i >= updateRange.getFirst() && i <= updateRange.getSecond()) {
-          veniceWriter.update(keyBytes, valueBytes, -1, -1, null);
+          veniceWriter.updateAsync(keyBytes, valueBytes, -1, -1, null);
         } else if (i >= deleteRange.getFirst() && i <= deleteRange.getSecond()) {
-          veniceWriter.delete(keyBytes, null);
+          veniceWriter.deleteAsync(keyBytes, null);
         } else {
-          veniceWriter.put(keyBytes, valueBytes, -1);
+          veniceWriter.putAsync(keyBytes, valueBytes, -1);
         }
       }
     }

@@ -29,7 +29,7 @@ import org.apache.helix.zookeeper.impl.client.ZkClient;
  * Class Invariants:
  * <ul>
  *   <li>Each method is thread-safe.</li>
- *   <li>The state of the repository (including the cache) will not be affected by object mutations until update
+ *   <li>The state of the repository (including the cache) will not be affected by object mutations until updateAsync
  *   methods from the repository are called.</li>
  * </ul>
  *

@@ -257,7 +257,8 @@ public class ParticipantStoreTest {
       }
     });
 
-    // Now, try to delete the version and the corresponding kill message should be present even for an ONLINE version
+    // Now, try to deleteAsync the version and the corresponding kill message should be present even for an ONLINE
+    // version
     // Push a new version so the ONLINE version can be deleted to mimic retiring an old version.
     VersionCreationResponse newVersionResponse = getNewStoreVersion(parentControllerClient, storeName, false);
     assertFalse(newVersionResponse.isError(), "Controller error: " + newVersionResponse.getError());

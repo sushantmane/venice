@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * This class is responsible for automatically create and delete per user store system store resources when the
+ * This class is responsible for automatically create and deleteAsync per user store system store resources when the
  * corresponding user store is created or deleted.
  */
 public class UserSystemStoreLifeCycleHelper {
@@ -184,7 +184,8 @@ public class UserSystemStoreLifeCycleHelper {
           pushStatusStoreRecordDeleter,
           LOGGER);
     }
-    // We must delete meta system store at the end as deleting other system store will try to send update to meta system
+    // We must deleteAsync meta system store at the end as deleting other system store will try to send updateAsync to
+    // meta system
     // store as well.
     if (userStore.isStoreMetaSystemStoreEnabled()) {
       deleteSystemStore(

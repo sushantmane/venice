@@ -248,7 +248,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     String topic = partitionAssignment.getTopic();
     if (partitionAssignment.getAllPartitions().isEmpty()) {
       LOGGER.warn(
-          "QuotaEnforcementHandler updated with an empty partition map for topic: {}. Skipping update process",
+          "QuotaEnforcementHandler updated with an empty partition map for topic: {}. Skipping updateAsync process",
           topic);
       return;
     }
@@ -263,7 +263,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     long quotaInRcu = storeRepository.getStore(Version.parseStoreFromKafkaTopicName(partitionAssignment.getTopic()))
         .getReadQuotaInCU();
     TokenBucket newStoreBucket = tokenBucketfromRcuPerSecond(quotaInRcu, thisNodeQuotaResponsibility);
-    storeVersionBuckets.put(topic, newStoreBucket); // put is atomic, so this method is thread-safe
+    storeVersionBuckets.put(topic, newStoreBucket); // putAsync is atomic, so this method is thread-safe
   }
 
   @Override
@@ -352,7 +352,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
              * It could happen to a tiny store. When the push job completes, the status of the latest version will
              * be updated, which will result in invoking this handleStoreChanged() function; then the helix resource
              * of the old version will be dropped. Dropping the related helix resource completes too fast, even
-             * before this store update callback completes, so it couldn't find the old resource in the external
+             * before this store updateAsync callback completes, so it couldn't find the old resource in the external
              * view.
              */
 
@@ -361,7 +361,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
           }
 
           /**
-           * For future version, it's possible that store metadata update callback is invoked faster than
+           * For future version, it's possible that store metadata updateAsync callback is invoked faster than
            * the external view change callback; but for any other versions between future version and the
            * oldest version that should be retire, they should exist on external view if they are online.
            */

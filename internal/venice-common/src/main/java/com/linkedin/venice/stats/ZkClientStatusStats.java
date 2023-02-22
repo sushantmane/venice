@@ -26,7 +26,7 @@ public class ZkClientStatusStats extends AbstractVeniceStats implements IZkState
   private final Sensor zkClientDisconnectedSensor, zkClientExpiredSensor, zkClientSyncConnectedSensor,
       zkClientNewSessionSensor, zkClientSessionEstablishmentErrorSensor, zkClientReconnectionLatencySensor;
 
-  // since ZKClient establish the connection during CTOR, it's likely to miss the first state update
+  // since ZKClient establish the connection during CTOR, it's likely to miss the first state updateAsync
   private KeeperState clientState = KeeperState.Unknown;
   private long disconnectionTime;
 

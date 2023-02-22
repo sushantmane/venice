@@ -88,7 +88,7 @@ public class VeniceControllerService extends AbstractVeniceService {
     } catch (Exception e) {
       LOGGER.error("Exception in initializing KME schema reader", e);
     }
-    // The admin consumer needs to use VeniceHelixAdmin to update Zookeeper directly
+    // The admin consumer needs to use VeniceHelixAdmin to updateAsync Zookeeper directly
     consumerServicesByClusters = new HashMap<>(multiClusterConfigs.getClusters().size());
     PubSubTopicRepository pubSubTopicRepository = new PubSubTopicRepository();
     /** N.B. The code below is copied from {@link com.linkedin.venice.controller.init.SystemSchemaInitializationRoutine */

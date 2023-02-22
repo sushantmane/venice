@@ -168,7 +168,7 @@ public class MetaStoreWriter implements Closeable {
       map.put(KEY_STRING_VERSION_NUMBER, Integer.toString(versionNumber));
       return map;
     }, () -> {
-      // Construct an update
+      // Construct an updateAsync
       StoreMetaValueWriteOpRecord writeOpRecord = new StoreMetaValueWriteOpRecord();
       writeOpRecord.timestamp = System.currentTimeMillis();
       List<Integer> list = new ArrayList<>(1);
@@ -228,7 +228,7 @@ public class MetaStoreWriter implements Closeable {
         put(KEY_STRING_PARTITION_ID, Integer.toString(partitionId));
       }
     }, () -> {
-      // Construct an update
+      // Construct an updateAsync
       StoreMetaValueWriteOpRecord writeOpRecord = new StoreMetaValueWriteOpRecord();
       writeOpRecord.timestamp = System.currentTimeMillis();
 
@@ -277,7 +277,7 @@ public class MetaStoreWriter implements Closeable {
         put(KEY_STRING_PARTITION_ID, Integer.toString(partitionId));
       }
     }, () -> {
-      // Construct an update WC record
+      // Construct an updateAsync WC record
       StoreMetaValueWriteOpRecord writeOpRecord = new StoreMetaValueWriteOpRecord();
       writeOpRecord.timestamp = System.currentTimeMillis();
       storeReplicaStatusesMapOps replicaStatusesMapOps = new storeReplicaStatusesMapOps();
@@ -306,7 +306,7 @@ public class MetaStoreWriter implements Closeable {
         put(KEY_STRING_PARTITION_ID, Integer.toString(partitionId));
       }
     });
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     writer.flush();
   }
 
@@ -340,7 +340,7 @@ public class MetaStoreWriter implements Closeable {
     StoreMetaKey key = dataType.getStoreMetaKey(keyStringSupplier.get());
     StoreMetaValue value = valueSupplier.get();
     value.timestamp = System.currentTimeMillis();
-    writer.put(key, value, AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get());
+    writer.putAsync(key, value, AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get());
     writer.flush();
   }
 
@@ -366,7 +366,7 @@ public class MetaStoreWriter implements Closeable {
     }
     StoreMetaKey key = dataType.getStoreMetaKey(keyStringSupplier.get());
     SpecificRecord update = updateSupplier.get();
-    writer.update(
+    writer.updateAsync(
         key,
         update,
         AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get(),

@@ -408,7 +408,7 @@ public class TestHelixStatusMessageChannel {
   }
 
   /**
-   * Handler in controller side used to deal with status update message from storage node.
+   * Handler in controller side used to deal with status updateAsync message from storage node.
    */
   private static class FailedTestStoreStatusMessageHandler implements StatusMessageHandler<StoreStatusMessage> {
     private int errorReplyCount;
@@ -430,7 +430,7 @@ public class TestHelixStatusMessageChannel {
   }
 
   /**
-   * Handler in controller side used to deal with status update message from storage node.
+   * Handler in controller side used to deal with status updateAsync message from storage node.
    */
   private static class TimeoutTestStoreStatusMessageHandler implements StatusMessageHandler<StoreStatusMessage> {
     private int timeOutReplyCount;

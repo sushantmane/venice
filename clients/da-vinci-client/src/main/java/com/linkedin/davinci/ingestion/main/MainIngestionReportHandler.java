@@ -91,7 +91,7 @@ public class MainIngestionReportHandler extends SimpleChannelInboundHandler<Full
     if (isolatedIngestionProcessStats != null) {
       isolatedIngestionProcessStats.updateMetricMap(metricsReport.aggregatedMetrics);
     } else {
-      LOGGER.warn("IsolatedIngestionProcessStats is not initialized yet, will skip metrics update.");
+      LOGGER.warn("IsolatedIngestionProcessStats is not initialized yet, will skip metrics updateAsync.");
     }
   }
 

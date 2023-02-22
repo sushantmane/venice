@@ -298,7 +298,7 @@ public class StorageService extends AbstractVeniceService {
    * Drops the partition of the specified store version in the storage service.
    * @param storeConfig config of the store version.
    * @param partition partition ID to be dropped.
-   * @param removeEmptyStorageEngine Whether to delete the storage engine when there is no remaining data partition.
+   * @param removeEmptyStorageEngine Whether to deleteAsync the storage engine when there is no remaining data partition.
    */
   public synchronized void dropStorePartition(
       VeniceStoreVersionConfig storeConfig,
@@ -364,7 +364,7 @@ public class StorageService extends AbstractVeniceService {
   }
 
   public void cleanupAllStores(VeniceConfigLoader configLoader) {
-    // Load local storage and delete them safely.
+    // Load local storage and deleteAsync them safely.
     // TODO Just clean the data dir in case loading and deleting is too slow.
     restoreAllStores(configLoader, true, true);
     LOGGER.info("Start cleaning up all the stores persisted previously");

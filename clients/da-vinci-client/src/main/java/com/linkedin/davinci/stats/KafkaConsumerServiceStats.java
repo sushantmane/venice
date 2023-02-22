@@ -51,7 +51,7 @@ public class KafkaConsumerServiceStats extends AbstractVeniceStats {
     // consumer record number per second returned by Kafka consumer poll.
     pollResultNumSensor = registerSensor("consumer_poll_result_num", new Avg(), new Total());
     pollRequestError = registerSensor("consumer_poll_error", new OccurrenceRate());
-    // To measure 'put' latency of consumer records blocking queue
+    // To measure 'putAsync' latency of consumer records blocking queue
     consumerRecordsProducingToWriterBufferLatencySensor =
         registerSensor("consumer_records_producing_to_write_buffer_latency", new Avg(), new Max());
     detectedDeletedTopicNumSensor = registerSensor("detected_deleted_topic_num", new Total());

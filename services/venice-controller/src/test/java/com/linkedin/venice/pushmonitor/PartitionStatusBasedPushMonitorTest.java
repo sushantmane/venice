@@ -139,7 +139,7 @@ public class PartitionStatusBasedPushMonitorTest extends AbstractPushMonitorTest
     doReturn(statusAndDetails).when(decider)
         .checkPushStatusAndDetailsByPartitionsStatus(pushStatus, partitionAssignment, null);
     PushStatusDecider.updateDecider(OfflinePushStrategy.WAIT_N_MINUS_ONE_REPLCIA_PER_PARTITION, decider);
-    doThrow(new VeniceException("Could not delete.")).when(getMockStoreCleaner())
+    doThrow(new VeniceException("Could not deleteAsync.")).when(getMockStoreCleaner())
         .deleteOneStoreVersion(anyString(), anyString(), anyInt());
     when(getMockAccessor().getOfflinePushStatusAndItsPartitionStatuses(Mockito.anyString())).thenAnswer(invocation -> {
       String kafkaTopic = invocation.getArgument(0);

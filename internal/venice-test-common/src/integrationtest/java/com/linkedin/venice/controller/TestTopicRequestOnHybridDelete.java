@@ -104,7 +104,7 @@ public class TestTopicRequestOnHybridDelete {
       controllerClient
           .updateStore(storeName, new UpdateStoreQueryParams().setEnableReads(false).setEnableWrites(false));
 
-      // delete store should return immediately without any error.
+      // deleteAsync store should return immediately without any error.
       ControllerResponse response = finalControllerClient.deleteStore(storeName);
       Assert.assertFalse(response.isError());
 
@@ -216,7 +216,7 @@ public class TestTopicRequestOnHybridDelete {
 
     // disable store
     controllerClient.updateStore(storeName, new UpdateStoreQueryParams().setEnableReads(false).setEnableWrites(false));
-    // delete versions
+    // deleteAsync versions
     controllerClient.deleteAllVersions(storeName);
     // enable store
     controllerClient.updateStore(storeName, new UpdateStoreQueryParams().setEnableReads(true).setEnableWrites(true));

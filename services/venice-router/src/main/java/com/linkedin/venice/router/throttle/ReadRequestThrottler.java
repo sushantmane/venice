@@ -135,7 +135,8 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
     }
   }
 
-  // TODO will update once we complete some experiments to finalize the correlation between size and read capacity unit.
+  // TODO will updateAsync once we complete some experiments to finalize the correlation between size and read capacity
+  // unit.
   // TODO right now read capacity unit is just QPS;
   @Override
   public int getReadCapacity() {
@@ -226,7 +227,7 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
   }
 
   private ConcurrentMap<String, StoreReadThrottler> buildAllStoreReadThrottlers() {
-    // Total quota for this router is changed, we have to update all store throttlers.
+    // Total quota for this router is changed, we have to updateAsync all store throttlers.
     List<Store> allStores = storeRepository.getAllStores();
     ConcurrentMap<String, StoreReadThrottler> newStoreThrottlers = new ConcurrentHashMap<>();
     for (Store store: allStores) {
@@ -276,7 +277,7 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
 
   @Override
   public void onRoutingDataDeleted(String kafkaTopic) {
-    // Ignore the event. If the deleted resource is not the current version, we don't need to update throttler.
+    // Ignore the event. If the deleted resource is not the current version, we don't need to updateAsync throttler.
     // If the deleted resource is the current version, we will handle it once we got the store data changed event with
     // the new current version.
   }
@@ -301,7 +302,7 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
 
   private void updateStoreThrottler(Runnable updater) {
     synchronized (storesThrottlers) {
-      // Total store quota should be changed because of add/update/delete store.
+      // Total store quota should be changed because of add/updateAsync/deleteAsync store.
       long oldIdealTotalQuotaPerRouter = idealTotalQuotaPerRouter;
       idealTotalQuotaPerRouter = calculateIdealTotalQuotaPerRouter();
       updater.run();
@@ -309,16 +310,18 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
         return;
       }
       if (oldIdealTotalQuotaPerRouter > maxRouterReadCapacity || idealTotalQuotaPerRouter > maxRouterReadCapacity) {
-        // Old router's quota and/or new router's quota exceed the router's max capacity, update all store throttlers
+        // Old router's quota and/or new router's quota exceed the router's max capacity, updateAsync all store
+        // throttlers
         // 1. If the new router's quota exceeded the router's max capacity, we have to reduce the quota for each store
         // to make sure each of them get the proper proportion of the max capacity as quota.
         // 2. If the old router's quota exceed the max capacity, but new router's quota is smaller than the max capacity
-        // We also need to update all store's quota, because they will all get more quotas
-        // 3. If the old router's quota and new router's quota both exceeded the max capacity, we still need to update
+        // We also need to updateAsync all store's quota, because they will all get more quotas
+        // 3. If the old router's quota and new router's quota both exceeded the max capacity, we still need to
+        // updateAsync
         // all store's quota because the proportion of each store has been changed.
         if (oldIdealTotalQuotaPerRouter != idealTotalQuotaPerRouter) {
           LOGGER.info(
-              "Old router's quota and/or new router's quota exceeds the router's max capacity, update throttlers for all stores.");
+              "Old router's quota and/or new router's quota exceeds the router's max capacity, updateAsync throttlers for all stores.");
           storesThrottlers.set(buildAllStoreReadThrottlers());
         }
       }
@@ -417,7 +420,7 @@ public class ReadRequestThrottler implements RouterThrottler, RoutersClusterMana
       long newIdealTotalQuotaPerRouter = calculateIdealTotalQuotaPerRouter();
       if (idealTotalQuotaPerRouter != newIdealTotalQuotaPerRouter) {
         idealTotalQuotaPerRouter = newIdealTotalQuotaPerRouter;
-        // Total quota for this router is changed, we have to update all store throttlers.
+        // Total quota for this router is changed, we have to updateAsync all store throttlers.
         storesThrottlers.set(buildAllStoreReadThrottlers());
       }
     }

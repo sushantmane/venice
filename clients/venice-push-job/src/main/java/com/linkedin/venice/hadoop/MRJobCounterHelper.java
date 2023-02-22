@@ -40,7 +40,7 @@ public class MRJobCounterHelper {
   private static final String MAPPER_ZSTD_DICT_TRAIN_FAILURE = "Mapper Zstd dict train failure";
 
   private static final String COUNTER_GROUP_KAFKA_INPUT_FORMAT = "KafkaInputFormat";
-  private static final String COUNTER_PUT_OR_DELETE_RECORDS = "put or delete records";
+  private static final String COUNTER_PUT_OR_DELETE_RECORDS = "putAsync or deleteAsync records";
 
   private static final String REPUSH_TTL_FILTERED_COUNT = "Repush ttl filtered count";
 

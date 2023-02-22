@@ -22,7 +22,7 @@ public abstract class KafkaConsumptionService<K, V>
     implements ConsumptionService<TopicPartitionWithURL, ConsumerRecords<K, V>> {
   /**
    * When it is started, it may start all internal threads, set stuff up, etc. Note that this method is intentionally NOT
-   * put on the {@link ConsumptionService} interface which {@link StoreIngestionTask} interacts with directly. Because
+   * putAsync on the {@link ConsumptionService} interface which {@link StoreIngestionTask} interacts with directly. Because
    * {@link StoreIngestionTask} should not be able to start nor stop a {@link ConsumptionService}.
    */
   abstract void start();

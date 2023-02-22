@@ -52,7 +52,7 @@ public class PushStatusStoreWriterTest {
     return writeOpRecord;
   }
 
-  @Test(description = "Expect an update call for adding current inc-push to ongoing-inc-pushes when status is SOIP")
+  @Test(description = "Expect an updateAsync call for adding current inc-push to ongoing-inc-pushes when status is SOIP")
   public void testWritePushStatusWhenStatusIsSOIP() {
     PushStatusKey serverPushStatusKey = PushStatusStoreUtils
         .getServerIncrementalPushKey(storeVersion, 1, incPushVersion, SERVER_INCREMENTAL_PUSH_PREFIX);
@@ -66,10 +66,15 @@ public class PushStatusStoreWriterTest {
         Optional.of(incPushVersion),
         Optional.of(SERVER_INCREMENTAL_PUSH_PREFIX));
 
-    verify(veniceWriterMock).update(eq(serverPushStatusKey), any(), eq(protoVersion), eq(derivedSchemaId), eq(null));
-    verify(veniceWriterCacheMock, times(2)).prepareVeniceWriter(storeName);
     verify(veniceWriterMock)
-        .update(eq(ongoPushStatusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null));
+        .updateAsync(eq(serverPushStatusKey), any(), eq(protoVersion), eq(derivedSchemaId), eq(null));
+    verify(veniceWriterCacheMock, times(2)).prepareVeniceWriter(storeName);
+    verify(veniceWriterMock).updateAsync(
+        eq(ongoPushStatusKey),
+        eq(getWriteComputeRecord()),
+        eq(protoVersion),
+        eq(derivedSchemaId),
+        eq(null));
   }
 
   @Test
@@ -82,7 +87,7 @@ public class PushStatusStoreWriterTest {
         START_OF_INCREMENTAL_PUSH_RECEIVED);
     verify(veniceWriterCacheMock).prepareVeniceWriter(storeName);
     verify(veniceWriterMock)
-        .update(eq(statusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null));
+        .updateAsync(eq(statusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null));
   }
 
   @Test
@@ -97,6 +102,7 @@ public class PushStatusStoreWriterTest {
 
     pushStatusStoreWriter.removeFromSupposedlyOngoingIncrementalPushVersions(storeName, storeVersion, incPushVersion);
     verify(veniceWriterCacheMock).prepareVeniceWriter(storeName);
-    verify(veniceWriterMock).update(eq(statusKey), eq(writeOpRecord), eq(protoVersion), eq(derivedSchemaId), eq(null));
+    verify(veniceWriterMock)
+        .updateAsync(eq(statusKey), eq(writeOpRecord), eq(protoVersion), eq(derivedSchemaId), eq(null));
   }
 }
