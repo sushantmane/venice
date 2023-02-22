@@ -128,7 +128,7 @@ public class TestDictionaryUtils {
             new VeniceWriterOptions.Builder(topic).setUseKafkaKeySerializer(true)
                 .setPartitionCount(PARTITION_COUNT)
                 .build())) {
-      veniceWriter.put(new KafkaKey(MessageType.PUT, "blah".getBytes()), "blah".getBytes(), 1, null);
+      veniceWriter.putAsync(new KafkaKey(MessageType.PUT, "blah".getBytes()), "blah".getBytes(), 1, null);
     }
 
     ByteBuffer dictionaryFromKafka = DictionaryUtils.readDictionaryFromKafka(topic, new VeniceProperties(props));

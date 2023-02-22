@@ -195,7 +195,7 @@ public abstract class ConsumerIntegrationTest {
       VeniceWriter<String, String, byte[]> veniceWriter,
       AvroGenericStoreClient client,
       String testValue) throws ExecutionException, InterruptedException {
-    veniceWriter.put(TEST_KEY, testValue, 1).get();
+    veniceWriter.putSync(TEST_KEY, testValue, 1).get();
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> {
       try {
         Object value = client.get(TEST_KEY).get();

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -69,17 +69,17 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
    * @param callback - The callback function, which will be triggered when producer sends out the message.
    * */
   @Override
-  public Future<PubSubProduceResult> sendMessage(
+  public void sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders headers,
-      PubSubProducerCallback callback) {
+      PubSubProducerCallback callback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     long startNs = System.nanoTime();
-    Future<PubSubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
+    producerAdapter.sendMessage(topic, partition, key, value, headers, callback, produceResultFuture);
     sharedProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
-    return result;
   }
 
   @Override

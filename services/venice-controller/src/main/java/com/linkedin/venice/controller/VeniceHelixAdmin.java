@@ -1090,7 +1090,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               .build());
     });
 
-    pushJobDetailsWriter.put(key, value, pushJobDetailsSchemaId, null);
+    pushJobDetailsWriter.putAsync(key, value, pushJobDetailsSchemaId, null);
   }
 
   /**
@@ -5973,7 +5973,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.resourceName = kafkaTopic;
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     writer.flush();
   }
 

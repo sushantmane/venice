@@ -353,7 +353,7 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
       String owner = "test-owner-" + cluster;
       String keySchemaStr = "\"string\"";
       String valueSchemaStr = "\"string\"";
-      when(veniceWriter.put(any(), any(), anyInt())).then(invocation -> {
+      when(veniceWriter.putSync(any(), any(), anyInt())).then(invocation -> {
         // Once we send message to topic through venice writer, return offset 1
         when(zkClient.readData(metadataPath, null))
             .thenReturn(AdminTopicMetadataAccessor.generateMetadataMap(1, -1, 1));

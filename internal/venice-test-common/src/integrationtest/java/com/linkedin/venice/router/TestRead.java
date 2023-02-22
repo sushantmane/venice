@@ -225,7 +225,7 @@ public abstract class TestRead {
     for (int i = 0; i < 100; ++i) {
       GenericRecord record = new GenericData.Record(VALUE_SCHEMA);
       record.put(VALUE_FIELD_NAME, i);
-      veniceWriter.put(KEY_PREFIX + i, record, valueSchemaId).get();
+      veniceWriter.putSync(KEY_PREFIX + i, record, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

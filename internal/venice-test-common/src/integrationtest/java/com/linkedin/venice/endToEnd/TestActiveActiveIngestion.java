@@ -593,7 +593,7 @@ public class TestActiveActiveIngestion {
           clusterWrapper.stopVeniceServer(serverWrapper.getPort());
           clusterWrapper.restartVeniceServer(serverWrapper.getPort());
         }
-        veniceWriter.put(entry.getKey(), entry.getValue(), 1, null);
+        veniceWriter.putAsync(entry.getKey(), entry.getValue(), 1, null);
       }
       veniceWriter.broadcastEndOfPush(Collections.emptyMap());
     }

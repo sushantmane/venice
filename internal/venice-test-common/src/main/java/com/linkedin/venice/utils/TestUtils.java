@@ -388,7 +388,7 @@ public class TestUtils {
         byte[] key = keySerializer.serialize(kafkaTopic, e.getKey());
         byte[] value = valueSerializer.serialize(kafkaTopic, e.getValue());
         value = compressor.compress(value);
-        putFutures.add(writer.put(key, value, valueSchemaId));
+        putFutures.add(writer.putSync(key, value, valueSchemaId));
       }
       for (Future future: putFutures) {
         future.get();
@@ -419,7 +419,7 @@ public class TestUtils {
 
       LinkedList<Future> putFutures = new LinkedList<>();
       for (Map.Entry e: (Iterable<Map.Entry>) batchData::iterator) {
-        putFutures.add(writer.put(e.getKey(), e.getValue(), valueSchemaId));
+        putFutures.add(writer.putSync(e.getKey(), e.getValue(), valueSchemaId));
       }
       for (Future future: putFutures) {
         future.get();

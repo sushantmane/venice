@@ -604,7 +604,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       deletePayload.replicationMetadataPayload = updatedRmdBytes;
       BiConsumer<ChunkAwareCallback, LeaderMetadataWrapper> produceToTopicFunction =
           (callback, sourceTopicOffset) -> veniceWriter.get()
-              .delete(
+              .deleteAsync(
                   key,
                   callback,
                   sourceTopicOffset,
@@ -1320,7 +1320,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
               callback,
               leaderMetadataWrapper,
               VeniceWriter.APP_DEFAULT_LOGICAL_TS,
-              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes));
+              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes),
+              null);
     };
   }
 

@@ -611,9 +611,9 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
     if (valueObject == null) {
       if (logicalTimestamp > 0) {
-        veniceWriter.delete(key, logicalTimestamp, callback);
+        veniceWriter.deleteAsync(key, logicalTimestamp, callback);
       } else {
-        veniceWriter.delete(key, callback);
+        veniceWriter.deleteAsync(key, callback);
       }
     } else {
       Schema valueObjectSchema = getSchemaFromObject(valueObject);
@@ -630,9 +630,9 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
       if (valueSchemaIdPair.getSecond() == -1) {
         if (logicalTimestamp > 0) {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), logicalTimestamp, callback);
         } else {
-          veniceWriter.put(key, value, valueSchemaIdPair.getFirst(), callback);
+          veniceWriter.putAsync(key, value, valueSchemaIdPair.getFirst(), callback);
         }
       } else {
         if (!isWriteComputeEnabled) {

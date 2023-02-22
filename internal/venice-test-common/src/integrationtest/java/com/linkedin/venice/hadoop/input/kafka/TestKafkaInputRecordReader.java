@@ -66,7 +66,7 @@ public class TestKafkaInputRecordReader {
         if (i >= updateRange.getFirst() && i <= updateRange.getSecond()) {
           veniceWriter.update(keyBytes, valueBytes, -1, -1, null);
         } else if (i >= deleteRange.getFirst() && i <= deleteRange.getSecond()) {
-          veniceWriter.delete(keyBytes, null);
+          veniceWriter.deleteAsync(keyBytes, null);
         } else {
           veniceWriter.put(keyBytes, valueBytes, -1);
         }
