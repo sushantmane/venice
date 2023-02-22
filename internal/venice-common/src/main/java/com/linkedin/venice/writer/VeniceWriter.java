@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -1094,12 +1095,13 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param updateDIV if true, the partition's segment's checksum will be updated and its sequence number incremented
    *                  if false, the checksum and seq# update are omitted, which is the right thing to do during retries
    */
-  private Future<PubSubProduceResult> sendMessage(
+  private void sendMessage(
       KeyProvider keyProvider,
       KafkaMessageEnvelopeProvider valueProvider,
       int partition,
       PubSubProducerCallback callback,
-      boolean updateDIV) {
+      boolean updateDIV,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     synchronized (this.partitionLocks[partition]) {
       KafkaMessageEnvelope kafkaValue = valueProvider.getKafkaMessageEnvelope();
       KafkaKey key = keyProvider.getKey(kafkaValue.producerMetadata);
@@ -1120,13 +1122,14 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
       try {
-        return producerAdapter.sendMessage(
+        producerAdapter.sendMessage(
             topicName,
             partition,
             key,
             kafkaValue,
             getHeaders(kafkaValue.getProducerMetadata()),
-            messageCallback);
+            messageCallback,
+            produceResultFuture);
       } catch (Exception e) {
         if (ExceptionUtils.recursiveClassEquals(e, TopicAuthorizationException.class)) {
           throw new TopicAuthorizationVeniceException(
@@ -1137,6 +1140,15 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
     }
+  }
+
+  private Future<PubSubProduceResult> sendMessage(
+      KeyProvider keyProvider,
+      KafkaMessageEnvelopeProvider valueProvider,
+      int partition,
+      PubSubProducerCallback callback,
+      boolean updateDIV) {
+    return null;
   }
 
   /**

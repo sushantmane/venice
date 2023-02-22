@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,14 +27,11 @@ import com.linkedin.venice.kafka.protocol.GUID;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
-import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
-import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
-import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.KeyWithChunkingSuffixSerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -51,11 +49,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 import org.mockito.ArgumentCaptor;
-import org.mockito.stubbing.Answer;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -88,35 +83,19 @@ public class ActiveActiveStoreIngestionTaskTest {
     byte[] updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key);
 
     PubSubProducerAdapter mockedProducer = mock(PubSubProducerAdapter.class);
-    Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
-    AtomicLong offset = new AtomicLong(0);
-
     ArgumentCaptor<KafkaKey> kafkaKeyArgumentCaptor = ArgumentCaptor.forClass(KafkaKey.class);
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
-    when(
-        mockedProducer.sendMessage(
+    doNothing().when(mockedProducer)
+        .sendMessage(
             eq(testTopic),
             any(),
             kafkaKeyArgumentCaptor.capture(),
             kmeArgumentCaptor.capture(),
             any(),
-            any())).thenAnswer((Answer<Future<PubSubProduceResult>>) invocation -> {
-              KafkaKey kafkaKey = invocation.getArgument(2);
-              KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(3);
-              PubSubProducerCallback callback = invocation.getArgument(5);
-              PubSubProduceResult produceResult = mock(PubSubProduceResult.class);
-              offset.addAndGet(1);
-              when(produceResult.getOffset()).thenReturn(offset.get());
-              MessageType messageType = MessageType.valueOf(kafkaMessageEnvelope.messageType);
-              when(produceResult.getSerializedSize()).thenReturn(
-                  kafkaKey.getKeyLength() + (messageType.equals(MessageType.PUT)
-                      ? ((Put) (kafkaMessageEnvelope.payloadUnion)).putValue.remaining()
-                      : 0));
-              callback.onCompletion(produceResult, null);
-              return mockedFuture;
-            });
+            any(),
+            any());
     VeniceWriterOptions veniceWriterOptions =
         new VeniceWriterOptions.Builder(testTopic).setPartitioner(new DefaultVenicePartitioner())
             .setTime(SystemTime.INSTANCE)
@@ -164,7 +143,7 @@ public class ActiveActiveStoreIngestionTaskTest {
         beforeProcessingRecordTimestamp);
 
     // Send 1 SOS, 2 Chunks, 1 Manifest.
-    verify(mockedProducer, times(4)).sendMessage(any(), any(), any(), any(), any(), any());
+    verify(mockedProducer, times(4)).sendMessage(any(), any(), any(), any(), any(), any(), any());
     ArgumentCaptor<LeaderProducedRecordContext> leaderProducedRecordContextArgumentCaptor =
         ArgumentCaptor.forClass(LeaderProducedRecordContext.class);
     verify(ingestionTask, times(3)).produceToStoreBufferService(

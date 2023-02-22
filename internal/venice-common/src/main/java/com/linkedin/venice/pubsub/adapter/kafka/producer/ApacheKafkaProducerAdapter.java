@@ -15,7 +15,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -66,39 +65,17 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
    * @param topic - The topic to be sent to.
    * @param key - The key of the message to be sent.
    * @param value - The {@link KafkaMessageEnvelope}, which acts as the Kafka value.
-   * @param callback - The callback function, which will be triggered when Kafka client sends out the message.
+   * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<PubSubProduceResult> sendMessageSync(
-      String topic,
-      Integer partition,
-      KafkaKey key,
-      KafkaMessageEnvelope value,
-      PubSubMessageHeaders headers,
-      PubSubProducerCallback callback) {
-    CompletableFuture<PubSubProduceResult> completableFuture = new CompletableFuture<>();
-    send(topic, partition, key, value, headers, new ApacheKafkaProducerCallback(callback, completableFuture));
-    return completableFuture;
-  }
-
-  @Override
-  public void sendMessageAsync(
-      String topic,
-      Integer partition,
-      KafkaKey key,
-      KafkaMessageEnvelope value,
-      PubSubMessageHeaders headers,
-      PubSubProducerCallback callback) {
-    send(topic, partition, key, value, headers, new ApacheKafkaProducerCallback(callback, null));
-  }
-
-  private void send(
+  public void sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders pubsubMessageHeaders,
-      ApacheKafkaProducerCallback kafkaCallback) {
+      PubSubProducerCallback pubsubProducerCallback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
         topic,
@@ -106,6 +83,8 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
+    ApacheKafkaProducerCallback kafkaCallback =
+        new ApacheKafkaProducerCallback(pubsubProducerCallback, produceResultFuture);
     try {
       producer.send(record, kafkaCallback);
     } catch (Exception e) {
