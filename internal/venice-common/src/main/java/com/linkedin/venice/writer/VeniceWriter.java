@@ -407,15 +407,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return topicName;
   }
 
-  /**
-   * Execute a standard "delete" on the key.
-   *
-   * @param key - The key to delete in storage.
-   * @param callback - callback will be executed after Kafka producer completes on sending the message.
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
-   */
+  /* DELETE op convenience methods */
   public void deleteAsync(K key, PubSubProducerCallback callback) {
     delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null, null);
   }
@@ -426,17 +418,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return produceResultFuture;
   }
 
-  /**
-   * Execute a standard "delete" on the key.
-   *
-   * @param key - The key to delete in storage.
-   * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
-   * @param callback - callback will be executed after Kafka producer completes on sending the message.
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
-   */
-  public void delete(K key, long logicalTs, PubSubProducerCallback callback) {
+  public void deleteAsync(K key, long logicalTs, PubSubProducerCallback callback) {
     delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null, null);
   }
 
@@ -446,33 +428,10 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     return produceResultFuture;
   }
 
-  /**
-   * Executes async "delete" on the key.
-   *
-   * @param key - The key to delete in storage.
-   * @param callback - Callback function invoked by Kafka producer after sending the message.
-   * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
-   *                         -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
-   *                              sending the message in VPJ plugin to the version topic;
-   *                         >=0: Leader replica consumes a deleted message from real-time topic, VeniceWriter in leader
-   *                              is sending this message to version topic with extra info: offset in the real-time topic.
-   */
   public void deleteAsync(K key, PubSubProducerCallback callback, LeaderMetadataWrapper leaderMetadataWrapper) {
     delete(key, callback, leaderMetadataWrapper, APP_DEFAULT_LOGICAL_TS, null, null);
   }
 
-  /**
-   * Executes async "delete" on the key.
-   *
-   * @param key - The key to delete in storage.
-   * @param callback - callback will be executed after Kafka producer completes on sending the message.
-   * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
-   *                             -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
-   *                                  sending the message in VPJ plugin to the version topic;
-   *                             >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
-   *                                  is sending this message to version topic with extra info: offset in the real-time topic.
-   * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
-   */
   public void deleteAsync(
       K key,
       PubSubProducerCallback callback,
@@ -481,22 +440,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     delete(key, callback, leaderMetadataWrapper, logicalTs, null, null);
   }
 
-  /**
-   * Execute a standard "delete" on the key.
-   *
-   * @param key - The key to delete in storage.
-   * @param callback - callback will be executed after Kafka producer completes on sending the message.
-   * @param leaderMetadataWrapper - The leader Metadata of this message in the source topic:
-   *                             -1:  VeniceWriter is sending this message in a Samza app to the real-time topic; or it's
-   *                                  sending the message in VPJ plugin to the version topic;
-   *                             >=0: Leader replica consumes a delete message from real-time topic, VeniceWriter in leader
-   *                                  is sending this message to version topic with extra info: offset in the real-time topic.
-   * @param deleteMetadata - a DeleteMetadata containing replication metadata related fields.
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
-   */
-  public void delete(
+  public void deleteAsync(
       K key,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
@@ -505,7 +449,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public void delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
+  public void deleteAsync(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
     delete(key, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, deleteMetadata, null);
   }
 
@@ -521,9 +465,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    *                              is sending this message to version topic with extra info: offset in the real-time topic.
    * @param logicalTs - An timestamp field to indicate when this record was produced from apps point of view.
    * @param deleteMetadata - a DeleteMetadata containing replication metadata related fields (can be null).
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
+   * @param produceResultFuture - If not null, this CompletableFuture is used to return the result of async call.
+   *
    */
   private void delete(
       K key,
@@ -582,9 +525,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param value - The value to be associated with the given key
    * @param valueSchemaId - value schema id for the given value
    * @param callback - Callback function invoked by Kafka producer after sending the message
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
   @Override
   public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
@@ -626,6 +566,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param valueSchemaId - value schema id for the given value
    * @param logicalTs - A timestamp field to indicate when this record was produced from apps view.
    * @param callback - Callback function invoked by Kafka producer after sending the message
+   * @param
    * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.

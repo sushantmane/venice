@@ -611,7 +611,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
 
     if (valueObject == null) {
       if (logicalTimestamp > 0) {
-        veniceWriter.delete(key, logicalTimestamp, callback);
+        veniceWriter.deleteAsync(key, logicalTimestamp, callback);
       } else {
         veniceWriter.deleteAsync(key, callback);
       }
