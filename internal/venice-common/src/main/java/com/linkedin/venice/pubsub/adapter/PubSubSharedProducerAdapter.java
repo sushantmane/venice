@@ -69,7 +69,7 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
    * @param callback - The callback function, which will be triggered when producer sends out the message.
    * */
   @Override
-  public Future<PubSubProduceResult> sendMessage(
+  public Future<PubSubProduceResult> sendMessageSync(
       String topic,
       Integer partition,
       KafkaKey key,
@@ -77,9 +77,23 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
       PubSubMessageHeaders headers,
       PubSubProducerCallback callback) {
     long startNs = System.nanoTime();
-    Future<PubSubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
+    Future<PubSubProduceResult> result =
+        producerAdapter.sendMessageSync(topic, partition, key, value, headers, callback);
     sharedProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
+  }
+
+  @Override
+  public void sendMessageAsync(
+      String topic,
+      Integer partition,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubSubMessageHeaders headers,
+      PubSubProducerCallback callback) {
+    long startNs = System.nanoTime();
+    producerAdapter.sendMessageAsync(topic, partition, key, value, headers, callback);
+    sharedProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
   }
 
   @Override

@@ -36,7 +36,15 @@ public interface PubSubProducerAdapter {
     return future.get(timeout, timeUnit);
   }
 
-  Future<PubSubProduceResult> sendMessage(
+  Future<PubSubProduceResult> sendMessageSync(
+      String topic,
+      Integer partition,
+      KafkaKey key,
+      KafkaMessageEnvelope value,
+      PubSubMessageHeaders headers,
+      PubSubProducerCallback callback);
+
+  void sendMessageAsync(
       String topic,
       Integer partition,
       KafkaKey key,
