@@ -613,7 +613,7 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
       if (logicalTimestamp > 0) {
         veniceWriter.delete(key, logicalTimestamp, callback);
       } else {
-        veniceWriter.delete(key, callback);
+        veniceWriter.deleteAsync(key, callback);
       }
     } else {
       Schema valueObjectSchema = getSchemaFromObject(valueObject);

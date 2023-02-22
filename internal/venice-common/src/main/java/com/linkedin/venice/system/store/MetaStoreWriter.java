@@ -306,7 +306,7 @@ public class MetaStoreWriter implements Closeable {
         put(KEY_STRING_PARTITION_ID, Integer.toString(partitionId));
       }
     });
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     writer.flush();
   }
 

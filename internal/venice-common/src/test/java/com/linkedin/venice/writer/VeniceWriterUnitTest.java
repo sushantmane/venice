@@ -47,12 +47,12 @@ public class VeniceWriterUnitTest {
         .sendMessage(anyString(), putPartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 
     ArgumentCaptor<Integer> deletePartitionArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     verify(mockedProducer, atLeast(2))
         .sendMessage(anyString(), deletePartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 
     ArgumentCaptor<Integer> updatePartitionArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    writer.delete(key, null);
+    writer.deleteAsync(key, null);
     verify(mockedProducer, atLeast(2))
         .sendMessage(anyString(), updatePartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 

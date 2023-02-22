@@ -32,7 +32,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
     LOGGER.info("Deleting pushStatus of storeName: {}, version: {}", storeName, version);
     for (int partitionId = 0; partitionId < partitionCount; partitionId++) {
       PushStatusKey pushStatusKey = PushStatusStoreUtils.getPushKey(version, partitionId, incrementalPushVersion);
-      writer.delete(pushStatusKey, null);
+      writer.deleteAsync(pushStatusKey, null);
     }
   }
 

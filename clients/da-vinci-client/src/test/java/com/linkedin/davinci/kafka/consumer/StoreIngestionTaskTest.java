@@ -1555,7 +1555,7 @@ public abstract class StoreIngestionTaskTest {
   public void testThrottling(boolean isActiveActiveReplicationEnabled) throws Exception {
     localVeniceWriter.broadcastStartOfPush(new HashMap<>());
     localVeniceWriter.put(putKeyFoo, putValue, SCHEMA_ID);
-    localVeniceWriter.delete(deleteKeyFoo, null);
+    localVeniceWriter.deleteAsync(deleteKeyFoo, null);
 
     runTest(new RandomPollStrategy(1), Utils.setOf(PARTITION_FOO), () -> {}, () -> {
       // START_OF_SEGMENT, START_OF_PUSH, PUT, DELETE
