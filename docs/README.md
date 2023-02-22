@@ -46,7 +46,7 @@ Leveraging this mechanism, it is possible to overlay the output of a stream proc
 ### Write Compute
 Write Compute includes two kinds of operations, which can be performed on the value associated with a given key:
 
-- **Partial update**: set the content of a field within the value.
+- **Partial updateAsync**: set the content of a field within the value.
 - **Collection merging**: add or remove entries in a set or map.  
 
 N.B.: Currently, write compute is only supported in conjunction with active-passive replication. Support for active-actice replication is under development. 

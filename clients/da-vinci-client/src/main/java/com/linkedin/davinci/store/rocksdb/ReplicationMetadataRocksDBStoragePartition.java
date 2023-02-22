@@ -84,7 +84,7 @@ public class ReplicationMetadataRocksDBStoragePartition extends RocksDBStoragePa
       }
     } catch (RocksDBException e) {
       throw new VeniceException(
-          "Failed to put key/value pair to store: " + storeName + ", partition id: " + partitionId,
+          "Failed to putAsync key/value pair to store: " + storeName + ", partition id: " + partitionId,
           e);
     }
   }
@@ -105,7 +105,7 @@ public class ReplicationMetadataRocksDBStoragePartition extends RocksDBStoragePa
       }
     } catch (RocksDBException e) {
       throw new VeniceException(
-          "Failed to put key/value pair to store: " + storeName + ", partition id: " + partitionId,
+          "Failed to putAsync key/value pair to store: " + storeName + ", partition id: " + partitionId,
           e);
     }
   }
@@ -122,7 +122,7 @@ public class ReplicationMetadataRocksDBStoragePartition extends RocksDBStoragePa
   }
 
   /**
-   * This API takes in value and metadata as ByteBuffer format and put it into RocksDB.
+   * This API takes in value and metadata as ByteBuffer format and putAsync it into RocksDB.
    * Note that it is not an efficient implementation as it copies the content to perform the ByteBuffer -> byte[] conversion.
    * TODO: Rewrite this implementation after we adopt the thread-local direct bytebuffer approach.
    */
@@ -159,7 +159,7 @@ public class ReplicationMetadataRocksDBStoragePartition extends RocksDBStoragePa
     }
     try {
       if (deferredWrite) {
-        // Just update the RMD for deletion during repush
+        // Just updateAsync the RMD for deletion during repush
         rocksDBSstFileWriter.put(key, ByteBuffer.wrap(replicationMetadata));
       } else {
         try (WriteBatch writeBatch = new WriteBatch()) {
@@ -171,8 +171,8 @@ public class ReplicationMetadataRocksDBStoragePartition extends RocksDBStoragePa
       }
     } catch (RocksDBException e) {
       String msg = deferredWrite
-          ? "Failed to put metadata while deleing key for store: " + storeName + ", partition id: " + partitionId
-          : "Failed to delete entry to store: " + storeName + ", partition id: " + partitionId;
+          ? "Failed to putAsync metadata while deleing key for store: " + storeName + ", partition id: " + partitionId
+          : "Failed to deleteAsync entry to store: " + storeName + ", partition id: " + partitionId;
       throw new VeniceException(msg, e);
     }
   }

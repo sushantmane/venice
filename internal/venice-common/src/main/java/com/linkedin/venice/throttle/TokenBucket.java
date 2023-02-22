@@ -94,11 +94,11 @@ public class TokenBucket {
   }
 
   /**
-   * This method does not call #update(), so it is only accurate as of the last time #tryConsume() was called
+   * This method does not call #updateAsync(), so it is only accurate as of the last time #tryConsume() was called
    * @return number of tokens remaining in the bucket
    */
   public long getStaleTokenCount() {
-    // TODO: maybe update the token after getting the stale token count
+    // TODO: maybe updateAsync the token after getting the stale token count
     return tokens.get();
   }
 

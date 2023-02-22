@@ -155,7 +155,7 @@ public class HelixReadOnlyStoreConfigRepository implements ReadOnlyStoreConfigRe
         Set<String> deletedStores = new HashSet<>(map.keySet());
         currentChildren.forEach(deletedStores::remove);
         LOGGER.info(
-            "Store configs list is changed. {} new configs. And will delete {} configs.",
+            "Store configs list is changed. {} new configs. And will deleteAsync {} configs.",
             newStores.size(),
             deletedStores.size());
         // New added store configs

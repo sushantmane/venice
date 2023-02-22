@@ -439,7 +439,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     aggKafkaConsumerService.createKafkaConsumerService(commonKafkaConsumerConfigs);
 
     /**
-     * Use the same diskUsage instance for all ingestion tasks; so that all the ingestion tasks can update the same
+     * Use the same diskUsage instance for all ingestion tasks; so that all the ingestion tasks can updateAsync the same
      * remaining disk space state to provide a more accurate alert.
      */
     DiskUsage diskUsage = new DiskUsage(
@@ -735,7 +735,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
 
   /**
    * Find the task that matches both the storeName and maximumVersion number, enable metrics emission for this task and
-   * update ingestion stats with this task; disable metric emission for all the task that doesn't max version.
+   * updateAsync ingestion stats with this task; disable metric emission for all the task that doesn't max version.
    */
   protected void updateStatsEmission(
       NavigableMap<String, StoreIngestionTask> taskMap,
@@ -764,7 +764,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
   /**
    * This function will go through all known ingestion task in this server node, find the task that matches the
    * storeName and has the largest version number; if the task doesn't enable metric emission, enable it and
-   * update store ingestion stats.
+   * updateAsync store ingestion stats.
    */
   protected void updateStatsEmission(NavigableMap<String, StoreIngestionTask> taskMap, String storeName) {
     int maxVersion = -1;

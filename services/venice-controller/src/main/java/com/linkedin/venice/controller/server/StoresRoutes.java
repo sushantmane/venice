@@ -513,7 +513,7 @@ public class StoresRoutes extends AbstractRoute {
     return new VeniceRouteHandler<OwnerResponse>(OwnerResponse.class) {
       @Override
       public void internalHandle(Request request, OwnerResponse veniceResponse) {
-        // Only admin users are allowed to update owners; regular user can do it through Nuage
+        // Only admin users are allowed to updateAsync owners; regular user can do it through Nuage
         if (!isAllowListUser(request)) {
           veniceResponse.setError("ACL failed for request " + request.url());
           return;
@@ -535,7 +535,7 @@ public class StoresRoutes extends AbstractRoute {
     return new VeniceRouteHandler<PartitionResponse>(PartitionResponse.class) {
       @Override
       public void internalHandle(Request request, PartitionResponse veniceResponse) {
-        veniceResponse.setError("This operation is no longer supported, please use the update store endpoint");
+        veniceResponse.setError("This operation is no longer supported, please use the updateAsync store endpoint");
       }
     };
   }

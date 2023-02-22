@@ -85,7 +85,7 @@ Commands:
                                  --version
     --skip-admin                 Skip an admin message.  Requires: --url,
                                  --cluster, --offset
-    --update-store               update store metadata.  Requires: --url,
+    --updateAsync-store               updateAsync store metadata.  Requires: --url,
                                  --cluster, --store, --owner,
                                  --partition-count, --version,
                                  --readability, --writeability,
@@ -170,7 +170,7 @@ java -jar venice-admin-tool-0.1.jar --delete-all-versions --url <url> --cluster 
 java -jar venice-admin-tool-0.1.jar --get-execution --url <url> --cluster <cluster> --execution <execution>
 java -jar venice-admin-tool-0.1.jar --set-owner --url <url> --cluster <cluster> --store <store> --owner <owner>
 java -jar venice-admin-tool-0.1.jar --set-partition-count --url <url> --cluster <cluster> --store <store> --partition-count <partition-count>
-java -jar venice-admin-tool-0.1.jar --update-store --url <url> --cluster <cluster> --store <store> --owner <owner> --partition-count <partition-count> --version <version> --readability <readability> --writeability <writeability> --storage-quota <storage-quota> --read-quota <read-quota>
+java -jar venice-admin-tool-0.1.jar --updateAsync-store --url <url> --cluster <cluster> --store <store> --owner <owner> --partition-count <partition-count> --version <version> --readability <readability> --writeability <writeability> --storage-quota <storage-quota> --read-quota <read-quota>
 java -jar venice-admin-tool-0.1.jar --empty-push --url <url> --cluster <cluster> --store <store> --push-id <push-id> --store-size <store-size>
 java -jar venice-admin-tool-0.1.jar --enable-throttling --url <url> --cluster <cluster>
 java -jar venice-admin-tool-0.1.jar --disable-throttling --url <url> --cluster <cluster>

@@ -154,7 +154,7 @@ public class TestPushJobWithNativeReplicationSharedProducer {
             ControllerClient dc1Client =
                 new ControllerClient(clusterName, childDatacenters.get(1).getControllerConnectString())) {
 
-          // verify the update store command has taken effect before starting the push job.
+          // verify the updateAsync store command has taken effect before starting the push job.
           NativeReplicationTestUtils.verifyDCConfigNativeRepl(Arrays.asList(dc0Client, dc1Client), storeName, true);
         }
       }
@@ -228,7 +228,7 @@ public class TestPushJobWithNativeReplicationSharedProducer {
         if (parentControllerClients[i] != null) {
           Assert.assertFalse(
               deleteStoreResponses[i].isError(),
-              "Failed to delete the test store: " + deleteStoreResponses[i].getError());
+              "Failed to deleteAsync the test store: " + deleteStoreResponses[i].getError());
         }
       }
       FileUtils.deleteDirectory(inputDir);

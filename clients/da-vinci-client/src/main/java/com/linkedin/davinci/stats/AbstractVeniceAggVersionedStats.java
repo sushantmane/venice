@@ -150,7 +150,7 @@ public abstract class AbstractVeniceAggVersionedStats<STATS, STATS_REPORTER exte
     }
 
     /**
-     * Since versions are changed, update the total stats accordingly.
+     * Since versions are changed, updateAsync the total stats accordingly.
      */
     updateTotalStats(storeName);
   }
@@ -164,7 +164,7 @@ public abstract class AbstractVeniceAggVersionedStats<STATS, STATS_REPORTER exte
   public void handleStoreDeleted(String storeName) {
     VeniceVersionedStats<STATS, STATS_REPORTER> stats = aggStats.remove(storeName);
     if (stats == null) {
-      LOGGER.debug("Trying to delete stats but store '{}' is not in the metric list.", storeName);
+      LOGGER.debug("Trying to deleteAsync stats but store '{}' is not in the metric list.", storeName);
     } else if (unregisterMetricForDeletedStoreEnabled) {
       stats.unregisterStats();
     }

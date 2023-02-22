@@ -175,7 +175,7 @@ public class VeniceServerConfig extends VeniceClusterConfig {
   private final long storeWriterBufferMemoryCapacity;
 
   /**
-   * Considering the consumer thread could put various sizes of messages into the shared queue, the internal
+   * Considering the consumer thread could putAsync various sizes of messages into the shared queue, the internal
    * {@link com.linkedin.davinci.kafka.consumer.MemoryBoundBlockingQueue} won't notify the waiting thread (consumer thread)
    * right away when some message gets processed until the freed memory hit the follow config: {@link #storeWriterBufferNotifyDelta}.
    * The reason behind this design:

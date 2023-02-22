@@ -52,7 +52,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
 
   @Test
   public void testHandleMapOpsCase3() {
-    // Same colo and second delete wins.
+    // Same colo and second deleteAsync wins.
     IndexedHashMap<String, Integer> map1 = new IndexedHashMap<>();
     map1.put("k1", 1);
     map1.put("k2", 2);
@@ -71,8 +71,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Put Map from two colos with the same timestamp.
      *
-     *  - Event 1, at T1, in DC1, put map1
-     *  - Event 2, at T1, in DC2, put map2
+     *  - Event 1, at T1, in DC1, putAsync map1
+     *  - Event 2, at T1, in DC2, putAsync map2
      *
      *  Expectation: map2 wins because it has a higher colo ID (colo_ID_2 > colo_ID_1).
      */
@@ -96,8 +96,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Put Map from two colos with the different timestamps.
      *
-     *  - Event 1, at T2, in DC1, put map1
-     *  - Event 2, at T1, in DC2, put map2
+     *  - Event 1, at T2, in DC1, putAsync map1
+     *  - Event 2, at T1, in DC2, putAsync map2
      *
      *  Expectation: map1 wins because it has a higher timestamp (T2 > T1).
      */
@@ -121,8 +121,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Put Map and Delete Map from two colos with the same timestamps.
      *
-     *  - Event 1, at T1, in DC1, put map1 delete map
-     *  - Event 2, at T1, in DC2, delete map
+     *  - Event 1, at T1, in DC1, putAsync map1 deleteAsync map
+     *  - Event 2, at T1, in DC2, deleteAsync map
      *
      *  Expectation: Delete wins because it has a higher colo ID (colo_ID_2 > colo_ID_1).
      */
@@ -143,8 +143,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Put Map and Delete Map from two colos with the different timestamps.
      *
-     *  - Event 1, at T1, in DC1, delete map
-     *  - Event 2, at T2, in DC2, put map1
+     *  - Event 1, at T1, in DC1, deleteAsync map
+     *  - Event 2, at T2, in DC2, putAsync map1
      *
      *  Expectation: Put Map wins because it has a higher timestamp.
      */
@@ -165,8 +165,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Put Map and Delete Map from two colos with the different timestamps.
      *
-     *  - Event 1, at T2, in DC1, delete map
-     *  - Event 2, at T1, in DC2, put map1
+     *  - Event 1, at T2, in DC1, deleteAsync map
+     *  - Event 2, at T1, in DC2, putAsync map1
      *
      *  Expectation: Delete Map wins.
      */
@@ -187,14 +187,14 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * One add-to-map op and one remove-from-map op after initial Put:
      *
-     *  - Event 1, at T1, in DC1, put {k1->1, k2->2}
-     *  - Event 2, at T1, in DC2, put {k4->4, k3->3, k2->2}
+     *  - Event 1, at T1, in DC1, putAsync {k1->1, k2->2}
+     *  - Event 2, at T1, in DC2, putAsync {k4->4, k3->3, k2->2}
      *  - Event 3, at T2, in DC1, collection merging operation to add K5->5
      *  - Event 4, at T3, in DC2, collection merging operation to remove key K3
      *
      *  Expect: {k4->4, k2->2, k5->5}
      *  Explanation:
-     *    Entry k3->3 is removed and entry k5->5 is added. The order of the remaining part of the put-only part does not
+     *    Entry k3->3 is removed and entry k5->5 is added. The order of the remaining part of the putAsync-only part does not
      *    change.
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
@@ -222,8 +222,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Many add-to-map ops after initial Put:
      *
-     *  - Event 1, at T1, in DC1, put {k2->2, k3->3, k4->4}
-     *  - Event 2, at T2, in DC2, put {k1->1, k2->2}
+     *  - Event 1, at T1, in DC1, putAsync {k2->2, k3->3, k4->4}
+     *  - Event 2, at T2, in DC2, putAsync {k1->1, k2->2}
      *  - Event 3, at T3, in DC1, collection merging operation to add k10->10
      *  - Event 4, at T4, in DC2, collection merging operation to add k9->9
      *  - Event 5, at T5, in DC1, collection merging operation to add k8->8
@@ -293,8 +293,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Many add-to-map ops (each from a different colo/fabric) with a same timestamp after initial Put:
      *
-     *  - Event 1, at T1, in DC1, put {k2->2, k3->3, k4->4}
-     *  - Event 2, at T2, in DC2, put {k1->1, k2->2}
+     *  - Event 1, at T1, in DC1, putAsync {k2->2, k3->3, k4->4}
+     *  - Event 2, at T2, in DC2, putAsync {k1->1, k2->2}
      *  - Event 3, at T3, in DC1, collection merging operation to add k10->10
      *  - Event 4, at T3, in DC2, collection merging operation to add k9->9
      *  - Event 5, at T3, in DC3, collection merging operation to add k8->8
@@ -367,8 +367,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Many add-to-map ops to add existing k-v entries after initial Put:
      *
-     *  - Event 1, at T1, in DC1, put {k2->2, k3->3, k4->4}
-     *  - Event 2, at T2, in DC2, put {k9->9, k8->8, k7->7, k6->6}
+     *  - Event 1, at T1, in DC1, putAsync {k2->2, k3->3, k4->4}
+     *  - Event 2, at T2, in DC2, putAsync {k9->9, k8->8, k7->7, k6->6}
      *  - Event 3, at T3, in DC1, collection merging operation to add k6->6
      *  - Event 4, at T4, in DC2, collection merging operation to add k7->7
      *  - Event 5, at T5, in DC1, collection merging operation to add k8->8
@@ -376,7 +376,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *
      *  Expect: {k6->6, k7->7, k8->8, k9->9}
      *  Explanation:
-     *    At the end, all entries are in the collection-merge part. IOW, the length of the put-only part is 0. The order
+     *    At the end, all entries are in the collection-merge part. IOW, the length of the putAsync-only part is 0. The order
      *    of these entries are determined by timestamps of when they are added.
      */
     List<CollectionOperation> allCollectionOps = getCollectionOpsForTestCase12();
@@ -429,8 +429,8 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
     /**
      * Many remove-from-map ops to remove existing k-v entries after initial Put:
      *
-     *  - Event 1, at T1, in DC1, put {k2->2, k3->3, k4->4}
-     *  - Event 2, at T2, in DC2, put {k9->9, k8->8, k7->7, k6->6}
+     *  - Event 1, at T1, in DC1, putAsync {k2->2, k3->3, k4->4}
+     *  - Event 2, at T2, in DC2, putAsync {k9->9, k8->8, k7->7, k6->6}
      *  - Event 3, at T3, in DC1, collection merging operation to remove k11 // // Remove a non-existing key
      *  - Event 4, at T4, in DC2, collection merging operation to remove k7
      *  - Event 5, at T5, in DC1, collection merging operation to remove k10 // Remove a non-existing key
@@ -474,11 +474,11 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to add k2->2
      *  - Event 3, at T2, in DC1, collection merging operation to add k3->3
      *  - Event 4, at T2, in DC2, collection merging operation to add k4->4
-     *  - Event 5, at T0, in DC1, put {k7->7, k8->8, k9->9}
+     *  - Event 5, at T0, in DC1, putAsync {k7->7, k8->8, k9->9}
      *
      *  Expect: {k7->7, k8->8, k9->9, k1->1, k2->2, k3->3, k4->4}
      *  Explanation:
-     *    All entries are added by the collection-merge add ops and the Put is inserted at the front part as the put-only
+     *    All entries are added by the collection-merge add ops and the Put is inserted at the front part as the putAsync-only
      *    part. Note that collection merges with higher timestamps do NOT prevent Put from being applied.
      */
     List<CollectionOperation> allCollectionOps = getCollectionOpsForTestCase14();
@@ -531,7 +531,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to add k2->2
      *  - Event 3, at T2, in DC1, collection merging operation to add k3->3
      *  - Event 4, at T2, in DC2, collection merging operation to add k4->4
-     *  - Event 5, at T3, in DC1, put {k7->7, k8->8, k9->9}
+     *  - Event 5, at T3, in DC1, putAsync {k7->7, k8->8, k9->9}
      *
      *  Expect: {k7->7, k8->8, k9->9}
      *  Explanation:
@@ -586,11 +586,11 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to add k2->2
      *  - Event 3, at T3, in DC1, collection merging operation to add k3->3
      *  - Event 4, at T3, in DC2, collection merging operation to add k4->4
-     *  - Event 5, at T2, in DC1, put {k7->7, k8->8, k9->9}
+     *  - Event 5, at T2, in DC1, putAsync {k7->7, k8->8, k9->9}
      *
      *  Expect: {k7->7, k8->8, k9->9, k3->3, k4->4}
      *  Explanation:
-     *    The first 3 entries in the result map are the new put-only part and it is the same as the last Put.
+     *    The first 3 entries in the result map are the new putAsync-only part and it is the same as the last Put.
      *    The last 2 entries in the result map are the collection-merge-added entries.
      *    The first 2 collection-merge-added entries are removed by the Put (which has a higher timestamp).
      */
@@ -645,7 +645,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to remove k2
      *  - Event 3, at T2, in DC1, collection merging operation to remove k3
      *  - Event 4, at T2, in DC2, collection merging operation to remove k4
-     *  - Event 5, at T0, in DC1, put {k1->1, k2->2, k3->3, k4->4, k5->5}
+     *  - Event 5, at T0, in DC1, putAsync {k1->1, k2->2, k3->3, k4->4, k5->5}
      *
      *  Expect: {k5->5}
      *  Explanation:
@@ -680,7 +680,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to remove k2
      *  - Event 3, at T2, in DC1, collection merging operation to remove k3
      *  - Event 4, at T2, in DC2, collection merging operation to remove k4
-     *  - Event 5, at T3, in DC1, put {k1->1, k2->2, k3->3, k4->4, k5->5}
+     *  - Event 5, at T3, in DC1, putAsync {k1->1, k2->2, k3->3, k4->4, k5->5}
      *
      *  Expect: {k1->1, k2->2, k3->3, k4->4, k5->5}
      *  Explanation:
@@ -716,7 +716,7 @@ public class MapCollectionMergeTest extends SortBasedCollectionFieldOperationHan
      *  - Event 2, at T1, in DC2, collection merging operation to remove k2
      *  - Event 3, at T3, in DC1, collection merging operation to remove k3
      *  - Event 4, at T3, in DC2, collection merging operation to remove k4
-     *  - Event 5, at T2, in DC1, put {k1->1, k2->2, k3->3, k4->4, k5->5}
+     *  - Event 5, at T2, in DC1, putAsync {k1->1, k2->2, k3->3, k4->4, k5->5}
      *
      *  Expect: {k1->1, k2->2, k5->5}
      *  Explanation:

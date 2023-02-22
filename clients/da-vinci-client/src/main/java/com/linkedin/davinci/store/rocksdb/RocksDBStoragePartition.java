@@ -46,12 +46,12 @@ import org.rocksdb.WriteOptions;
 
 
 /**
- * In {@link RocksDBStoragePartition}, it assumes the update(insert/delete) will happen sequentially.
+ * In {@link RocksDBStoragePartition}, it assumes the updateAsync(insert/deleteAsync) will happen sequentially.
  * If the batch push is bytewise-sorted by key, this class is leveraging {@link SstFileWriter} to
  * generate the SST file directly and ingest all the generated SST files into the RocksDB database
  * at the end of the push.
  *
- * If the ingestion is unsorted, this class is using the regular RocksDB interface to support update
+ * If the ingestion is unsorted, this class is using the regular RocksDB interface to support updateAsync
  * operations.
  */
 @NotThreadSafe
@@ -82,7 +82,7 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
    */
   private boolean isClosed = false;
   /**
-   * Since all the modification functions are synchronized, we don't need any other synchronization for the update path
+   * Since all the modification functions are synchronized, we don't need any other synchronization for the updateAsync path
    * to guard RocksDB closing behavior.
    * The following {@link #readCloseRWLock} is only used to guard {@link #get} since we don't want to synchronize get requests.
    */
@@ -125,7 +125,7 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
    * stored in `DEFAULT` column family, if no column family is specified.
    * If we stores replication metadata in the RocksDB, we stored it in a separated column family. We will insert all the
    * column family descriptors into columnFamilyDescriptors and pass it to RocksDB when opening the store, and it will
-   * fill the columnFamilyHandles with handles which will be used when we want to put/get/delete
+   * fill the columnFamilyHandles with handles which will be used when we want to putAsync/get/deleteAsync
    * from different RocksDB column families.
    */
   protected final List<ColumnFamilyHandle> columnFamilyHandleList = new ArrayList<>();
@@ -403,7 +403,7 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
       }
     } catch (RocksDBException e) {
       throw new VeniceException(
-          "Failed to put key/value pair to store: " + storeName + ", partition id: " + partitionId,
+          "Failed to putAsync key/value pair to store: " + storeName + ", partition id: " + partitionId,
           e);
     }
   }
@@ -547,7 +547,7 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
       }
     } catch (RocksDBException e) {
       throw new VeniceException(
-          "Failed to delete entry from store: " + storeName + ", partition id: " + partitionId,
+          "Failed to deleteAsync entry from store: " + storeName + ", partition id: " + partitionId,
           e);
     }
   }

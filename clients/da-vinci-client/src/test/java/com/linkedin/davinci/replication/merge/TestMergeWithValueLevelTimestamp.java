@@ -58,7 +58,7 @@ public class TestMergeWithValueLevelTimestamp extends TestMergeConflictResolver 
     GenericRecord result = deserializer.deserialize(mergeConflictResult.getNewValue());
     Assert.assertEquals(GenericData.get().compare(result, newValueRecord, userSchemaV1), 0);
 
-    // verify update ignored.
+    // verify updateAsync ignored.
     mergeConflictResult = mergeConflictResolver.put(
         Lazy.of(() -> oldBB),
         new RmdWithValueSchemaId(1, RMD_VERSION_ID, GenericData.get().deepCopy(userRmdSchemaV1, rmdRecord)),
@@ -99,7 +99,7 @@ public class TestMergeWithValueLevelTimestamp extends TestMergeConflictResolver 
         0);
     Assert.assertEquals(mergeConflictResult.getNewValue(), newBB);
 
-    // verify put with invalid schema id
+    // verify putAsync with invalid schema id
     Assert.assertThrows(
         VeniceException.class,
         () -> mergeConflictResolver.put(
@@ -162,10 +162,10 @@ public class TestMergeWithValueLevelTimestamp extends TestMergeConflictResolver 
     MergeConflictResult mergeConflictResult = mergeConflictResolver
         .delete(Lazy.of(() -> null), new RmdWithValueSchemaId(1, RMD_VERSION_ID, timestampRecord), 30L, 1L, 0, 0);
 
-    // verify delete null value
+    // verify deleteAsync null value
     Assert.assertNull(mergeConflictResult.getNewValue());
 
-    // verify update ignored.
+    // verify updateAsync ignored.
     mergeConflictResult = mergeConflictResolver
         .delete(Lazy.of(() -> null), new RmdWithValueSchemaId(1, RMD_VERSION_ID, timestampRecord), 10L, 1L, 0, 0);
     Assert.assertTrue(mergeConflictResult.isUpdateIgnored());
@@ -185,7 +185,7 @@ public class TestMergeWithValueLevelTimestamp extends TestMergeConflictResolver 
     Assert.assertFalse(mergeConflictResult.isUpdateIgnored());
     Assert.assertEquals(mergeConflictResult.getValueSchemaId(), 1);
 
-    // Validate delete wins on same timestamp
+    // Validate deleteAsync wins on same timestamp
     mergeConflictResult = mergeConflictResolver
         .delete(Lazy.of(() -> null), new RmdWithValueSchemaId(1, RMD_VERSION_ID, timestampRecord), 30L, 1L, 0, 0);
     Assert.assertFalse(mergeConflictResult.isUpdateIgnored());

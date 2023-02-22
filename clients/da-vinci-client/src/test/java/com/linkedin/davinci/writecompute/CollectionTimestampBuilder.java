@@ -59,7 +59,7 @@ public class CollectionTimestampBuilder {
 
   public void setPutOnlyPartLength(int putOnlyPartLength) {
     if (putOnlyPartLength < 0) {
-      throw new IllegalArgumentException("Expect put-only length to be non-negative. Got: " + putOnlyPartLength);
+      throw new IllegalArgumentException("Expect putAsync-only length to be non-negative. Got: " + putOnlyPartLength);
     }
     this.putOnlyPartLength = putOnlyPartLength;
   }

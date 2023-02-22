@@ -29,7 +29,7 @@ import org.apache.logging.log4j.Logger;
  * kind of disk failure, there is a timeout mechanism inside the health status polling API;
  * a total timeout will be decided at the beginning:
  * totalTimeout = Math.max(30 seconds, health check interval + disk operation timeout)
- * we will keep track of the last update time for the in-memory health status variable, if
+ * we will keep track of the last updateAsync time for the in-memory health status variable, if
  * the in-memory status haven't been updated for more than the totalTimeout, we believe the
  * disk operation hang due to disk failure and start reporting unhealthy for this server.
  */
@@ -184,7 +184,7 @@ public class DiskHealthCheckService extends AbstractVeniceService {
           if (!tmpFile.exists()) {
             tmpFile.createNewFile();
           }
-          // delete the temporary file at the end
+          // deleteAsync the temporary file at the end
           tmpFile.deleteOnExit();
 
           try (PrintWriter printWriter = new PrintWriter(tmpFile, "UTF-8")) {
@@ -214,7 +214,7 @@ public class DiskHealthCheckService extends AbstractVeniceService {
             }
 
             try (AutoCloseableLock ignore = AutoCloseableLock.of(lock)) {
-              // update the disk health status
+              // updateAsync the disk health status
               diskHealthy = fileReadableAndCorrect;
               lastStatusUpdateTimeInNS = System.nanoTime();
             }

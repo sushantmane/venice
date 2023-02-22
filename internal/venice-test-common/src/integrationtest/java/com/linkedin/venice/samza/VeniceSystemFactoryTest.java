@@ -131,7 +131,7 @@ public class VeniceSystemFactoryTest {
       // Delete the record
       IntegrationTestPushUtils.sendStreamingRecord(producer, storeName, key, null);
 
-      // Verify the delete
+      // Verify the deleteAsync
       TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, () -> {
         GenericRecord deletedRecord = null;
         try {

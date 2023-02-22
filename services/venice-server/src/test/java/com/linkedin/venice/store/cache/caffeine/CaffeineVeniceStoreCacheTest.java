@@ -42,7 +42,7 @@ public class CaffeineVeniceStoreCacheTest {
     // read it back
     Assert.assertEquals(cache.getIfPresent(PRESENT_KEY), PRESENT_VALUE);
 
-    // update it
+    // updateAsync it
     cache.insert(PRESENT_KEY, SECOND_PRESENT_VALUE);
 
     // read it back again

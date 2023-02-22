@@ -65,7 +65,7 @@ public class PushStatusStoreUtils {
       String incrementalPushVersion,
       String incrementalPushPrefix) {
     PushStatusKey pushStatusKey = new PushStatusKey();
-    /* upon modifying the order of keyStrings in PushStatusKey, please update getPartitionIdFromServerIncrementalPushKey()
+    /* upon modifying the order of keyStrings in PushStatusKey, please updateAsync getPartitionIdFromServerIncrementalPushKey()
     to reflect an updated index of partitionId in keyStrings list. */
     pushStatusKey.keyStrings = Arrays.asList(version, partitionId, incrementalPushVersion, incrementalPushPrefix);
     pushStatusKey.messageType = PushStatusKeyType.SERVER_INCREMENTAL_PUSH.ordinal();

@@ -87,7 +87,7 @@ public class ChunkAssembler {
           continue;
         }
         /**
-         * The latest event is a delete event.
+         * The latest event is a deleteAsync event.
          */
         if (reusedMapperValue.replicationMetadataPayload.remaining() != 0) {
           return new ValueBytesAndSchemaId(
@@ -105,7 +105,7 @@ public class ChunkAssembler {
           continue;
         }
         /**
-         * The latest event is a put event.
+         * The latest event is a putAsync event.
          */
         return new ValueBytesAndSchemaId(
             ByteUtils.extractByteArray(reusedMapperValue.value),

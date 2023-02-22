@@ -17,8 +17,8 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
     /**
      * A classic example:
      *
-     *  - Event 1, at T1, in DC1, put {3, 2, 1}
-     *  - Event 2, at T1, in DC2, put {2, 3, 4}
+     *  - Event 1, at T1, in DC1, putAsync {3, 2, 1}
+     *  - Event 2, at T1, in DC2, putAsync {2, 3, 4}
      *  - Event 3, at T2, in DC1, collection merging operation to add 5
      *  - Event 4, at T3, in DC2, collection merging operation to remove 3
      */
@@ -38,8 +38,8 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
     /**
      * A classic example:
      *
-     *  - Event 1, at T1, in DC1, put {2, 3, 4}
-     *  - Event 2, at T1, in DC2, put {3, 2, 1}
+     *  - Event 1, at T1, in DC1, putAsync {2, 3, 4}
+     *  - Event 2, at T1, in DC2, putAsync {3, 2, 1}
      *  - Event 3, at T2, in DC1, collection merging operation to add 5
      *  - Event 4, at T3, in DC2, collection merging operation to remove 3
      */
@@ -57,10 +57,10 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
   @Test
   public void testHandleListOpsCase3() {
     /**
-     * Many add-to-list operations after initial put:
+     * Many add-to-list operations after initial putAsync:
      *
-     *  - Event 1, at T1, in DC1, put {2, 3, 4}
-     *  - Event 2, at T1, in DC2, put {3, 2, 1}
+     *  - Event 1, at T1, in DC1, putAsync {2, 3, 4}
+     *  - Event 2, at T1, in DC2, putAsync {3, 2, 1}
      *  - Event 3, at T2, in DC1, collection merging operation to add 5
      *  - Event 4, at T3, in DC2, collection merging operation to add 6
      *  - Event 5, at T4, in DC1, collection merging operation to add 7
@@ -85,10 +85,10 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
   @Test
   public void testHandleListOpsCase4() {
     /**
-     * Many remove-from-list operations after initial put:
+     * Many remove-from-list operations after initial putAsync:
      *
-     *  - Event 1, at T1, in DC1, put {2, 3, 4}
-     *  - Event 2, at T1, in DC2, put {3, 2, 1}
+     *  - Event 1, at T1, in DC1, putAsync {2, 3, 4}
+     *  - Event 2, at T1, in DC2, putAsync {3, 2, 1}
      *  - Event 3, at T2, in DC1, collection merging operation to remove 2
      *  - Event 4, at T3, in DC2, collection merging operation to remove 3
      *  - Event 5, at T4, in DC1, collection merging operation to remove 1
@@ -108,13 +108,13 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
   @Test
   public void testHandleListOpsCase5() {
     /**
-     * All operations are put or delete:
+     * All operations are putAsync or deleteAsync:
      *
-     *  - Event 1, at T1, in DC1, put {1, 2}
-     *  - Event 2, at T1, in DC2, put {3, 4}
-     *  - Event 3, at T2, in DC1, put {5, 6}
-     *  - Event 4, at T3, in DC2, put {7, 8}
-     *  - Event 3, at T3, in DC1, delete
+     *  - Event 1, at T1, in DC1, putAsync {1, 2}
+     *  - Event 2, at T1, in DC2, putAsync {3, 4}
+     *  - Event 3, at T2, in DC1, putAsync {5, 6}
+     *  - Event 4, at T3, in DC2, putAsync {7, 8}
+     *  - Event 3, at T3, in DC1, deleteAsync
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
         new PutListOperation(3L, COLO_ID_1, Arrays.asList(1, 2), LIST_FIELD_NAME),
@@ -131,7 +131,7 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
   @Test
   public void testHandleListOpsCase6() {
     /**
-     * All operations are collection merge (e.g. add to list / delete from list):
+     * All operations are collection merge (e.g. add to list / deleteAsync from list):
      *
      *  - Event 1, at T1, in DC1, add 1 to list
      *  - Event 2, at T1, in DC2, add 2 to list
@@ -165,7 +165,7 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
      *  - Event 3, at T2, in DC1, add 3 to list
      *  - Event 4, at T3, in DC2, add 4 to list
      *  - Event 5, at T4, in DC1, add 5 to list
-     *  - Event 6, at T4, in DC2, put {7, 8, 9}
+     *  - Event 6, at T4, in DC2, putAsync {7, 8, 9}
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
         new MergeListOperation(3L, COLO_ID_1, Collections.singletonList(1), Collections.emptyList(), LIST_FIELD_NAME),
@@ -190,7 +190,7 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
      *  - Event 3, at T2, in DC1, add 3 to list
      *  - Event 4, at T3, in DC2, add 4 to list
      *  - Event 5, at T4, in DC1, add 5 to list
-     *  - Event 6, at T4, in DC2, delete
+     *  - Event 6, at T4, in DC2, deleteAsync
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
         new MergeListOperation(3L, COLO_ID_1, Collections.singletonList(1), Collections.emptyList(), LIST_FIELD_NAME),
@@ -215,7 +215,7 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
      *  - Event 3, at T2, in DC1, add 3 to list
      *  - Event 4, at T3, in DC2, add 4 to list
      *  - Event 5, at T5, in DC1, add 5 to list
-     *  - Event 6, at T4, in DC2, delete
+     *  - Event 6, at T4, in DC2, deleteAsync
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
         new MergeListOperation(3L, COLO_ID_1, Collections.singletonList(1), Collections.emptyList(), LIST_FIELD_NAME),
@@ -235,12 +235,12 @@ public class ListCollectionMergeTest extends SortBasedCollectionFieldOperationHa
     /**
      * Put partially overrides collection-merge-only value:
      *
-     *  - Event 1, at T1, in DC1, delete 1 from list
-     *  - Event 2, at T1, in DC2, delete 2 from list
-     *  - Event 3, at T2, in DC1, delete 3 from list
-     *  - Event 4, at T3, in DC2, put {1, 2, 3, 4, 5}
-     *  - Event 5, at T4, in DC2, delete 4 from list
-     *  - Event 6, at T5, in DC1, delete 5 from list
+     *  - Event 1, at T1, in DC1, deleteAsync 1 from list
+     *  - Event 2, at T1, in DC2, deleteAsync 2 from list
+     *  - Event 3, at T2, in DC1, deleteAsync 3 from list
+     *  - Event 4, at T3, in DC2, putAsync {1, 2, 3, 4, 5}
+     *  - Event 5, at T4, in DC2, deleteAsync 4 from list
+     *  - Event 6, at T5, in DC1, deleteAsync 5 from list
      */
     List<CollectionOperation> allCollectionOps = Arrays.asList(
         new MergeListOperation(3L, COLO_ID_1, Collections.emptyList(), Collections.singletonList(1), LIST_FIELD_NAME),

@@ -50,7 +50,7 @@ public class HostLevelIngestionStats extends AbstractVeniceStats {
   private final Sensor pollRequestSensor;
   private final Sensor pollRequestLatencySensor;
   private final Sensor pollResultNumSensor;
-  /** To measure 'put' latency of consumer records blocking queue */
+  /** To measure 'putAsync' latency of consumer records blocking queue */
   private final Sensor consumerRecordsQueuePutLatencySensor;
   private final Sensor keySizeSensor;
   private final Sensor valueSizeSensor;
@@ -82,7 +82,7 @@ public class HostLevelIngestionStats extends AbstractVeniceStats {
   private final Sensor checkLongRunningTasksLatencySensor;
   // Measure the latency in enforcing hybrid store disk quota
   private final Sensor quotaEnforcementLatencySensor;
-  // Measure the latency from "after polling records from Kafka" to "successfully put records in to drainer queue"
+  // Measure the latency from "after polling records from Kafka" to "successfully putAsync records in to drainer queue"
   private final Sensor consumerToQueueLatencySensor;
   // Measure the latency in putting data into storage engine
   private final Sensor storageEnginePutLatencySensor;

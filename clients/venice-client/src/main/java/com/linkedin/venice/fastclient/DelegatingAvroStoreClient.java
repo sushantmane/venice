@@ -18,7 +18,7 @@ import org.apache.avro.Schema;
  * Each layer provides some functionality, e.g. stats collection, etc.
  *
  * Fast-Client's layers include the below components. Check {@link ClientFactory#getAndStartGenericStoreClient}
- * to figure out how the layers are put together for different requirements.
+ * to figure out how the layers are putAsync together for different requirements.
  *
  * Layer -1:
  * AvroGenericStoreClient => interface: Borrowed from thin-client

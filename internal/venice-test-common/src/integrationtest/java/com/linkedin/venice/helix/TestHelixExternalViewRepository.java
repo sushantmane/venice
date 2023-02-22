@@ -287,7 +287,8 @@ public class TestHelixExternalViewRepository {
   }
 
   // @Test
-  // TODO: Either delete this test or fix the getBootstrapping instances api to work with L/F (or make an equivalent new
+  // TODO: Either deleteAsync this test or fix the getBootstrapping instances api to work with L/F (or make an
+  // equivalent new
   // api)
   public void testGetBootstrapInstances() throws Exception {
     manager.disconnect();

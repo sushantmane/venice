@@ -118,10 +118,12 @@ public abstract class AbstractPushMonitor
         try {
           routingDataRepository.subscribeRoutingDataChange(offlinePushStatus.getKafkaTopic(), this);
 
-          // Now that we're subscribed, update the view of this data. Once we move to L/F, we'll move this logic into
+          // Now that we're subscribed, updateAsync the view of this data. Once we move to L/F, we'll move this logic
+          // into
           // the
           // parameterless
-          // version of this function above. But until then we put it here. We refresh this data after subscribing to be
+          // version of this function above. But until then we putAsync it here. We refresh this data after subscribing
+          // to be
           // sure that we're
           // going to get ALL the change events and not lose any in between reading the data and subscribing to changes
           // in
@@ -141,7 +143,7 @@ public abstract class AbstractPushMonitor
           getOfflinePushAccessor().subscribePartitionStatusChange(offlinePushStatus, this);
 
           // Check the status for running pushes. In case controller missed some notification during the failover, we
-          // need to update it based on current routing data.
+          // need to updateAsync it based on current routing data.
           if (!offlinePushStatus.getCurrentStatus().isTerminal()) {
             String topic = offlinePushStatus.getKafkaTopic();
             if (routingDataRepository.containsKafkaTopic(topic)) {
@@ -158,7 +160,8 @@ public abstract class AbstractPushMonitor
               }
             } else {
               // In any case, we found the offline push status is STARTED, but the related version could not be found.
-              // We only log it as cleaning up here was found to prematurely delete push jobs during controller failover
+              // We only log it as cleaning up here was found to prematurely deleteAsync push jobs during controller
+              // failover
               LOGGER.info("Found legacy offline push: {}", offlinePushStatus.getKafkaTopic());
             }
           }
@@ -514,7 +517,7 @@ public abstract class AbstractPushMonitor
         offlinePushAccessor.deleteOfflinePushStatusAndItsPartitionStatuses(offlinePushStatus.getKafkaTopic());
       }
     } catch (Exception e) {
-      LOGGER.warn("Could not delete legacy push status: {}", offlinePushStatus.getKafkaTopic(), e);
+      LOGGER.warn("Could not deleteAsync legacy push status: {}", offlinePushStatus.getKafkaTopic(), e);
     }
   }
 
@@ -593,8 +596,8 @@ public abstract class AbstractPushMonitor
 
   /**
    * Direct calls to updatePushStatus should be made carefully. e.g. calling with {@link ExecutionStatus}.ERROR or
-   * other terminal status update should be made through handleOfflinePushUpdate. That method will then invoke
-   * handleErrorPush and perform relevant operations to handle the ERROR status update properly.
+   * other terminal status updateAsync should be made through handleOfflinePushUpdate. That method will then invoke
+   * handleErrorPush and perform relevant operations to handle the ERROR status updateAsync properly.
    */
   protected void updatePushStatus(
       OfflinePushStatus expectedCurrPushStatus,
@@ -896,12 +899,13 @@ public abstract class AbstractPushMonitor
     try {
       updateStoreVersionStatus(storeName, versionNumber, VersionStatus.ERROR);
       aggPushHealthStats.recordFailedPush(storeName, getDurationInSec(pushStatus));
-      // If we met some error to delete error version, we should not throw the exception out to fail this operation,
+      // If we met some error to deleteAsync error version, we should not throw the exception out to fail this
+      // operation,
       // because it will be collected once a new push is completed for this store.
       storeCleaner.deleteOneStoreVersion(clusterName, storeName, versionNumber);
     } catch (Exception e) {
       LOGGER.warn(
-          "Could not delete error version: {} for store: {} in cluster: {}",
+          "Could not deleteAsync error version: {} for store: {} in cluster: {}",
           versionNumber,
           storeName,
           clusterName,

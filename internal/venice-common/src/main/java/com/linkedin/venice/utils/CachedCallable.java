@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * CachedCallable is useful when referring to expensive resources.
  * Return the same reference if it is fresh (within {@link #ttlMs}
- * or update reference if it is stale.
+ * or updateAsync reference if it is stale.
  */
 public class CachedCallable<T> implements Callable<T> {
   private final Callable<T> inner;

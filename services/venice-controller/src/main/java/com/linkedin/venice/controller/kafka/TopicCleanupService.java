@@ -31,9 +31,9 @@ import org.apache.logging.log4j.Logger;
  * 1. When Controller needs to clean up topics for retired versions or uncompleted store pushes or store deletion, it only
  * truncates the topics (lower topic retention) instead of deleting them right away.
  * 2. The {@link TopicCleanupService} is working as a single process to clean up all the unused topics.
- * With this way, most of time (no leadership handover), there is only one controller talking to Kafka to delete topic, which is expected
+ * With this way, most of time (no leadership handover), there is only one controller talking to Kafka to deleteAsync topic, which is expected
  * from Kafka's perspective to avoid concurrent topic deletion.
- * In theory, it is still possible to have two controllers talking to Kafka to delete topic during leadership handover since
+ * In theory, it is still possible to have two controllers talking to Kafka to deleteAsync topic during leadership handover since
  * the previous leader controller could be still working on the topic cleaning up but the new leader controller starts
  * processing.
  *
@@ -143,7 +143,7 @@ public class TopicCleanupService extends AbstractVeniceService {
   }
 
   /**
-   * The following will delete topics based on their priority. Real-time topics are given higher priority than version topics.
+   * The following will deleteAsync topics based on their priority. Real-time topics are given higher priority than version topics.
    * If version topic deletion takes more than certain time it refreshes the entire topic list and start deleting from RT topics again.
     */
   void cleanupVeniceTopics() {
@@ -155,13 +155,13 @@ public class TopicCleanupService extends AbstractVeniceService {
       String topic = allTopics.poll();
       /**
        * Until now, we haven't figured out a good way to handle real-time topic cleanup:
-       *     1. If {@link TopicCleanupService} doesn't delete real-time topic, the truncated real-time topic could cause inconsistent data problem
+       *     1. If {@link TopicCleanupService} doesn't deleteAsync real-time topic, the truncated real-time topic could cause inconsistent data problem
        *       between parent cluster and prod cluster if the deleted hybrid store gets re-created;
        *     2. If {@link TopicCleanupService} deletes the real-time topic, it might crash MM if application is still producing to the real-time topic
        *       in parent cluster;
        *
        *     Since Kafka nurse script will automatically kick in if MM crashes (which should still happen very infrequently),
-       *     for the time being, we choose to delete the real-time topic.
+       *     for the time being, we choose to deleteAsync the real-time topic.
        */
       try {
         try {
@@ -174,13 +174,13 @@ public class TopicCleanupService extends AbstractVeniceService {
         }
         getTopicManager().ensureTopicIsDeletedAndBlockWithRetry(topic);
       } catch (ExecutionException e) {
-        LOGGER.warn("ExecutionException caught when trying to delete topic: {}", topic);
+        LOGGER.warn("ExecutionException caught when trying to deleteAsync topic: {}", topic);
         // No op, will try again in the next cleanup cycle.
       }
 
       if (!Version.isRealTimeTopic(topic)) {
         // If Version topic deletion took long time, skip further VT deletion and check if we have new RT topic to
-        // delete
+        // deleteAsync
         if (System.currentTimeMillis() - refreshTime > refreshQueueCycle) {
           allTopics.clear();
           populateDeprecatedTopicQueue(allTopics);

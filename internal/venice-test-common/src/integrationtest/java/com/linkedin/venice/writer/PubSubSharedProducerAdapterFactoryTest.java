@@ -88,7 +88,7 @@ public class PubSubSharedProducerAdapterFactoryTest {
         for (int i = 0; i < 100 && !Thread.interrupted(); i++) {
           try {
             veniceWriter1
-                .put(new KafkaKey(MessageType.PUT, "topic1".getBytes()), "topic1".getBytes(), 1, (metadata, e) -> {
+                .putAsync(new KafkaKey(MessageType.PUT, "topic1".getBytes()), "topic1".getBytes(), 1, (metadata, e) -> {
                   if (e != null) {
                     LOGGER.error("Error when producing to an existing topic: {}", existingTopic, e);
                   } else {
@@ -119,7 +119,7 @@ public class PubSubSharedProducerAdapterFactoryTest {
            */
           for (int i = 0; i < 100 && !Thread.interrupted(); i++) {
             try {
-              finalVeniceWriter.put(
+              finalVeniceWriter.putAsync(
                   new KafkaKey(MessageType.PUT, "topic2".getBytes()),
                   "topic2".getBytes(),
                   1,

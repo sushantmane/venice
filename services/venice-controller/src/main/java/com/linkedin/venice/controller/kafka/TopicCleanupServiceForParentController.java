@@ -50,20 +50,20 @@ public class TopicCleanupServiceForParentController extends TopicCleanupService 
               (oldVal, givenVal) -> oldVal - 1);
           if (remainingFactor > 0) {
             LOGGER.info(
-                "Retention policy for topic: {} is: {} ms, and it is deprecated, will delete it after {} ms.",
+                "Retention policy for topic: {} is: {} ms, and it is deprecated, will deleteAsync it after {} ms.",
                 topic,
                 retention,
                 remainingFactor * sleepIntervalBetweenTopicListFetchMs);
           } else {
             LOGGER.info(
-                "Retention policy for topic: {} is: {} ms, and it is deprecated, will delete it now.",
+                "Retention policy for topic: {} is: {} ms, and it is deprecated, will deleteAsync it now.",
                 topic,
                 retention);
             storeToCountdownForDeletion.remove(topic + "_" + topicManager.getKafkaBootstrapServers());
             try {
               topicManager.ensureTopicIsDeletedAndBlockWithRetry(topic);
             } catch (ExecutionException e) {
-              LOGGER.warn("ExecutionException caught when trying to delete topic: {}", topic);
+              LOGGER.warn("ExecutionException caught when trying to deleteAsync topic: {}", topic);
               // No op, will try again in the next cleanup cycle.
             }
           }

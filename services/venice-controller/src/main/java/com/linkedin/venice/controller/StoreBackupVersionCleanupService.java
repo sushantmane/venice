@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
  * If it is not specified, the retention policy will be controlled by config: {@link ConfigKeys#CONTROLLER_BACKUP_VERSION_DEFAULT_RETENTION_MS}.
  * The backup versions will become eligible for removal if the latest current version has been promoted for more
  * than configured retention time period.
- * If the specified retention time is 0, this service won't delete the backup version right after the latest version is
+ * If the specified retention time is 0, this service won't deleteAsync the backup version right after the latest version is
  * promoted to the new current version since there could be a delay before Routers receive the new version promotion notification.
  * Currently, the minimal retention time is hard-coded as 1 hour here: {@link StoreBackupVersionCleanupService#MINIMAL_BACKUP_VERSION_CLEANUP_DELAY}
  * to accommodate the delay between Controller and Router.
@@ -129,7 +129,7 @@ public class StoreBackupVersionCleanupService extends AbstractVeniceService {
         admin.deleteOldVersionInStore(clusterName, storeName, versionNum);
       } catch (Exception e) {
         LOGGER.error(
-            "Encountered exception while trying to delete version: {}, store: {}, in cluster: {}",
+            "Encountered exception while trying to deleteAsync version: {}, store: {}, in cluster: {}",
             versionNum,
             storeName,
             clusterName,

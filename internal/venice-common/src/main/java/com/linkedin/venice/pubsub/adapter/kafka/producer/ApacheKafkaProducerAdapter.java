@@ -14,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -68,13 +68,14 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
    * @param pubsubProducerCallback - The callback function, which will be triggered when Kafka client sends out the message.
    * */
   @Override
-  public Future<PubSubProduceResult> sendMessage(
+  public void sendMessage(
       String topic,
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders pubsubMessageHeaders,
-      PubSubProducerCallback pubsubProducerCallback) {
+      PubSubProducerCallback pubsubProducerCallback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
         topic,
@@ -82,10 +83,10 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
+    ApacheKafkaProducerCallback kafkaCallback =
+        new ApacheKafkaProducerCallback(pubsubProducerCallback, produceResultFuture);
     try {
       producer.send(record, kafkaCallback);
-      return kafkaCallback.getProduceResultFuture();
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "

@@ -277,7 +277,7 @@ public class DaVinciClientBasedMetadata extends AbstractStoreMetadata {
         }
       }
     }
-    // Update schemas TODO consider update in place with additional checks to skip existing schemas for better
+    // Update schemas TODO consider updateAsync in place with additional checks to skip existing schemas for better
     // performance if it's thread safe.
     Map.Entry<CharSequence, CharSequence> keySchemaEntry =
         getStoreMetaValue(storeMetaKeyMap.get(STORE_KEY_SCHEMAS_KEY)).storeKeySchemas.keySchemaMap.entrySet()

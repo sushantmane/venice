@@ -287,7 +287,7 @@ public class TopicManager implements Closeable {
           CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
     } catch (Exception e) {
       if (ExceptionUtils.recursiveClassEquals(e, TopicExistsException.class)) {
-        logger.info("Topic: {} already exists, will update retention policy.", topicName);
+        logger.info("Topic: {} already exists, will updateAsync retention policy.", topicName);
         waitUntilTopicCreated(topicName, numPartitions, deadlineMs);
         updateTopicRetention(topicName, retentionTimeMs);
         logger.info("Updated retention policy to be {}ms for topic: {}", retentionTimeMs, topicName);
@@ -317,7 +317,7 @@ public class TopicManager implements Closeable {
   }
 
   /**
-   * This method sends a delete command to Kafka and immediately returns with a future. The future could be null if the
+   * This method sends a deleteAsync command to Kafka and immediately returns with a future. The future could be null if the
    * underlying Kafka admin client doesn't support it. In both cases, deletion will occur asynchronously.
    * @param topicName
    */
@@ -348,7 +348,7 @@ public class TopicManager implements Closeable {
    * @param topicName
    * @param retentionInMS
    * @param topicProperties
-   * @return true if the retention time gets updated; false if no update is needed.
+   * @return true if the retention time gets updated; false if no updateAsync is needed.
    */
   public boolean updateTopicRetention(String topicName, long retentionInMS, Properties topicProperties)
       throws TopicDoesNotExistException {
@@ -387,7 +387,7 @@ public class TopicManager implements Closeable {
     long expectedMinLogCompactionLagMs = logCompaction ? topicMinLogCompactionLagMs : 0L;
     boolean needToUpdateTopicConfig = false;
     if (!expectedCompactionPolicy.equals(currentCompactionPolicy)) {
-      // Different, then update
+      // Different, then updateAsync
       needToUpdateTopicConfig = true;
       topicProperties.put(TopicConfig.CLEANUP_POLICY_CONFIG, expectedCompactionPolicy);
     }
@@ -541,7 +541,7 @@ public class TopicManager implements Closeable {
       try {
         future.get(kafkaOperationTimeoutMs, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
-        throw new VeniceException("Thread interrupted while waiting to delete topic: " + topicName);
+        throw new VeniceException("Thread interrupted while waiting to deleteAsync topic: " + topicName);
       } catch (ExecutionException e) {
         if (e.getCause() instanceof UnknownTopicOrPartitionException) {
           // No-op. Topic is deleted already, consider this as a successful deletion.
@@ -550,7 +550,7 @@ public class TopicManager implements Closeable {
         }
       } catch (TimeoutException e) {
         throw new VeniceOperationAgainstKafkaTimedOut(
-            "Failed to delete kafka topic: " + topicName + " after " + kafkaOperationTimeoutMs);
+            "Failed to deleteAsync kafka topic: " + topicName + " after " + kafkaOperationTimeoutMs);
       }
       logger.info("Topic: {} has been deleted", topicName);
       // TODO: Remove the checks below once we have fully migrated to use the Kafka admin client.
@@ -592,7 +592,7 @@ public class TopicManager implements Closeable {
       }
     }
     throw new VeniceOperationAgainstKafkaTimedOut(
-        "Failed to delete kafka topic: " + topicName + " after " + kafkaOperationTimeoutMs + " ms (" + current
+        "Failed to deleteAsync kafka topic: " + topicName + " after " + kafkaOperationTimeoutMs + " ms (" + current
             + " attempts).");
   }
 

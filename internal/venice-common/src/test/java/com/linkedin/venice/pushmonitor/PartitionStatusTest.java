@@ -27,12 +27,12 @@ public class PartitionStatusTest {
     PartitionStatus readonlyPartitionStatus = ReadOnlyPartitionStatus.fromPartitionStatus(partitionStatus);
     try {
       readonlyPartitionStatus.updateProgress(instanceId, 1);
-      Assert.fail("Can no update a readonly partition status.");
+      Assert.fail("Can no updateAsync a readonly partition status.");
     } catch (VeniceException e) {
     }
     try {
       readonlyPartitionStatus.updateReplicaStatus(instanceId, ExecutionStatus.COMPLETED);
-      Assert.fail("Can no update a readonly partition status.");
+      Assert.fail("Can no updateAsync a readonly partition status.");
     } catch (VeniceException e) {
     }
   }

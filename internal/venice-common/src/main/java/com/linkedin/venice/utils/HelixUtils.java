@@ -170,7 +170,8 @@ public class HelixUtils {
     updateChildren(dataAccessor, pathes, data, DEFAULT_HELIX_OP_RETRY_COUNT);
   }
 
-  // TODO there is not atomic operations to update multiple node to ZK. We should ask Helix library to rollback if it's
+  // TODO there is not atomic operations to updateAsync multiple node to ZK. We should ask Helix library to rollback if
+  // it's
   // only partial successful.
   public static <T> void updateChildren(
       ZkBaseDataAccessor<T> dataAccessor,
@@ -194,7 +195,7 @@ public class HelixUtils {
       if (retry == retryCount) {
         throw new ZkDataAccessException(
             pathes.get(0).substring(0, pathes.get(0).lastIndexOf('/')),
-            "update children",
+            "updateAsync children",
             retryCount);
       }
     }
@@ -231,7 +232,7 @@ public class HelixUtils {
       }
       retry++;
     }
-    throw new ZkDataAccessException(path, "compare and update", retryCount);
+    throw new ZkDataAccessException(path, "compare and updateAsync", retryCount);
   }
 
   /**

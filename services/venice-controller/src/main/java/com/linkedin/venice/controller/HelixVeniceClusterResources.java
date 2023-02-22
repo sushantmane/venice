@@ -228,7 +228,7 @@ public class HelixVeniceClusterResources implements VeniceResource {
       VeniceSystemStoreType systemStoreType = VeniceSystemStoreType.getSystemStoreType(storeName);
       if (systemStoreType == null || !systemStoreType.isStoreZkShared()) {
         /**
-         * We only need to update the Vanilla Venice stores here since the updated zk shared store
+         * We only need to updateAsync the Vanilla Venice stores here since the updated zk shared store
          * will be reflected in all the derived system stores.
          */
         if (store.getReplicationFactor() <= 0) {

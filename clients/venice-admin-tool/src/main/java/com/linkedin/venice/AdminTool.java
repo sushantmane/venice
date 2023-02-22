@@ -1512,7 +1512,7 @@ public class AdminTool {
       // Update parent cluster discovery info if all child clusters are online.
       for (ControllerClient controllerClient: destChildControllerClientMap.values()) {
         if (!controllerClient.discoverCluster(storeName).getCluster().equals(destClusterName)) {
-          // No need to update cluster discovery in parent if one child is not ready.
+          // No need to updateAsync cluster discovery in parent if one child is not ready.
           return;
         }
       }
@@ -1632,7 +1632,7 @@ public class AdminTool {
    *                        defined as follows:
    *                        [0] Continue to execute abort migration even if the store doesn't appear to be migrating.
    *                        [1] Continue to reset store migration flag, storeConfig and cluster discovery mapping.
-   *                        [2] Continue to delete the cloned store in the destination cluster.
+   *                        [2] Continue to deleteAsync the cloned store in the destination cluster.
    */
   public static void abortMigration(
       String veniceUrl,
@@ -1700,7 +1700,7 @@ public class AdminTool {
       terminate = !promptsOverride[2];
     } else {
       terminate = !userGivesPermission(
-          "Next step is to delete the cloned store in dest cluster " + destClusterName + ". " + storeName + " in "
+          "Next step is to deleteAsync the cloned store in dest cluster " + destClusterName + ". " + storeName + " in "
               + destClusterName + " will be deleted irreversibly."
               + " Please verify there is no reads/writes to the cloned store. Do you want to proceed?");
     }
@@ -1716,7 +1716,7 @@ public class AdminTool {
     }
 
     if (destControllerClient.getStore(storeName).getStore() != null) {
-      // If multi-colo, both parent and child dest controllers will consume the delete store message
+      // If multi-colo, both parent and child dest controllers will consume the deleteAsync store message
       System.err.println(
           "Deleting cloned store " + storeName + " in " + destControllerClient.getLeaderControllerUrl() + " ...");
       destControllerClient
@@ -1724,7 +1724,8 @@ public class AdminTool {
       TrackableControllerResponse deleteResponse = destControllerClient.deleteStore(storeName);
       printObject(deleteResponse);
       if (deleteResponse.isError()) {
-        System.err.println("ERROR: failed to delete store " + storeName + " in the dest cluster " + destClusterName);
+        System.err
+            .println("ERROR: failed to deleteAsync store " + storeName + " in the dest cluster " + destClusterName);
       }
     } else {
       System.err.println(
@@ -1779,7 +1780,8 @@ public class AdminTool {
       TrackableControllerResponse deleteResponse = srcControllerClient.deleteStore(storeName);
       printObject(deleteResponse);
       if (deleteResponse.isError()) {
-        System.err.println("ERROR: failed to delete store " + storeName + " in the original cluster " + srcClusterName);
+        System.err
+            .println("ERROR: failed to deleteAsync store " + storeName + " in the original cluster " + srcClusterName);
         return;
       }
     }

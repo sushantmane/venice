@@ -27,7 +27,7 @@ public interface IngestionBackendBase extends Closeable {
   void addIngestionNotifier(VeniceNotifier ingestionListener);
 
   /**
-   * This method stops to subscribe the specified topic partition and delete partition data from storage and it will
+   * This method stops to subscribe the specified topic partition and deleteAsync partition data from storage and it will
    * always drop empty storage engine.
    * @param storeConfig Store version config
    * @param partition Partition number to be dropped in the store version.
@@ -41,7 +41,7 @@ public interface IngestionBackendBase extends Closeable {
   }
 
   /**
-   * This method stops to subscribe the specified topic partition and delete partition data from storage.
+   * This method stops to subscribe the specified topic partition and deleteAsync partition data from storage.
    * @param storeConfig Store version config
    * @param partition Partition number to be dropped in the store version.
    * @param timeoutInSeconds Number of seconds to wait before timeout.

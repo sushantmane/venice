@@ -80,7 +80,7 @@ Note: If you change the store name from `test-store` to something else, you will
 ```
 
 
-#### Step 8: Let's update some existing records in the dataset and add few new records using incremental push
+#### Step 8: Let's updateAsync some existing records in the dataset and add few new records using incremental push
 
 ##### Print records to be updated and added to the existing dataset in the store
 ```bash

@@ -352,7 +352,7 @@ public class StoreBackendTest {
     // Simulate concurrent store deletion while subscription is pending.
     CompletableFuture subscribeResult = storeBackend.subscribe(ComplementSet.universalSet());
     storeBackend.delete();
-    // Verify that store delete aborted pending subscribe and that all versions were deleted exactly once.
+    // Verify that store deleteAsync aborted pending subscribe and that all versions were deleted exactly once.
     assertThrows(CompletionException.class, () -> subscribeResult.getNow(null));
     assertTrue(versionMap.isEmpty());
     assertEquals(FileUtils.sizeOfDirectory(baseDataPath), 0);

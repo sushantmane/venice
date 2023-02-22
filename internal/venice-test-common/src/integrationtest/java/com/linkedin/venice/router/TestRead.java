@@ -214,7 +214,7 @@ public abstract class TestRead {
           cc.updateStore(readDisabledStoreName, new UpdateStoreQueryParams().setEnableReads(false));
       if (updateStoreResponse.isError()) {
         throw new VeniceException(
-            "Failed to update store: " + readDisabledStoreName + " with error: " + updateStoreResponse.getError());
+            "Failed to updateAsync store: " + readDisabledStoreName + " with error: " + updateStoreResponse.getError());
       }
     });
 
@@ -225,7 +225,7 @@ public abstract class TestRead {
     for (int i = 0; i < 100; ++i) {
       GenericRecord record = new GenericData.Record(VALUE_SCHEMA);
       record.put(VALUE_FIELD_NAME, i);
-      veniceWriter.put(KEY_PREFIX + i, record, valueSchemaId).get();
+      veniceWriter.putSync(KEY_PREFIX + i, record, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());
@@ -237,7 +237,7 @@ public abstract class TestRead {
             TimeUnit.SECONDS,
             () -> assertEquals(cc.getStore(storeName).getStore().getCurrentVersion(), pushVersion)));
 
-    // Force router refresh metadata to reflect config update.
+    // Force router refresh metadata to reflect config updateAsync.
     veniceCluster.refreshAllRouterMetaData();
   }
 
@@ -427,7 +427,7 @@ public abstract class TestRead {
       // Bump up store-level max key count in batch-get request
       updateStore(10000L, MAX_KEY_LIMIT + 1);
 
-      // It will take some time to let Router receive the store update.
+      // It will take some time to let Router receive the store updateAsync.
       TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, () -> {
         try {
           storeClient.batchGet(keySet).get();

@@ -84,7 +84,7 @@ public class HelixReadOnlyZKSharedSystemStoreRepository extends HelixReadOnlySto
   /**
    * This function is used to filter out non system stores from the system store cluster, and
    * this is very important since {@link CachedReadOnlyStoreRepository#refresh()} is relying on
-   * this function to retrieve all the stores in this cluster and put a watch against each znode,
+   * this function to retrieve all the stores in this cluster and putAsync a watch against each znode,
    * and we need to filter out non-system stores to avoid unnecessary zk watches.
    * @return
    */

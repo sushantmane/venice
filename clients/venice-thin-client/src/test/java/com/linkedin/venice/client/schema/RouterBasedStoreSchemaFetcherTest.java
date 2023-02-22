@@ -90,7 +90,7 @@ public class RouterBasedStoreSchemaFetcherTest {
         .when(mockGetAllValueSchemaFuture)
         .get();
     Mockito.doReturn(mockGetAllValueSchemaFuture).when(mockClient).getRaw("value_schema/" + storeName);
-    // Set up mocks for update schemas
+    // Set up mocks for updateAsync schemas
     CompletableFuture<byte[]> mockGetUpdateValueSchemaFuture1 = Mockito.mock(CompletableFuture.class);
     Mockito.doReturn(OBJECT_MAPPER.writeValueAsBytes(createUpdateSchemaResponse(1, 1, valueSchemaStr1)))
         .when(mockGetUpdateValueSchemaFuture1)
@@ -102,13 +102,13 @@ public class RouterBasedStoreSchemaFetcherTest {
         .get();
     Mockito.doReturn(mockGetUpdateValueSchemaFuture2).when(mockClient).getRaw("update_schema/" + storeName + "/2");
 
-    // Fetch both update schemas.
+    // Fetch both updateAsync schemas.
     StoreSchemaFetcher storeSchemaFetcher = new RouterBasedStoreSchemaFetcher(mockClient);
     Schema updateSchema1 = storeSchemaFetcher.getUpdateSchema(Schema.parse(valueSchemaStr1));
     Schema updateSchema2 = storeSchemaFetcher.getUpdateSchema(Schema.parse(valueSchemaStr2));
     Assert.assertEquals(updateSchema1, UPDATE_SCHEMA_CONVERTER.convert(valueSchemaStr1));
     Assert.assertEquals(updateSchema2, UPDATE_SCHEMA_CONVERTER.convert(valueSchemaStr2));
-    // Each update schema fetch should call get value schemas first then get latest update schema.
+    // Each updateAsync schema fetch should call get value schemas first then get latest updateAsync schema.
     Mockito.verify(mockClient, Mockito.timeout(TIMEOUT).times(4)).getRaw(Mockito.anyString());
   }
 

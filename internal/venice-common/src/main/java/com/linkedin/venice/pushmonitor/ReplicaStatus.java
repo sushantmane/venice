@@ -86,7 +86,7 @@ public class ReplicaStatus {
   }
 
   private void addHistoricStatus(ExecutionStatus status) {
-    // Do not update status in case that replica is already in PROGRESS and target status is also PROGRESS.
+    // Do not updateAsync status in case that replica is already in PROGRESS and target status is also PROGRESS.
     // Because we don't want status history become too long due to lots of PROGRESS statuses.
     if (status.equals(PROGRESS) && !statusHistory.isEmpty()
         && statusHistory.get(statusHistory.size() - 1).getStatus().equals(PROGRESS)) {

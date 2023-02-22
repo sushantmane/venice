@@ -815,7 +815,7 @@ public class DaVinciComputeTest {
         value.put("companiesEmbedding", companiesEmbedding);
       }
       value.put("member_feature", mfEmbedding);
-      writer.put(i, value, valueSchemaId).get();
+      writer.putSync(i, value, valueSchemaId).get();
     }
     writer.broadcastEndOfPush(Collections.emptyMap());
   }
@@ -827,7 +827,7 @@ public class DaVinciComputeTest {
 
     veniceWriter.broadcastStartOfPush(Collections.emptyMap());
     for (Map.Entry<Integer, GenericRecord> keyValue: valuesByKey.entrySet()) {
-      veniceWriter.put(keyValue.getKey(), keyValue.getValue(), valueSchemaId).get();
+      veniceWriter.putSync(keyValue.getKey(), keyValue.getValue(), valueSchemaId).get();
     }
     veniceWriter.broadcastEndOfPush(Collections.emptyMap());
   }
@@ -845,7 +845,7 @@ public class DaVinciComputeTest {
       GenericRecord valueRecord = new GenericData.Record(valueSchema);
       valueRecord.put("int_field", i);
       valueRecord.put("float_field", i + 100.0f);
-      writer.put(KEY_PREFIX + i, valueRecord, valueSchemaId).get();
+      writer.putSync(KEY_PREFIX + i, valueRecord, valueSchemaId).get();
     }
 
     writer.broadcastEndOfPush(Collections.emptyMap());
@@ -884,7 +884,7 @@ public class DaVinciComputeTest {
         value.put("companiesEmbedding", companiesEmbedding);
       }
       value.put("member_feature", mfEmbedding);
-      writer.put(key, value, valueSchemaId).get();
+      writer.putSync(key, value, valueSchemaId).get();
     }
     writer.broadcastEndOfPush(Collections.emptyMap());
   }

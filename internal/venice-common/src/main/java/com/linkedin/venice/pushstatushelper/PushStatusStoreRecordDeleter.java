@@ -32,7 +32,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
     LOGGER.info("Deleting pushStatus of storeName: {}, version: {}", storeName, version);
     for (int partitionId = 0; partitionId < partitionCount; partitionId++) {
       PushStatusKey pushStatusKey = PushStatusStoreUtils.getPushKey(version, partitionId, incrementalPushVersion);
-      writer.delete(pushStatusKey, null);
+      writer.deleteAsync(pushStatusKey, null);
     }
   }
 
@@ -54,7 +54,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
         "Deleting incremental push status belonging to a partition:{}. pushStatusKey:{}",
         partitionId,
         pushStatusKey);
-    return veniceWriterCache.prepareVeniceWriter(storeName).delete(pushStatusKey, null);
+    return veniceWriterCache.prepareVeniceWriter(storeName).deleteSync(pushStatusKey, null);
   }
 
   public void removePushStatusStoreVeniceWriter(String storeName) {

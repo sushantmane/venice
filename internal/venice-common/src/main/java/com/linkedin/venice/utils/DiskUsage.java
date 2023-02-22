@@ -68,7 +68,7 @@ public class DiskUsage {
   }
 
   /**
-   * Each time you write bytes to the disk, call this method.  It will determine an appropriate frequency to update its
+   * Each time you write bytes to the disk, call this method.  It will determine an appropriate frequency to updateAsync its
    * view of the disk so this call will usually be very fast.  If the disk is beyond the threshold that was set at
    * construction then it will return true.  Otherwise it returns false.
    */

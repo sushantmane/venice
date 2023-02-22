@@ -841,7 +841,7 @@ public abstract class TestHttp2Multiplex<C extends Http2FrameCodec> {
     assertTrue(parentChannel.isWritable());
     assertFalse(childChannel.isWritable());
 
-    // Now write an window update frame for the stream which then should ensure we will flush the bytes that were
+    // Now write an window updateAsync frame for the stream which then should ensure we will flush the bytes that were
     // queued in the RemoteFlowController before for the stream.
     frameInboundWriter.writeInboundWindowUpdate(childChannel.stream().id(), (int) bytesBeforeUnwritable);
     assertTrue(childChannel.isWritable());

@@ -148,10 +148,10 @@ public abstract class AbstractStore implements Store {
        * config as well since they are referring to the same object.
        */
       // For new version, apply store level config on it.
-      // update version compression type
+      // updateAsync version compression type
       version.setCompressionStrategy(getCompressionStrategy());
 
-      // update version Helix state model
+      // updateAsync version Helix state model
       version.setLeaderFollowerModelEnabled(isLeaderFollowerModelEnabled());
 
       version.setChunkingEnabled(isChunkingEnabled());
@@ -314,9 +314,10 @@ public abstract class AbstractStore implements Store {
         }
       } else if (VersionStatus.STARTED.equals(version.getStatus()) && (i != lastElementIndex) && !isMigrating()) {
         // For the non-last started version, if it's not the current version(STARTED version should not be the current
-        // version, just prevent some edge cases here.), we should delete it only if the store is not migrating
+        // version, just prevent some edge cases here.), we should deleteAsync it only if the store is not migrating
         // as during store migration are there are concurrent pushes with STARTED version.
-        // So if the store is not migrating, it's stuck in STARTED, it means somehow the controller did not update the
+        // So if the store is not migrating, it's stuck in STARTED, it means somehow the controller did not updateAsync
+        // the
         // version status properly.
         versionsToDelete.add(version);
       }

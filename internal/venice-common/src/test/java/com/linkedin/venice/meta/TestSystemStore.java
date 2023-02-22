@@ -107,7 +107,7 @@ public class TestSystemStore {
     assertEquals(systemStore.getNativeReplicationSourceFabric(), "");
     assertFalse(systemStore.isDaVinciPushStatusStoreEnabled());
 
-    // All the shared store-level property update should throw exception
+    // All the shared store-level property updateAsync should throw exception
     assertThrows(() -> systemStore.setOwner("test"));
     assertThrows(() -> systemStore.setStorageQuotaInByte(1));
     assertThrows(() -> systemStore.setPartitionCount(1));
@@ -145,7 +145,7 @@ public class TestSystemStore {
     assertThrows(() -> systemStore.setSystemStores(null));
     assertThrows(() -> systemStore.putSystemStore(VeniceSystemStoreType.META_STORE, new SystemStoreAttributesImpl()));
 
-    // Test the non-sharable property update
+    // Test the non-sharable property updateAsync
     systemStore.setCurrentVersion(10);
     assertEquals(systemStore.getCurrentVersion(), 10);
     systemStore.setLargestUsedVersionNumber(10);

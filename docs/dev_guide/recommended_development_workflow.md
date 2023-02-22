@@ -33,7 +33,7 @@ The GitHub issue should contain the detailed problem statement.
 8. Please state that the contribution is your original work and that you license the work to the project under the project's open source license.
 9. If this PR resolves an issue be sure to include `Resolves #XXX` to correctly link and close the issue upon merge.
 10. The project uses Apache Jenkins for continuous testing on Linux AMD64 and ARM64 build nodes. A CI job will not be started automatically for pull request. A maintainer has to trigger the testing. Feel free to tag a maintainer and ask for a build trigger.
-11. Once ready, a maintainer will update the PR with the test results.
+11. Once ready, a maintainer will updateAsync the PR with the test results.
 12. Investigate and fix failures caused by the pull the request
 13. Fixes can simply be pushed to the same branch from which you opened your pull request.
 14. Please address feedback via additional commits instead of amending existing commits. This makes it easier for the reviewers to know what has changed since the last review. All commits will be squashed into a single one by the committer via GitHub's squash button or by a script as part of the merge process.

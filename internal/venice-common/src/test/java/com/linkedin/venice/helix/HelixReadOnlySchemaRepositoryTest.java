@@ -117,7 +117,7 @@ public class HelixReadOnlySchemaRepositoryTest {
     when(schemaRepository.getSchemaMap()).thenReturn(schemaDataMap);
     verify(schemaRepository, times(3)).forceRefreshSchemaData(any(), any());
 
-    // A force refresh should update the schemas.
+    // A force refresh should updateAsync the schemas.
     when(store.getLatestSuperSetValueSchemaId()).thenReturn(1);
     Assert.assertTrue(schemaRepository.getSupersetSchema(storeName) != null);
     Assert.assertEquals(schemaRepository.getSupersetSchema(storeName).getSchema(), VALUE_SCHEMA);

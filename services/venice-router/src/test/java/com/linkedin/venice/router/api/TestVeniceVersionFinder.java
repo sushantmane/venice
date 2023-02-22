@@ -205,7 +205,7 @@ public class TestVeniceVersionFinder {
     store.setCurrentVersion(secondVersion);
     Assert.assertEquals(versionFinder.getVersion(storeName, request), firstVersion);
 
-    // When we retire an old version, we update to the new version anyways
+    // When we retire an old version, we updateAsync to the new version anyways
     store.addVersion(new VersionImpl(storeName, thirdVersion));
     store.updateVersionStatus(thirdVersion, VersionStatus.ONLINE);
     store.setCurrentVersion(thirdVersion);

@@ -59,7 +59,7 @@ public class KafkaDataIntegrityValidator {
   }
 
   /**
-   * For a given partition, find all the producers that has written to this partition and update the offsetRecord using
+   * For a given partition, find all the producers that has written to this partition and updateAsync the offsetRecord using
    * segment information.
    * @param partition
    * @param offsetRecord

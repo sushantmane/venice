@@ -461,7 +461,7 @@ public class TestPushJobWithNativeReplication {
                 parentControllerClient,
                 new UpdateStoreQueryParams().setLeaderFollowerModel(true).setNativeReplicationEnabled(true));
 
-            // verify the update store command has taken effect before starting the push job.
+            // verify the updateAsync store command has taken effect before starting the push job.
             NativeReplicationTestUtils
                 .verifyDCConfigNativeRepl(Arrays.asList(dc0Client, dc1Client), VPJ_HEARTBEAT_STORE_NAME, true);
           }
@@ -754,7 +754,7 @@ public class TestPushJobWithNativeReplication {
                     newRePushVersion);
               });
               for (int i = 1; i <= 10; i++) {
-                finalIncPushToRTWriter.put(Integer.toString(i), incValuePrefix + i, 1);
+                finalIncPushToRTWriter.putAsync(Integer.toString(i), incValuePrefix + i, 1);
               }
               finalIncPushToRTWriter.broadcastEndOfIncrementalPush(incPushToRTVersion, new HashMap<>());
             });
@@ -906,7 +906,7 @@ public class TestPushJobWithNativeReplication {
                   .get(clusterName)
                   .useControllerClient(
                       dc1Client -> TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
-                        // verify the update store command has taken effect before starting the push job.
+                        // verify the updateAsync store command has taken effect before starting the push job.
                         Assert.assertEquals(
                             dc0Client.getStore(storeName).getStore().getStorageQuotaInByte(),
                             Store.UNLIMITED_STORAGE_QUOTA);

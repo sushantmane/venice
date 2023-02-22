@@ -63,12 +63,13 @@ public class AdminConsumptionTaskIntegrationTest {
           VeniceWriter<byte[], byte[], byte[]> writer =
               TestUtils.getVeniceWriterFactory(kafka.getAddress()).createBasicVeniceWriter(adminTopic)) {
         byte[] message = getStoreCreationMessage(clusterName, storeName, owner, "invalid_key_schema", valueSchema, 1);
-        long badOffset = writer.put(new byte[0], message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
-            .get()
-            .getOffset();
+        long badOffset =
+            writer.putSync(new byte[0], message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                .get()
+                .getOffset();
 
         byte[] goodMessage = getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 2);
-        writer.put(new byte[0], goodMessage, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        writer.putAsync(new byte[0], goodMessage, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
 
         Thread.sleep(5000); // Non-deterministic, but whatever. This should never fail.
         Assert.assertFalse(controller.getVeniceAdmin().hasStore(clusterName, storeName));

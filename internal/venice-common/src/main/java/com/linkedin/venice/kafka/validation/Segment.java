@@ -53,7 +53,7 @@ public class Segment {
   private boolean ended;
   private boolean finalSegment;
   /**
-   * Set this field to true when building a new segment for an incoming message, and update this flag to false immediately
+   * Set this field to true when building a new segment for an incoming message, and updateAsync this flag to false immediately
    * after checking incoming message's sequence number.
    */
   private boolean newSegment;

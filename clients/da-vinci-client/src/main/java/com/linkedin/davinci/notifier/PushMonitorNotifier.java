@@ -22,7 +22,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Notifier used to update replica status by offline push monitor accessor.
+ * Notifier used to updateAsync replica status by offline push monitor accessor.
  */
 public class PushMonitorNotifier implements VeniceNotifier {
   private static final Logger LOGGER = LogManager.getLogger(PushMonitorNotifier.class);

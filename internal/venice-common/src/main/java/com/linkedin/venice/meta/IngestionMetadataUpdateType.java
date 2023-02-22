@@ -32,7 +32,7 @@ public enum IngestionMetadataUpdateType {
   public static IngestionMetadataUpdateType valueOf(int value) {
     IngestionMetadataUpdateType type = INGESTION_METADATA_UPDATE_TYPE_MAP.get(value);
     if (type == null) {
-      throw new VeniceMessageException("Invalid ingestion metadata update type: " + value);
+      throw new VeniceMessageException("Invalid ingestion metadata updateAsync type: " + value);
     }
     return type;
   }

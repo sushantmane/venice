@@ -127,7 +127,7 @@ public class HelixCustomizedViewOfflinePushRepository extends HelixBaseRoutingRe
           LOGGER.info("Ideal state of cluster: " + manager.getClusterName() + " is updated from zk");
         } catch (HelixMetaDataAccessException e) {
           LOGGER.error(
-              "Failed to update the ideal state of cluster: {}. Because we could not access to zk.",
+              "Failed to updateAsync the ideal state of cluster: {}. Because we could not access to zk.",
               manager.getClusterName(),
               e);
           return;
@@ -139,7 +139,7 @@ public class HelixCustomizedViewOfflinePushRepository extends HelixBaseRoutingRe
         if (!resourceToPartitionCountMapSnapshot.containsKey(resourceName)) {
           LOGGER.warn(
               "Could not find resource: {} in ideal state. Ideal state is up to date, so the resource has been"
-                  + " deleted from ideal state or could not read from zk. Ignore its customized view update.",
+                  + " deleted from ideal state or could not read from zk. Ignore its customized view updateAsync.",
               resourceName);
           continue;
         }

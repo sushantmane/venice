@@ -70,7 +70,7 @@ public class VenicePathParser<HTTP_REQUEST extends BasicHttpRequest>
   // Right now, we hardcoded url path for getting leader controller to be same as the one
   // being used in Venice Controller, so that ControllerClient can use the same API to get
   // leader controller without knowing whether the host is Router or Controller.
-  // Without good reason, please don't update this path.
+  // Without good reason, please don't updateAsync this path.
   public static final String TYPE_LEADER_CONTROLLER = ControllerRoute.LEADER_CONTROLLER.getPath().replace("/", "");
   @Deprecated
   public static final String TYPE_LEADER_CONTROLLER_LEGACY =

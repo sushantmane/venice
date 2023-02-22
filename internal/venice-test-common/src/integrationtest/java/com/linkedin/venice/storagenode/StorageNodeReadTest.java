@@ -322,7 +322,7 @@ public class StorageNodeReadTest {
         response = sendHeartbeatRequest(client, testServerAddr);
         Assert.assertEquals(response.getStatusLine().getStatusCode(), 200);
 
-        // delete the db path
+        // deleteAsync the db path
         FileUtils.deleteDirectory(serverWrapper.getDataDirectory());
 
         Thread.sleep(TimeUnit.SECONDS.toMillis(5));
@@ -362,7 +362,7 @@ public class StorageNodeReadTest {
     // Insert test record and wait synchronously for it to succeed
     Future[] writerFutures = new Future[numOfRecords];
     for (int i = 0; i < numOfRecords; i++) {
-      writerFutures[i] = veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId);
+      writerFutures[i] = veniceWriter.putSync(keyPrefix + i, valuePrefix + i, valueSchemaId);
     }
     for (int i = 0; i < numOfRecords; i++) {
       writerFutures[i].get();

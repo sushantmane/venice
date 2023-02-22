@@ -154,7 +154,7 @@ public class ReplicaStatusTest {
   @Test
   public void testCurrentIncPushVersionStatusGotSaved() {
     ReplicaStatus replicaStatus = new ReplicaStatus(instanceId);
-    // update (max length + 1) statuses to the replica status history
+    // updateAsync (max length + 1) statuses to the replica status history
     replicaStatus.updateStatus(STARTED);
     for (int i = 0; i < ReplicaStatus.MAX_HISTORY_LENGTH; i++) {
       replicaStatus.updateStatus(START_OF_INCREMENTAL_PUSH_RECEIVED, "testInc1");

@@ -239,7 +239,7 @@ public class TestMetrics {
     String actual = Metrics.toJson(metrics);
 
     // We cannot compare the "actual" and "expected" strings directly, because serialization may
-    // reorder elements (for example, it may put "host" after "uri"). Instead, we deserialized both
+    // reorder elements (for example, it may putAsync "host" after "uri"). Instead, we deserialized both
     // the expected and actual to a raw Map, and then compare the contents of the maps.
     ObjectMapper objectMapper = SimpleJsonMapper.getObjectMapper();
     Map<String, Object> expectedMap = objectMapper.readValue(expected, new TypeReference<Map<String, Object>>() {
@@ -258,7 +258,7 @@ public class TestMetrics {
   /**
    * Tests the workflow that will be typical in a client-server interaction. Specifically, the
    * server returns a serialized EspressoResponseMetrics with metrics but no host, URI, or client
-   * side latency. The client must deserialize the metrics, then update these fields.
+   * side latency. The client must deserialize the metrics, then updateAsync these fields.
    */
   @Test(groups = "unit")
   public void testWorkflow() throws IOException {
@@ -279,7 +279,7 @@ public class TestMetrics {
     String actual = Metrics.toJson(routerMetrics);
 
     // We cannot compare the "actual" and "expected" strings directly, because serialization may
-    // reorder elements (for example, it may put "host" after "uri"). Instead, we deserialized both
+    // reorder elements (for example, it may putAsync "host" after "uri"). Instead, we deserialized both
     // the expected and actual to a raw Map, and then compare the contents of the maps.
     ObjectMapper objectMapper = SimpleJsonMapper.getObjectMapper();
     Map<String, Object> expectedMap = objectMapper.readValue(expected, new TypeReference<Map<String, Object>>() {

@@ -247,7 +247,7 @@ public class ReadRequestThrottlerTest {
     Assert.assertEquals(
         throttler.getStoreReadThrottler("testOnStoreCreatedAndDeleted").getQuota(),
         extraQuota / routerCount);
-    // Mock delete the new store.
+    // Mock deleteAsync the new store.
     Mockito.doReturn(Arrays.asList(store)).when(storeRepository).getAllStores();
     Mockito.doReturn(totalQuota).when(storeRepository).getTotalStoreReadQuota();
     throttler.handleStoreDeleted(newStore.getName());

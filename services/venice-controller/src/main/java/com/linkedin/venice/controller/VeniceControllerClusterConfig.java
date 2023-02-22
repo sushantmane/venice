@@ -322,7 +322,8 @@ public class VeniceControllerClusterConfig {
     kafkaBootstrapServers = props.getString(KAFKA_BOOTSTRAP_SERVERS);
     partitionSize = props.getSizeInBytes(DEFAULT_PARTITION_SIZE);
     maxNumberOfPartition = props.getInt(DEFAULT_MAX_NUMBER_OF_PARTITIONS);
-    // If the timeout is longer than 3min, we need to update controller client's timeout as well, otherwise creating
+    // If the timeout is longer than 3min, we need to updateAsync controller client's timeout as well, otherwise
+    // creating
     // version would fail.
     offLineJobWaitTimeInMilliseconds = props.getLong(OFFLINE_JOB_START_TIMEOUT_MS, 120000);
     // By default, delayed rebalance is disabled.

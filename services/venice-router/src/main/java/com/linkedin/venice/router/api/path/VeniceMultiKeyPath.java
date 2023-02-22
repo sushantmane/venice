@@ -190,8 +190,8 @@ public abstract class VeniceMultiKeyPath<K> extends VenicePath {
        * if (!routerKeyMap.containsKey(key)) {
        *   ... ...
        * }
-       * newRouterKeyMap.put(key, routerKeyMap.get(key));
-       * newKeyIdxToRouterKey.put(routerKeyMap.get(key).keyIndex, key);
+       * newRouterKeyMap.putAsync(key, routerKeyMap.get(key));
+       * newKeyIdxToRouterKey.putAsync(routerKeyMap.get(key).keyIndex, key);
        *
        * Since this way will save two unnecessary Map lookups.
        * This could make a big difference considering large batch-get user cases.

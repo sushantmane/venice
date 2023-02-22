@@ -63,7 +63,7 @@ public class HelixReadOnlyStoreRepository extends CachedReadOnlyStoreRepository 
         // 1. Put store in read repo.
         // 2. Store updated in read write repo.
         // 3. Subscribe to data change in read repo.
-        // Updates in step 2 will not be reflected until the next update.
+        // Updates in step 2 will not be reflected until the next updateAsync.
         refreshOneStore(newStore.getName());
       }
       return oldStore;
@@ -90,8 +90,8 @@ public class HelixReadOnlyStoreRepository extends CachedReadOnlyStoreRepository 
 
   /**
    * {@link HelixReadOnlyZKSharedSystemStoreRepository} is overriding this function to filter out
-   * stores, which are not necessary to put a watch against, and if this logic to monitor the zk
-   * store repository gets changed in the future, we need to update {@link HelixReadOnlyZKSharedSystemStoreRepository}
+   * stores, which are not necessary to putAsync a watch against, and if this logic to monitor the zk
+   * store repository gets changed in the future, we need to updateAsync {@link HelixReadOnlyZKSharedSystemStoreRepository}
    * accordingly.
    * @param newZkStoreNames
    */

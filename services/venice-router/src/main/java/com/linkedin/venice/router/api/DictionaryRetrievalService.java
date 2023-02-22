@@ -44,7 +44,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * DictionaryRetrievalService runs in a producer-consumer pattern. A thread is created which waits for items to be put
+ * DictionaryRetrievalService runs in a producer-consumer pattern. A thread is created which waits for items to be putAsync
  * in a shared BlockingQueue.
  * There are 2 producers for the store versions to download dictionaries for.
  *  1) Store metadata changed ZK listener.
@@ -67,7 +67,7 @@ public class DictionaryRetrievalService extends AbstractVeniceService {
   private final StorageNodeClient storageNodeClient;
   private final CompressorFactory compressorFactory;
 
-  // Shared queue between producer and consumer where topics whose dictionaries have to be downloaded are put in.
+  // Shared queue between producer and consumer where topics whose dictionaries have to be downloaded are putAsync in.
   private final BlockingQueue<String> dictionaryDownloadCandidates = new LinkedBlockingQueue<>();
 
   // This map is used as a collection of futures that were created to download dictionaries for each store version.
@@ -116,7 +116,7 @@ public class DictionaryRetrievalService extends AbstractVeniceService {
               .map(Version::kafkaTopicName)
               .collect(Collectors.toList()));
 
-      // For versions that went into non ONLINE states, delete dictionary.
+      // For versions that went into non ONLINE states, deleteAsync dictionary.
       versions.stream()
           .filter(
               version -> version.getCompressionStrategy() == CompressionStrategy.ZSTD_WITH_DICT
@@ -124,7 +124,7 @@ public class DictionaryRetrievalService extends AbstractVeniceService {
           .forEach(
               version -> handleVersionRetirement(version.kafkaTopicName(), "Version status " + version.getStatus()));
 
-      // For versions that have been retired, delete dictionary.
+      // For versions that have been retired, deleteAsync dictionary.
       downloadingDictionaryFutures.keySet()
           .stream()
           .filter(topic -> Version.parseStoreFromKafkaTopicName(topic).equals(store.getName())) // Those topics which
@@ -161,7 +161,7 @@ public class DictionaryRetrievalService extends AbstractVeniceService {
 
     executor = Executors.newScheduledThreadPool(routerConfig.getRouterDictionaryProcessingThreads());
 
-    // This thread is the consumer and it waits for an item to be put in the "dictionaryDownloadCandidates" queue.
+    // This thread is the consumer and it waits for an item to be putAsync in the "dictionaryDownloadCandidates" queue.
     Runnable runnable = () -> {
       while (true) {
         String kafkaTopic;

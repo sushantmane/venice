@@ -44,7 +44,7 @@ public abstract class CheckSum {
 
   /**
    * Update the checksum buffer to include input with startIndex and length.
-   * Following calls to multiple 'update's you need to call 'getCheckSum'
+   * Following calls to multiple 'updateAsync's you need to call 'getCheckSum'
    * which will reset the buffer as well.
    */
   public void update(byte[] input, int startIndex, int length) {

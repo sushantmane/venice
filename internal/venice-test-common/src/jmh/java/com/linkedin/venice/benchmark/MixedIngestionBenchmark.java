@@ -94,7 +94,7 @@ public class MixedIngestionBenchmark {
       veniceWriter.broadcastStartOfPush(new HashMap<>());
       Map<String, String> records = generateInput(500000, true, 0);
       for (Map.Entry<String, String> entry: records.entrySet()) {
-        veniceWriter.put(entry.getKey(), entry.getValue(), 1);
+        veniceWriter.putAsync(entry.getKey(), entry.getValue(), 1);
       }
       veniceWriter.broadcastEndOfPush(new HashMap<>());
     }

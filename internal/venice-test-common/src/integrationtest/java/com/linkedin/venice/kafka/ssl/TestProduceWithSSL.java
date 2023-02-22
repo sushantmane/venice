@@ -76,7 +76,7 @@ public class TestProduceWithSSL {
     String testKey = "key";
     String testVal = "value";
     writer.broadcastStartOfPush(new HashMap<>());
-    writer.put(testKey, testVal, 1);
+    writer.putAsync(testKey, testVal, 1);
     writer.broadcastEndOfPush(new HashMap<>());
 
     // Wait for storage node to finish consuming, and new version to be activated
@@ -136,7 +136,7 @@ public class TestProduceWithSSL {
           KafkaInputRecordReader.KIF_RECORD_READER_KAFKA_CONFIG_PREFIX + "send.buffer.bytes",
           Integer.toString(4 * 1024 * 1024));
 
-      // put cert into hadoop user credentials.
+      // putAsync cert into hadoop user credentials.
       Properties sslProps = KafkaSSLUtils.getLocalCommonKafkaSSLConfig();
       byte[] keyStoreCert = readFile(sslProps.getProperty(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG));
       byte[] trustStoreCert = readFile(sslProps.getProperty(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG));

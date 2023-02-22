@@ -154,7 +154,7 @@ public class TestStreaming {
       }
 
       byte[] value = compressor.compress(valueSerializer.serialize("", valueRecord));
-      veniceWriter.put(KEY_PREFIX + i, value, valueSchemaId).get();
+      veniceWriter.putSync(KEY_PREFIX + i, value, valueSchemaId).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

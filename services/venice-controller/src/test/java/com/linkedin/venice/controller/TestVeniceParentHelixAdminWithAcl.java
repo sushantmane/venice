@@ -74,7 +74,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .putAsync(any(), any(), anyInt());
 
     String keySchemaStr = "\"string\"";
     String valueSchemaStr = "\"string\"";
@@ -100,7 +100,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .putAsync(any(), any(), anyInt());
 
     String keySchemaStr = "\"string\"";
     String valueSchemaStr = "\"string\"";
@@ -115,7 +115,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
   @Test
   public void testDeleteStoreWithAuthorization() {
-    String storeName = "test-store-authorizer-delete";
+    String storeName = "test-store-authorizer-deleteAsync";
     String owner = "unittest";
     Store store = TestUtils.createTestStore(storeName, owner, System.currentTimeMillis());
     doReturn(store).when(internalAdmin).getStore(eq(clusterName), eq(storeName));
@@ -123,7 +123,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .putAsync(any(), any(), anyInt());
 
     when(zkClient.readData(zkMetadataNodePath, null)).thenReturn(null)
         .thenReturn(AdminTopicMetadataAccessor.generateMetadataMap(1, -1, 1));
@@ -136,7 +136,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
   }
 
   /**
-   * This tests if updateAcl() is able to update the ACl rules for a store and deleteAcl is able to delete it.
+   * This tests if updateAcl() is able to updateAsync the ACl rules for a store and deleteAcl is able to deleteAsync it.
    */
   @Test
   public void testUpdateAndGetAndDeleteAcl() {

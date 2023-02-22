@@ -65,7 +65,7 @@ public class TestAdminToolEndToEnd {
         liveClusterConfigRepository.getConfigs().getServerKafkaFetchQuotaRecordsPerSecondForRegion(regionName),
         kafkaFetchQuota);
 
-    String[] adminToolArgs = { "--update-cluster-config", "--url",
+    String[] adminToolArgs = { "--updateAsync-cluster-config", "--url",
         venice.getLeaderVeniceController().getControllerUrl(), "--cluster", clusterName, "--fabric", regionName,
         "--" + Arg.SERVER_KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND.getArgName(), String.valueOf(kafkaFetchQuota) };
     AdminTool.main(adminToolArgs);
@@ -79,7 +79,7 @@ public class TestAdminToolEndToEnd {
     });
 
     String[] disallowStoreMigrationArg =
-        { "--update-cluster-config", "--url", venice.getLeaderVeniceController().getControllerUrl(), "--cluster",
+        { "--updateAsync-cluster-config", "--url", venice.getLeaderVeniceController().getControllerUrl(), "--cluster",
             clusterName, "--" + Arg.ALLOW_STORE_MIGRATION.getArgName(), String.valueOf(false) };
     AdminTool.main(disallowStoreMigrationArg);
 

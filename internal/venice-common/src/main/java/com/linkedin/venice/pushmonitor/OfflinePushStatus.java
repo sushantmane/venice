@@ -358,7 +358,7 @@ public class OfflinePushStatus {
     // Status history is append-only. So here we don't need to deep copy each object in this list. Simply copy the list
     // itself is able to avoid affecting the object while updating the cloned one.
     clonePushStatus.setStatusHistory(new ArrayList<>(statusHistory));
-    // As same as status history, there is no way update properties inside Partition status object. So only
+    // As same as status history, there is no way updateAsync properties inside Partition status object. So only
     // copy list is enough here.
     clonePushStatus.setPartitionStatuses(new ArrayList<>(partitionIdToStatus.values()));
     clonePushStatus.setPushProperties(new HashMap<>(pushProperties));

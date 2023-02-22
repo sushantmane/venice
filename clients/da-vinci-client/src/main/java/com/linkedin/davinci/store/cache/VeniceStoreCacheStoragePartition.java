@@ -59,7 +59,7 @@ public class VeniceStoreCacheStoragePartition extends AbstractStoragePartition {
 
   @Override
   public void put(byte[] key, ByteBuffer value) {
-    // This is the method called by the store ingestion task. If the update policy is to purge, purge.
+    // This is the method called by the store ingestion task. If the updateAsync policy is to purge, purge.
     // If in the future we want to store the data, store it. Anything that wants to guarantee
     // that something is stored irregardless should call the putDeserializedValue method.
 

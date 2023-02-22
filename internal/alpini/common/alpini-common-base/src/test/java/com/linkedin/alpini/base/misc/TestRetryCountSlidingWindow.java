@@ -24,7 +24,7 @@ public class TestRetryCountSlidingWindow {
   private final int _ioWorkersCount = 64;
   private final double _error = 0.005;
   private final int _ioWorkerUpdateIntervalMs = 20;
-  // Each ioWorker would put 1000 requests in every 20 ms == 100 * (1000/20) = 5K/s for one ioWorker.
+  // Each ioWorker would putAsync 1000 requests in every 20 ms == 100 * (1000/20) = 5K/s for one ioWorker.
   // The total QPS would be 5 K * 64 = 320,000 /s.
   final int _totalCount = 100;
   final int _initRetryCut = 20;

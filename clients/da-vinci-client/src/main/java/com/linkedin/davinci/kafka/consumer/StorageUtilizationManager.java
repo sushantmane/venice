@@ -273,7 +273,7 @@ public class StorageUtilizationManager implements StoreDataChangedListener {
        *
        * TODO: Do a force-refresh of store metadata to get latest state before kill the job
        * We might have potential race condition: The store version is updated to be ONLINE and become CURRENT in Controller,
-       * but the notification to storage node gets delayed, the quota exceeding issue will put this partition of current version to be ERROR,
+       * but the notification to storage node gets delayed, the quota exceeding issue will putAsync this partition of current version to be ERROR,
        * which will break the production.
        */
       pausePartition(partition, consumingTopic);

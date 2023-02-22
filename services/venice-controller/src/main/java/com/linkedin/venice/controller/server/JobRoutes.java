@@ -93,7 +93,7 @@ public class JobRoutes extends AbstractRoute {
     /**
      * Job status
      * Job status query should happen after 'querying offset' since job status query could
-     * delete current topic
+     * deleteAsync current topic
      */
     Admin.OfflinePushStatusInfo offlineJobStatus =
         admin.getOffLinePushStatus(cluster, kafkaTopicName, incrementalPushVersion);

@@ -223,7 +223,7 @@ public class TestDelayedRebalance {
 
     try (VeniceWriter<String, String, byte[]> veniceWriter = cluster.getVeniceWriter(topicName)) {
       veniceWriter.broadcastStartOfPush(new HashMap<>());
-      veniceWriter.put("test", "test", 1);
+      veniceWriter.putAsync("test", "test", 1);
       veniceWriter.broadcastEndOfPush(new HashMap<>());
     }
 

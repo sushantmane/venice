@@ -138,7 +138,7 @@ public class TestWriteComputeProcessor {
     Schema noOpSchema = recordWriteComputeSchema.getField("hits").schema().getTypes().get(0);
     GenericData.Record noOpRecord = new GenericData.Record(noOpSchema);
 
-    // update "hasNext" to false
+    // updateAsync "hasNext" to false
     GenericData.Record recordUpdateRecord = new GenericData.Record(recordWriteComputeSchema);
     recordUpdateRecord.put("hits", noOpRecord);
     recordUpdateRecord.put("hasNext", true);
@@ -194,7 +194,7 @@ public class TestWriteComputeProcessor {
     Assert.assertNull(result.get("nullableArray"));
     Assert.assertEquals(result.get("intField"), 0);
 
-    // use a array operation to update the nullable field
+    // use a array operation to updateAsync the nullable field
     GenericData.Record listOpsRecord =
         new GenericData.Record(writeComputeSchema.getField("nullableArray").schema().getTypes().get(2));
     listOpsRecord.put(SET_UNION, Arrays.asList(1, 2));

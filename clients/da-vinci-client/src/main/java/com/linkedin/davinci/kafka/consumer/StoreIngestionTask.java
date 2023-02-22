@@ -296,7 +296,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected boolean isDataRecovery;
   protected final MetaStoreWriter metaStoreWriter;
   protected final Function<String, String> kafkaClusterUrlResolver;
-  /** TODO Get rid of this map once we delete the dedicated consumer mode */
+  /** TODO Get rid of this map once we deleteAsync the dedicated consumer mode */
   private final Object2IntMap<String> kafkaClusterUrlToIdMap;
   protected final boolean readOnlyForBatchOnlyStoreEnabled;
   protected final CompressionStrategy compressionStrategy;
@@ -967,7 +967,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         case DUPLICATE_MESSAGE:
           /**
            * DuplicatedDataException can be thrown when leader is consuming from RT and is running DIV check on the message
-           * before producing it to VT. Still record the time spent on trying to produce to Kafka, but should not update
+           * before producing it to VT. Still record the time spent on trying to produce to Kafka, but should not updateAsync
            * the counter for records that have been produced to Kafka
            */
           elapsedTimeForProducingToKafka += LatencyUtils.getLatencyInMS(kafkaProduceStartTimeInNS);
@@ -1281,7 +1281,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
      * Completed partitions will remain ONLINE without a backing ingestion task. If the partition belongs to a hybrid
      * store then it will remain stale until the host is restarted. This is because both the auto reset task and Helix
      * controller doesn't think there is a problem with the replica since it's COMPLETED and ONLINE. Stale replicas is
-     * better than dropping availability and that's why we do not put COMPLETED replicas to ERROR state immediately.
+     * better than dropping availability and that's why we do not putAsync COMPLETED replicas to ERROR state immediately.
      */
     partitionIngestionExceptionList.forEach(ep -> {
       if (ep != null && ep.isReplicaCompleted()) {
@@ -1669,8 +1669,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
               "This shouldn't happen since unsubscription should happen before reset offset for: {}",
               topicPartition);
           /*
-           * Only update the consumer and partitionConsumptionStateMap when consumer actually has
-           * subscription to this topic/partition; otherwise, we would blindly update the StateMap
+           * Only updateAsync the consumer and partitionConsumptionStateMap when consumer actually has
+           * subscription to this topic/partition; otherwise, we would blindly updateAsync the StateMap
            * and mess up other operations on the StateMap.
            */
           try {
@@ -1829,7 +1829,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
       // Report such kind of message once per minute to reduce logging volume
       /*
-       * TODO: right now, if we update a store to enable hybrid, {@link StoreIngestionTask} for the existing versions
+       * TODO: right now, if we updateAsync a store to enable hybrid, {@link StoreIngestionTask} for the existing versions
        * won't know it since {@link #hybridStoreConfig} parameter is passed during construction.
        *
        * So far, to make hybrid store/incremental store work, customer needs to do a new push after enabling hybrid/
@@ -1875,7 +1875,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     }
 
     if (this.suppressLiveUpdates && partitionConsumptionState.isCompletionReported()) {
-      String msg = "Skipping message as live update suppression is enabled and store: " + kafkaVersionTopic
+      String msg = "Skipping message as live updateAsync suppression is enabled and store: " + kafkaVersionTopic
           + " partition " + partitionId + " is already ready to serve, these are buffered records in the queue.";
       if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
         LOGGER.info(msg);
@@ -1979,7 +1979,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     hostLevelIngestionStats.recordTotalRecordsConsumed();
 
     /*
-     * Also update this stats separately for Leader and Follower.
+     * Also updateAsync this stats separately for Leader and Follower.
      */
     recordProcessedRecordStats(partitionConsumptionState, recordSize);
 
@@ -1996,7 +1996,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     /**
      * Syncing offset checking in syncOffset() should be the very last step for processing a record.
      *
-     * Check whether offset metadata checkpoint will happen; if so, update the producer states recorded in OffsetRecord
+     * Check whether offset metadata checkpoint will happen; if so, updateAsync the producer states recorded in OffsetRecord
      * with the updated producer states maintained in {@link #kafkaDataIntegrityValidator}
      */
     boolean syncOffset =
@@ -2013,7 +2013,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
        * the intermediate checksum generation is an expensive operation.
        */
       this.kafkaDataIntegrityValidator.updateOffsetRecordForPartition(subPartition, offsetRecord);
-      // update the offset metadata in the OffsetRecord
+      // updateAsync the offset metadata in the OffsetRecord
       updateOffsetMetadataInOffsetRecord(partitionConsumptionState);
       syncOffset(kafkaVersionTopic, partitionConsumptionState);
     }
@@ -2409,7 +2409,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
   /**
    * Maintain the latest processed offsets by drainers in memory; in most of the time, these offsets are ahead of the
-   * checkpoint offsets inside {@link OffsetRecord}. Prior to update the offset in memory, the underlying storage engine
+   * checkpoint offsets inside {@link OffsetRecord}. Prior to updateAsync the offset in memory, the underlying storage engine
    * should have persisted the given record.
    */
   protected abstract void updateLatestInMemoryProcessedOffset(
@@ -2522,16 +2522,16 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         return 0;
       }
 
-      /** N.B.: In either branches of the if, above, we don't want to update the {@link OffsetRecord} */
+      /** N.B.: In either branches of the if, above, we don't want to updateAsync the {@link OffsetRecord} */
     }
 
-    // We want to update offsets in all cases, except when we hit the PersistenceFailureException
+    // We want to updateAsync offsets in all cases, except when we hit the PersistenceFailureException
     if (partitionConsumptionState == null) {
-      LOGGER.info("{} has been unsubscribed, will skip offset update", consumerRecord.getTopicPartition());
+      LOGGER.info("{} has been unsubscribed, will skip offset updateAsync", consumerRecord.getTopicPartition());
     } else {
       OffsetRecord offsetRecord = partitionConsumptionState.getOffsetRecord();
       /**
-       * Only update the latest message timestamp when seeing data messages after EOP; the data messages after EOP
+       * Only updateAsync the latest message timestamp when seeing data messages after EOP; the data messages after EOP
        * should come from real-time topics.
        */
       if (partitionConsumptionState.isEndOfPushReceived() && !kafkaKey.isControlMessage()) {
@@ -2614,7 +2614,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
       if (!(warningException instanceof ImproperlyStartedSegmentException)) {
         /**
-         * Run a dummy validation to update DIV metadata.
+         * Run a dummy validation to updateAsync DIV metadata.
          */
         validator.validateMessage(consumerRecord, endOfPushReceived, true);
       }
@@ -2646,7 +2646,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     ByteBuffer putValue = put.putValue;
 
     if ((putValue.remaining() == 0) && (put.replicationMetadataPayload.remaining() > 0)) {
-      // For RMD chunk, it is already prepended with the schema ID, so we will just put to storage engine.
+      // For RMD chunk, it is already prepended with the schema ID, so we will just putAsync to storage engine.
       writeToStorageEngine(partition, keyBytes, put);
     } else if (putValue.position() < ValueRecord.SCHEMA_HEADER_LENGTH) {
       throw new VeniceException(
@@ -2822,7 +2822,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         }
         valueLen = put.putValue.remaining();
         keyLen = keyBytes.length;
-        // update checksum for this PUT message if needed.
+        // updateAsync checksum for this PUT message if needed.
         partitionConsumptionState.maybeUpdateExpectedChecksum(keyBytes, put);
         prependHeaderAndWriteToStorageEngine(
             // Leaders might consume from a RT topic and immediately write into StorageEngine,
@@ -2891,9 +2891,10 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           leaderProducedRecordContext.getConsumedOffset(),
           kafkaKey.getKey());
       if (transientRecord != null) {
-        // This is perfectly fine, logging to see how often it happens where we get multiple put/update/delete for same
+        // This is perfectly fine, logging to see how often it happens where we get multiple
+        // putAsync/updateAsync/deleteAsync for same
         // key in quick succession.
-        String msg = consumerTaskId + ": multiple put,update,delete for same key received from: "
+        String msg = consumerTaskId + ": multiple putAsync,updateAsync,deleteAsync for same key received from: "
             + consumerRecord.getTopicPartition();
         if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
           LOGGER.info(msg);
@@ -3023,7 +3024,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       if (schemaExists) {
         LOGGER.info("Found new value schema [{}] for {} after {} ms", schemaId, storeName, elapsedTime);
         availableSchemaIds.set(schemaId, new Object());
-        // TODO: Query metastore for existence of value schema id before doing an update. During bounce of large
+        // TODO: Query metastore for existence of value schema id before doing an updateAsync. During bounce of large
         // cluster these metastore writes could be spiky
         if (metaStoreWriter != null && !VeniceSystemStoreType.META_STORE.isSystemStore(storeName)) {
           String metaStoreName = VeniceSystemStoreType.META_STORE.getSystemStoreName(storeName);
@@ -3212,8 +3213,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           if (suppressLiveUpdates) {
             // If live updates suppression is enabled, stop consuming any new messages once the partition is ready to
             // serve.
-            String msg =
-                consumerTaskId + " Live update suppression is enabled. Stop consumption for partition " + partition;
+            String msg = consumerTaskId + " Live updateAsync suppression is enabled. Stop consumption for partition "
+                + partition;
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
               LOGGER.info(msg);
             }
@@ -3358,7 +3359,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
      */
     PRODUCED_TO_KAFKA,
     /**
-     * The consumer record has been put into drainer queue; the following cases will result in putting to drainer directly:
+     * The consumer record has been putAsync into drainer queue; the following cases will result in putting to drainer directly:
      * 1. Online/Offline ingestion task
      * 2. Follower replicas
      * 3. Leader is consuming from local version topics
@@ -3430,7 +3431,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   }
 
   /**
-   * Validate if the given consumerRecord has a valid upstream offset to update from.
+   * Validate if the given consumerRecord has a valid upstream offset to updateAsync from.
    * @param consumerRecord
    * @return true, if the record is not null and contains a valid upstream offset, otherwise false.
    */

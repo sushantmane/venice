@@ -297,7 +297,7 @@ public class OffsetRecord {
    * This function will print out detailed offset info, which including info per producerGuid.
    * The reason is not using the default {@link PartitionState#toString} since it won't print GUID properly.
    *
-   * This function is mostly used in AdminOffsetManager since the offset record update frequency for
+   * This function is mostly used in AdminOffsetManager since the offset record updateAsync frequency for
    * admin topic is very low.
    */
   public String toDetailedString() {

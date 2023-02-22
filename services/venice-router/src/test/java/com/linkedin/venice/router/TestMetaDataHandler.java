@@ -439,7 +439,7 @@ public class TestMetaDataHandler {
     ResourceStateResponse resourceStateResponse =
         OBJECT_MAPPER.readValue(response.content().array(), ResourceStateResponse.class);
     Assert.assertTrue(resourceStateResponse.isReadyToServe());
-    // Add a not ready to serve replica in partition 0 which should put the version to not ready to serve.
+    // Add a not ready to serve replica in partition 0 which should putAsync the version to not ready to serve.
     replicaStates0
         .add(new ReplicaState(0, "test-host_2", HelixState.STANDBY_STATE, ExecutionStatus.STARTED.toString(), false));
     replicaStates1
@@ -453,7 +453,7 @@ public class TestMetaDataHandler {
     Assert.assertEquals(response.status().code(), 200);
     resourceStateResponse = OBJECT_MAPPER.readValue(response.content().array(), ResourceStateResponse.class);
     Assert.assertFalse(resourceStateResponse.isReadyToServe());
-    // Add one more ready to serve replica in each partition which should put the version to ready to serve.
+    // Add one more ready to serve replica in each partition which should putAsync the version to ready to serve.
     replicaStates0
         .add(new ReplicaState(0, "test-host_4", HelixState.STANDBY_STATE, ExecutionStatus.COMPLETED.toString(), true));
     replicaStates1

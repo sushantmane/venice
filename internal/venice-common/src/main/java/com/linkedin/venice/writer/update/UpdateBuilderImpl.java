@@ -39,7 +39,7 @@ public class UpdateBuilderImpl implements UpdateBuilder {
   private void validateUpdateSchema(Schema updateSchema) {
     if (updateSchema.getType() != Schema.Type.RECORD
         || !updateSchema.getName().endsWith(WriteComputeConstants.WRITE_COMPUTE_RECORD_SCHEMA_SUFFIX)) {
-      throw new IllegalArgumentException("Got invalid record-update schema: " + updateSchema);
+      throw new IllegalArgumentException("Got invalid record-updateAsync schema: " + updateSchema);
     }
   }
 
@@ -99,8 +99,8 @@ public class UpdateBuilderImpl implements UpdateBuilder {
   public GenericRecord build() {
     if (updateFieldNameSet.isEmpty() && collectionMergeFieldNameSet.isEmpty()) {
       throw new IllegalStateException(
-          "No update has been specified. Please use setter methods to specify how to partially "
-              + "update a value record before calling this build method.");
+          "No updateAsync has been specified. Please use setter methods to specify how to partially "
+              + "updateAsync a value record before calling this build method.");
     }
     for (Schema.Field updateField: updateRecord.getSchema().getFields()) {
       final String fieldName = updateField.name();
@@ -113,7 +113,7 @@ public class UpdateBuilderImpl implements UpdateBuilder {
     Exception serializationException = validateUpdateRecordIsSerializable(updateRecord).orElse(null);
     if (serializationException != null) {
       throw new VeniceException(
-          "The built partial-update record failed to be serialized. It could be caused by setting "
+          "The built partial-updateAsync record failed to be serialized. It could be caused by setting "
               + "field value(s) with wrong type(s). Built record: " + updateRecord + ", and serialization exception: ",
           serializationException);
     }
@@ -130,13 +130,13 @@ public class UpdateBuilderImpl implements UpdateBuilder {
   }
 
   /**
-   * Given a field from the partial update schema and find the type of its corresponding value field.
+   * Given a field from the partial updateAsync schema and find the type of its corresponding value field.
    *
-   * @param updateField A field from the partial update schema.
+   * @param updateField A field from the partial updateAsync schema.
    * @return Type of its corresponding value field.
    */
   private Schema.Type getCorrespondingValueFieldType(Schema.Field updateField) {
-    // Each field in partial update schema is a union of multiple schemas.
+    // Each field in partial updateAsync schema is a union of multiple schemas.
     List<Schema> updateFieldSchemas = updateField.schema().getTypes();
     // The last schema in the union is the schema of the field in the corresponding value schema.
     return updateFieldSchemas.get(updateFieldSchemas.size() - 1).getType();
@@ -167,7 +167,8 @@ public class UpdateBuilderImpl implements UpdateBuilder {
   }
 
   private GenericRecord createNoOpRecord(Schema.Field updateField) {
-    // Because of the way how partial update schema is generated, the first entry in the every union write compute field
+    // Because of the way how partial updateAsync schema is generated, the first entry in the every union write compute
+    // field
     // must be the no-op schema.
     Schema noOpRecordSchema = updateField.schema().getTypes().get(0);
     return new GenericData.Record(noOpRecordSchema);

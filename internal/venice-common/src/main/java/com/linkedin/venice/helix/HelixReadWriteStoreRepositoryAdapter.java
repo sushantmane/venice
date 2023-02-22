@@ -46,7 +46,7 @@ public class HelixReadWriteStoreRepositoryAdapter extends HelixReadOnlyStoreRepo
         throw new VeniceException("SystemStore type expected here for store: " + storeName);
       }
       /**
-       * For system store, we only update the info stored in the corresponding Venice regular store,
+       * For system store, we only updateAsync the info stored in the corresponding Venice regular store,
        * since shared properties are not mutable in {@link SystemStore} api.
        */
       SystemStore systemStore = (SystemStore) store;
@@ -55,7 +55,7 @@ public class HelixReadWriteStoreRepositoryAdapter extends HelixReadOnlyStoreRepo
   }
 
   /**
-   * This function only be used to delete regular venice store, and the system store is bundled with regular venice store.
+   * This function only be used to deleteAsync regular venice store, and the system store is bundled with regular venice store.
    */
   @Override
   public void deleteStore(String name) {

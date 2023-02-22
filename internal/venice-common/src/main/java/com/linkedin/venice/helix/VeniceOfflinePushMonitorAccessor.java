@@ -117,7 +117,7 @@ public class VeniceOfflinePushMonitorAccessor implements OfflinePushAccessor {
         pushStatus.setPartitionStatuses(partitionStatuses);
       } else {
         LOGGER.info(
-            "Found invalid push statues: {} for topic: {} in cluster: {}. Will delete it from ZK.",
+            "Found invalid push statues: {} for topic: {} in cluster: {}. Will deleteAsync it from ZK.",
             pushStatus.getCurrentStatus(),
             pushStatus.getKafkaTopic(),
             clusterName);
@@ -211,12 +211,12 @@ public class VeniceOfflinePushMonitorAccessor implements OfflinePushAccessor {
   /**
    * Because one partition status could contain multiple replicas statuses. So during the updating, the conflicts would
    * happen once there are more than one instance updating its status. In order to handle this conflict, we use a
-   * compare and set(CAS) semantic to update.
+   * compare and set(CAS) semantic to updateAsync.
    * 1. Read the latest partition status ZNode from ZK.
    * 2. Record the version of this ZNode.
-   * 3. Apply our change on partition status and update ZNode with the recorded version.
+   * 3. Apply our change on partition status and updateAsync ZNode with the recorded version.
    * 4. If we got BadVersionException, Helix accessor will help us to retry
-   * 5. If everything goes well, update succeed.
+   * 5. If everything goes well, updateAsync succeed.
    * So eventually, all updates will succeed after couples of retries.
    */
   private void compareAndUpdateReplicaStatus(
@@ -228,14 +228,15 @@ public class VeniceOfflinePushMonitorAccessor implements OfflinePushAccessor {
       String incrementalPushVersion) {
     // If a version was created prior to the deployment of this new push monitor, an exception would be thrown while
     // upgrading venice server.
-    // Because the server would try to update replica status but there is no ZNode for that replica. So we add a check
-    // here to ignore the update
+    // Because the server would try to updateAsync replica status but there is no ZNode for that replica. So we add a
+    // check
+    // here to ignore the updateAsync
     // in case of ZNode missing.
     if (!pushStatusExists(topic)) {
       return;
     }
     LOGGER.info(
-        "Start update replica status for topic: {}, partition: {} in cluster: {}.",
+        "Start updateAsync replica status for topic: {}, partition: {} in cluster: {}.",
         topic,
         partitionId,
         clusterName);

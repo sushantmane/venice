@@ -92,7 +92,7 @@ public class TestControllerEnforceSSL {
       Assert.assertTrue(updateResponse.isError(), updateResponse.getError());
 
       /**
-       * Cluster discovery should still work; explicitly put the test after getStore and updateStore to confirm that
+       * Cluster discovery should still work; explicitly putAsync the test after getStore and updateStore to confirm that
        * Controller listener service doesn't crash if it "halts" some requests.
        */
       D2ServiceDiscoveryResponse clusterDiscovery = controllerClient.discoverCluster(storeName);

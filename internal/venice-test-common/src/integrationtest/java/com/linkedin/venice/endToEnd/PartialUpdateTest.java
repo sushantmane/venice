@@ -92,7 +92,7 @@ import org.testng.annotations.Test;
 
 
 /**
- * This class includes tests on partial update (Write Compute) with a setup that has both the parent and child controllers.
+ * This class includes tests on partial updateAsync (Write Compute) with a setup that has both the parent and child controllers.
  */
 public class PartialUpdateTest {
   private static final int NUMBER_OF_CHILD_DATACENTERS = 1;
@@ -134,8 +134,8 @@ public class PartialUpdateTest {
    * (1) Send a bunch of large UPDATE messages to make sure eventually the key's value + RMD size greater than 1MB and
    * thus trigger chunking / RMD chunking.
    * (2) Run a KIF repush to make sure it handles RMD chunks correctly.
-   * (3) Send a DELETE message to partially delete some of the items in the map field.
-   * (4) Send a DELETE message to fully delete the record.
+   * (3) Send a DELETE message to partially deleteAsync some of the items in the map field.
+   * (4) Send a DELETE message to fully deleteAsync the record.
    */
   @Test(timeOut = TEST_TIMEOUT_MS * 4)
   public void testReplicationMetadataChunkingE2E() throws IOException {
@@ -336,8 +336,8 @@ public class PartialUpdateTest {
   }
 
   /**
-   * This test simulates a situation where the stored value schema mismatches with the value schema used by a partial update
-   * request. In other words, the partial update request tries to update a field that does not exist in the stored value
+   * This test simulates a situation where the stored value schema mismatches with the value schema used by a partial updateAsync
+   * request. In other words, the partial updateAsync request tries to updateAsync a field that does not exist in the stored value
    * record due to schema mismatch.
    *
    * In this case, we expect a superset schema that contains fields from all value schema to be used to store the partially
@@ -407,7 +407,7 @@ public class PartialUpdateTest {
         }
       });
 
-      // Step 2: Partially update a field that exists in V2 schema (and it does not exist in V1 schema).
+      // Step 2: Partially updateAsync a field that exists in V2 schema (and it does not exist in V1 schema).
       Schema writeComputeSchemaV2 =
           WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(valueSchemaV2);
       UpdateBuilder updateBuilder = new UpdateBuilderImpl(writeComputeSchemaV2);
@@ -566,7 +566,7 @@ public class PartialUpdateTest {
         GenericRecord partialUpdateRecord = updateBuilder.build();
 
         sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord);
-        // Verify the update
+        // Verify the updateAsync
         TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
           try {
             GenericRecord retrievedValue = readValue(storeReader, key);
@@ -587,7 +587,7 @@ public class PartialUpdateTest {
         updateBuilder.setNewFieldValue("firstName", updatedFirstName1);
         GenericRecord partialUpdateRecord1 = updateBuilder.build();
         sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord1);
-        // Verify the update
+        // Verify the updateAsync
         TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, () -> {
           try {
             GenericRecord retrievedValue = readValue(storeReader, key);
@@ -601,7 +601,7 @@ public class PartialUpdateTest {
 
         // Delete the record
         sendStreamingRecord(veniceProducer, storeName, key, null);
-        // Verify the delete
+        // Verify the deleteAsync
         TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
           try {
             GenericRecord retrievedValue = readValue(storeReader, key);
@@ -624,7 +624,7 @@ public class PartialUpdateTest {
         GenericRecord partialUpdateRecord2 = updateBuilder.build();
 
         sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord2);
-        // Verify the update
+        // Verify the updateAsync
         TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
           try {
             GenericRecord retrievedValue = readValue(storeReader, key);
@@ -645,7 +645,7 @@ public class PartialUpdateTest {
         updateBuilder.setNewFieldValue("firstName", updatedFirstName3);
         GenericRecord partialUpdateRecord3 = updateBuilder.build();
         sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord3);
-        // Verify the update
+        // Verify the updateAsync
         TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
           try {
             GenericRecord retrievedValue = readValue(storeReader, key);

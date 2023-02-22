@@ -115,7 +115,7 @@ public class VeniceMultiGetPath extends VeniceMultiKeyPath<MultiGetRouterRequest
    * remove a key from the multi-get path;
    * however, don't modify the keyIdxToRouterKey map because we need to maintain a mapping from keyIdx to RouterKey;
    * the MultiGetResponseRecord from the servers only contains keyIdx and doesn't contains the actual key,
-   * but we need the key to update the cache.
+   * but we need the key to updateAsync the cache.
    * @param key
    */
   public void removeFromRequest(RouterKey key) {

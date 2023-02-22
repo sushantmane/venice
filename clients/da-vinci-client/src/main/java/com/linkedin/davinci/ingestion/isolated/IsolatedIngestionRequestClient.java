@@ -55,7 +55,7 @@ public class IsolatedIngestionRequestClient implements Closeable {
     try {
       httpClientTransport.sendRequest(IngestionAction.METRIC, report);
     } catch (Exception e) {
-      LOGGER.warn("Failed to send metrics update with exception", e);
+      LOGGER.warn("Failed to send metrics updateAsync with exception", e);
     }
   }
 

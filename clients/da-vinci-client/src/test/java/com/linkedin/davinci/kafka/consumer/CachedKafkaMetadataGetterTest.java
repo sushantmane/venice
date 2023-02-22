@@ -21,7 +21,7 @@ public class CachedKafkaMetadataGetterTest {
     CachedKafkaMetadataGetter.ValueAndExpiryTime<Long> valueCache =
         new CachedKafkaMetadataGetter.ValueAndExpiryTime<>(1L, System.nanoTime());
     offsetCache.put(key, valueCache);
-    // Successful call will update the value from 1 to 2.
+    // Successful call will updateAsync the value from 1 to 2.
     TestUtils.waitForNonDeterministicAssertion(5, TimeUnit.SECONDS, () -> {
       Long actualResult = cachedKafkaMetadataGetter.fetchMetadata(key, offsetCache, () -> 2L);
       Long expectedResult = 2L;

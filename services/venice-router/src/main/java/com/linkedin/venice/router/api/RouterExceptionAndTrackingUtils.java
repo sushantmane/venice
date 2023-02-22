@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
  * So we temporarily track all the error cases when throwing a exception.
  *
  * TODO: If later on DDS router could support a better way to register a handler to handle the exceptional cases,
- * we should update the logic here.
+ * we should updateAsync the logic here.
  */
 
 public class RouterExceptionAndTrackingUtils {

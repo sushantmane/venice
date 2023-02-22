@@ -82,7 +82,7 @@ public class ZkRoutersClusterManager
     }
     routersClusterConfig = newRoutersClusterConfig;
     zkClient.subscribeStateChanges(zkStateListener);
-    // force a live router count update
+    // force a live router count updateAsync
     changeLiveRouterCount(zkClient.getChildren(getRouterRootPath()).size());
     LOGGER.info("Refresh finished for cluster {}'s {}.", clusterName, getClass().getSimpleName());
   }
@@ -123,10 +123,10 @@ public class ZkRoutersClusterManager
       // if this returns false, it means the router instance doesn't exist zk path
       boolean pathExistedPriorToDeletion = zkClient.delete(getRouterPath(instanceId));
       if (!pathExistedPriorToDeletion) {
-        LOGGER.info("Attempted to delete a non-existent zk path: {}.", getRouterPath(instanceId));
+        LOGGER.info("Attempted to deleteAsync a non-existent zk path: {}.", getRouterPath(instanceId));
       }
     } catch (Exception e) {
-      // cannot delete this instance from zk path because of exceptions
+      // cannot deleteAsync this instance from zk path because of exceptions
       throw new VeniceException(
           "Error when deleting router " + instanceId + " from zk path " + getRouterPath(instanceId),
           e);
@@ -136,7 +136,7 @@ public class ZkRoutersClusterManager
   }
 
   /**
-   * Get how many routers live right now. It could be a delay because the number will only be update once the manger
+   * Get how many routers live right now. It could be a delay because the number will only be updateAsync once the manger
    * received
    * the zk notification.
    */
@@ -257,7 +257,7 @@ public class ZkRoutersClusterManager
   public void createRouterClusterConfig() {
     /**
      * {@link ZkBaseDataAccessor#set} will try to create the ZNode if it doesn't exist.
-     * If the ZNode already exists, it will just simply update the content.
+     * If the ZNode already exists, it will just simply updateAsync the content.
      */
     boolean createConfigSuccess =
         dataAccessor.set(getRouterRootPath(), new RoutersClusterConfig(), AccessOption.PERSISTENT);
@@ -350,17 +350,17 @@ public class ZkRoutersClusterManager
   }
 
   private void compareAndSetClusterConfig(DataUpdater<RoutersClusterConfig> updater) {
-    // Compare and update the config in ZK because it might be updated by other router/controller at the same time.
+    // Compare and updateAsync the config in ZK because it might be updated by other router/controller at the same time.
     HelixUtils.compareAndUpdate(dataAccessor, getRouterRootPath(), updater);
-    // Read latest version from ZK to update local config. If we just do routerClusterConfig.addRouterConfig only,
-    // this update might be overwritten by the change from other router/controller in a short time.
+    // Read latest version from ZK to updateAsync local config. If we just do routerClusterConfig.addRouterConfig only,
+    // this updateAsync might be overwritten by the change from other router/controller in a short time.
     // For example:
     // 1. router1 is registered
     // 2. router2 is trying to register.
-    // 3. router2's registration succeed through our compare and update mechanism.
+    // 3. router2's registration succeed through our compare and updateAsync mechanism.
     // 4. router2 execute routerClusterConfig.addRouterConfig(router2)
     // 5. Data change event is coming for the router1's registration and overwrite the router2's registration info
-    // 6. Data change event is coming for the router2's registration and update data to the correct version.
+    // 6. Data change event is coming for the router2's registration and updateAsync data to the correct version.
     // So after registration, read the latest version from zk is more safe here and the cost is pretty small because
     // registration is a rare operation.
     // Synchronized keyword protect routersClusterConfig from conflict updating.
@@ -371,7 +371,7 @@ public class ZkRoutersClusterManager
   @Override
   public void handleStateChanged(Watcher.Event.KeeperState keeperState) {
     if (keeperState.getIntValue() != 3 && keeperState.getIntValue() != 5 && keeperState.getIntValue() != 6) {
-      // Looks like we're disconnected. Lets update our connection state and freeze our internal state
+      // Looks like we're disconnected. Lets updateAsync our connection state and freeze our internal state
       LOGGER.warn("zkclient is disconnected and is in state: {}.", keeperState);
       this.isConnected.set(false);
     } else {

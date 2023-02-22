@@ -69,7 +69,7 @@ import org.testng.annotations.Test;
 public class TestAdminSparkServer extends AbstractTestAdminSparkServer {
   /**
    * Seems that Helix has limit on the number of resource each node is able to handle.
-   * If the test case needs more than one storage node like testing failover etc, please put it into {@link TestAdminSparkServerWithMultiServers}
+   * If the test case needs more than one storage node like testing failover etc, please putAsync it into {@link TestAdminSparkServerWithMultiServers}
    *
    * And please collect the store and version you created in the end of your test case.
    */
@@ -640,7 +640,7 @@ public class TestAdminSparkServer extends AbstractTestAdminSparkServer {
     int numVersionToPreserve = 100;
 
     String storeName = cluster.getNewStoreVersion().getName();
-    // Disable writes at first and test could we enable writes again through the update store method.
+    // Disable writes at first and test could we enable writes again through the updateAsync store method.
     Assert.assertFalse(
         controllerClient.enableStoreReadWrites(storeName, false).isError(),
         "Disable writes should not fail.");

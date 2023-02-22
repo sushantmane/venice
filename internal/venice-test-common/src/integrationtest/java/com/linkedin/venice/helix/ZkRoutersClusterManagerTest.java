@@ -71,7 +71,7 @@ public class ZkRoutersClusterManagerTest {
     // Register two routers through different zk clients.
     manager.registerRouter(Utils.getHelixNodeIdentifier(port));
     failedManager.registerRouter(Utils.getHelixNodeIdentifier(port + 1));
-    // Eventually both manager wil get notification to update router count.
+    // Eventually both manager wil get notification to updateAsync router count.
     TestUtils.waitForNonDeterministicCompletion(1, TimeUnit.SECONDS, () -> manager.getLiveRoutersCount() == 2);
     TestUtils.waitForNonDeterministicCompletion(1, TimeUnit.SECONDS, () -> failedManager.getLiveRoutersCount() == 2);
     // One router failed

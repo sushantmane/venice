@@ -78,7 +78,7 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
 
   /**
    * IMPORTANT: All newly created KafkaConsumerService are already started in {@link #createKafkaConsumerService(Properties)},
-   * if this is no longer the case in future, make sure to update the startInner logic here.
+   * if this is no longer the case in future, make sure to updateAsync the startInner logic here.
    */
   @Override
   public boolean startInner() {

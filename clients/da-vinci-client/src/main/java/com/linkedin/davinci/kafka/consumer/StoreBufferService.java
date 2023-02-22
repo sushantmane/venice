@@ -41,7 +41,7 @@ import org.apache.logging.log4j.Logger;
  * 3. All the records belonging to the same topic+partition will be allocated to the same drainer thread, otherwise DIV will fail;
  * 4. The logic to assign topic+partition to drainer, please check {@link #getDrainerIndexForConsumerRecord(PubSubMessage, int)};
  * 5. There is still a thread executing {@link StoreIngestionTask} for each topic, which will handle admin actions, such
- * as subscribe, unsubscribe, kill and so on, and also poll consumer records from Kafka and put them into {@link #blockingQueueArr}
+ * as subscribe, unsubscribe, kill and so on, and also poll consumer records from Kafka and putAsync them into {@link #blockingQueueArr}
  * maintained by {@link StoreBufferService};
  *
  * For now, the assumption is that one-consumer-polling-thread should be fast enough to catch up with Kafka MM replication,

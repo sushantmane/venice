@@ -260,7 +260,7 @@ public class MapTest {
         map.put(j * 10, j * 10);
       }
 
-      /* Iterate hm for elemBeforePut elements, then call put() to replace value
+      /* Iterate hm for elemBeforePut elements, then call putAsync() to replace value
        * for existing key.  With bug 8025173, this will also cause a resize, but
        * not increase the modCount.
        * Finish the iteration to check for a corrupt iterator.
@@ -284,7 +284,7 @@ public class MapTest {
         }
       }
 
-      // Do put() to replace entry (and resize table when bug present)
+      // Do putAsync() to replace entry (and resize table when bug present)
       if (map.put(0, 100) == null) {
         throw new RuntimeException("Error in test: expected key 0 to be in the HashMap");
       }

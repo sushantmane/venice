@@ -31,7 +31,7 @@ public class BatchJobHeartbeatConfigs {
   public static final Utils.ConfigEntity<String> HEARTBEAT_STORE_NAME_CONFIG =
       new Utils.ConfigEntity<>("heartbeat.store.name", null, "Heartbeat store name");
   public static final Utils.ConfigEntity<Boolean> HEARTBEAT_LAST_HEARTBEAT_IS_DELETE_CONFIG = new Utils.ConfigEntity<>(
-      "heartbeat.is.last.heartbeat.delete",
+      "heartbeat.is.last.heartbeat.deleteAsync",
       true,
       "Whether the last heartbeat message is a DELETE record which deletes the existing k-v pair of a BatchJobHeartbeatKey. "
           + "In production, it should be true because once a VPJ run finishes, its liveness heartbeat should be deleted "

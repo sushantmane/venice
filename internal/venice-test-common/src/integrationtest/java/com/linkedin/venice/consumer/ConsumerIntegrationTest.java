@@ -153,7 +153,7 @@ public abstract class ConsumerIntegrationTest {
 
   @Test(timeOut = 60 * Time.MS_PER_SECOND)
   public void testForwardCompatibility() throws ExecutionException, InterruptedException {
-    // Verify that the regular writer can update the store
+    // Verify that the regular writer can updateAsync the store
     try (VeniceWriter<String, String, byte[]> regularVeniceWriter = cluster.getVeniceWriter(topicName)) {
       writeAndVerifyRecord(regularVeniceWriter, client, "value1");
     }
@@ -195,7 +195,7 @@ public abstract class ConsumerIntegrationTest {
       VeniceWriter<String, String, byte[]> veniceWriter,
       AvroGenericStoreClient client,
       String testValue) throws ExecutionException, InterruptedException {
-    veniceWriter.put(TEST_KEY, testValue, 1).get();
+    veniceWriter.putSync(TEST_KEY, testValue, 1).get();
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> {
       try {
         Object value = client.get(TEST_KEY).get();

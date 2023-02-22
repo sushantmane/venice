@@ -58,7 +58,7 @@ public class InternalRTStoreInitializationRoutine implements ClusterLeaderInitia
       admin.updateStore(clusterName, storeName, updateStoreQueryParams);
       store = admin.getStore(clusterName, storeName);
       if (!store.isHybrid()) {
-        throw new VeniceException("Unable to update store " + storeName + " to a hybrid store");
+        throw new VeniceException("Unable to updateAsync store " + storeName + " to a hybrid store");
       }
       LOGGER.info("Enabled hybrid for internal store " + storeName + " in cluster " + clusterName);
     }

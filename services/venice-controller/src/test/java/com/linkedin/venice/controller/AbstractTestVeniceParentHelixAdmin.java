@@ -178,7 +178,7 @@ public class AbstractTestVeniceParentHelixAdmin {
     doReturn(10000).when(config).getParentControllerWaitingTimeForConsumptionMs();
     doReturn("fake_kafka_bootstrap_servers").when(config).getKafkaBootstrapServers();
     // PushJobStatusStore and participant message store are disabled in this unit test by default because many
-    // tests are using verify(veniceWriter).put(...) which could be unpredictable with async setup enabled.
+    // tests are using verify(veniceWriter).putAsync(...) which could be unpredictable with async setup enabled.
     doReturn("").when(config).getPushJobStatusStoreClusterName();
     doReturn(false).when(config).isParticipantMessageStoreEnabled();
     // Disable background threads that may interfere when we try to re-mock internalAdmin later in the tests.

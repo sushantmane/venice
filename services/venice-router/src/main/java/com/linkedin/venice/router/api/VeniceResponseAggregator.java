@@ -122,7 +122,7 @@ public class VeniceResponseAggregator implements ResponseAggregatorFactory<Basic
           Optional.empty(),
           Optional.empty(),
           INTERNAL_SERVER_ERROR,
-          "HelixGroupSelector has already been initialized before, and no further update expected!");
+          "HelixGroupSelector has already been initialized before, and no further updateAsync expected!");
     }
     this.helixGroupSelector = helixGroupSelector;
   }

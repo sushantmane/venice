@@ -113,7 +113,7 @@ public class VeniceSystemFactory implements SystemFactory, Serializable {
    * Value: a pair of boolean: <isActive, isStreamReprocessingJobSucceeded>
    *
    * For each SystemProducer created through this factory, keep track of its status in
-   * the below Map. {@link com.linkedin.venice.pushmonitor.RouterBasedPushMonitor} will update
+   * the below Map. {@link com.linkedin.venice.pushmonitor.RouterBasedPushMonitor} will updateAsync
    * the status of the SystemProducer.
    */
   private final Map<SystemProducer, Pair<Boolean, Boolean>> systemProducerStatues;
@@ -311,7 +311,7 @@ public class VeniceSystemFactory implements SystemFactory, Serializable {
     String veniceParentZKHosts = config.get(VENICE_PARENT_D2_ZK_HOSTS);
     if (isEmpty(veniceParentZKHosts)) {
       throw new SamzaException(
-          VENICE_PARENT_D2_ZK_HOSTS + " should not be null, please put this property in your app-def.xml");
+          VENICE_PARENT_D2_ZK_HOSTS + " should not be null, please putAsync this property in your app-def.xml");
     }
 
     String localVeniceZKHosts = config.get(VENICE_CHILD_D2_ZK_HOSTS);
@@ -462,7 +462,7 @@ public class VeniceSystemFactory implements SystemFactory, Serializable {
   }
 
   /**
-   * {@link com.linkedin.venice.pushmonitor.RouterBasedPushMonitor} will update the status of a SystemProducer with
+   * {@link com.linkedin.venice.pushmonitor.RouterBasedPushMonitor} will updateAsync the status of a SystemProducer with
    * push type STREAM_REPROCESSING:
    * END_OF_PUSH_RECEIVED: isActive -> false; isStreamReprocessingJobSucceeded -> true
    * COMPLETED: isActive -> false; isStreamReprocessingJobSucceeded -> true

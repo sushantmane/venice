@@ -81,7 +81,7 @@ public class MergeConflictResolver {
    *                               the ReplicationMetadata for the newly inserted record.
    * @param newValueColoID ID of the colo/fabric where this new Put request came from.
    *
-   * @return A MergeConflictResult which denotes what update should be applied or if the operation should be ignored.
+   * @return A MergeConflictResult which denotes what updateAsync should be applied or if the operation should be ignored.
    */
   public MergeConflictResult put(
       Lazy<ByteBuffer> oldValueBytesProvider,
@@ -288,7 +288,8 @@ public class MergeConflictResolver {
           return false;
         }
       }
-      // All timestamps of existing fields are strictly greater than the new put timestamp. So, new Put can be ignored.
+      // All timestamps of existing fields are strictly greater than the new putAsync timestamp. So, new Put can be
+      // ignored.
       return true;
 
     } else {
@@ -304,7 +305,7 @@ public class MergeConflictResolver {
             return false;
           }
         }
-        // All timestamps of existing fields are strictly greater than the new put timestamp. So, new Put can be
+        // All timestamps of existing fields are strictly greater than the new putAsync timestamp. So, new Put can be
         // ignored.
         return true;
 
@@ -380,13 +381,13 @@ public class MergeConflictResolver {
    *
    * @param rmdWithValueSchemaID The replication metadata of the currently persisted value and the value schema ID.
    * @param deleteOperationTimestamp The logical timestamp of the incoming record.
-   * @param deleteOperationSourceOffset The offset from which the delete operation originates in the realtime stream.
+   * @param deleteOperationSourceOffset The offset from which the deleteAsync operation originates in the realtime stream.
    *                                    Used to build the ReplicationMetadata for the newly inserted record.
    * @param deleteOperationSourceBrokerID The ID of the broker from which the new value originates.  ID's should correspond
    *                                 to the kafkaClusterUrlIdMap configured in the LeaderFollowerIngestionTask.  Used to build
    *                                 the ReplicationMetadata for the newly inserted record.
    * @param deleteOperationColoID ID of the colo/fabric where this new Delete request came from.
-   * @return A MergeConflictResult which denotes what update should be applied or if the operation should be ignored.
+   * @return A MergeConflictResult which denotes what updateAsync should be applied or if the operation should be ignored.
    */
   public MergeConflictResult delete(
       Lazy<ByteBuffer> oldValueBytesProvider,
@@ -669,7 +670,7 @@ public class MergeConflictResolver {
       // This Write Compute record could be a Write Compute Delete request which is not supported and there should be no
       // one using it.
       throw new IllegalStateException(
-          "Write Compute only support partial update. Got unexpected Write Compute record: " + writeComputeRecord);
+          "Write Compute only support partial updateAsync. Got unexpected Write Compute record: " + writeComputeRecord);
     }
 
     Object oldTimestampObject = rmdWithValueSchemaId.getRmdRecord().get(TIMESTAMP_FIELD_NAME);
@@ -685,17 +686,17 @@ public class MergeConflictResolver {
         toUpdateFieldNames = WriteComputeSchemaConverter.getNamesOfFieldsToBeUpdated(writeComputeRecord);
         for (String toUpdateFieldName: toUpdateFieldNames) {
           if (oldValueSchema.getField(toUpdateFieldName) == null) {
-            return false; // Write Compute tries to update a non-existing field in the old value (schema).
+            return false; // Write Compute tries to updateAsync a non-existing field in the old value (schema).
           }
         }
-        return true; // Write Compute does not try to update any non-existing fields in the old value (schema).
+        return true; // Write Compute does not try to updateAsync any non-existing fields in the old value (schema).
 
       case PER_FIELD_TIMESTAMP:
         GenericRecord timestampRecord = (GenericRecord) oldTimestampObject;
         toUpdateFieldNames = WriteComputeSchemaConverter.getNamesOfFieldsToBeUpdated(writeComputeRecord);
         for (String toUpdateFieldName: toUpdateFieldNames) {
           if (timestampRecord.get(toUpdateFieldName) == null) {
-            return false; // Write Compute tries to update a non-existing field.
+            return false; // Write Compute tries to updateAsync a non-existing field.
           }
           if (isRmdFieldTimestampSmaller(timestampRecord, toUpdateFieldName, updateOperationTimestamp, false)) {
             return false; // One existing field must be updated.

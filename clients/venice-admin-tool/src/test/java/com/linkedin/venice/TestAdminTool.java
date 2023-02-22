@@ -33,8 +33,8 @@ public class TestAdminTool {
 
   @Test(enabled = false) // disable until SSL config file becomes a mandatory config
   public void testAdminToolRequiresSSLConfigFile() {
-    String[] args =
-        { "--delete-store", "--url", "https://localhost:7036", "--cluster", "test-cluster", "--store", "testStore" };
+    String[] args = { "--deleteAsync-store", "--url", "https://localhost:7036", "--cluster", "test-cluster", "--store",
+        "testStore" };
     try {
       AdminTool.main(args);
     } catch (Exception e) {
@@ -46,7 +46,7 @@ public class TestAdminTool {
   @Test
   public void testAdminUpdateStoreArg() throws ParseException, IOException {
     final String K1 = "k1", V1 = "v1", K2 = "k2", V2 = "v2", K3 = "k3", V3 = "v3";
-    String[] args = { "--update-store", "--url", "http://localhost:7036", "--cluster", "test-cluster", "--store",
+    String[] args = { "--updateAsync-store", "--url", "http://localhost:7036", "--cluster", "test-cluster", "--store",
         "testStore", "--partitioner-params", K1 + "=" + V1 + "," + K2 + "=" + V2 + "," + K3 + "=" + V3 };
 
     CommandLine commandLine = AdminTool.getCommandLine(args);
@@ -66,7 +66,7 @@ public class TestAdminTool {
     String regionName = "region0";
     int kafkaFetchQuota = 1000;
 
-    String[] args = { "--update-cluster-config", "--url", controllerUrl, "--cluster", clusterName, "--fabric",
+    String[] args = { "--updateAsync-cluster-config", "--url", controllerUrl, "--cluster", clusterName, "--fabric",
         regionName, "--" + SERVER_KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND.getArgName(), String.valueOf(kafkaFetchQuota) };
 
     CommandLine commandLine = AdminTool.getCommandLine(args);

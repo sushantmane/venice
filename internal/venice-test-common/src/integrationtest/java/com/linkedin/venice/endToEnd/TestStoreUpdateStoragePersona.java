@@ -102,7 +102,7 @@ public class TestStoreUpdateStoragePersona {
     ControllerResponse response =
         controllerClient.updateStore(store.getName(), new UpdateStoreQueryParams().setStorageQuotaInByte(quota * 2));
     Assert.assertTrue(response.isError());
-    /** Make sure the update failed, nothing was updated */
+    /** Make sure the updateAsync failed, nothing was updated */
     TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, () -> {
       Assert.assertEquals(
           controllerClient.getStore(store.getName()).getStore().getStorageQuotaInByte(),

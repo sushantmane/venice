@@ -246,8 +246,8 @@ import org.apache.logging.log4j.Logger;
 /**
  * This class is a wrapper of {@link VeniceHelixAdmin}, which will be used in parent controller.
  * There should be only one single Parent Controller, which is the endpoint for all the admin data
- * update.
- * For every admin update operation, it will first push admin operation messages to Kafka,
+ * updateAsync.
+ * For every admin updateAsync operation, it will first push admin operation messages to Kafka,
  * then wait for the admin consumer to consume the message.
  * All validations on the updates should be done before the admin operation message is published to Kafka.
  */
@@ -638,7 +638,7 @@ public class VeniceParentHelixAdmin implements Admin {
         updateStore(clusterName, storeName, updateStoreQueryParams);
         store = getStore(clusterName, storeName);
         if (!store.isHybrid()) {
-          throw new VeniceException("Unable to update the " + storeDescriptor + " to a hybrid store");
+          throw new VeniceException("Unable to updateAsync the " + storeDescriptor + " to a hybrid store");
         }
         LOGGER.info("Enabled hybrid for internal store: {} in cluster: {}", storeName, clusterName);
       }
@@ -731,7 +731,7 @@ public class VeniceParentHelixAdmin implements Admin {
         byte[] serializedValue = adminOperationSerializer.serialize(message);
         try {
           Future<PubSubProduceResult> future = veniceWriter
-              .put(emptyKeyByteArr, serializedValue, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+              .putSync(emptyKeyByteArr, serializedValue, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
           PubSubProduceResult produceResult = future.get();
 
           LOGGER.info("Sent message: {} to kafka, offset: {}", message, produceResult.getOffset());
@@ -1017,7 +1017,7 @@ public class VeniceParentHelixAdmin implements Admin {
       try {
         store = getVeniceHelixAdmin().checkPreConditionForDeletion(clusterName, storeName);
       } catch (VeniceNoStoreException e) {
-        // It's possible for a store to partially exist due to partial delete/creation failures.
+        // It's possible for a store to partially exist due to partial deleteAsync/creation failures.
         LOGGER.warn("Store object is missing for store: {} will proceed with the rest of store deletion", storeName);
       }
       DeleteStore deleteStore = (DeleteStore) AdminMessageType.DELETE_STORE.getNewInstance();
@@ -1149,7 +1149,7 @@ public class VeniceParentHelixAdmin implements Admin {
   * Check whether any topic for this store exists or not.
   * The existing topic could be introduced by two cases:
   * 1. The previous job push is still running;
-  * 2. The previous job push fails to delete this topic;
+  * 2. The previous job push fails to deleteAsync this topic;
   *
   * For the 1st case, it is expected to refuse the new data push,
   * and for the 2nd case, customer should reach out Venice team to fix this issue for now.
@@ -1336,15 +1336,15 @@ public class VeniceParentHelixAdmin implements Admin {
     int truncatedTopicCnt = 0;
     for (String topic: sortedNonTruncatedVersionTopics) {
       /**
-       * If Venice repush somehow failed and we delete the version topic for the current version here, future incremental
-       * pushes will fail; therefore, keep Venice repush transparent and don't delete any VTs; future regular batch pushes
-       * from users will delete the VT we retain here.
+       * If Venice repush somehow failed and we deleteAsync the version topic for the current version here, future incremental
+       * pushes will fail; therefore, keep Venice repush transparent and don't deleteAsync any VTs; future regular batch pushes
+       * from users will deleteAsync the VT we retain here.
        * Potential improvement: After the Venice repush completes, we can automatically deletes VT from previous version,
        * at the risk of not being able to roll back to previous version though, so not recommend to do such automation.
        */
       if (isRepush && currentVersionsMap.containsValue(Version.parseVersionFromVersionTopicName(topic))) {
         LOGGER.info(
-            "Do not delete the current version topic: {} since the incoming push is a Venice internal re-push.",
+            "Do not deleteAsync the current version topic: {} since the incoming push is a Venice internal re-push.",
             topic);
         continue;
       }
@@ -1737,7 +1737,7 @@ public class VeniceParentHelixAdmin implements Admin {
   }
 
   /**
-   * Query the current version for the given store. In parent colo, Venice do not update the current version because
+   * Query the current version for the given store. In parent colo, Venice do not updateAsync the current version because
    * there is not offline push monitor. So parent controller will query each prod controller and return the map.
    */
   @Override
@@ -2226,13 +2226,13 @@ public class VeniceParentHelixAdmin implements Admin {
       Optional<Map<String, String>> storeViewConfig = params.getStoreViews();
 
       /**
-       * Check whether parent controllers will only propagate the update configs to child controller, or all unchanged
+       * Check whether parent controllers will only propagate the updateAsync configs to child controller, or all unchanged
        * configs should be replicated to children too.
        */
       Optional<Boolean> replicateAll = params.getReplicateAllConfigs();
       boolean replicateAllConfigs = replicateAll.isPresent() && replicateAll.get();
       List<CharSequence> updatedConfigsList = new LinkedList<>();
-      String errorMessagePrefix = "Store update error for " + storeName + " in cluster: " + clusterName + ": ";
+      String errorMessagePrefix = "Store updateAsync error for " + storeName + " in cluster: " + clusterName + ": ";
 
       Store currStore = getVeniceHelixAdmin().getStore(clusterName, storeName);
       if (currStore == null) {
@@ -2245,7 +2245,8 @@ public class VeniceParentHelixAdmin implements Admin {
       setStore.storeName = storeName;
       setStore.owner = owner.map(addToUpdatedConfigList(updatedConfigsList, OWNER)).orElseGet(currStore::getOwner);
 
-      // Invalid config update on hybrid will not be populated to admin channel so subsequent updates on the store won't
+      // Invalid config updateAsync on hybrid will not be populated to admin channel so subsequent updates on the store
+      // won't
       // be blocked by retry mechanism.
       if (currStore.isHybrid() && (partitionerClass.isPresent() || partitionerParams.isPresent())) {
         String errorMessage = errorMessagePrefix + "Cannot change partitioner class and parameters for hybrid stores";
@@ -2262,8 +2263,8 @@ public class VeniceParentHelixAdmin implements Admin {
       }
 
       /**
-       * TODO: We should build an UpdateStoreHelper that takes current store config and update command as input, and
-       *       return whether the update command is valid.
+       * TODO: We should build an UpdateStoreHelper that takes current store config and updateAsync command as input, and
+       *       return whether the updateAsync command is valid.
        */
       validateNativeReplicationEnableConfigs(
           nativeReplicationEnabled,
@@ -2289,7 +2290,7 @@ public class VeniceParentHelixAdmin implements Admin {
         updatedConfigsList.add(STORE_VIEW);
       }
 
-      // Only update fields that are set, other fields will be read from the original store's partitioner config.
+      // Only updateAsync fields that are set, other fields will be read from the original store's partitioner config.
       PartitionerConfig updatedPartitionerConfig = VeniceHelixAdmin.mergeNewSettingsIntoOldPartitionerConfig(
           currStore,
           partitionerClass,
@@ -2550,7 +2551,7 @@ public class VeniceParentHelixAdmin implements Admin {
           writeComputationEnabled.orElse(false) && !currStore.isWriteComputationEnabled();
       if (writeComputeJustEnabled) {
         // Dry-run generating Write Compute schemas before sending admin messages to enable Write Compute because Write
-        // Compute schema generation may fail due to some reasons. If that happens, abort the store update process.
+        // Compute schema generation may fail due to some reasons. If that happens, abort the store updateAsync process.
         addWriteComputeSchemaForStore(clusterName, storeName, true);
       }
 
@@ -2624,7 +2625,7 @@ public class VeniceParentHelixAdmin implements Admin {
         // Allow failure in write-compute schema generation in all schema except the latest value schema
         if (valueSchemaEntry.getId() == maxId) {
           throw new VeniceException(
-              "For store " + storeName + " cannot generate update schema for value schema ID :"
+              "For store " + storeName + " cannot generate updateAsync schema for value schema ID :"
                   + valueSchemaEntry.getId() + ", top level field probably missing defaults.",
               e);
         }
@@ -3395,7 +3396,7 @@ public class VeniceParentHelixAdmin implements Admin {
       // If there is a temporary datacenter connection failure, we want VPJ to report failure while allowing the push
       // to succeed in remaining datacenters. If we want to allow the push to succeed in asyc in the remaining
       // datacenter
-      // then put the topic delete into an else block under `if (failcount > 0)`
+      // then putAsync the topic deleteAsync into an else block under `if (failcount > 0)`
       if (failCount > 0) {
         currentReturnStatus = ExecutionStatus.ERROR;
         currentReturnStatusDetails = Optional.of(failCount + "/" + childClusters.size() + " DCs unreachable. ");
@@ -4901,13 +4902,13 @@ public class VeniceParentHelixAdmin implements Admin {
       UpdateStoreQueryParams params = new UpdateStoreQueryParams(storeInfo, false);
       ControllerResponse response = destFabricChildControllerClient.updateStore(storeInfo.getName(), params);
       if (response.isError()) {
-        throw new VeniceException("Failed to update store " + response.getError());
+        throw new VeniceException("Failed to updateAsync store " + response.getError());
       }
 
       response = destFabricChildControllerClient
           .updateAdminTopicMetadata(storeExecutionId, Optional.of(storeName), Optional.empty(), Optional.empty());
       if (response.isError()) {
-        throw new VeniceException("Failed to update store's execution id " + response.getError());
+        throw new VeniceException("Failed to updateAsync store's execution id " + response.getError());
       }
 
       return storeInfo;

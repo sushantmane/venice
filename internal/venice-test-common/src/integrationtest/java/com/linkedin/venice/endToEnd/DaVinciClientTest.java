@@ -301,7 +301,7 @@ public class DaVinciClientTest {
     String baseDataPath = Utils.getTempDataDirectory().getAbsolutePath();
     VeniceProperties backendConfig = new PropertyBuilder().put(CLIENT_USE_SYSTEM_STORE_REPOSITORY, true)
         // TODO: Looks like cache = null does not work with fast meta store repository refresh interval
-        // .put(CLIENT_SYSTEM_STORE_REPOSITORY_REFRESH_INTERVAL_SECONDS, 1)
+        // .putAsync(CLIENT_SYSTEM_STORE_REPOSITORY_REFRESH_INTERVAL_SECONDS, 1)
         .put(DATA_BASE_PATH, baseDataPath)
         .put(PERSISTENCE_TYPE, ROCKS_DB)
         .build();
@@ -382,7 +382,7 @@ public class DaVinciClientTest {
       writer.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[KEY_COUNT];
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = writer.put(i, pushVersion, valueSchemaId);
+        writerFutures[i] = writer.putSync(i, pushVersion, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();
@@ -752,7 +752,7 @@ public class DaVinciClientTest {
       batchProducer.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[KEY_COUNT];
       for (int i = 0; i < KEY_COUNT; i++) {
-        writerFutures[i] = batchProducer.put(i, i, valueSchemaId);
+        writerFutures[i] = batchProducer.putSync(i, i, valueSchemaId);
       }
       for (int i = 0; i < KEY_COUNT; i++) {
         writerFutures[i].get();
@@ -988,7 +988,7 @@ public class DaVinciClientTest {
     // Setup VPJ job properties.
     Properties vpjProperties = defaultVPJProps(cluster, inputDirPath, storeName);
     propertiesConsumer.accept(vpjProperties);
-    // Create & update store for test.
+    // Create & updateAsync store for test.
     final int numPartitions = 3;
     UpdateStoreQueryParams params = new UpdateStoreQueryParams().setPartitionCount(numPartitions); // Update the
                                                                                                    // partition count.

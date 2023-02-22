@@ -306,7 +306,7 @@ public class ActiveActiveReplicationForHybridTest {
             Optional.of(false),
             Optional.of(true),
             Optional.of(false));
-        fail("The update store command should not have succeeded since AA cannot be enabled without enabling NR.");
+        fail("The updateAsync store command should not have succeeded since AA cannot be enabled without enabling NR.");
       } catch (AssertionError e) {
         assertTrue(e.getMessage().contains("Http Status " + HttpStatus.SC_BAD_REQUEST)); // Must contain the correct
                                                                                          // HTTP status code
@@ -342,7 +342,7 @@ public class ActiveActiveReplicationForHybridTest {
             Optional.of(false),
             Optional.of(true),
             Optional.of(false));
-        fail("The update store command should not have succeeded since AA cannot be enabled without enabling NR.");
+        fail("The updateAsync store command should not have succeeded since AA cannot be enabled without enabling NR.");
       } catch (AssertionError e) {
         assertTrue(e.getMessage().contains("Http Status " + HttpStatus.SC_BAD_REQUEST)); // Must contain the correct
                                                                                          // HTTP status code

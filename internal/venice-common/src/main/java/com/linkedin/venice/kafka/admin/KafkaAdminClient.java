@@ -233,7 +233,8 @@ public class KafkaAdminClient implements KafkaAdminWrapper {
   // errors.
   @Override
   public boolean isTopicDeletionUnderway() {
-    // Always return false to bypass the checks since concurrent topic delete request for Java kafka admin client is
+    // Always return false to bypass the checks since concurrent topic deleteAsync request for Java kafka admin client
+    // is
     // harmless.
     return false;
   }

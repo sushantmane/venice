@@ -113,7 +113,7 @@ RealTimeConsume(nodeId) ==
 (* consuming from the version topic, a participating node applies the      *)
 (* incoming write locally, and persists the offset of the lase message it  *)
 (* consumed.  It also uses the realTimeTopic offset in the versionTopic    *)
-(* message to update it's realTimeTopic offset checkpoint so as to avoid   *)
+(* message to updateAsync it's realTimeTopic offset checkpoint so as to avoid   *)
 (* doing duplicate work should the node become leader at a later state.    *)
 (***************************************************************************)
 VersionTopicConsume(nodeId) ==
@@ -155,7 +155,7 @@ FollowerConsume ==
 
 (***************************************************************************)
 (* Leader promotion/demotion are not discrete in reality. A refinement can *)
-(* override these methods and put in some extra states to simulate cases   *)
+(* override these methods and putAsync in some extra states to simulate cases   *)
 (* of catchup or multiple leaders.                                         *)
 (***************************************************************************)
 ChangeReplicaState(node, newState) ==

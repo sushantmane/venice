@@ -58,7 +58,7 @@ import org.apache.logging.log4j.Logger;
  * ReadWriteSchemaRepository doesn't cache existing schemas locally and it always
  * queries ZK for currently values. This is a different behavior compared to
  * {@link com.linkedin.venice.meta.ReadOnlyStoreRepository} where values always
- * get cached and future update callbacks are registered.
+ * get cached and future updateAsync callbacks are registered.
  *
  * Notice: Users should not instantiate this class elsewhere than in the leader
  * Controller and there should be always only 1 ReadWriteSchemaRepository per cluster.
@@ -286,7 +286,7 @@ public class HelixReadWriteSchemaRepository implements ReadWriteSchemaRepository
    * @throws {@link com.linkedin.venice.exceptions.VeniceNoStoreException}, if store doesn't exist;
    * @throws {@link com.linkedin.venice.exceptions.StoreKeySchemaExistException}, if key schema already exists;
    * @throws {@link org.apache.avro.SchemaParseException}, if key schema is invalid;
-   * @throws {@link com.linkedin.venice.exceptions.VeniceException}, if zookeeper update fails;
+   * @throws {@link com.linkedin.venice.exceptions.VeniceException}, if zookeeper updateAsync fails;
    */
   @Override
   public SchemaEntry initKeySchema(String storeName, String schemaStr) {
@@ -338,10 +338,10 @@ public class HelixReadWriteSchemaRepository implements ReadWriteSchemaRepository
           DirectionalSchemaCompatibilityType.FULL);
       if (dupSchemaId == SchemaData.DUPLICATE_VALUE_SCHEMA_CODE) {
         logger.info("Value schema already exists. Skipping adding it to the schema repository. Schema: {}.", schemaStr);
-      } else { // there is some doc field update
+      } else { // there is some doc field updateAsync
         newValueSchemaEntry = new SchemaEntry(dupSchemaId, schemaStr);
         accessor.addValueSchema(storeName, newValueSchemaEntry);
-        logger.info("Adding similar schema to the schema repository for doc field update. Schema: {}.", schemaStr);
+        logger.info("Adding similar schema to the schema repository for doc field updateAsync. Schema: {}.", schemaStr);
       }
     } else {
       accessor.addValueSchema(storeName, newValueSchemaEntry);

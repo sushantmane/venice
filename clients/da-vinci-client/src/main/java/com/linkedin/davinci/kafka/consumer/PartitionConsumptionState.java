@@ -71,7 +71,7 @@ public class PartitionConsumptionState {
 
   /**
    * The following priorities are used to store the progress of processed records since it is not efficient to
-   * update offset db for every record.
+   * updateAsync offset db for every record.
    */
   private long processedRecordSizeSinceLastSync;
 
@@ -96,9 +96,9 @@ public class PartitionConsumptionState {
 
   /**
    * This hash map will keep a temporary mapping between a key and it's value.
-   * get {@link #getTransientRecord(byte[])} and put {@link #setTransientRecord(int, long, byte[], int, GenericRecord)}
+   * get {@link #getTransientRecord(byte[])} and putAsync {@link #setTransientRecord(int, long, byte[], int, GenericRecord)}
    * operation on this map will be invoked from kafka consumer thread.
-   * delete {@link #mayRemoveTransientRecord(int, long, byte[])} operation will be invoked from drainer thread after persisting it in DB.
+   * deleteAsync {@link #mayRemoveTransientRecord(int, long, byte[])} operation will be invoked from drainer thread after persisting it in DB.
    * because of the properties of the above operations the caller is guaranteed to get the latest value for a key either from
    * this map or from the DB.
    */
@@ -460,7 +460,7 @@ public class PartitionConsumptionState {
   }
 
   /**
-   * This operation is performed atomically to delete the record only when the provided sourceOffset matches.
+   * This operation is performed atomically to deleteAsync the record only when the provided sourceOffset matches.
    *
    * @param kafkaClusterId
    * @param kafkaConsumedOffset

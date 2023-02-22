@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * Handler in controller side used to deal with status update message from storage node.
+ * Handler in controller side used to deal with status updateAsync message from storage node.
  */
 public class StoreStatusMessageHandler implements StatusMessageHandler<StoreStatusMessage> {
   private static final Logger LOGGER = LogManager.getLogger(StatusMessageHandler.class);

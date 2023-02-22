@@ -4,7 +4,7 @@ import java.util.Map;
 
 
 /**
- * Accessor user to get/update the last execution id and the generated id from a storage.
+ * Accessor user to get/updateAsync the last execution id and the generated id from a storage.
  */
 public interface ExecutionIdAccessor {
   /**

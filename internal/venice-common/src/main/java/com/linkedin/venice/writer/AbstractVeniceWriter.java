@@ -25,27 +25,34 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
     return this.topicName;
   }
 
-  public Future<PubSubProduceResult> put(K key, V value, int valueSchemaId) {
-    return put(key, value, valueSchemaId, null);
+  public void putAsync(K key, V value, int valueSchemaId) {
+    putAsync(key, value, valueSchemaId, null);
+  }
+
+  public Future<PubSubProduceResult> putSync(K key, V value, int valueSchemaId) {
+    return putSync(key, value, valueSchemaId, null);
   }
 
   public abstract void close(boolean gracefulClose) throws IOException;
 
-  public abstract Future<PubSubProduceResult> put(K key, V value, int valueSchemaId, PubSubProducerCallback callback);
+  public abstract void putAsync(K key, V value, int valueSchemaId, PubSubProducerCallback callback);
 
-  public abstract Future<PubSubProduceResult> put(
+  public abstract Future<PubSubProduceResult> putSync(
+      K key,
+      V value,
+      int valueSchemaId,
+      PubSubProducerCallback callback);
+
+  public abstract void putAsync(
       K key,
       V value,
       int valueSchemaId,
       PubSubProducerCallback callback,
       PutMetadata putMetadata);
 
-  public abstract Future<PubSubProduceResult> delete(
-      K key,
-      PubSubProducerCallback callback,
-      DeleteMetadata deleteMetadata);
+  public abstract void delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata);
 
-  public abstract Future<PubSubProduceResult> update(
+  public abstract void updateAsync(
       K key,
       U update,
       int valueSchemaId,

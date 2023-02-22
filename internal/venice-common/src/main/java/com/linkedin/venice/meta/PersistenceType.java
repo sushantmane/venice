@@ -26,7 +26,7 @@ public enum PersistenceType {
   ROCKS_DB(2),
 
   /**
-   * Fastest lock-free most secure of all storage engines. Ignores data put in it, always returns null.
+   * Fastest lock-free most secure of all storage engines. Ignores data putAsync in it, always returns null.
    */
   BLACK_HOLE(3),
 

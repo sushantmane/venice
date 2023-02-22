@@ -24,8 +24,8 @@ import org.apache.logging.log4j.Logger;
  * according to the max size of messages, which could be buffered.
  *
  * The reason behind this design:
- * Considering some thread could put various sizes of messages into the shared queue, {@link MemoryBoundBlockingQueue}
- * won't notify the waiting thread (the 'put' thread)
+ * Considering some thread could putAsync various sizes of messages into the shared queue, {@link MemoryBoundBlockingQueue}
+ * won't notify the waiting thread (the 'putAsync' thread)
  * right away when some message gets processed until the freed memory hit the follow config: {@link #notifyDeltaInByte}.
  * The reason behind this design:
  * When the buffered queue is full, and the processing thread keeps processing small message, the bigger message won't

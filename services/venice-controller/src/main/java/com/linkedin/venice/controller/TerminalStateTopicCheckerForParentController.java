@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
  * A task that periodically polls the job state for existing version topics in the parent fabric. This is to make sure
  * topics in the parent fabric are cleaned up in a timely manner once they reach terminal states in all child fabrics.
  * This is to prevent out-of-order issue when compaction is enabled and MM rewind old messages from parent to child
- * fabrics during restart. Topic cleanup is part of job status polling because it's only safe to delete the VT in parent
+ * fabrics during restart. Topic cleanup is part of job status polling because it's only safe to deleteAsync the VT in parent
  * fabric once the job reaches terminal state in all child fabrics.
  */
 public class TerminalStateTopicCheckerForParentController implements Runnable, Closeable {

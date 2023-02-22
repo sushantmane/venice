@@ -264,7 +264,8 @@ public class PushStatusStoreTest {
         // SOIP from the controller since other partition has replicas with EOIP status
         statusStoreDeleter.deletePartitionIncrementalPushStatus(storeName, 1, incPushVersion.get(), 1).get();
         TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
-          // N.B.: Even though we block on the deleter's future, that only means the delete message is persisted into
+          // N.B.: Even though we block on the deleter's future, that only means the deleteAsync message is persisted
+          // into
           // Kafka, but querying the system store may still yield a stale result, hence the need for retrying.
           JobStatusQueryResponse jobStatusQueryResponse =
               controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());

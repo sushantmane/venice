@@ -58,7 +58,7 @@ public class HelixReadWriteStoreRepository extends CachedReadOnlyStoreRepository
       putStore(store);
       if (store.isStoreMetaSystemStoreEnabled() && metaStoreWriter.isPresent()) {
         /**
-         * Write the update to the meta system store RT topic.
+         * Write the updateAsync to the meta system store RT topic.
          */
         metaStoreWriter.get().writeStoreProperties(clusterName, store);
       }
