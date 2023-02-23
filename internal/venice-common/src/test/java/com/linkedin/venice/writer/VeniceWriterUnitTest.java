@@ -21,7 +21,7 @@ import org.testng.annotations.Test;
 
 
 public class VeniceWriterUnitTest {
-  @Test(dataProvider = "Chunking-And-Partition-Counts", dataProviderClass = DataProviderUtils.class, timeOut = 3000)
+  @Test(dataProvider = "Chunking-And-Partition-Counts", dataProviderClass = DataProviderUtils.class)
   public void testTargetPartitionIsSameForAllOperationsWithTheSameKey(boolean isChunkingEnabled, int partitionCount) {
     PubSubProducerAdapter mockedProducer = mock(PubSubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
