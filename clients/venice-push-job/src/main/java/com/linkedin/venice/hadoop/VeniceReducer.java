@@ -576,7 +576,7 @@ public class VeniceReducer extends AbstractMapReduceTask
     this.exceedQuota = exceedQuota;
   }
 
-  protected class ReducerProduceCallback implements PubSubProducerCallback {
+  protected class ReducerProduceCallback extends PubSubProducerCallback {
     private final Reporter reporter;
 
     public ReducerProduceCallback(Reporter reporter) {
