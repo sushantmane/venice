@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
@@ -144,7 +145,7 @@ public class TestHelixCustomizedView {
     for (int i = 0; i < 10; ++i) {
       GenericRecord record = new GenericData.Record(VALUE_SCHEMA);
       record.put(VALUE_FIELD_NAME, i);
-      veniceWriter.put(keyPrefix + i, record, valueSchemaId).get();
+      veniceWriter.put(keyPrefix + i, record, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

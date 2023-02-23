@@ -8,6 +8,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -20,7 +21,8 @@ public class ApacheKafkaProducerCallbackTest {
   @Test
   public void testOnCompletionWithNullExceptionShouldInvokeInternalCallbackWithNullException() {
     SimplePubSubProducerCallbackImpl internalCallback = new SimplePubSubProducerCallbackImpl();
-    ApacheKafkaProducerCallback kafkaProducerCallback = new ApacheKafkaProducerCallback(internalCallback);
+    ApacheKafkaProducerCallback kafkaProducerCallback =
+        new ApacheKafkaProducerCallback(internalCallback, new CompletableFuture<>());
     RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), 0, 1, 1676397545, 1L, 11, 12);
 
     kafkaProducerCallback.onCompletion(recordMetadata, null);
@@ -38,7 +40,8 @@ public class ApacheKafkaProducerCallbackTest {
   @Test
   public void testOnCompletionWithNonNullExceptionShouldInvokeInternalCallbackWithNonNullException() {
     SimplePubSubProducerCallbackImpl internalCallback = new SimplePubSubProducerCallbackImpl();
-    ApacheKafkaProducerCallback kafkaProducerCallback = new ApacheKafkaProducerCallback(internalCallback);
+    ApacheKafkaProducerCallback kafkaProducerCallback =
+        new ApacheKafkaProducerCallback(internalCallback, new CompletableFuture<>());
     RecordMetadata recordMetadata = new RecordMetadata(new TopicPartition("topicX", 42), -1, -1, -1, -1L, -1, -1);
 
     UnknownTopicOrPartitionException exception = new UnknownTopicOrPartitionException("Unknown topic: topicX");
@@ -59,7 +62,8 @@ public class ApacheKafkaProducerCallbackTest {
   public void testOnCompletionWithNonNullExceptionShouldCompleteFutureExceptionally()
       throws ExecutionException, InterruptedException {
     SimplePubSubProducerCallbackImpl internalCallback = new SimplePubSubProducerCallbackImpl();
-    ApacheKafkaProducerCallback kafkaProducerCallback = new ApacheKafkaProducerCallback(internalCallback);
+    ApacheKafkaProducerCallback kafkaProducerCallback =
+        new ApacheKafkaProducerCallback(internalCallback, new CompletableFuture<>());
     Future<PubSubProduceResult> produceResultFuture = kafkaProducerCallback.getProduceResultFuture();
     assertFalse(produceResultFuture.isDone());
     assertFalse(produceResultFuture.isCancelled());
@@ -77,7 +81,8 @@ public class ApacheKafkaProducerCallbackTest {
   public void testOnCompletionWithNonNullExceptionShouldCompleteFuture()
       throws ExecutionException, InterruptedException {
     SimplePubSubProducerCallbackImpl internalCallback = new SimplePubSubProducerCallbackImpl();
-    ApacheKafkaProducerCallback kafkaProducerCallback = new ApacheKafkaProducerCallback(internalCallback);
+    ApacheKafkaProducerCallback kafkaProducerCallback =
+        new ApacheKafkaProducerCallback(internalCallback, new CompletableFuture<>());
     Future<PubSubProduceResult> produceResultFuture = kafkaProducerCallback.getProduceResultFuture();
     assertFalse(produceResultFuture.isDone());
     assertFalse(produceResultFuture.isCancelled());

@@ -52,6 +52,7 @@ import io.tehuti.metrics.MetricsRepository;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -170,7 +171,7 @@ public abstract class AbstractClientEndToEndSetup {
     for (int i = 0; i < recordCnt; ++i) {
       GenericRecord record = new GenericData.Record(VALUE_SCHEMA);
       record.put(VALUE_FIELD_NAME, i);
-      veniceWriter.put(keyPrefix + i, record, valueSchemaId).get();
+      veniceWriter.put(keyPrefix + i, record, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

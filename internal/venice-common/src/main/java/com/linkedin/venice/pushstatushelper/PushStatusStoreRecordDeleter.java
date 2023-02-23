@@ -7,6 +7,7 @@ import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +33,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
     LOGGER.info("Deleting pushStatus of storeName: {}, version: {}", storeName, version);
     for (int partitionId = 0; partitionId < partitionCount; partitionId++) {
       PushStatusKey pushStatusKey = PushStatusStoreUtils.getPushKey(version, partitionId, incrementalPushVersion);
-      writer.delete(pushStatusKey, null);
+      writer.delete(pushStatusKey, null, null);
     }
   }
 
@@ -54,7 +55,7 @@ public class PushStatusStoreRecordDeleter implements AutoCloseable {
         "Deleting incremental push status belonging to a partition:{}. pushStatusKey:{}",
         partitionId,
         pushStatusKey);
-    return veniceWriterCache.prepareVeniceWriter(storeName).delete(pushStatusKey, null);
+    return veniceWriterCache.prepareVeniceWriter(storeName).delete(pushStatusKey, null, new CompletableFuture<>());
   }
 
   public void removePushStatusStoreVeniceWriter(String storeName) {

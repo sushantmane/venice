@@ -754,7 +754,7 @@ public class TestPushJobWithNativeReplication {
                     newRePushVersion);
               });
               for (int i = 1; i <= 10; i++) {
-                finalIncPushToRTWriter.put(Integer.toString(i), incValuePrefix + i, 1);
+                finalIncPushToRTWriter.put(Integer.toString(i), incValuePrefix + i, 1, null);
               }
               finalIncPushToRTWriter.broadcastEndOfIncrementalPush(incPushToRTVersion, new HashMap<>());
             });

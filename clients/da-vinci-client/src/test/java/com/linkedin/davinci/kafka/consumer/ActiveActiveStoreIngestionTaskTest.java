@@ -102,6 +102,7 @@ public class ActiveActiveStoreIngestionTaskTest {
             kafkaKeyArgumentCaptor.capture(),
             kmeArgumentCaptor.capture(),
             any(),
+            any(),
             any())).thenAnswer((Answer<Future<PubSubProduceResult>>) invocation -> {
               KafkaKey kafkaKey = invocation.getArgument(2);
               KafkaMessageEnvelope kafkaMessageEnvelope = invocation.getArgument(3);
@@ -164,7 +165,7 @@ public class ActiveActiveStoreIngestionTaskTest {
         beforeProcessingRecordTimestamp);
 
     // Send 1 SOS, 2 Chunks, 1 Manifest.
-    verify(mockedProducer, times(4)).sendMessage(any(), any(), any(), any(), any(), any());
+    verify(mockedProducer, times(4)).sendMessage(any(), any(), any(), any(), any(), any(), any());
     ArgumentCaptor<LeaderProducedRecordContext> leaderProducedRecordContextArgumentCaptor =
         ArgumentCaptor.forClass(LeaderProducedRecordContext.class);
     verify(ingestionTask, times(3)).produceToStoreBufferService(

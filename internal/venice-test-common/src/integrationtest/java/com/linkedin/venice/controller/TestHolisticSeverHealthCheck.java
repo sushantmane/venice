@@ -23,6 +23,7 @@ import com.linkedin.venice.writer.VeniceWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -120,7 +121,7 @@ public class TestHolisticSeverHealthCheck {
 
     try (VeniceWriter<String, String, byte[]> veniceWriter = cluster.getVeniceWriter(topicName)) {
       veniceWriter.broadcastStartOfPush(new HashMap<>());
-      veniceWriter.put("test", "test", 1).get();
+      veniceWriter.put("test", "test", 1, new CompletableFuture<>()).get();
       veniceWriter.broadcastEndOfPush(new HashMap<>());
     }
 

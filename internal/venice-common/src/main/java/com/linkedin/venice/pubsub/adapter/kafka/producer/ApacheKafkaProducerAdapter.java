@@ -14,6 +14,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -74,7 +75,8 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders pubsubMessageHeaders,
-      PubSubProducerCallback pubsubProducerCallback) {
+      PubSubProducerCallback pubsubProducerCallback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     ensureProducerIsNotClosed();
     ProducerRecord<KafkaKey, KafkaMessageEnvelope> record = new ProducerRecord<>(
         topic,
@@ -82,7 +84,8 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
+    ApacheKafkaProducerCallback kafkaCallback =
+        new ApacheKafkaProducerCallback(pubsubProducerCallback, produceResultFuture);
     try {
       producer.send(record, kafkaCallback);
       return kafkaCallback.getProduceResultFuture();

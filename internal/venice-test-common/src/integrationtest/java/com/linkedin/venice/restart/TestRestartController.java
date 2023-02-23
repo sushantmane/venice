@@ -61,13 +61,13 @@ public class TestRestartController {
 
     // push some data
     veniceWriter.broadcastStartOfPush(new HashMap<>());
-    veniceWriter.put("1", "1", 1);
+    veniceWriter.put("1", "1", 1, null);
 
     // Stop the original leader
     int port = cluster.stopLeaderVeniceController();
 
     // Push rest of data.
-    veniceWriter.put("2", "2", 1);
+    veniceWriter.put("2", "2", 1, null);
     veniceWriter.broadcastEndOfPush(new HashMap<>());
 
     // After stopping origin leader, the new leader could handle the push status report correctly.
@@ -150,9 +150,9 @@ public class TestRestartController {
     Assert.assertEquals(controllerClient.queryJobStatus(topicName).getStatus(), ExecutionStatus.STARTED.toString());
     // push some data
     veniceWriter.broadcastStartOfPush(new HashMap<>());
-    veniceWriter.put("1", "1", 1);
+    veniceWriter.put("1", "1", 1, null);
     // Push rest of data.
-    veniceWriter.put("2", "2", 1);
+    veniceWriter.put("2", "2", 1, null);
     veniceWriter.broadcastEndOfPush(new HashMap<>());
 
     // After stopping origin leader, the new leader could handle the push status report correctly.

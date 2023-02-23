@@ -848,7 +848,7 @@ public class TestHybrid {
           TestUtils.getVeniceWriterFactory(veniceWriterProperties).createBasicVeniceWriter(tmpTopic1)) {
         // Write 10 records
         for (int i = 0; i < 10; ++i) {
-          tmpWriter1.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
+          tmpWriter1.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1, null);
         }
       }
 
@@ -859,7 +859,7 @@ public class TestHybrid {
           TestUtils.getVeniceWriterFactory(veniceWriterProperties).createBasicVeniceWriter(tmpTopic2)) {
         // Write 10 records
         for (int i = 10; i < 20; ++i) {
-          tmpWriter2.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1);
+          tmpWriter2.put(stringSerializer.serialize("key_" + i), stringSerializer.serialize("value_" + i), 1, null);
         }
       }
 
@@ -1263,7 +1263,8 @@ public class TestHybrid {
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
               0,
-              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
+              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
+              null);
 
           // Send <key1, value2, seq: 2>
           record = getKafkaKeyAndValueEnvelope(
@@ -1279,7 +1280,8 @@ public class TestHybrid {
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
               0,
-              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
+              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
+              null);
 
           // Send <key1, value1, seq: 1 (Duplicated message)>
           record = getKafkaKeyAndValueEnvelope(
@@ -1295,7 +1297,8 @@ public class TestHybrid {
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
               0,
-              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
+              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
+              null);
 
           // Send <key2, value1, seq: 3>
           record = getKafkaKeyAndValueEnvelope(
@@ -1311,7 +1314,8 @@ public class TestHybrid {
               record.getSecond(),
               new CompletableFutureCallback(new CompletableFuture<>()),
               0,
-              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
+              VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER,
+              null);
         }
 
         try (CloseableHttpAsyncClient storageNodeClient = HttpAsyncClients.createDefault()) {
@@ -1433,7 +1437,7 @@ public class TestHybrid {
                 .createBasicVeniceWriter(Version.composeRealTimeTopic(storeName))) {
           for (int j = i * 50 + 1; j <= i * 50 + 50; j++) {
             realTimeTopicWriter
-                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
+                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1, null);
           }
         }
       }
@@ -1502,7 +1506,7 @@ public class TestHybrid {
                 .createBasicVeniceWriter(Version.composeRealTimeTopic(storeName))) {
           for (int j = i * 50 + 1; j <= i * 50 + 50; j++) {
             realTimeTopicWriter
-                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1);
+                .put(stringSerializer.serialize(String.valueOf(j)), stringSerializer.serialize(prefix + j), 1, null);
           }
         }
       }

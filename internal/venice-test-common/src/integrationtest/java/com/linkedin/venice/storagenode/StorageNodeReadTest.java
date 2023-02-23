@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -362,7 +363,7 @@ public class StorageNodeReadTest {
     // Insert test record and wait synchronously for it to succeed
     Future[] writerFutures = new Future[numOfRecords];
     for (int i = 0; i < numOfRecords; i++) {
-      writerFutures[i] = veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId);
+      writerFutures[i] = veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId, new CompletableFuture<>());
     }
     for (int i = 0; i < numOfRecords; i++) {
       writerFutures[i].get();

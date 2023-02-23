@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -303,6 +304,6 @@ public class KafkaConsumptionTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    producerAdapter.sendMessage(topic, null, recordKey, recordValue, null, null).get();
+    producerAdapter.sendMessage(topic, null, recordKey, recordValue, null, null, new CompletableFuture<>()).get();
   }
 }

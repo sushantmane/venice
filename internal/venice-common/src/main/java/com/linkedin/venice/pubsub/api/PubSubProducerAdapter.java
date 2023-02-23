@@ -4,6 +4,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,8 +42,9 @@ public interface PubSubProducerAdapter {
       Integer partition,
       KafkaKey key,
       KafkaMessageEnvelope value,
-      PubSubMessageHeaders headers,
-      PubSubProducerCallback callback);
+      PubSubMessageHeaders pubsubMessageHeaders,
+      PubSubProducerCallback pubsubProducerCallback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture);
 
   void flush();
 

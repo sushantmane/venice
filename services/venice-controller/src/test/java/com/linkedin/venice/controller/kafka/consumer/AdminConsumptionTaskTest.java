@@ -111,6 +111,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -319,11 +320,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), false);
     executor.submit(task);
@@ -348,7 +351,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The store doesn't exist
     doReturn(false).when(admin).hasStore(clusterName, storeName);
     doThrow(new VeniceException("Mock store creation exception")).doNothing()
@@ -380,7 +384,8 @@ public class AdminConsumptionTaskTest {
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+                new CompletableFuture<>())
             .get()).getOffset();
     AdminConsumptionStats mockStats = mock(AdminConsumptionStats.class);
     doThrow(StringIndexOutOfBoundsException.class).when(mockStats).recordAdminMessageDelegateLatency(anyDouble());
@@ -402,11 +407,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     doThrow(new VeniceException("Mock store creation exception")).doNothing()
         .when(admin)
         .createStore(clusterName, storeName, owner, keySchema, valueSchema, false);
@@ -434,7 +441,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The store doesn't exist
     doReturn(false).when(admin).hasStore(clusterName, storeName);
     doThrow(new VeniceException("Mock store creation exception")).when(admin)
@@ -468,13 +476,15 @@ public class AdminConsumptionTaskTest {
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
-                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+                new CompletableFuture<>())
             .get();
     veniceWriter
         .put(
             emptyKeyBytes,
             getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 2),
-            AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+            AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+            new CompletableFuture<>())
         .get();
 
     Queue<AbstractPollStrategy> pollStrategies = new LinkedList<>();
@@ -540,13 +550,15 @@ public class AdminConsumptionTaskTest {
             .put(
                 emptyKeyBytes,
                 getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
-                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+                new CompletableFuture<>())
             .get();
     veniceWriter
         .put(
             emptyKeyBytes,
             getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 2),
-            AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+            AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+            new CompletableFuture<>())
         .get();
 
     Queue<PubSubTopicPartitionOffset> pollDeliveryOrder = new LinkedList<>();
@@ -583,18 +595,21 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     long offsetToSkip =
         ((PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
-                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+                new CompletableFuture<>())
             .get()).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 3),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     Set<PubSubTopicPartitionOffset> set = new HashSet<>();
     set.add(
@@ -648,16 +663,19 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // Write a message with a skipped execution id but valid producer metadata.
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 3),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 4),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The stores don't exist yet.
     doReturn(false).when(admin).hasStore(clusterName, storeName1);
     doReturn(false).when(admin).hasStore(clusterName, storeName2);
@@ -690,7 +708,8 @@ public class AdminConsumptionTaskTest {
     Future<PubSubProduceResult> metadataForStoreName0Future = oldVeniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName0, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     adminTopicMetadataAccessor.updateMetadata(
         clusterName,
         AdminTopicMetadataAccessor.generateMetadataMap(metadataForStoreName0Future.get().getOffset(), -1, 1));
@@ -699,16 +718,19 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 3),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // Write a message with a skipped execution id but valid producer metadata.
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 4),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName3, owner, keySchema, valueSchema, 5),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The stores don't exist yet.
     doReturn(false).when(admin).hasStore(clusterName, storeName0);
     doReturn(false).when(admin).hasStore(clusterName, storeName1);
@@ -737,11 +759,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The store doesn't exist for the first time, and exist for the second time
     when(admin.hasStore(clusterName, storeName)).thenReturn(false).thenReturn(true);
 
@@ -769,13 +793,15 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // This scenario mostly happens when leader controller fails over
     veniceWriter = getVeniceWriter(inMemoryKafkaBroker);
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // The store doesn't exist
     doReturn(false).when(admin).hasStore(clusterName, storeName1);
     doReturn(false).when(admin).hasStore(clusterName, storeName2);
@@ -804,7 +830,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     AdminConsumptionTask task = getAdminConsumptionTask(new RandomPollStrategy(), true);
     executor.submit(task);
@@ -831,7 +858,8 @@ public class AdminConsumptionTaskTest {
       veniceWriter.put(
           emptyKeyBytes,
           getKillOfflinePushJobMessage(clusterName, storeTopicName, i),
-          AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+          AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+          null);
       final long executionId = i;
       TestUtils.waitForNonDeterministicCompletion(TIMEOUT, TimeUnit.MILLISECONDS, () -> {
         Map<String, Long> metaData = adminTopicMetadataAccessor.getMetadata(clusterName);
@@ -857,7 +885,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     String newOwner = owner + "updated";
     int partitionNumber = 100;
@@ -932,7 +961,7 @@ public class AdminConsumptionTaskTest {
     adminMessage.executionId = 2;
     byte[] message = adminOperationSerializer.serialize(adminMessage);
 
-    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION, null);
 
     TestUtils.waitForNonDeterministicAssertion(TIMEOUT, TimeUnit.MILLISECONDS, () -> {
       Assert.assertEquals(getLastOffset(clusterName), 2L);
@@ -968,19 +997,23 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName1, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName2, owner, keySchema, valueSchema, 2),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName1, 3),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName2, 4),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     // The store doesn't exist
     when(admin.hasStore(clusterName, storeName1)).thenReturn(false);
@@ -1042,11 +1075,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
         TimeUnit.MILLISECONDS,
@@ -1061,11 +1096,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     Map<String, Long> newMetadata = AdminTopicMetadataAccessor.generateMetadataMap(offset, -1, 4L);
     adminTopicMetadataAccessor.updateMetadata(clusterName, newMetadata);
@@ -1077,7 +1114,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
         TimeUnit.MILLISECONDS,
@@ -1094,18 +1132,21 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     long failingOffset =
         ((PubSubProduceResult) veniceWriter
             .put(
                 emptyKeyBytes,
                 getAddVersionMessage(clusterName, storeName, mockPushJobId, 1, 1, 2L),
-                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION)
+                AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+                new CompletableFuture<>())
             .get()).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     doThrow(new VeniceException("Mocked add version exception")).when(admin)
         .addVersionAndStartIngestion(
             clusterName,
@@ -1153,15 +1194,18 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     final long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     OffsetRecord offsetRecord = offsetManager.getLastOffset(topicName, AdminTopicUtils.ADMIN_TOPIC_PARTITION_ID);
     offsetRecord.setCheckpointLocalVersionTopicOffset(offset);
@@ -1181,11 +1225,13 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     final long latestOffset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
@@ -1204,25 +1250,30 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 2L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 3L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // New admin messages should fail with DIV error
     Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 4L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     veniceWriter.put(
         emptyKeyBytes,
         getKillOfflinePushJobMessage(clusterName, storeTopicName, 5L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
     // We need to actually create a gap in producer metadata too in order to craft a valid DIV exception.
     Set<PubSubTopicPartitionOffset> set = new HashSet<>();
     set.add(
@@ -1277,7 +1328,8 @@ public class AdminConsumptionTaskTest {
     Future<PubSubProduceResult> future = veniceWriter.put(
         emptyKeyBytes,
         getAddVersionMessage(clusterName, storeName, mockPushJobId, versionNumber, numberOfPartitions, 1L),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        new CompletableFuture<>());
     long offset = future.get(TIMEOUT, TimeUnit.MILLISECONDS).getOffset();
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
@@ -1302,12 +1354,12 @@ public class AdminConsumptionTaskTest {
     int i = 0;
     for (int id = 1; id < 11; id++) {
       messages[i] = getKillOfflinePushJobMessage(clusterName, topicName, id);
-      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION, null);
       i++;
     }
     // Mimic rewind.
     for (i = 4; i < 10; i++) {
-      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+      veniceWriter.put(emptyKeyBytes, messages[i], AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION, null);
     }
     TestUtils.waitForNonDeterministicAssertion(
         TIMEOUT,
@@ -1329,7 +1381,8 @@ public class AdminConsumptionTaskTest {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreCreationMessage(clusterName, storeName, owner, keySchema, valueSchema, 1),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     DerivedSchemaCreation derivedSchemaCreation =
         (DerivedSchemaCreation) AdminMessageType.DERIVED_SCHEMA_CREATION.getNewInstance();
@@ -1348,7 +1401,7 @@ public class AdminConsumptionTaskTest {
     adminMessage.executionId = 2;
     byte[] message = adminOperationSerializer.serialize(adminMessage);
 
-    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+    veniceWriter.put(emptyKeyBytes, message, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION, null);
 
     TestUtils.waitForNonDeterministicAssertion(TIMEOUT, TimeUnit.MILLISECONDS, () -> {
       Assert.assertEquals(getLastOffset(clusterName), 2L);

@@ -196,9 +196,9 @@ class DefaultPushJobHeartbeatSender implements PushJobHeartbeatSender {
     };
 
     if (isLastHeartbeat && sendDeleteAsLasHeartbeat) {
-      veniceWriter.delete(keyBytes, callback);
+      veniceWriter.delete(keyBytes, callback, null);
     } else {
-      veniceWriter.put(keyBytes, valueBytes, valueSchemaId, callback);
+      veniceWriter.put(keyBytes, valueBytes, valueSchemaId, callback, null);
     }
     veniceWriter.flush();
 

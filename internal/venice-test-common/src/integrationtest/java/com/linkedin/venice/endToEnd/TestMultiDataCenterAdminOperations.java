@@ -153,7 +153,8 @@ public class TestMultiDataCenterAdminOperations {
     veniceWriter.put(
         emptyKeyBytes,
         getStoreUpdateMessage(clusterName, "store-not-exist", "store-owner", executionId, adminOperationSerializer),
-        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+        AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+        null);
 
     List<VeniceControllerWrapper> controllersToTest = new ArrayList<>();
     controllersToTest.add(parentController);

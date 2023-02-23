@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -82,7 +83,7 @@ public class ChangeCaptureViewWriter extends VeniceViewWriter {
     // updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key); (line 604
     // A/AIngestionTask?)
     try {
-      veniceWriter.put(key, recordChangeEvent, 1).get();
+      veniceWriter.put(key, recordChangeEvent, 1, new CompletableFuture<>()).get();
     } catch (InterruptedException | ExecutionException e) {
       LOGGER
           .error("Failed to produce to Change Capture view topic for store: {} version: {}", store.getName(), version);
