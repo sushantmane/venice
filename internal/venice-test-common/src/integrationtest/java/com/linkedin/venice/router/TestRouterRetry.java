@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
@@ -101,7 +102,7 @@ public class TestRouterRetry {
     for (int i = 0; i < 100; ++i) {
       GenericRecord record = new GenericData.Record(VALUE_SCHEMA);
       record.put(VALUE_FIELD_NAME, i);
-      veniceWriter.put(KEY_PREFIX + i, record, valueSchemaId).get();
+      veniceWriter.put(KEY_PREFIX + i, record, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

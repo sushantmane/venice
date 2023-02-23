@@ -61,7 +61,8 @@ public class TestKafkaInputFormat {
     VeniceWriterFactory veniceWriterFactory = TestUtils.getVeniceWriterFactory(kafka.getAddress());
     try (VeniceWriter<byte[], byte[], byte[]> veniceWriter = veniceWriterFactory.createBasicVeniceWriter(topicName)) {
       for (int i = 0; i < numRecord; ++i) {
-        veniceWriter.put((KAFKA_MESSAGE_KEY_PREFIX + i).getBytes(), (KAFKA_MESSAGE_VALUE_PREFIX + i).getBytes(), -1);
+        veniceWriter
+            .put((KAFKA_MESSAGE_KEY_PREFIX + i).getBytes(), (KAFKA_MESSAGE_VALUE_PREFIX + i).getBytes(), -1, null);
       }
     }
 

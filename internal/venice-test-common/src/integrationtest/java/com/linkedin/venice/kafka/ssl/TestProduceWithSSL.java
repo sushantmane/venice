@@ -76,7 +76,7 @@ public class TestProduceWithSSL {
     String testKey = "key";
     String testVal = "value";
     writer.broadcastStartOfPush(new HashMap<>());
-    writer.put(testKey, testVal, 1);
+    writer.put(testKey, testVal, 1, null);
     writer.broadcastEndOfPush(new HashMap<>());
 
     // Wait for storage node to finish consuming, and new version to be activated

@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -195,7 +196,7 @@ public abstract class ConsumerIntegrationTest {
       VeniceWriter<String, String, byte[]> veniceWriter,
       AvroGenericStoreClient client,
       String testValue) throws ExecutionException, InterruptedException {
-    veniceWriter.put(TEST_KEY, testValue, 1).get();
+    veniceWriter.put(TEST_KEY, testValue, 1, new CompletableFuture<>()).get();
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> {
       try {
         Object value = client.get(TEST_KEY).get();
