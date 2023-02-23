@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -200,7 +201,7 @@ public class VeniceClusterInitializer implements Closeable {
       veniceWriter.broadcastStartOfPush(Collections.emptyMap());
       Future[] writerFutures = new Future[ENTRY_COUNT];
       for (int i = 0; i < ENTRY_COUNT; i++) {
-        writerFutures[i] = veniceWriter.put(KEY_PREFIX + i, values.get(i), valueSchemaId);
+        writerFutures[i] = veniceWriter.put(KEY_PREFIX + i, values.get(i), valueSchemaId, new CompletableFuture<>());
       }
 
       // wait synchronously for them to succeed

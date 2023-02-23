@@ -66,10 +66,16 @@ public class PushStatusStoreWriterTest {
         Optional.of(incPushVersion),
         Optional.of(SERVER_INCREMENTAL_PUSH_PREFIX));
 
-    verify(veniceWriterMock).update(eq(serverPushStatusKey), any(), eq(protoVersion), eq(derivedSchemaId), eq(null));
-    verify(veniceWriterCacheMock, times(2)).prepareVeniceWriter(storeName);
     verify(veniceWriterMock)
-        .update(eq(ongoPushStatusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null));
+        .update(eq(serverPushStatusKey), any(), eq(protoVersion), eq(derivedSchemaId), eq(null), any());
+    verify(veniceWriterCacheMock, times(2)).prepareVeniceWriter(storeName);
+    verify(veniceWriterMock).update(
+        eq(ongoPushStatusKey),
+        eq(getWriteComputeRecord()),
+        eq(protoVersion),
+        eq(derivedSchemaId),
+        eq(null),
+        any());
   }
 
   @Test
@@ -82,7 +88,7 @@ public class PushStatusStoreWriterTest {
         START_OF_INCREMENTAL_PUSH_RECEIVED);
     verify(veniceWriterCacheMock).prepareVeniceWriter(storeName);
     verify(veniceWriterMock)
-        .update(eq(statusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null));
+        .update(eq(statusKey), eq(getWriteComputeRecord()), eq(protoVersion), eq(derivedSchemaId), eq(null), any());
   }
 
   @Test
@@ -97,6 +103,7 @@ public class PushStatusStoreWriterTest {
 
     pushStatusStoreWriter.removeFromSupposedlyOngoingIncrementalPushVersions(storeName, storeVersion, incPushVersion);
     verify(veniceWriterCacheMock).prepareVeniceWriter(storeName);
-    verify(veniceWriterMock).update(eq(statusKey), eq(writeOpRecord), eq(protoVersion), eq(derivedSchemaId), eq(null));
+    verify(veniceWriterMock)
+        .update(eq(statusKey), eq(writeOpRecord), eq(protoVersion), eq(derivedSchemaId), eq(null), any());
   }
 }

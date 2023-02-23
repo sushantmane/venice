@@ -21,7 +21,7 @@ import org.testng.annotations.Test;
 
 
 public class VeniceWriterUnitTest {
-  @Test(dataProvider = "Chunking-And-Partition-Counts", dataProviderClass = DataProviderUtils.class)
+  @Test(dataProvider = "Chunking-And-Partition-Counts", dataProviderClass = DataProviderUtils.class, timeOut = 3000)
   public void testTargetPartitionIsSameForAllOperationsWithTheSameKey(boolean isChunkingEnabled, int partitionCount) {
     PubSubProducerAdapter mockedProducer = mock(PubSubProducerAdapter.class);
     Future mockedFuture = mock(Future.class);
@@ -49,12 +49,12 @@ public class VeniceWriterUnitTest {
         .sendMessage(anyString(), putPartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 
     ArgumentCaptor<Integer> deletePartitionArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    writer.delete(key, null);
+    writer.delete(key, null, null);
     verify(mockedProducer, atLeast(2))
         .sendMessage(anyString(), deletePartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 
     ArgumentCaptor<Integer> updatePartitionArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    writer.delete(key, null);
+    writer.delete(key, null, null);
     verify(mockedProducer, atLeast(2))
         .sendMessage(anyString(), updatePartitionArgumentCaptor.capture(), any(), any(), any(), any(), any());
 

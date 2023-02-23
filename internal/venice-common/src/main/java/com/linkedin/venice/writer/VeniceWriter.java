@@ -1382,7 +1382,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       while (true) {
         try {
           boolean isEndOfSegment = ControlMessageType.valueOf(controlMessage).equals(ControlMessageType.END_OF_SEGMENT);
-          CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
           sendMessage(
               this::getControlMessageKey,
               MessageType.CONTROL_MESSAGE,
@@ -1393,8 +1392,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
               updateCheckSum,
               leaderMetadataWrapper,
               VENICE_DEFAULT_LOGICAL_TS,
-              produceResultFuture);
-          produceResultFuture.get();
+              new CompletableFuture<>()).get();
           return;
         } catch (InterruptedException | ExecutionException e) {
           if (e.getMessage() != null && e.getMessage().contains(Errors.UNKNOWN_TOPIC_OR_PARTITION.message())) {
