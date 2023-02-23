@@ -157,7 +157,7 @@ public class VeniceWriterTest {
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
-    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
+    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
     Properties writerProperties = new Properties();
     writerProperties.put(VeniceWriter.MAX_ELAPSED_TIME_FOR_SEGMENT_IN_MS, 0);
     String stringSchema = "\"string\"";
@@ -175,7 +175,8 @@ public class VeniceWriterTest {
       writer.put(Integer.toString(i), Integer.toString(i), 1, null);
     }
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
-    verify(mockedProducer, atLeast(1000)).sendMessage(any(), any(), any(), kmeArgumentCaptor.capture(), any(), any());
+    verify(mockedProducer, atLeast(1000))
+        .sendMessage(any(), any(), any(), kmeArgumentCaptor.capture(), any(), any(), any());
     int segmentNumber = -1;
     for (KafkaMessageEnvelope envelope: kmeArgumentCaptor.getAllValues()) {
       if (segmentNumber == -1) {
@@ -194,7 +195,7 @@ public class VeniceWriterTest {
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
-    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
+    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
     Properties writerProperties = new Properties();
     String stringSchema = "\"string\"";
     VeniceKafkaSerializer serializer = new VeniceAvroKafkaSerializer(stringSchema);
@@ -236,7 +237,8 @@ public class VeniceWriterTest {
     writer.put(Integer.toString(6), Integer.toString(1), 1, null, VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER);
 
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
-    verify(mockedProducer, atLeast(2)).sendMessage(any(), any(), any(), kmeArgumentCaptor.capture(), any(), any());
+    verify(mockedProducer, atLeast(2))
+        .sendMessage(any(), any(), any(), kmeArgumentCaptor.capture(), any(), any(), any());
 
     // first one will be control message SOS, there should not be any aa metadata.
     KafkaMessageEnvelope value0 = kmeArgumentCaptor.getAllValues().get(0);
@@ -291,7 +293,7 @@ public class VeniceWriterTest {
     Future mockedFuture = mock(Future.class);
     when(mockedProducer.getNumberOfPartitions(any())).thenReturn(1);
     when(mockedProducer.getNumberOfPartitions(any(), anyInt(), any())).thenReturn(1);
-    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
+    when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
     String stringSchema = "\"string\"";
     VeniceKafkaSerializer serializer = new VeniceAvroKafkaSerializer(stringSchema);
     String testTopic = "test";
@@ -326,7 +328,7 @@ public class VeniceWriterTest {
     ArgumentCaptor<KafkaKey> keyArgumentCaptor = ArgumentCaptor.forClass(KafkaKey.class);
     ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
     verify(mockedProducer, atLeast(2))
-        .sendMessage(any(), any(), keyArgumentCaptor.capture(), kmeArgumentCaptor.capture(), any(), any());
+        .sendMessage(any(), any(), keyArgumentCaptor.capture(), kmeArgumentCaptor.capture(), any(), any(), any());
     KeyWithChunkingSuffixSerializer keyWithChunkingSuffixSerializer = new KeyWithChunkingSuffixSerializer();
     byte[] serializedKey = serializer.serialize(testTopic, Integer.toString(1));
     byte[] serializedValue = serializer.serialize(testTopic, valueString);
@@ -462,7 +464,7 @@ public class VeniceWriterTest {
       Future future = executor.submit(() -> {
         countDownLatch.countDown();
         // send to non-existent topic
-        producer.sendMessage("topic", null, new KafkaKey(MessageType.PUT, "key".getBytes()), null, null, null);
+        producer.sendMessage("topic", null, new KafkaKey(MessageType.PUT, "key".getBytes()), null, null, null, null);
         fail("Should be blocking send");
       });
 

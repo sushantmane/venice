@@ -13,10 +13,13 @@ import org.apache.kafka.clients.producer.RecordMetadata;
  */
 public class ApacheKafkaProducerCallback implements Callback {
   private final PubSubProducerCallback pubsubProducerCallback;
-  private final CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
+  private final CompletableFuture<PubSubProduceResult> produceResultFuture;
 
-  public ApacheKafkaProducerCallback(PubSubProducerCallback pubsubProducerCallback) {
+  public ApacheKafkaProducerCallback(
+      PubSubProducerCallback pubsubProducerCallback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     this.pubsubProducerCallback = pubsubProducerCallback;
+    this.produceResultFuture = produceResultFuture;
   }
 
   /**
@@ -47,10 +50,12 @@ public class ApacheKafkaProducerCallback implements Callback {
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
     PubSubProduceResult produceResult = new ApacheKafkaProduceResult(metadata);
-    if (exception != null) {
-      produceResultFuture.completeExceptionally(exception);
-    } else {
-      produceResultFuture.complete(produceResult);
+    if (produceResultFuture != null) {
+      if (exception != null) {
+        produceResultFuture.completeExceptionally(exception);
+      } else {
+        produceResultFuture.complete(produceResult);
+      }
     }
     pubsubProducerCallback.onCompletion(new ApacheKafkaProduceResult(metadata), exception);
   }

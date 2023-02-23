@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,9 +76,11 @@ public class PubSubSharedProducerAdapter implements PubSubProducerAdapter {
       KafkaKey key,
       KafkaMessageEnvelope value,
       PubSubMessageHeaders headers,
-      PubSubProducerCallback callback) {
+      PubSubProducerCallback callback,
+      CompletableFuture<PubSubProduceResult> produceResultFuture) {
     long startNs = System.nanoTime();
-    Future<PubSubProduceResult> result = producerAdapter.sendMessage(topic, partition, key, value, headers, callback);
+    Future<PubSubProduceResult> result =
+        producerAdapter.sendMessage(topic, partition, key, value, headers, callback, produceResultFuture);
     sharedProducerStats.recordProducerSendLatency(LatencyUtils.getLatencyInMS(startNs));
     return result;
   }

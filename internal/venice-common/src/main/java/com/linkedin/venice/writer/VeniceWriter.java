@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -1120,13 +1121,15 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
       try {
+        CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
         return producerAdapter.sendMessage(
             topicName,
             partition,
             key,
             kafkaValue,
             getHeaders(kafkaValue.getProducerMetadata()),
-            messageCallback);
+            messageCallback,
+            produceResultFuture);
       } catch (Exception e) {
         if (ExceptionUtils.recursiveClassEquals(e, TopicAuthorizationException.class)) {
           throw new TopicAuthorizationVeniceException(
