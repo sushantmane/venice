@@ -33,6 +33,7 @@ import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfigImpl;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.ZKStore;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
@@ -218,7 +219,7 @@ public class TopicManagerTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    producer.sendMessage(topic, null, recordKey, recordValue, null, null).get();
+    producer.sendMessage(topic, null, recordKey, recordValue, null, new SimplePubSubProducerCallbackImpl()).get();
   }
 
   @Test

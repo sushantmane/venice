@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.exceptions.VeniceException;
@@ -87,7 +88,7 @@ public class ApacheKafkaProducerAdapterTest {
     when(kafkaProducerMock.send(any(ProducerRecord.class), isNull())).thenReturn(recordMetadataFutureMock);
     Future<PubSubProduceResult> produceResultFuture =
         producerAdapter.sendMessage(TOPIC_NAME, 42, testKafkaKey, testKafkaValue, null, null);
-    assertNotNull(produceResultFuture);
+    assertNull(produceResultFuture);
     verify(kafkaProducerMock, never()).send(any(ProducerRecord.class), isNull());
     verify(kafkaProducerMock, times(1)).send(any(ProducerRecord.class), any(Callback.class));
 
