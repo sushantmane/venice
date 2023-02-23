@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
@@ -76,7 +77,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   @Test
   public void testReducerUpdateWithTooLargeValueAndChunkingDisabled() {
     AbstractVeniceWriter mockWriter = mock(AbstractVeniceWriter.class);
-    when(mockWriter.update(any(), any(), anyInt(), anyInt(), any()))
+    when(mockWriter.update(any(), any(), anyInt(), anyInt(), any(), any()))
         .thenThrow(new RecordTooLargeException("expected exception"));
     JobConf jobConf = setupJobConf();
     jobConf.setInt(DERIVED_SCHEMA_ID_PROP, 2);
@@ -131,7 +132,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
         valueCaptor.capture(),
         schemaIdCaptor.capture(),
         callbackCaptor.capture(),
-        metadataArgumentCaptor.capture());
+        metadataArgumentCaptor.capture(),
+        any());
     Assert.assertEquals(keyCaptor.getValue(), keyFieldValue.getBytes());
     Assert.assertEquals(valueCaptor.getValue(), valueFieldValue.getBytes());
     Assert.assertEquals((int) schemaIdCaptor.getValue(), VALUE_SCHEMA_ID);
@@ -451,7 +453,11 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubSubProducerCallback callback) {
+          PubSubProducerCallback callback,
+          CompletableFuture completableFuture) {
+        if (completableFuture != null) {
+          completableFuture.completeExceptionally(new VeniceException("Fake exception"));
+        }
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
       }
@@ -462,7 +468,11 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object value,
           int valueSchemaId,
           PubSubProducerCallback callback,
-          PutMetadata putMetadata) {
+          PutMetadata putMetadata,
+          CompletableFuture completableFuture) {
+        if (completableFuture != null) {
+          completableFuture.completeExceptionally(new VeniceException("Fake exception"));
+        }
         callback.onCompletion(null, new VeniceException("Fake exception"));
         return null;
       }
@@ -471,7 +481,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       public Future<PubSubProduceResult> delete(
           Object key,
           PubSubProducerCallback callback,
-          DeleteMetadata deleteMetadata) {
+          DeleteMetadata deleteMetadata,
+          CompletableFuture completableFuture) {
         return null;
       }
 
@@ -481,7 +492,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubSubProducerCallback callback) {
+          PubSubProducerCallback callback,
+          CompletableFuture completableFuture) {
         // no-op
         return null;
       }
@@ -525,7 +537,11 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object value,
           int valueSchemaId,
           PubSubProducerCallback callback,
-          PutMetadata putMetadata) {
+          PutMetadata putMetadata,
+          CompletableFuture completableFuture) {
+        if (completableFuture != null) {
+          completableFuture.completeExceptionally(new VeniceException("Some writer exception"));
+        }
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
       }
@@ -534,7 +550,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       public Future<PubSubProduceResult> delete(
           Object key,
           PubSubProducerCallback callback,
-          DeleteMetadata deleteMetadata) {
+          DeleteMetadata deleteMetadata,
+          CompletableFuture completableFuture) {
         return null;
       }
 
@@ -543,7 +560,11 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object key,
           Object value,
           int valueSchemaId,
-          PubSubProducerCallback callback) {
+          PubSubProducerCallback callback,
+          CompletableFuture completableFuture) {
+        if (completableFuture != null) {
+          completableFuture.completeExceptionally(new VeniceException("Some writer exception"));
+        }
         callback.onCompletion(null, new VeniceException("Some writer exception"));
         return null;
       }
@@ -554,7 +575,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
-          PubSubProducerCallback callback) {
+          PubSubProducerCallback callback,
+          CompletableFuture completableFuture) {
         // no-op
         return null;
       }

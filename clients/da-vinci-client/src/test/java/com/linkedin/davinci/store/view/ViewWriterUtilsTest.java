@@ -31,7 +31,8 @@ public class ViewWriterUtilsTest {
     Future<PubSubProduceResult> mockFuture = Mockito.mock(Future.class);
 
     VeniceWriter mockVeniceWriter = Mockito.mock(VeniceWriter.class);
-    Mockito.when(mockVeniceWriter.put(Mockito.any(), Mockito.any(), Mockito.anyInt())).thenReturn(mockFuture);
+    Mockito.when(mockVeniceWriter.put(Mockito.any(), Mockito.any(), Mockito.anyInt(), Mockito.any()))
+        .thenReturn(mockFuture);
 
     VeniceServerConfig mockVeniceServerConfig = Mockito.mock(VeniceServerConfig.class);
     Mockito.when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
