@@ -74,7 +74,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .put(any(), any(), anyInt(), any());
 
     String keySchemaStr = "\"string\"";
     String valueSchemaStr = "\"string\"";
@@ -100,7 +100,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .put(any(), any(), anyInt(), any());
 
     String keySchemaStr = "\"string\"";
     String valueSchemaStr = "\"string\"";
@@ -123,7 +123,7 @@ public class TestVeniceParentHelixAdminWithAcl extends AbstractTestVeniceParentH
 
     doReturn(CompletableFuture.completedFuture(new SimplePubSubProduceResultImpl(topicName, partitionId, 1, -1)))
         .when(veniceWriter)
-        .put(any(), any(), anyInt());
+        .put(any(), any(), anyInt(), any());
 
     when(zkClient.readData(zkMetadataNodePath, null)).thenReturn(null)
         .thenReturn(AdminTopicMetadataAccessor.generateMetadataMap(1, -1, 1));
