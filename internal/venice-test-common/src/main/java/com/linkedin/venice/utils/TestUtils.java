@@ -94,6 +94,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -388,7 +389,7 @@ public class TestUtils {
         byte[] key = keySerializer.serialize(kafkaTopic, e.getKey());
         byte[] value = valueSerializer.serialize(kafkaTopic, e.getValue());
         value = compressor.compress(value);
-        putFutures.add(writer.put(key, value, valueSchemaId));
+        putFutures.add(writer.put(key, value, valueSchemaId, new CompletableFuture<>()));
       }
       for (Future future: putFutures) {
         future.get();
@@ -419,7 +420,7 @@ public class TestUtils {
 
       LinkedList<Future> putFutures = new LinkedList<>();
       for (Map.Entry e: (Iterable<Map.Entry>) batchData::iterator) {
-        putFutures.add(writer.put(e.getKey(), e.getValue(), valueSchemaId));
+        putFutures.add(writer.put(e.getKey(), e.getValue(), valueSchemaId, new CompletableFuture<>()));
       }
       for (Future future: putFutures) {
         future.get();

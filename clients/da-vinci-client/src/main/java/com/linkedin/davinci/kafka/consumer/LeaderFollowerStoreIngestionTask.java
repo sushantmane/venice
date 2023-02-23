@@ -1963,7 +1963,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         consumerRecord.getValue(),
                         callback,
                         consumerRecord.getTopicPartition().getPartitionNumber(),
-                        leaderMetadataWrapper),
+                        leaderMetadataWrapper,
+                        null),
                 subPartition,
                 kafkaUrl,
                 kafkaClusterId,
@@ -1995,7 +1996,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                           consumerRecord.getValue(),
                           callback,
                           consumerRecord.getTopicPartition().getPartitionNumber(),
-                          leaderMetadataWrapper),
+                          leaderMetadataWrapper,
+                          null),
                   subPartition,
                   kafkaUrl,
                   kafkaClusterId,
@@ -2045,7 +2047,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         versionTopicPartitionToBeProduced,
                         new HashMap<>(),
                         callback,
-                        leaderMetadataWrapper),
+                        leaderMetadataWrapper,
+                        null),
                 subPartition,
                 kafkaUrl,
                 kafkaClusterId,
@@ -2075,7 +2078,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         consumerRecord.getTopicPartition().getPartitionNumber(),
                         new HashMap<>(),
                         callback,
-                        DEFAULT_LEADER_METADATA_WRAPPER),
+                        DEFAULT_LEADER_METADATA_WRAPPER,
+                        null),
                 subPartition,
                 kafkaUrl,
                 kafkaClusterId,
@@ -2648,7 +2652,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         kafkaValue,
                         callback,
                         consumerRecord.getTopicPartition().getPartitionNumber(),
-                        leaderMetadataWrapper);
+                        leaderMetadataWrapper,
+                        null);
               } else {
                 /**
                  * When amplificationFactor != 1 and it is a leaderSubPartition consuming from the Real-time topic,
@@ -2657,7 +2662,13 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                  * please check {@link com.linkedin.venice.partitioner.UserPartitionAwarePartitioner}
                  */
                 veniceWriter.get()
-                    .put(keyBytes, ByteUtils.extractByteArray(putValue), put.schemaId, callback, leaderMetadataWrapper);
+                    .put(
+                        keyBytes,
+                        ByteUtils.extractByteArray(putValue),
+                        put.schemaId,
+                        callback,
+                        leaderMetadataWrapper,
+                        null);
               }
             },
             subPartition,
@@ -2701,9 +2712,10 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
                         kafkaValue,
                         callback,
                         consumerRecord.getTopicPartition().getPartitionNumber(),
-                        leaderMetadataWrapper);
+                        leaderMetadataWrapper,
+                        null);
               } else {
-                veniceWriter.get().delete(keyBytes, callback, leaderMetadataWrapper);
+                veniceWriter.get().delete(keyBytes, callback, leaderMetadataWrapper, null);
               }
             },
             subPartition,
@@ -2826,7 +2838,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
       BiConsumer<ChunkAwareCallback, LeaderMetadataWrapper> produce =
           (callback, leaderMetadataWrapper) -> veniceWriter.get()
-              .put(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper);
+              .put(keyBytes, updatedValueBytes, readerValueSchemaId, callback, leaderMetadataWrapper, null);
 
       produceToLocalKafka(
           consumerRecord,

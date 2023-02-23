@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.avro.Schema;
@@ -398,7 +399,7 @@ public class ReadComputeValidationTest {
     for (Map.Entry<Integer, GenericRecord> keyValue: valuesByKey.entrySet()) {
       byte[] compressedValue = compressorFactory.getCompressor(CompressionStrategy.NO_OP)
           .compress(serializer.serialize(topic, keyValue.getValue()));
-      veniceWriter.put(keyValue.getKey(), compressedValue, valueSchemaId).get();
+      veniceWriter.put(keyValue.getKey(), compressedValue, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(Collections.emptyMap());
@@ -426,7 +427,7 @@ public class ReadComputeValidationTest {
       value.put("member_feature", MF_EMBEDDING);
       byte[] compressedValue =
           compressorFactory.getCompressor(CompressionStrategy.NO_OP).compress(serializer.serialize(topic, value));
-      veniceWriter.put(i, compressedValue, valueSchemaId).get();
+      veniceWriter.put(i, compressedValue, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

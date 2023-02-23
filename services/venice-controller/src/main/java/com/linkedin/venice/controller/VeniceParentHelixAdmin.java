@@ -225,6 +225,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -730,8 +731,11 @@ public class VeniceParentHelixAdmin implements Admin {
         VeniceWriter<byte[], byte[], byte[]> veniceWriter = veniceWriterMap.get(clusterName);
         byte[] serializedValue = adminOperationSerializer.serialize(message);
         try {
-          Future<PubSubProduceResult> future = veniceWriter
-              .put(emptyKeyByteArr, serializedValue, AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION);
+          Future<PubSubProduceResult> future = veniceWriter.put(
+              emptyKeyByteArr,
+              serializedValue,
+              AdminOperationSerializer.LATEST_SCHEMA_ID_FOR_ADMIN_OPERATION,
+              new CompletableFuture<>());
           PubSubProduceResult produceResult = future.get();
 
           LOGGER.info("Sent message: {} to kafka, offset: {}", message, produceResult.getOffset());

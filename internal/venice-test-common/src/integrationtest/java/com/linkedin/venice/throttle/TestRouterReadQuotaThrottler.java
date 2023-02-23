@@ -28,6 +28,7 @@ import io.tehuti.metrics.MetricsRepository;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.testng.Assert;
@@ -66,7 +67,7 @@ public class TestRouterReadQuotaThrottler {
 
       writer.broadcastStartOfPush(new HashMap<>());
       // Insert test record and wait synchronously for it to succeed
-      writer.put(key, value, valueSchemaId).get();
+      writer.put(key, value, valueSchemaId, new CompletableFuture<>()).get();
       // Write end of push message to make node become ONLINE from BOOTSTRAP
       writer.broadcastEndOfPush(new HashMap<String, String>());
     }

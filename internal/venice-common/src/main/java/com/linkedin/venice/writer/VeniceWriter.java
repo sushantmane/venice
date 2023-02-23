@@ -1105,7 +1105,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
       try {
-        CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
         return producerAdapter.sendMessage(
             topicName,
             partition,

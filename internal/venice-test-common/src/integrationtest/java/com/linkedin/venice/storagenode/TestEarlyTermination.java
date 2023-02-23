@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.IOUtils;
@@ -114,7 +115,7 @@ public class TestEarlyTermination {
     // Insert test record and wait synchronously for it to succeed
     for (int i = 0; i < 100; ++i) {
 
-      veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId).get();
+      veniceWriter.put(keyPrefix + i, valuePrefix + i, valueSchemaId, new CompletableFuture<>()).get();
     }
     // Write end of push message to make node become ONLINE from BOOTSTRAP
     veniceWriter.broadcastEndOfPush(new HashMap<>());

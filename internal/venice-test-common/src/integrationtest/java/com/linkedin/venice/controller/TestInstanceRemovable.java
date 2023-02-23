@@ -141,7 +141,7 @@ public class TestInstanceRemovable {
 
     try (VeniceWriter<String, String, byte[]> veniceWriter = cluster.getVeniceWriter(topicName)) {
       veniceWriter.broadcastStartOfPush(new HashMap<>());
-      veniceWriter.put("test", "test", 1);
+      veniceWriter.put("test", "test", 1, null);
       veniceWriter.broadcastEndOfPush(new HashMap<>());
     }
 

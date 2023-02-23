@@ -95,7 +95,7 @@ public class PubSubSharedProducerAdapterFactoryTest {
                     LOGGER.info("produced offset test-topic-1: {}", metadata.getOffset());
                     producedTopicPresent.countDown();
                   }
-                });
+                }, null);
           } catch (VeniceException e) {
             LOGGER.error("Exception: ", e);
           }
@@ -123,7 +123,8 @@ public class PubSubSharedProducerAdapterFactoryTest {
                   new KafkaKey(MessageType.PUT, "topic2".getBytes()),
                   "topic2".getBytes(),
                   1,
-                  (metadata, e) -> producedTopicNotPresent.getAndIncrement());
+                  (metadata, e) -> producedTopicNotPresent.getAndIncrement(),
+                  null);
             } catch (VeniceException e) {
               LOGGER.error("Exception: ", e);
             }

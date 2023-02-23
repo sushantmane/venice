@@ -118,15 +118,15 @@ public class VeniceReducer extends AbstractMapReduceTask
           }
           if (valueBytes == null) {
             DeleteMetadata deleteMetadata = new DeleteMetadata(valueSchemaId, rmdVersionId, rmdPayload);
-            writer.delete(keyBytes, callback, deleteMetadata);
+            writer.delete(keyBytes, callback, deleteMetadata, null);
           } else {
             PutMetadata putMetadata = (new PutMetadata(rmdVersionId, rmdPayload));
-            writer.put(keyBytes, valueBytes, valueSchemaId, callback, putMetadata);
+            writer.put(keyBytes, valueBytes, valueSchemaId, callback, putMetadata, null);
           }
         } else if (enableWriteCompute && derivedValueSchemaId > 0) {
-          writer.update(keyBytes, valueBytes, valueSchemaId, derivedValueSchemaId, callback);
+          writer.update(keyBytes, valueBytes, valueSchemaId, derivedValueSchemaId, callback, null);
         } else {
-          writer.put(keyBytes, valueBytes, valueSchemaId, callback, null);
+          writer.put(keyBytes, valueBytes, valueSchemaId, callback, null, null);
         }
       };
     }

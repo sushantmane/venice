@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -442,7 +443,7 @@ public class StorageNodeComputeTest {
     Future[] writerFutures = new Future[numOfRecords];
     for (int i = 0; i < numOfRecords; i++) {
       byte[] compressedValue = compressor.compress(values.get(i));
-      writerFutures[i] = veniceWriter.put(keyPrefix + i, compressedValue, valueSchemaId);
+      writerFutures[i] = veniceWriter.put(keyPrefix + i, compressedValue, valueSchemaId, new CompletableFuture<>());
     }
 
     // wait synchronously for them to succeed

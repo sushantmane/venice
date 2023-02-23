@@ -5973,7 +5973,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.resourceName = kafkaTopic;
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
-    writer.delete(key, null);
+    writer.delete(key, null, null);
     writer.flush();
   }
 
@@ -5988,7 +5988,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     ParticipantMessageValue value = new ParticipantMessageValue();
     value.messageType = killPushJobType.getValue();
     value.messageUnion = message;
-    writer.put(key, value, PARTICIPANT_MESSAGE_STORE_SCHEMA_ID);
+    writer.put(key, value, PARTICIPANT_MESSAGE_STORE_SCHEMA_ID, null);
   }
 
   private VeniceWriter getParticipantStoreWriter(String clusterName) {

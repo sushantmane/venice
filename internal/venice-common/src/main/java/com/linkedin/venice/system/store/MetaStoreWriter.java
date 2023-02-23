@@ -306,7 +306,7 @@ public class MetaStoreWriter implements Closeable {
         put(KEY_STRING_PARTITION_ID, Integer.toString(partitionId));
       }
     });
-    writer.delete(key, null);
+    writer.delete(key, null, null);
     writer.flush();
   }
 
@@ -340,7 +340,7 @@ public class MetaStoreWriter implements Closeable {
     StoreMetaKey key = dataType.getStoreMetaKey(keyStringSupplier.get());
     StoreMetaValue value = valueSupplier.get();
     value.timestamp = System.currentTimeMillis();
-    writer.put(key, value, AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get());
+    writer.put(key, value, AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get(), null);
     writer.flush();
   }
 
@@ -371,6 +371,7 @@ public class MetaStoreWriter implements Closeable {
         update,
         AvroProtocolDefinition.METADATA_SYSTEM_SCHEMA_STORE.currentProtocolVersion.get(),
         derivedComputeSchemaId,
+        null,
         null);
     writer.flush();
   }

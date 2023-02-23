@@ -120,7 +120,7 @@ public class TestHolisticSeverHealthCheck {
 
     try (VeniceWriter<String, String, byte[]> veniceWriter = cluster.getVeniceWriter(topicName)) {
       veniceWriter.broadcastStartOfPush(new HashMap<>());
-      veniceWriter.put("test", "test", 1).get();
+      veniceWriter.put("test", "test", 1, null).get();
       veniceWriter.broadcastEndOfPush(new HashMap<>());
     }
 

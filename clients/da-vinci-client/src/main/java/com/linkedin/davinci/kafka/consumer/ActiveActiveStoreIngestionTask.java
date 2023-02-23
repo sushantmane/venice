@@ -608,7 +608,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
                   key,
                   callback,
                   sourceTopicOffset,
-                  new DeleteMetadata(valueSchemaId, rmdProtocolVersionID, updatedRmdBytes));
+                  new DeleteMetadata(valueSchemaId, rmdProtocolVersionID, updatedRmdBytes),
+                  null);
       LeaderProducedRecordContext leaderProducedRecordContext =
           LeaderProducedRecordContext.newDeleteRecord(kafkaClusterId, consumerRecord.getOffset(), key, deletePayload);
       produceToLocalKafka(
@@ -1320,7 +1321,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
               callback,
               leaderMetadataWrapper,
               VeniceWriter.APP_DEFAULT_LOGICAL_TS,
-              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes));
+              new PutMetadata(getRmdProtocolVersionID(), updatedRmdBytes),
+              null);
     };
   }
 

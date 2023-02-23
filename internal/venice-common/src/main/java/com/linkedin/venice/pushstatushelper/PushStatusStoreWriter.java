@@ -53,7 +53,8 @@ public class PushStatusStoreWriter implements AutoCloseable {
     writer.put(
         pushStatusKey,
         pushStatusValue,
-        AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion());
+        AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
+        null);
   }
 
   public void writePushStatus(String storeName, int version, int partitionId, ExecutionStatus status) {
@@ -97,6 +98,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
         writeComputeRecord,
         AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
         derivedSchemaId,
+        null,
         null);
 
     // If this is a server side SOIP status update then add this incremental
@@ -131,6 +133,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
             writeComputeRecord,
             AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
             derivedSchemaId,
+            null,
             null);
   }
 
@@ -156,6 +159,7 @@ public class PushStatusStoreWriter implements AutoCloseable {
             writeComputeRecord,
             AvroProtocolDefinition.PUSH_STATUS_SYSTEM_SCHEMA_STORE.getCurrentProtocolVersion(),
             derivedSchemaId,
+            null,
             null);
   }
 
