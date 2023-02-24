@@ -68,8 +68,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   @Test
   public void testReducerPutWithTooLargeValueAndChunkingDisabled() {
     AbstractVeniceWriter mockWriter = mock(AbstractVeniceWriter.class);
-    doThrow(new RecordTooLargeException("expected exception")).when(mockWriter)
-        .put(any(), any(), anyInt(), any(), any());
+    doThrow(new RecordTooLargeException("expected exception")).when(mockWriter).put(any(), any(), anyInt(), any());
     testReduceWithTooLargeValueAndChunkingDisabled(mockWriter, setupJobConf());
   }
 
@@ -122,16 +121,11 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<byte[]> keyCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<byte[]> valueCaptor = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Integer> schemaIdCaptor = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<PutMetadata> metadataArgumentCaptor = ArgumentCaptor.forClass(PutMetadata.class);
     ArgumentCaptor<VeniceReducer.ReducerProduceCallback> callbackCaptor =
         ArgumentCaptor.forClass(VeniceReducer.ReducerProduceCallback.class);
 
-    verify(mockWriter).put(
-        keyCaptor.capture(),
-        valueCaptor.capture(),
-        schemaIdCaptor.capture(),
-        callbackCaptor.capture(),
-        metadataArgumentCaptor.capture());
+    verify(mockWriter)
+        .put(keyCaptor.capture(), valueCaptor.capture(), schemaIdCaptor.capture(), callbackCaptor.capture());
     Assert.assertEquals(keyCaptor.getValue(), keyFieldValue.getBytes());
     Assert.assertEquals(valueCaptor.getValue(), valueFieldValue.getBytes());
     Assert.assertEquals((int) schemaIdCaptor.getValue(), VALUE_SCHEMA_ID);
@@ -299,7 +293,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
         Arrays.asList(new BytesWritable("test_value_0".getBytes()), new BytesWritable("test_value_1".getBytes()));
     OutputCollector mockCollector = mock(OutputCollector.class);
     reducer.reduce(new BytesWritable(keyBytes), values.iterator(), mockCollector, mockReporter);
-    verify(mockWriter).put(any(), any(), anyInt(), any(), any()); // Expect the writer to be invoked
+    verify(mockWriter).put(any(), any(), anyInt(), any()); // Expect the writer to be invoked
     Assert.assertFalse(reducer.hasReportedFailure(mockReporter, isDuplicateKeyAllowed));
   }
 
@@ -315,7 +309,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     OutputCollector mockCollector = mock(OutputCollector.class);
     AbstractVeniceWriter mockVeniceWriter = mock(AbstractVeniceWriter.class);
     doThrow(new TopicAuthorizationVeniceException("No ACL permission")).when(mockVeniceWriter)
-        .put(any(), any(), anyInt(), any(), any());
+        .put(any(), any(), anyInt(), any());
     VeniceReducer reducer = new VeniceReducer();
     reducer.setVeniceWriter(mockVeniceWriter);
     reducer.configure(setupJobConf());
@@ -427,14 +421,14 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
     ArgumentCaptor<VeniceReducer.ReducerProduceCallback> callbackCaptor =
         ArgumentCaptor.forClass(VeniceReducer.ReducerProduceCallback.class);
 
-    verify(mockWriter).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
+    verify(mockWriter).put(any(), any(), anyInt(), callbackCaptor.capture());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), mockReporter);
 
     // test with different reporter
     Reporter newMockReporter = createZeroCountReporterMock();
 
     reducer.reduce(keyWritable, values.iterator(), mockCollector, newMockReporter);
-    verify(mockWriter, times(2)).put(any(), any(), anyInt(), callbackCaptor.capture(), any());
+    verify(mockWriter, times(2)).put(any(), any(), anyInt(), callbackCaptor.capture());
     Assert.assertEquals(callbackCaptor.getValue().getProgressable(), newMockReporter);
   }
 
