@@ -69,8 +69,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   @Test
   public void testReducerPutWithTooLargeValueAndChunkingDisabled() {
     AbstractVeniceWriter mockWriter = mock(AbstractVeniceWriter.class);
-    when(mockWriter.put(any(), any(), anyInt(), any(), any()))
-        .thenThrow(new RecordTooLargeException("expected exception"));
+    doThrow(new RecordTooLargeException("expected exception")).when(mockWriter)
+        .put(any(), any(), anyInt(), any(), any());
     testReduceWithTooLargeValueAndChunkingDisabled(mockWriter, setupJobConf());
   }
 
@@ -315,8 +315,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
 
     OutputCollector mockCollector = mock(OutputCollector.class);
     AbstractVeniceWriter mockVeniceWriter = mock(AbstractVeniceWriter.class);
-    when(mockVeniceWriter.put(any(), any(), anyInt(), any(), any()))
-        .thenThrow(new TopicAuthorizationVeniceException("No ACL permission"));
+    doThrow(new TopicAuthorizationVeniceException("No ACL permission")).when(mockVeniceWriter)
+        .put(any(), any(), anyInt(), any(), any());
     VeniceReducer reducer = new VeniceReducer();
     reducer.setVeniceWriter(mockVeniceWriter);
     reducer.configure(setupJobConf());
@@ -458,14 +458,14 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> put(
+      public void put(
           Object key,
           Object value,
           int valueSchemaId,
           PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
-        return null;
+        callback.completeExceptionally(new VeniceException("Fake exception"));
       }
 
       @Override
@@ -516,14 +516,14 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   public void testClosingReducerWithWriterException() throws IOException {
     AbstractVeniceWriter exceptionWriter = new AbstractVeniceWriter(TOPIC_NAME) {
       @Override
-      public Future<PubSubProduceResult> put(
+      public void put(
           Object key,
           Object value,
           int valueSchemaId,
           PubSubProducerCallback callback,
           PutMetadata putMetadata) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
-        return null;
+        callback.completeExceptionally(new VeniceException("Some writer exception"));
       }
 
       @Override
