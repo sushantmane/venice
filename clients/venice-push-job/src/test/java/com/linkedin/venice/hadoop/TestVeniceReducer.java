@@ -468,11 +468,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> delete(
-          Object key,
-          PubSubProducerCallback callback,
-          DeleteMetadata deleteMetadata) {
-        return null;
+      public void delete(Object key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
       }
 
       @Override
@@ -531,11 +527,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> delete(
-          Object key,
-          PubSubProducerCallback callback,
-          DeleteMetadata deleteMetadata) {
-        return null;
+      public void delete(Object key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata) {
       }
 
       @Override
