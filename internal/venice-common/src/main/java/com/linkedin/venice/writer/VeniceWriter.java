@@ -773,7 +773,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     update(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
   }
 
-  public Future<PubSubProduceResult> update(
+  public void update(
       K key,
       U update,
       int valueSchemaId,
@@ -802,7 +802,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     updatePayLoad.schemaId = valueSchemaId;
     updatePayLoad.updateSchemaId = derivedSchemaId;
 
-    return sendMessage(
+    sendMessage(
         producerMetadata -> kafkaKey,
         MessageType.UPDATE,
         updatePayLoad,
