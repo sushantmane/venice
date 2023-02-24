@@ -1413,7 +1413,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * Producer DIV will be recalculated (not DIV pass-through mode); checksum for the input partition in this producer
    * will also be updated.
    */
-  public Future<PubSubProduceResult> asyncSendControlMessage(
+  public void asyncSendControlMessage(
       ControlMessage controlMessage,
       int partition,
       Map<String, String> debugInfo,
@@ -1423,7 +1423,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       controlMessage.debugInfo = getDebugInfo(debugInfo);
       boolean updateCheckSum = true;
       boolean isEndOfSegment = ControlMessageType.valueOf(controlMessage).equals(ControlMessageType.END_OF_SEGMENT);
-      return sendMessage(
+      sendMessage(
           this::getControlMessageKey,
           MessageType.CONTROL_MESSAGE,
           controlMessage,
