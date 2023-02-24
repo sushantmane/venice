@@ -588,17 +588,9 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param valueSchemaId - value schema id for the given value
    * @param logicalTs - A timestamp field to indicate when this record was produced from apps view.
    * @param callback - Callback function invoked by Kafka producer after sending the message
-   * @return a java.util.concurrent.Future Future for the RecordMetadata that will be assigned to this
-   * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
-   * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubSubProduceResult> put(
-      K key,
-      V value,
-      int valueSchemaId,
-      long logicalTs,
-      PubSubProducerCallback callback) {
-    return put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null);
+  public void put(K key, V value, int valueSchemaId, long logicalTs, PubSubProducerCallback callback) {
+    put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, logicalTs, null);
   }
 
   /**

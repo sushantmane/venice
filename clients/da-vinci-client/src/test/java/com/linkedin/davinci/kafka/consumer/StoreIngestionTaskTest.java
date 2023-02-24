@@ -1085,9 +1085,9 @@ public abstract class StoreIngestionTaskTest {
   @Test(dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
   public void testVeniceMessagesProcessing(boolean isActiveActiveReplicationEnabled) throws Exception {
     localVeniceWriter.broadcastStartOfPush(new HashMap<>());
-    PubSubProduceResult putMetadata = (PubSubProduceResult) localVeniceWriter
-        .put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
-        .get();
+    PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+    localVeniceWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+    PubSubProduceResult putMetadata = putResult.get();
     PubSubProducerCallback deleteResult = new SimplePubSubProducerCallbackImpl();
     localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, deleteResult);
     PubSubProduceResult deleteMetadata = deleteResult.get();
@@ -1165,7 +1165,9 @@ public abstract class StoreIngestionTaskTest {
           fooTopicPartition,
           new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(1, new AtomicLong(1)));
       try {
-        rtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+        PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+        rtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+        putResult.get();
         PubSubProducerCallback deleteResult = new SimplePubSubProducerCallbackImpl();
         rtWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, deleteResult);
         deleteResult.get();
@@ -2595,11 +2597,15 @@ public abstract class StoreIngestionTaskTest {
 
     long recordsNum = 5L;
     for (int i = 0; i < recordsNum; i++) {
-      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+      putResult.get();
     }
 
     for (int i = 0; i < recordsNum; i++) {
-      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+      putResult.get();
     }
 
     waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
@@ -2610,11 +2616,15 @@ public abstract class StoreIngestionTaskTest {
     // Pause remote kafka consumption
     remoteKafkaQuota.set(0);
     for (int i = 0; i < recordsNum; i++) {
-      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+      localRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+      putResult.get();
     }
 
     for (int i = 0; i < recordsNum; i++) {
-      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
+      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+      remoteRtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, putResult);
+      putResult.get();
     }
 
     Long doubleRecordsNum = recordsNum * 2;
