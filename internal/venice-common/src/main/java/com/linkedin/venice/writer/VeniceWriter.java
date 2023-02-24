@@ -704,7 +704,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * TODO: move pass-through supports into a server-specific extension of VeniceWriter
    */
   @Deprecated
-  public Future<PubSubProduceResult> put(
+  public void put(
       KafkaKey kafkaKey,
       KafkaMessageEnvelope kafkaMessageEnvelope,
       PubSubProducerCallback callback,
@@ -722,7 +722,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       ((ChunkAwareCallback) callback).setChunkingInfo(serializedKey, null, null, null, null);
     }
 
-    return sendMessage(producerMetadata -> kafkaKey, kafkaMessageEnvelopeProvider, upstreamPartition, callback, false);
+    sendMessage(producerMetadata -> kafkaKey, kafkaMessageEnvelopeProvider, upstreamPartition, callback, false);
   }
 
   private KafkaMessageEnvelopeProvider getKafkaMessageEnvelopeProvider(
