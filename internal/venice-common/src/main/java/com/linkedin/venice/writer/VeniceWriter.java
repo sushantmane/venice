@@ -769,13 +769,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   @Override
-  public Future<PubSubProduceResult> update(
-      K key,
-      U update,
-      int valueSchemaId,
-      int derivedSchemaId,
-      PubSubProducerCallback callback) {
-    return update(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
+  public void update(K key, U update, int valueSchemaId, int derivedSchemaId, PubSubProducerCallback callback) {
+    update(key, update, valueSchemaId, derivedSchemaId, callback, APP_DEFAULT_LOGICAL_TS);
   }
 
   public Future<PubSubProduceResult> update(

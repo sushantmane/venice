@@ -10,6 +10,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -76,8 +77,8 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
   @Test
   public void testReducerUpdateWithTooLargeValueAndChunkingDisabled() {
     AbstractVeniceWriter mockWriter = mock(AbstractVeniceWriter.class);
-    when(mockWriter.update(any(), any(), anyInt(), anyInt(), any()))
-        .thenThrow(new RecordTooLargeException("expected exception"));
+    doThrow(new RecordTooLargeException("expected exception")).when(mockWriter)
+        .update(any(), any(), anyInt(), anyInt(), any());
     JobConf jobConf = setupJobConf();
     jobConf.setInt(DERIVED_SCHEMA_ID_PROP, 2);
     jobConf.setBoolean(ENABLE_WRITE_COMPUTE, true);
@@ -472,14 +473,13 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> update(
+      public void update(
           Object key,
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
           PubSubProducerCallback callback) {
         // no-op
-        return null;
       }
 
       @Override
@@ -541,14 +541,13 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> update(
+      public void update(
           Object key,
           Object update,
           int valueSchemaId,
           int derivedSchemaId,
           PubSubProducerCallback callback) {
         // no-op
-        return null;
       }
 
       @Override
