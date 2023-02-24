@@ -15,6 +15,8 @@ import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.schema.rmd.RmdUtils;
 import com.linkedin.venice.serialization.VeniceKafkaSerializer;
 import com.linkedin.venice.serialization.avro.VeniceAvroKafkaSerializer;
@@ -82,7 +84,9 @@ public class ChangeCaptureViewWriter extends VeniceViewWriter {
     // updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key); (line 604
     // A/AIngestionTask?)
     try {
-      veniceWriter.put(key, recordChangeEvent, 1).get();
+      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+      veniceWriter.put(key, recordChangeEvent, 1, putResult);
+      putResult.get();
     } catch (InterruptedException | ExecutionException e) {
       LOGGER
           .error("Failed to produce to Change Capture view topic for store: {} version: {}", store.getName(), version);
