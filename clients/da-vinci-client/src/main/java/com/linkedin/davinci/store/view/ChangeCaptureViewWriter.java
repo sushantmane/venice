@@ -83,8 +83,16 @@ public class ChangeCaptureViewWriter extends VeniceViewWriter {
     // TODO: Chunking?
     // updatedKeyBytes = ChunkingUtils.KEY_WITH_CHUNKING_SUFFIX_SERIALIZER.serializeNonChunkedKey(key); (line 604
     // A/AIngestionTask?)
+    syncSendRecordChangeEvent(key, recordChangeEvent, version, new SimplePubSubProducerCallbackImpl());
+  }
+
+  // visible for testing
+  protected void syncSendRecordChangeEvent(
+      byte[] key,
+      RecordChangeEvent recordChangeEvent,
+      int version,
+      PubSubProducerCallback putResult) {
     try {
-      PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
       veniceWriter.put(key, recordChangeEvent, 1, putResult);
       putResult.get();
     } catch (InterruptedException | ExecutionException e) {
