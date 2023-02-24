@@ -559,8 +559,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
   @Override
-  public Future<PubSubProduceResult> put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
-    return put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
+  public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
+    put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
   }
 
   @Override
@@ -619,7 +619,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * record. Invoking java.util.concurrent.Future's get() on this future will block until the associated request
    * completes and then return the metadata for the record or throw any exception that occurred while sending the record.
    */
-  public Future<PubSubProduceResult> put(
+  public void put(
       K key,
       V value,
       int valueSchemaId,
@@ -636,7 +636,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     if (serializedKey.length + serializedValue.length
         + replicationMetadataPayloadSize > maxSizeForUserPayloadPerMessageInBytes) {
       if (isChunkingEnabled) {
-        return putLargeValue(
+        putLargeValue(
             serializedKey,
             serializedValue,
             valueSchemaId,
@@ -645,6 +645,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
             leaderMetadataWrapper,
             logicalTs,
             putMetadata);
+        return;
       } else {
         throw new RecordTooLargeException(
             "This record exceeds the maximum size. "
@@ -674,7 +675,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       putPayload.replicationMetadataVersionId = putMetadata.getRmdVersionId();
       putPayload.replicationMetadataPayload = putMetadata.getRmdPayload();
     }
-    return sendMessage(
+    sendMessage(
         producerMetadata -> kafkaKey,
         MessageType.PUT,
         putPayload,
@@ -1120,7 +1121,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * This function implements chunking of a large value into many small values.
    */
-  private Future<PubSubProduceResult> putLargeValue(
+  private void putLargeValue(
       byte[] serializedKey,
       byte[] serializedValue,
       int valueSchemaId,
@@ -1204,7 +1205,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
     // We only return the last future (the one for the manifest) and assume that once this one is finished,
     // all the chunks should also be finished, since they were sent first, and ordering should be guaranteed.
-    return sendMessage(
+    sendMessage(
         manifestKeyProvider,
         MessageType.PUT,
         putManifestsPayload,

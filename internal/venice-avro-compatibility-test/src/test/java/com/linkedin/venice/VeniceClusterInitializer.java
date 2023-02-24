@@ -203,7 +203,7 @@ public class VeniceClusterInitializer implements Closeable {
       Future[] writerFutures = new Future[ENTRY_COUNT];
       for (int i = 0; i < ENTRY_COUNT; i++) {
         PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
-        writerFutures[i] = veniceWriter.put(KEY_PREFIX + i, values.get(i), valueSchemaId, putResult);
+        veniceWriter.put(KEY_PREFIX + i, values.get(i), valueSchemaId, putResult);
         writerFutures[i] = putResult;
       }
 

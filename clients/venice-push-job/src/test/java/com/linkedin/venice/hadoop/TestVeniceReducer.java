@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.Counters;
@@ -448,13 +447,9 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> put(
-          Object key,
-          Object value,
-          int valueSchemaId,
-          PubSubProducerCallback callback) {
+      public void put(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Fake exception"));
-        return null;
+        callback.completeExceptionally(new VeniceException("Fake exception"));
       }
 
       @Override
@@ -479,6 +474,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           int valueSchemaId,
           int derivedSchemaId,
           PubSubProducerCallback callback) {
+        callback.complete(null);
         // no-op
       }
 
@@ -531,13 +527,9 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
       }
 
       @Override
-      public Future<PubSubProduceResult> put(
-          Object key,
-          Object value,
-          int valueSchemaId,
-          PubSubProducerCallback callback) {
+      public void put(Object key, Object value, int valueSchemaId, PubSubProducerCallback callback) {
         callback.onCompletion(null, new VeniceException("Some writer exception"));
-        return null;
+        callback.completeExceptionally(new VeniceException("Some writer exception"));
       }
 
       @Override
@@ -548,6 +540,7 @@ public class TestVeniceReducer extends AbstractTestVeniceMR {
           int derivedSchemaId,
           PubSubProducerCallback callback) {
         // no-op
+        callback.complete(null);
       }
 
       @Override
