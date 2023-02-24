@@ -44,6 +44,7 @@ public class MockInMemoryProducerAdapter implements PubSubProducerAdapter {
     long offset = broker.produce(topic, partition, new InMemoryKafkaMessage(key, value));
     PubSubProduceResult produceResult = new SimplePubSubProduceResultImpl(topic, partition, offset, -1);
     callback.onCompletion(produceResult, null);
+    callback.complete(produceResult);
     return new Future<PubSubProduceResult>() {
       @Override
       public boolean cancel(boolean mayInterruptIfRunning) {
