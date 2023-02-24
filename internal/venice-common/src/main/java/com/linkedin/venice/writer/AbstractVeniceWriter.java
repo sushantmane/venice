@@ -40,10 +40,7 @@ public abstract class AbstractVeniceWriter<K, V, U> implements Closeable {
       PubSubProducerCallback callback,
       PutMetadata putMetadata);
 
-  public abstract Future<PubSubProduceResult> delete(
-      K key,
-      PubSubProducerCallback callback,
-      DeleteMetadata deleteMetadata);
+  public abstract void delete(K key, PubSubProducerCallback callback, DeleteMetadata deleteMetadata);
 
   public abstract Future<PubSubProduceResult> update(
       K key,
