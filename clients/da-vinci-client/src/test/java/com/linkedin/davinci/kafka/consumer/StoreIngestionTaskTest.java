@@ -1088,8 +1088,9 @@ public abstract class StoreIngestionTaskTest {
     PubSubProduceResult putMetadata = (PubSubProduceResult) localVeniceWriter
         .put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null)
         .get();
-    PubSubProduceResult deleteMetadata =
-        (PubSubProduceResult) localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
+    PubSubProducerCallback deleteResult = new SimplePubSubProducerCallbackImpl();
+    localVeniceWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, deleteResult);
+    PubSubProduceResult deleteMetadata = deleteResult.get();
 
     Queue<AbstractPollStrategy> pollStrategies = new LinkedList<>();
     pollStrategies.add(new RandomPollStrategy());
@@ -1165,7 +1166,9 @@ public abstract class StoreIngestionTaskTest {
           new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(1, new AtomicLong(1)));
       try {
         rtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
-        rtWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
+        PubSubProducerCallback deleteResult = new SimplePubSubProducerCallbackImpl();
+        rtWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, deleteResult);
+        deleteResult.get();
 
         verifyPutAndDelete(amplificationFactor, isActiveActiveReplicationEnabled, false);
       } catch (Exception e) {
