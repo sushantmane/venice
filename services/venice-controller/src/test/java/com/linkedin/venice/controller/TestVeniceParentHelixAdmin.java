@@ -68,6 +68,7 @@ import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.InvalidKeySchemaPartitioner;
 import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushmonitor.OfflinePushStatus;
 import com.linkedin.venice.pushmonitor.PartitionStatus;
@@ -94,7 +95,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
@@ -314,7 +315,7 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
   }
 
   @Test
-  public void testCreateStoreForMultiCluster() {
+  public void testCreateStoreForMultiCluster() throws ExecutionException, InterruptedException {
     String secondCluster = "testCreateStoreForMultiCluster";
     VeniceControllerConfig configForSecondCluster = mockConfig(secondCluster);
     mockResources(configForSecondCluster, secondCluster);
@@ -354,13 +355,12 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
       String keySchemaStr = "\"string\"";
       String valueSchemaStr = "\"string\"";
 
-      when(veniceWriter.put(any(), any(), anyInt(), any())).then(invocation -> {
+      when(veniceWriter.syncPut(any(), any(), anyInt())).then(invocation -> {
         // Once we send message to topic through venice writer, return offset 1
         when(zkClient.readData(metadataPath, null))
             .thenReturn(AdminTopicMetadataAccessor.generateMetadataMap(1, -1, 1));
-        Future future = mock(Future.class);
-        doReturn(new SimplePubSubProduceResultImpl(adminTopic, partitionId, 1, -1)).when(future).get();
-        return future;
+        PubSubProduceResult produceResult = new SimplePubSubProduceResultImpl(adminTopic, partitionId, 1, -1);
+        return produceResult;
       });
 
       parentAdmin.createStore(cluster, storeName, owner, keySchemaStr, valueSchemaStr);

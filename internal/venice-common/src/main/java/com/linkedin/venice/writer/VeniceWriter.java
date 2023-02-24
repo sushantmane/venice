@@ -32,6 +32,7 @@ import com.linkedin.venice.kafka.validation.checksum.CheckSumType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.partitioner.VenicePartitioner;
+import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
@@ -561,6 +562,13 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   @Override
   public void put(K key, V value, int valueSchemaId, PubSubProducerCallback callback) {
     put(key, value, valueSchemaId, callback, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
+  }
+
+  public PubSubProduceResult syncPut(K key, V value, int valueSchemaId)
+      throws ExecutionException, InterruptedException {
+    PubSubProducerCallback putResult = new SimplePubSubProducerCallbackImpl();
+    put(key, value, valueSchemaId, putResult, DEFAULT_LEADER_METADATA_WRAPPER, APP_DEFAULT_LOGICAL_TS, null);
+    return putResult.get();
   }
 
   @Override
