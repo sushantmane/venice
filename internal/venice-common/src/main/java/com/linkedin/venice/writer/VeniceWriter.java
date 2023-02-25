@@ -1023,7 +1023,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   }
 
   // visible for testing
-  protected void syncSendMessage(
+  public void syncSendMessage(
       KeyProvider keyProvider,
       MessageType messageType,
       Object payload,
