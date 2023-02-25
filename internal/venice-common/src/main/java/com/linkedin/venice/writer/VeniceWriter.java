@@ -58,7 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
@@ -993,7 +992,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * Data message like PUT and DELETE should call this API to enable DIV check.
    */
-  private Future<PubSubProduceResult> sendMessage(
+  private void sendMessage(
       KeyProvider keyProvider,
       MessageType messageType,
       Object payload,
@@ -1001,19 +1000,10 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper,
       long logicalTs) {
-    return sendMessage(
-        keyProvider,
-        messageType,
-        payload,
-        false,
-        partition,
-        callback,
-        true,
-        leaderMetadataWrapper,
-        logicalTs);
+    sendMessage(keyProvider, messageType, payload, false, partition, callback, true, leaderMetadataWrapper, logicalTs);
   }
 
-  private Future<PubSubProduceResult> sendMessage(
+  private void sendMessage(
       KeyProvider keyProvider,
       MessageType messageType,
       Object payload,
@@ -1029,7 +1019,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       kafkaValue.payloadUnion = payload;
       return kafkaValue;
     };
-    return sendMessage(keyProvider, kafkaMessageEnvelopeProvider, partition, callback, updateDIV);
+    sendMessage(keyProvider, kafkaMessageEnvelopeProvider, partition, callback, updateDIV);
   }
 
   /**
@@ -1056,7 +1046,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param updateDIV if true, the partition's segment's checksum will be updated and its sequence number incremented
    *                  if false, the checksum and seq# update are omitted, which is the right thing to do during retries
    */
-  private Future<PubSubProduceResult> sendMessage(
+  private void sendMessage(
       KeyProvider keyProvider,
       KafkaMessageEnvelopeProvider valueProvider,
       int partition,
@@ -1082,7 +1072,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         }
       }
       try {
-        return producerAdapter.sendMessage(
+        producerAdapter.sendMessage(
             topicName,
             partition,
             key,
@@ -1346,6 +1336,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       Map<String, String> debugInfo,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper) {
+    PubSubProducerCallback sendResult = callback;
     synchronized (this.partitionLocks[partition]) {
       // Work around until we upgrade to a more modern Avro version which supports overriding the
       // String implementation.
@@ -1355,16 +1346,22 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       while (true) {
         try {
           boolean isEndOfSegment = ControlMessageType.valueOf(controlMessage).equals(ControlMessageType.END_OF_SEGMENT);
+          // if caller does not pass Callback-come-Future arg, we need create one as we need it for block the thread
+          // until message is successfully sent. Also, we cannot reuse callback as it is also a Future object.
+          if (callback == null) {
+            sendResult = new SimplePubSubProducerCallbackImpl();
+          }
           sendMessage(
               this::getControlMessageKey,
               MessageType.CONTROL_MESSAGE,
               controlMessage,
               isEndOfSegment,
               partition,
-              callback,
+              sendResult,
               updateCheckSum,
               leaderMetadataWrapper,
-              VENICE_DEFAULT_LOGICAL_TS).get();
+              VENICE_DEFAULT_LOGICAL_TS);
+          sendResult.get(); // infinite blocking call
           return;
         } catch (InterruptedException | ExecutionException e) {
           if (e.getMessage() != null && e.getMessage().contains(Errors.UNKNOWN_TOPIC_OR_PARTITION.message())) {
