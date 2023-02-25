@@ -9,10 +9,9 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -30,7 +29,7 @@ import com.linkedin.venice.kafka.protocol.VersionSwap;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionImpl;
-import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.schema.rmd.RmdSchemaGenerator;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.views.ChangeCaptureView;
@@ -45,10 +44,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -180,12 +181,14 @@ public class ChangeCaptureViewWriterTest {
   }
 
   @Test
-  public void testProcessRecord() {
+  public void testProcessRecord() throws ExecutionException, InterruptedException {
     // Set up mocks
     Store mockStore = mock(Store.class);
     VeniceProperties props = new VeniceProperties();
     Object2IntMap<String> urlMappingMap = new Object2IntOpenHashMap<>();
+    PubSubProduceResult produceResultMock = Mockito.mock(PubSubProduceResult.class);
     VeniceWriter mockVeniceWriter = mock(VeniceWriter.class);
+    doReturn(produceResultMock).when(mockVeniceWriter).syncPut(any(), any(), anyInt());
     VeniceServerConfig mockVeniceServerConfig = mock(VeniceServerConfig.class);
     when(mockVeniceServerConfig.getKafkaClusterUrlToIdMap()).thenReturn(urlMappingMap);
 
@@ -194,9 +197,7 @@ public class ChangeCaptureViewWriterTest {
     when(mockVeniceConfigLoader.getVeniceServerConfig()).thenReturn(mockVeniceServerConfig);
 
     ChangeCaptureViewWriter changeCaptureViewWriter =
-        spy(new ChangeCaptureViewWriter(mockVeniceConfigLoader, mockStore, SCHEMA, Collections.emptyMap()));
-    doNothing().when(changeCaptureViewWriter)
-        .syncSendRecordChangeEvent(any(), any(), anyInt(), any(PubSubProducerCallback.class));
+        new ChangeCaptureViewWriter(mockVeniceConfigLoader, mockStore, SCHEMA, Collections.emptyMap());
 
     Schema rmdSchema = RmdSchemaGenerator.generateMetadataSchema(SCHEMA, 1);
     List<Long> vectors = Arrays.asList(1L, 2L, 3L);
@@ -219,8 +220,7 @@ public class ChangeCaptureViewWriterTest {
     ArgumentCaptor<RecordChangeEvent> eventCaptor = ArgumentCaptor.forClass(RecordChangeEvent.class);
 
     // Verify and capture input
-    verify(changeCaptureViewWriter, atLeastOnce())
-        .syncSendRecordChangeEvent(keyCaptor.capture(), eventCaptor.capture(), eq(1), any());
+    verify(mockVeniceWriter, atLeastOnce()).syncPut(keyCaptor.capture(), eventCaptor.capture(), eq(1));
 
     List<RecordChangeEvent> changeEvents = eventCaptor.getAllValues();
     List<byte[]> keys = keyCaptor.getAllValues();
