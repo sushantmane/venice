@@ -37,6 +37,7 @@ import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
@@ -219,7 +220,9 @@ public class TopicManagerTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    producer.sendMessage(topic, null, recordKey, recordValue, null, new SimplePubSubProducerCallbackImpl()).get();
+    PubSubProducerCallback sendResult = new SimplePubSubProducerCallbackImpl();
+    producer.sendMessage(topic, null, recordKey, recordValue, null, sendResult);
+    sendResult.get();
   }
 
   @Test

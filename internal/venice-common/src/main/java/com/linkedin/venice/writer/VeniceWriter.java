@@ -1022,6 +1022,35 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     sendMessage(keyProvider, kafkaMessageEnvelopeProvider, partition, callback, updateDIV);
   }
 
+  // visible for testing
+  protected void syncSendMessage(
+      KeyProvider keyProvider,
+      MessageType messageType,
+      Object payload,
+      boolean isEndOfSegment,
+      int partition,
+      PubSubProducerCallback callback,
+      boolean updateDIV,
+      LeaderMetadataWrapper leaderMetadataWrapper,
+      long logicalTs) throws ExecutionException, InterruptedException {
+    // if caller does not pass Callback-come-Future arg, we need create one as we need it for block the thread
+    // until message is successfully sent. Also, we cannot reuse callback as it is also a Future object.
+    if (callback == null) {
+      callback = new SimplePubSubProducerCallbackImpl();
+    }
+    sendMessage(
+        keyProvider,
+        messageType,
+        payload,
+        isEndOfSegment,
+        partition,
+        callback,
+        updateDIV,
+        leaderMetadataWrapper,
+        logicalTs);
+    callback.get(); // infinite blocking call
+  }
+
   /**
    * This is (and should remain!) the only function in the class which writes to Kafka. The synchronized locking
    * is important, in that it ensures that DIV-related operations are performed atomically with the write to Kafka,
@@ -1336,7 +1365,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       Map<String, String> debugInfo,
       PubSubProducerCallback callback,
       LeaderMetadataWrapper leaderMetadataWrapper) {
-    PubSubProducerCallback sendResult = callback;
     synchronized (this.partitionLocks[partition]) {
       // Work around until we upgrade to a more modern Avro version which supports overriding the
       // String implementation.
@@ -1346,22 +1374,16 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       while (true) {
         try {
           boolean isEndOfSegment = ControlMessageType.valueOf(controlMessage).equals(ControlMessageType.END_OF_SEGMENT);
-          // if caller does not pass Callback-come-Future arg, we need create one as we need it for block the thread
-          // until message is successfully sent. Also, we cannot reuse callback as it is also a Future object.
-          if (callback == null) {
-            sendResult = new SimplePubSubProducerCallbackImpl();
-          }
-          sendMessage(
+          syncSendMessage(
               this::getControlMessageKey,
               MessageType.CONTROL_MESSAGE,
               controlMessage,
               isEndOfSegment,
               partition,
-              sendResult,
+              callback,
               updateCheckSum,
               leaderMetadataWrapper,
-              VENICE_DEFAULT_LOGICAL_TS);
-          sendResult.get(); // infinite blocking call
+              VENICE_DEFAULT_LOGICAL_TS); // infinite blocking call
           return;
         } catch (InterruptedException | ExecutionException e) {
           if (e.getMessage() != null && e.getMessage().contains(Errors.UNKNOWN_TOPIC_OR_PARTITION.message())) {

@@ -33,6 +33,7 @@ import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapter;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.kafka.KafkaPubSubMessageDeserializer;
@@ -304,7 +305,8 @@ public class KafkaConsumptionTest {
       controlMessage.debugInfo = Collections.emptyMap();
       recordValue.payloadUnion = controlMessage;
     }
-    producerAdapter.sendMessage(topic, null, recordKey, recordValue, null, new SimplePubSubProducerCallbackImpl())
-        .get();
+    PubSubProducerCallback sendResult = new SimplePubSubProducerCallbackImpl();
+    producerAdapter.sendMessage(topic, null, recordKey, recordValue, null, sendResult);
+    sendResult.get();
   }
 }
