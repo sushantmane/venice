@@ -41,12 +41,8 @@ public class TestTopicCleanupServiceForMultiKafkaClusters {
     Map<String, String> kafkaUrlMap = new HashMap<>();
     kafkaUrlMap.put(kafkaClusterKey1, kafkaClusterServerUrl1);
     kafkaUrlMap.put(kafkaClusterKey2, kafkaClusterServerUrl2);
-    Map<String, String> kafkaZkMap = new HashMap<>();
-    kafkaZkMap.put(kafkaClusterKey1, kafkaClusterServerZk1);
-    kafkaZkMap.put(kafkaClusterKey2, kafkaClusterServerZk2);
     doReturn(parentFabrics).when(config).getParentFabrics();
     doReturn(kafkaUrlMap).when(config).getChildDataCenterKafkaUrlMap();
-    doReturn(kafkaZkMap).when(config).getChildDataCenterKafkaZkMap();
 
     admin = mock(Admin.class);
     topicManager1 = mock(TopicManager.class);

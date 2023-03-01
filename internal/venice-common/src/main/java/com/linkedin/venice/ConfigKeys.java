@@ -1082,12 +1082,6 @@ public class ConfigKeys {
   public static final String CHILD_DATA_CENTER_KAFKA_URL_PREFIX = "child.data.center.kafka.url";
 
   /**
-   * Config prefix for Kafka zk address in all child fabrics; parent controllers need to know the
-   * Kafka zk in all fabrics for native replication.
-   */
-  public static final String CHILD_DATA_CENTER_KAFKA_ZK_PREFIX = "child.data.center.kafka.zk";
-
-  /**
    * D2 Service name for the child controllers in local datacenter
    */
   public static final String CHILD_CLUSTER_D2_SERVICE_NAME = "child.cluster.d2.service.name";

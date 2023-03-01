@@ -5,7 +5,6 @@ import static com.linkedin.venice.ConfigKeys.ADMIN_TOPIC_REMOTE_CONSUMPTION_ENAB
 import static com.linkedin.venice.ConfigKeys.ADMIN_TOPIC_SOURCE_REGION;
 import static com.linkedin.venice.ConfigKeys.AGGREGATE_REAL_TIME_SOURCE_REGION;
 import static com.linkedin.venice.ConfigKeys.CHILD_DATA_CENTER_KAFKA_URL_PREFIX;
-import static com.linkedin.venice.ConfigKeys.CHILD_DATA_CENTER_KAFKA_ZK_PREFIX;
 import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY;
 import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID;
 import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH;
@@ -186,8 +185,6 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
       nativeReplicationRequiredChildControllerProps.put(PARENT_KAFKA_CLUSTER_FABRIC_LIST, parentColoName);
       nativeReplicationRequiredChildControllerProps
           .put(CHILD_DATA_CENTER_KAFKA_URL_PREFIX + "." + parentColoName, parentKafka.getAddress());
-      nativeReplicationRequiredChildControllerProps
-          .put(CHILD_DATA_CENTER_KAFKA_ZK_PREFIX + "." + parentColoName, parentKafka.getZkAddress());
       for (String coloName: childColoNames) {
         ZkServerWrapper zkServerWrapper = ServiceFactory.getZkServer();
         KafkaBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServerWrapper);
@@ -196,8 +193,6 @@ public class VeniceTwoLayerMultiColoMultiClusterWrapper extends ProcessWrapper {
         kafkaBrokerByColoName.put(coloName, kafkaBrokerWrapper);
         nativeReplicationRequiredChildControllerProps
             .put(CHILD_DATA_CENTER_KAFKA_URL_PREFIX + "." + coloName, kafkaBrokerWrapper.getAddress());
-        nativeReplicationRequiredChildControllerProps
-            .put(CHILD_DATA_CENTER_KAFKA_ZK_PREFIX + "." + coloName, kafkaBrokerWrapper.getZkAddress());
       }
       Properties activeActiveRequiredChildControllerProps = new Properties();
       activeActiveRequiredChildControllerProps.put(ACTIVE_ACTIVE_REAL_TIME_SOURCE_FABRIC_LIST, childColoList);

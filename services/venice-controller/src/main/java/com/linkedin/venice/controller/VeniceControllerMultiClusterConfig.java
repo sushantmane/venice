@@ -221,10 +221,6 @@ public class VeniceControllerMultiClusterConfig {
     return getCommonConfig().getChildDataCenterKafkaUrlMap();
   }
 
-  public Map<String, String> getChildDataCenterKafkaZkMap() {
-    return getCommonConfig().getChildDataCenterKafkaZkMap();
-  }
-
   public Set<String> getParentFabrics() {
     return getCommonConfig().getParentFabrics();
   }

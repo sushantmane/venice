@@ -7,7 +7,6 @@ import static com.linkedin.venice.ConfigKeys.CHILD_CLUSTER_ALLOWLIST;
 import static com.linkedin.venice.ConfigKeys.CHILD_CLUSTER_URL_PREFIX;
 import static com.linkedin.venice.ConfigKeys.CHILD_CLUSTER_WHITELIST;
 import static com.linkedin.venice.ConfigKeys.CHILD_DATA_CENTER_KAFKA_URL_PREFIX;
-import static com.linkedin.venice.ConfigKeys.CHILD_DATA_CENTER_KAFKA_ZK_PREFIX;
 import static com.linkedin.venice.ConfigKeys.CLUSTER_DISCOVERY_D2_SERVICE;
 import static com.linkedin.venice.ConfigKeys.CLUSTER_TO_D2;
 import static com.linkedin.venice.ConfigKeys.CONCURRENT_INIT_ROUTINES_ENABLED;
@@ -235,7 +234,6 @@ public class VeniceControllerWrapper extends ProcessWrapper {
               builder.put(
                   CHILD_DATA_CENTER_KAFKA_URL_PREFIX + "." + dcName,
                   childController.getKafkaBootstrapServers(options.isSslToKafka()));
-              builder.put(CHILD_DATA_CENTER_KAFKA_ZK_PREFIX + "." + dcName, childController.getKafkaZkAddress());
               LOGGER.info(
                   "ControllerConfig: {}.{} KafkaUrl: {} kafkaZk: {}",
                   CHILD_DATA_CENTER_KAFKA_URL_PREFIX,
@@ -261,9 +259,6 @@ public class VeniceControllerWrapper extends ProcessWrapper {
               options.isSslToKafka()
                   ? options.getKafkaBroker().getSSLAddress()
                   : options.getKafkaBroker().getAddress());
-          builder.put(
-              CHILD_DATA_CENTER_KAFKA_ZK_PREFIX + "." + parentDataCenterName1,
-              options.getKafkaBroker().getZkAddress());
           builder.put(PARENT_KAFKA_CLUSTER_FABRIC_LIST, parentDataCenterName1);
 
           /**
