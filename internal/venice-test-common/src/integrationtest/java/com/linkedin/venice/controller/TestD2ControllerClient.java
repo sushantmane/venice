@@ -28,7 +28,7 @@ public class TestD2ControllerClient {
     try (ZkServerWrapper zkServer = ServiceFactory.getZkServer();
         KafkaBrokerWrapper kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServer);
         VeniceControllerWrapper controllerWrapper = ServiceFactory.getVeniceController(
-            new VeniceControllerCreateOptions.Builder(CLUSTER_NAME, kafkaBrokerWrapper).replicationFactor(1)
+            new VeniceControllerCreateOptions.Builder(CLUSTER_NAME, zkServer, kafkaBrokerWrapper).replicationFactor(1)
                 .partitionSize(10)
                 .rebalanceDelayMs(0)
                 .minActiveReplica(1)

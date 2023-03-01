@@ -202,7 +202,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         }
 
         VeniceControllerWrapper veniceControllerWrapper = ServiceFactory.getVeniceController(
-            new VeniceControllerCreateOptions.Builder(options.getClusterName(), kafkaBrokerWrapper)
+            new VeniceControllerCreateOptions.Builder(options.getClusterName(), zkServerWrapper, kafkaBrokerWrapper)
                 .replicationFactor(options.getReplicationFactor())
                 .partitionSize(options.getPartitionSize())
                 .rebalanceDelayMs(options.getRebalanceDelayMs())
@@ -518,7 +518,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
 
   public VeniceControllerWrapper addVeniceController(Properties properties) {
     VeniceControllerWrapper veniceControllerWrapper = ServiceFactory.getVeniceController(
-        new VeniceControllerCreateOptions.Builder(clusterName, kafkaBrokerWrapper).coloName(coloName)
+        new VeniceControllerCreateOptions.Builder(clusterName, zkServerWrapper, kafkaBrokerWrapper).coloName(coloName)
             .replicationFactor(defaultReplicaFactor)
             .partitionSize(defaultPartitionSize)
             .rebalanceDelayMs(defaultDelayToRebalanceMS)
