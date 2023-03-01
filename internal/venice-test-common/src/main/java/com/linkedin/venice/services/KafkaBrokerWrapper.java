@@ -25,7 +25,7 @@ import scala.collection.Seq;
  * This class contains a Kafka Broker, and provides facilities for cleaning up
  * its side effects when we're done using it.
  */
-public class KafkaBrokerWrapper extends PubSubBackendWrapper {
+public class KafkaBrokerWrapper extends ProcessWrapper {
   // Class-level state and APIs
   public static final String SERVICE_NAME = "Kafka";
   private static final int OFFSET_TOPIC_PARTITIONS = 1;
