@@ -12,11 +12,11 @@ import com.linkedin.venice.kafka.KafkaClientFactory;
  * are added.
  */
 public class PubSubClientsFactory {
-  private final PubSubProducerAdapterFactory<PubSubProducerAdapter> producerAdapterFactory;
+  private final PubSubProducerAdapterFactory producerAdapterFactory;
   private final KafkaClientFactory kafkaClientFactory;
 
   public PubSubClientsFactory(
-      PubSubProducerAdapterFactory<PubSubProducerAdapter> producerAdapterFactory,
+      PubSubProducerAdapterFactory producerAdapterFactory,
       KafkaClientFactory kafkaClientFactory) {
     this.producerAdapterFactory = producerAdapterFactory;
     this.kafkaClientFactory = kafkaClientFactory;
