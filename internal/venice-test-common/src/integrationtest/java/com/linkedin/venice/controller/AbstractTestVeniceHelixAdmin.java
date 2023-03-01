@@ -67,10 +67,7 @@ class AbstractTestVeniceHelixAdmin {
   String clusterName;
   String storeOwner = "Doge of Venice";
   VeniceControllerConfig controllerConfig;
-
   String zkAddress;
-  String kafkaZkAddress;
-
   ZkServerWrapper zkServerWrapper;
   private ZkServerWrapper kafkaZkServer;
   KafkaBrokerWrapper kafkaBrokerWrapper;
@@ -96,7 +93,6 @@ class AbstractTestVeniceHelixAdmin {
     zkAddress = zkServerWrapper.getAddress();
     kafkaZkServer = ServiceFactory.getZkServer();
     kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(kafkaZkServer);
-    kafkaZkAddress = kafkaBrokerWrapper.getZkAddress();
     clusterName = Utils.getUniqueString("test-cluster");
     Properties properties = getControllerProperties(clusterName);
     if (!createParticipantStore) {

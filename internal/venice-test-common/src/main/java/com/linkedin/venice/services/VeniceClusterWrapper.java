@@ -572,7 +572,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         coloName,
         clusterName,
         kafkaBrokerWrapper,
-        getKafka().getZkAddress(),
+        zkServerWrapper.getAddress(),
         featureProperties,
         new Properties());
     synchronized (this) {
@@ -592,7 +592,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         coloName,
         clusterName,
         kafkaBrokerWrapper,
-        getKafka().getZkAddress(),
+        zkServerWrapper.getAddress(),
         new Properties(),
         properties);
     synchronized (this) {
@@ -606,7 +606,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         coloName,
         clusterName,
         kafkaBrokerWrapper,
-        getKafka().getZkAddress(),
+        zkServerWrapper.getAddress(),
         featureProperties,
         configProperties);
     synchronized (this) {
