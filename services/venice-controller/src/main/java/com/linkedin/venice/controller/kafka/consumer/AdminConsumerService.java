@@ -69,8 +69,7 @@ public class AdminConsumerService extends AbstractVeniceService {
               this.getClass(),
               cluster + "_" + remoteKafkaServerUrl.get(),
               metricsRepository));
-      this.consumerFactory = admin.getVeniceConsumerFactory()
-          .clone(remoteKafkaServerUrl.get(), remoteKafkaZkAddress.get(), metricsParameters);
+      this.consumerFactory = admin.getVeniceConsumerFactory().clone(remoteKafkaServerUrl.get(), metricsParameters);
     } else {
       this.consumerFactory = admin.getVeniceConsumerFactory();
       remoteKafkaServerUrl = Optional.empty();

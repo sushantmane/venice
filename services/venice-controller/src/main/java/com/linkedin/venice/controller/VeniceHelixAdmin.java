@@ -451,7 +451,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
     this.topicManagerRepository = new TopicManagerRepository(
         getKafkaBootstrapServers(isSslToKafka()),
-        multiClusterConfigs.getKafkaZkAddress(),
         multiClusterConfigs.getTopicManagerKafkaOperationTimeOutMs(),
         multiClusterConfigs.getTopicDeletionStatusPollIntervalMs(),
         multiClusterConfigs.getKafkaMinLogCompactionLagInMs(),
@@ -5652,7 +5651,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    */
   @Override
   public TopicManager getTopicManager(Pair<String, String> kafkaBootstrapServersAndZkAddress) {
-    return this.topicManagerRepository.getTopicManager(kafkaBootstrapServersAndZkAddress);
+    return this.topicManagerRepository.getTopicManager(kafkaBootstrapServersAndZkAddress.getFirst());
   }
 
   /**

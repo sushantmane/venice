@@ -381,20 +381,12 @@ public class IntegrationTestPushUtils {
     }
 
     @Override
-    protected String getKafkaZkAddress() {
-      return kafkaZkAddress;
-    }
-
-    @Override
     public String getKafkaBootstrapServers() {
       return kafkaBootstrapServers;
     }
 
     @Override
-    protected KafkaClientFactory clone(
-        String kafkaBootstrapServers,
-        String kafkaZkAddress,
-        Optional<MetricsParameters> metricsParameters) {
+    protected KafkaClientFactory clone(String kafkaBootstrapServers, Optional<MetricsParameters> metricsParameters) {
       return new TestKafkaClientFactory(kafkaBootstrapServers, kafkaZkAddress);
     }
   }

@@ -139,10 +139,7 @@ public class TopicManager implements Closeable {
                 kafkaClientFactory.getKafkaBootstrapServers(),
                 mp.metricsRepository));
     this.partitionOffsetFetcher = PartitionOffsetFetcherFactory.createDefaultPartitionOffsetFetcher(
-        kafkaClientFactory.clone(
-            kafkaClientFactory.getKafkaBootstrapServers(),
-            kafkaClientFactory.getKafkaZkAddress(),
-            metricsForPartitionOffsetFetcher),
+        kafkaClientFactory.clone(kafkaClientFactory.getKafkaBootstrapServers(), metricsForPartitionOffsetFetcher),
         kafkaReadOnlyAdmin,
         kafkaOperationTimeoutMs,
         optionalMetricsRepository);
