@@ -97,10 +97,6 @@ public class VeniceControllerMultiClusterConfig {
     return getCommonConfig().getSslFactoryClassName();
   }
 
-  public String getKafkaZkAddress() {
-    return getCommonConfig().getKafkaZkAddress();
-  }
-
   public boolean isDisableParentRequestTopicForStreamPushes() {
     return getCommonConfig().isDisableParentRequestTopicForStreamPushes();
   }

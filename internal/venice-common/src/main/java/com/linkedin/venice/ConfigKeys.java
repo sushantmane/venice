@@ -221,7 +221,6 @@ public class ConfigKeys {
    *
    * Ignored if {@value KAFKA_REPLICATION_FACTOR} is present.
    */
-  public static final String KAFKA_ZK_ADDRESS = "kafka.zk.address";
   public static final String DEFAULT_READ_STRATEGY = "default.read.strategy";
   public static final String DEFAULT_OFFLINE_PUSH_STRATEGY = "default.offline.push.strategy";
   public static final String DEFAULT_ROUTING_STRATEGY = "default.routing.strategy";

@@ -1244,11 +1244,8 @@ public class AdminTool {
     String zkConnectionString = getRequiredArgument(cmd, Arg.KAFKA_ZOOKEEPER_CONNECTION_URL);
     Properties properties = loadProperties(cmd, Arg.KAFKA_CONSUMER_CONFIG_FILE);
     properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServer);
-    properties.put(ConfigKeys.KAFKA_ZK_ADDRESS, zkConnectionString);
     VeniceProperties veniceProperties = new VeniceProperties(properties);
     KafkaClientFactory kafkaClientFactory = new KafkaConsumerFactoryImpl(veniceProperties);
-    int zkSessionTimeoutMs = 30 * Time.MS_PER_SECOND;
-    int zkConnectionTimeoutMs = 60 * Time.MS_PER_SECOND;
     int kafkaTimeOut = 30 * Time.MS_PER_SECOND;
     int topicDeletionStatusPollingInterval = 2 * Time.MS_PER_SECOND;
     if (cmd.hasOption(Arg.KAFKA_OPERATION_TIMEOUT.toString())) {

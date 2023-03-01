@@ -29,7 +29,6 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_ADMIN_CLASS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_REPLICATION_FACTOR;
 import static com.linkedin.venice.ConfigKeys.KAFKA_SECURITY_PROTOCOL;
-import static com.linkedin.venice.ConfigKeys.KAFKA_ZK_ADDRESS;
 import static com.linkedin.venice.ConfigKeys.MIN_ACTIVE_REPLICA;
 import static com.linkedin.venice.ConfigKeys.NATIVE_REPLICATION_FABRIC_ALLOWLIST;
 import static com.linkedin.venice.ConfigKeys.NATIVE_REPLICATION_SOURCE_FABRIC;
@@ -154,7 +153,6 @@ public class VeniceControllerWrapper extends ProcessWrapper {
         PropertyBuilder builder = new PropertyBuilder().put(clusterProps.toProperties())
             .put(KAFKA_REPLICATION_FACTOR, 1)
             .put(ADMIN_TOPIC_REPLICATION_FACTOR, 1)
-            .put(KAFKA_ZK_ADDRESS, options.getKafkaBroker().getZkAddress())
             .put(CONTROLLER_NAME, "venice-controller") // Why is this configurable?
             .put(DEFAULT_REPLICA_FACTOR, options.getReplicationFactor())
             .put(DEFAULT_NUMBER_OF_PARTITION, 1)
@@ -235,11 +233,10 @@ public class VeniceControllerWrapper extends ProcessWrapper {
                   CHILD_DATA_CENTER_KAFKA_URL_PREFIX + "." + dcName,
                   childController.getKafkaBootstrapServers(options.isSslToKafka()));
               LOGGER.info(
-                  "ControllerConfig: {}.{} KafkaUrl: {} kafkaZk: {}",
+                  "ControllerConfig: {}.{} KafkaUrl: {}",
                   CHILD_DATA_CENTER_KAFKA_URL_PREFIX,
                   dcName,
-                  childController.getKafkaBootstrapServers(options.isSslToKafka()),
-                  childController.getKafkaZkAddress());
+                  childController.getKafkaBootstrapServers(options.isSslToKafka()));
             }
           }
         }
@@ -361,10 +358,6 @@ public class VeniceControllerWrapper extends ProcessWrapper {
       return configs.get(0).getString(SSL_KAFKA_BOOTSTRAP_SERVERS);
     }
     return configs.get(0).getString(KAFKA_BOOTSTRAP_SERVERS);
-  }
-
-  public String getKafkaZkAddress() {
-    return configs.get(0).getString(KAFKA_ZK_ADDRESS);
   }
 
   @Override
