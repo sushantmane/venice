@@ -633,8 +633,6 @@ public class TopicManager implements Closeable {
 
   /**
    * A quick check to see whether the topic exists.
-   *
-   * N.B.: The behavior of the Scala and Java admin clients are different...
    */
   public boolean containsTopic(String topic) {
     return kafkaReadOnlyAdmin.get().containsTopic(topic);

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.VeniceControllerMultiClusterConfig;
 import com.linkedin.venice.kafka.TopicManager;
-import com.linkedin.venice.utils.Pair;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -52,10 +51,10 @@ public class TestTopicCleanupServiceForMultiKafkaClusters {
     admin = mock(Admin.class);
     topicManager1 = mock(TopicManager.class);
     doReturn(kafkaClusterServerUrl1).when(topicManager1).getKafkaBootstrapServers();
-    doReturn(topicManager1).when(admin).getTopicManager(Pair.create(kafkaClusterServerUrl1, kafkaClusterServerZk1));
+    doReturn(topicManager1).when(admin).getTopicManager(kafkaClusterServerUrl1);
     topicManager2 = mock(TopicManager.class);
     doReturn(kafkaClusterServerUrl2).when(topicManager2).getKafkaBootstrapServers();
-    doReturn(topicManager2).when(admin).getTopicManager(Pair.create(kafkaClusterServerUrl2, kafkaClusterServerZk2));
+    doReturn(topicManager2).when(admin).getTopicManager(kafkaClusterServerUrl2);
 
     topicCleanupService = new TopicCleanupServiceForParentController(admin, config);
   }

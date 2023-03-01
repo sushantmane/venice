@@ -294,8 +294,7 @@ public class AdminConsumptionTask implements Runnable, Closeable {
             "Admin topic remote consumption is enabled but no config for the source Kafka "
                 + "bootstrap server url or source Kafka ZK address");
       }
-      this.sourceKafkaClusterTopicManager =
-          admin.getTopicManager(new Pair<>(remoteKafkaServerUrl.get(), remoteKafkaZkAddress.get()));
+      this.sourceKafkaClusterTopicManager = admin.getTopicManager(remoteKafkaServerUrl.get());
     }
   }
 

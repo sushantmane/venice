@@ -212,10 +212,10 @@ public class TestAdminSparkWithMocks {
     doReturn(true).when(admin).whetherEnableBatchPushFromAdmin(anyString());
     doReturn(true).when(admin).isActiveActiveReplicationEnabledInAllRegion(clusterName, storeName, false);
     doReturn(storeName + "_rt").when(admin).getRealTimeTopic(anyString(), anyString());
-    doReturn(corpRegionKafka).when(admin).getNativeReplicationKafkaBootstrapServerAndZkAddress(corpRegion);
+    doReturn(corpRegionKafka).when(admin).getNativeReplicationKafkaBootstrapServerAddress(corpRegion);
     doReturn(emergencySourceRegionKafka).when(admin)
-        .getNativeReplicationKafkaBootstrapServerAndZkAddress(emergencySourceRegion);
-    doReturn(sourceGridFabricKafka).when(admin).getNativeReplicationKafkaBootstrapServerAndZkAddress(sourceGridFabric);
+        .getNativeReplicationKafkaBootstrapServerAddress(emergencySourceRegion);
+    doReturn(sourceGridFabricKafka).when(admin).getNativeReplicationKafkaBootstrapServerAddress(sourceGridFabric);
 
     if (emergencySourceRegionPresent) {
       doReturn(Optional.of(emergencySourceRegion)).when(admin).getEmergencySourceRegion();
