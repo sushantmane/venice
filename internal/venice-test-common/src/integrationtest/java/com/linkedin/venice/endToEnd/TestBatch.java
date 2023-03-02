@@ -540,7 +540,7 @@ public abstract class TestBatch {
           }
         },
         null,
-        null,
+        new UpdateStoreQueryParams(),
         false,
         true);
 
