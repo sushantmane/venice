@@ -337,9 +337,9 @@ public class CreateVersion extends AbstractRoute {
 
             if (pushType.isIncremental() && admin.isParent()) {
               overrideSourceRegionAddressForIncrementalPushJob(
-                  clusterName,
                   admin,
                   responseObject,
+                  clusterName,
                   emergencySourceRegion.orElse(null),
                   sourceGridFabric.orElse(null),
                   isActiveActiveReplicationEnabledInAllRegion.get(),
@@ -406,26 +406,31 @@ public class CreateVersion extends AbstractRoute {
   }
 
   /**
-   * Override the source fabric for VPJ incremental push job for A/A replication. Following is the order of priority.
-   * P1. Parent controller emergency source fabric config.
-   * P2. VPJ plugin source grid fabric config.
-   * P3. parent corp kafka cluster.
+   * Override the source fabric [response.setKafkaBootstrapServers()] for VPJ incremental push job for A/A replication.
+   * Following is the order of priority.
+   *  P1. Parent controller emergency source fabric config.
+   *  P2. VPJ plugin source grid fabric config.
+   *  P3. parent corp kafka cluster.
    *
    * At this point parent corp cluster is already set in the response.setKafkaBootstrapServers().
    * So we only need to override for P1 and P2.
    */
-  void overrideSourceRegionAddressForIncrementalPushJob(
-      String clusterName,
+  // visible for testing
+  static void overrideSourceRegionAddressForIncrementalPushJob(
       Admin admin,
       VersionCreationResponse response,
+      String clusterName,
       String emergencySourceRegion,
       String pushJobSourceGridFabric,
       boolean isAAEnabledInAllRegions,
       boolean isNativeReplicationEnabled) {
-    // P2: If AA is not enabled in all regions we should use aggregate
-    // RT address for inc-pushes if native replication is enabled
     if (!isAAEnabledInAllRegions && isNativeReplicationEnabled) {
+      // P2: When AA is not enabled in all the regions we use aggregate RT address, if it is available,
+      // for inc-pushes if native-replication is enabled.
       admin.getAggregateRealTimeTopicSource(clusterName).ifPresent(response::setKafkaBootstrapServers);
+      return;
+    } else if (!isAAEnabledInAllRegions) {
+      // When both AA is NOT enabled in all regions and native replication is disabled, don't do anything.
       return;
     }
 
