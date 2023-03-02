@@ -125,8 +125,18 @@ public class VersionImpl implements Version {
   }
 
   @Override
+  public boolean isLeaderFollowerModelEnabled() {
+    return true;
+  }
+
+  @Override
   public boolean isNativeReplicationEnabled() {
     return this.storeVersion.nativeReplicationEnabled;
+  }
+
+  @Override
+  public void setLeaderFollowerModelEnabled(boolean leaderFollowerModelEnabled) {
+    this.storeVersion.leaderFollowerModelEnabled = true; // kept for interop during
   }
 
   @Override
@@ -413,6 +423,7 @@ public class VersionImpl implements Version {
         getDataRecoveryVersionConfig());
     clonedVersion.setStatus(getStatus());
     clonedVersion.setCompressionStrategy(getCompressionStrategy());
+    clonedVersion.setLeaderFollowerModelEnabled(true);
     clonedVersion.setChunkingEnabled(isChunkingEnabled());
     clonedVersion.setRmdChunkingEnabled(isRmdChunkingEnabled());
     clonedVersion.setPushType(getPushType());

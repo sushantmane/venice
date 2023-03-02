@@ -200,6 +200,7 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
     setWriteComputationEnabled(store.isWriteComputationEnabled());
     setReadComputationEnabled(store.isReadComputationEnabled());
     setBootstrapToOnlineTimeoutInHours(store.getBootstrapToOnlineTimeoutInHours());
+    setLeaderFollowerModelEnabled(true); // to be deleted in next release
     setNativeReplicationEnabled(store.isNativeReplicationEnabled());
     setBackupStrategy(store.getBackupStrategy());
     setSchemaAutoRegisterFromPushJobEnabled(store.isSchemaAutoRegisterFromPushJobEnabled());
@@ -598,6 +599,16 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
   @Override
   public void setBootstrapToOnlineTimeoutInHours(int bootstrapToOnlineTimeoutInHours) {
     this.storeProperties.bootstrapToOnlineTimeoutInHours = bootstrapToOnlineTimeoutInHours;
+  }
+
+  @Override
+  public boolean isLeaderFollowerModelEnabled() {
+    return true;
+  }
+
+  @Override
+  public void setLeaderFollowerModelEnabled(boolean leaderFollowerModelEnabled) {
+    this.storeProperties.leaderFollowerModelEnabled = true; // kept for interop
   }
 
   @Override

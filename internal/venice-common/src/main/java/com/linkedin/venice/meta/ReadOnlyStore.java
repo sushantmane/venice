@@ -323,8 +323,18 @@ public class ReadOnlyStore implements Store {
     }
 
     @Override
+    public boolean isLeaderFollowerModelEnabled() {
+      return true;
+    }
+
+    @Override
     public boolean isNativeReplicationEnabled() {
       return this.delegate.isNativeReplicationEnabled();
+    }
+
+    @Override
+    public void setLeaderFollowerModelEnabled(boolean leaderFollowerModelEnabled) {
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -965,6 +975,16 @@ public class ReadOnlyStore implements Store {
 
   @Override
   public void setBootstrapToOnlineTimeoutInHours(int bootstrapToOnlineTimeoutInHours) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean isLeaderFollowerModelEnabled() {
+    return true;
+  }
+
+  @Override
+  public void setLeaderFollowerModelEnabled(boolean leaderFollowerModelEnabled) {
     throw new UnsupportedOperationException();
   }
 
