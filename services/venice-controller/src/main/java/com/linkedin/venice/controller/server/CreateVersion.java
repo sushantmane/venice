@@ -335,43 +335,17 @@ public class CreateVersion extends AbstractRoute {
               }
             }
 
-            /**
-             * Override the source fabric for VPJ incremental push job for A/A replication. Following is the order of priority.
-             * 1. Parent controller emergency source fabric config.
-             * 2. VPJ plugin source grid fabric config.
-             * 3. parent corp kafka cluster.
-             *
-             * At this point parent corp cluster is already set in the responseObject.setKafkaBootstrapServers().
-             * So we only need to override for 1 and 2.
-             */
             if (pushType.isIncremental() && admin.isParent()) {
-              if (isActiveActiveReplicationEnabledInAllRegion.get()) {
-                Optional<String> overRideSourceRegion =
-                    emergencySourceRegion.isPresent() ? emergencySourceRegion : Optional.empty();
-                if (!overRideSourceRegion.isPresent() && sourceGridFabric.isPresent()) {
-                  overRideSourceRegion = sourceGridFabric;
-                }
-                if (overRideSourceRegion.isPresent()) {
-                  String sourceKafkaBootstrapServers =
-                      admin.getNativeReplicationKafkaBootstrapServerAddress(overRideSourceRegion.get());
-                  if (sourceKafkaBootstrapServers == null) {
-                    throw new VeniceException(
-                        "Failed to get the kafka URL for the source region: " + overRideSourceRegion.get());
-                  }
-                  responseObject.setKafkaBootstrapServers(sourceKafkaBootstrapServers);
-                  LOGGER.info(
-                      "Incremental Push to RT Policy job source region is being overridden with: {} address: {}",
-                      overRideSourceRegion.get(),
-                      sourceKafkaBootstrapServers);
-                }
-              } else if (version.isNativeReplicationEnabled()) {
-                Optional<String> aggregateRealTimeTopicSourceKafkaServers =
-                    admin.getAggregateRealTimeTopicSource(clusterName);
-                aggregateRealTimeTopicSourceKafkaServers
-                    .ifPresent(source -> responseObject.setKafkaBootstrapServers(source));
-              }
+              overrideSourceRegionAddressForIncrementalPushJob(
+                  clusterName,
+                  admin,
+                  responseObject,
+                  emergencySourceRegion.orElse(null),
+                  sourceGridFabric.orElse(null),
+                  isActiveActiveReplicationEnabledInAllRegion.get(),
+                  version.isNativeReplicationEnabled());
               LOGGER.info(
-                  "Incremental Push to RT Policy job final source region address is: {}",
+                  "Incremental push job final source region address is: {}",
                   responseObject.getKafkaBootstrapServers());
             }
             break;
@@ -429,6 +403,51 @@ public class CreateVersion extends AbstractRoute {
 
       return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(responseObject);
     };
+  }
+
+  /**
+   * Override the source fabric for VPJ incremental push job for A/A replication. Following is the order of priority.
+   * P1. Parent controller emergency source fabric config.
+   * P2. VPJ plugin source grid fabric config.
+   * P3. parent corp kafka cluster.
+   *
+   * At this point parent corp cluster is already set in the response.setKafkaBootstrapServers().
+   * So we only need to override for P1 and P2.
+   */
+  void overrideSourceRegionAddressForIncrementalPushJob(
+      String clusterName,
+      Admin admin,
+      VersionCreationResponse response,
+      String emergencySourceRegion,
+      String pushJobSourceGridFabric,
+      boolean isAAEnabledInAllRegions,
+      boolean isNativeReplicationEnabled) {
+    // P2: If AA is not enabled in all regions we should use aggregate
+    // RT address for inc-pushes if native replication is enabled
+    if (!isAAEnabledInAllRegions && isNativeReplicationEnabled) {
+      admin.getAggregateRealTimeTopicSource(clusterName).ifPresent(response::setKafkaBootstrapServers);
+      return;
+    }
+
+    String overRideSourceRegion = emergencySourceRegion;
+    // When emergencySourceRegion is null then use sourceGridFabric
+    if (overRideSourceRegion == null && pushJobSourceGridFabric != null) {
+      overRideSourceRegion = pushJobSourceGridFabric;
+    }
+    // When emergencySourceRegion is not set and VPJ did not send SOURCE_GRID_FABRIC
+    // then we do not override the bootstrap server address.
+    if (overRideSourceRegion == null) {
+      return;
+    }
+    String bootstrapServerAddress = admin.getNativeReplicationKafkaBootstrapServerAddress(overRideSourceRegion);
+    if (bootstrapServerAddress == null) {
+      throw new VeniceException("Failed to get the broker server URL for the source region: " + overRideSourceRegion);
+    }
+    LOGGER.info(
+        "Incremental push job source region is being overridden with: {} address: {}",
+        overRideSourceRegion,
+        bootstrapServerAddress);
+    response.setKafkaBootstrapServers(bootstrapServerAddress);
   }
 
   private void validatePushType(PushType pushType, Store store) {
