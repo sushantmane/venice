@@ -137,7 +137,6 @@ public class TestPushJobWithEmergencySourceRegionSelection {
     UpdateStoreQueryParams updateStoreParams =
         new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
             .setPartitionCount(partitionCount)
-            .setLeaderFollowerModel(true)
             .setNativeReplicationEnabled(true)
             .setNativeReplicationSourceFabric("dc-1")
             .setActiveActiveReplicationEnabled(true);

@@ -179,8 +179,7 @@ public class TestUtils {
       Optional<Boolean> enableChunking) {
     UpdateStoreQueryParams params = new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setHybridRewindSeconds(25L)
-        .setHybridOffsetLagThreshold(1L)
-        .setLeaderFollowerModel(true);
+        .setHybridOffsetLagThreshold(1L);
 
     enableNativeReplication.ifPresent(params::setNativeReplicationEnabled);
     enableActiveActiveReplication.ifPresent(params::setActiveActiveReplicationEnabled);

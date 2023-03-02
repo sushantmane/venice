@@ -164,8 +164,7 @@ public class TestActiveActiveIngestion {
         "testView",
         "{\"viewClassName\" : \"" + TestView.class.getCanonicalName() + "\", \"viewParameters\" : {}}");
 
-    UpdateStoreQueryParams storeParms = new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-        .setActiveActiveReplicationEnabled(true)
+    UpdateStoreQueryParams storeParms = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setHybridRewindSeconds(500)
         .setStoreViews(viewConfig)
         .setHybridOffsetLagThreshold(8)
@@ -370,8 +369,7 @@ public class TestActiveActiveIngestion {
         IntegrationTestPushUtils.defaultVPJProps(multiRegionMultiClusterWrapper, inputDirPath, storeName);
     String keySchemaStr = recordSchema.getField(DEFAULT_KEY_FIELD_PROP).schema().toString();
     String valueSchemaStr = recordSchema.getField(DEFAULT_VALUE_FIELD_PROP).schema().toString();
-    UpdateStoreQueryParams storeParms = new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-        .setActiveActiveReplicationEnabled(true)
+    UpdateStoreQueryParams storeParms = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setHybridRewindSeconds(360)
         .setHybridOffsetLagThreshold(8)
         .setChunkingEnabled(isChunkingEnabled)

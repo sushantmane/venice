@@ -6412,7 +6412,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       }
     }
 
-    VeniceControllerClusterConfig clusterConfig = getHelixVeniceClusterResources(clusterName).getConfig();
     if (storeName.isPresent()) {
       /**
        * Legacy stores venice_system_store_davinci_push_status_store_<cluster_name> still exist.
@@ -6540,7 +6539,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
     }
 
-    VeniceControllerClusterConfig clusterConfig = getHelixVeniceClusterResources(clusterName).getConfig();
     if (storeName.isPresent()) {
       /**
        * Legacy stores venice_system_store_davinci_push_status_store_<cluster_name> still exist.

@@ -209,27 +209,19 @@ public class ActiveActiveReplicationForHybridTest {
       createAndVerifyStoreInAllRegions(storeName4, parentControllerClient, dcControllerClientList);
 
       assertCommand(
-          parentControllerClient.updateStore(storeName1, new UpdateStoreQueryParams().setLeaderFollowerModel(true)));
-
-      assertCommand(
           parentControllerClient.updateStore(
               storeName2,
-              new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-                  .setHybridRewindSeconds(10)
+              new UpdateStoreQueryParams().setHybridRewindSeconds(10)
                   .setHybridOffsetLagThreshold(2)
                   .setHybridDataReplicationPolicy(DataReplicationPolicy.AGGREGATE)));
 
       assertCommand(
           parentControllerClient.updateStore(
               storeName3,
-              new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-                  .setHybridRewindSeconds(10)
-                  .setHybridOffsetLagThreshold(2)));
+              new UpdateStoreQueryParams().setHybridRewindSeconds(10).setHybridOffsetLagThreshold(2)));
 
       assertCommand(
-          parentControllerClient.updateStore(
-              storeName4,
-              new UpdateStoreQueryParams().setIncrementalPushEnabled(true).setLeaderFollowerModel(true)));
+          parentControllerClient.updateStore(storeName4, new UpdateStoreQueryParams().setIncrementalPushEnabled(true)));
 
       // Test batch
       assertCommand(

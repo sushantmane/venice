@@ -145,7 +145,6 @@ public class TestPushJobWithSourceGridFabricSelection {
     UpdateStoreQueryParams updateStoreParams =
         new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
             .setPartitionCount(partitionCount)
-            .setLeaderFollowerModel(true)
             .setNativeReplicationEnabled(true)
             .setNativeReplicationSourceFabric(dcNames[0]);
 

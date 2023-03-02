@@ -136,8 +136,7 @@ public class DataRecoveryTest {
           parentControllerClient
               .updateStore(
                   storeName,
-                  new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-                      .setHybridRewindSeconds(10)
+                  new UpdateStoreQueryParams().setHybridRewindSeconds(10)
                       .setHybridOffsetLagThreshold(2)
                       .setHybridDataReplicationPolicy(DataReplicationPolicy.AGGREGATE)
                       .setNativeReplicationEnabled(true)
@@ -190,9 +189,7 @@ public class DataRecoveryTest {
           parentControllerClient
               .updateStore(
                   storeName,
-                  new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-                      .setNativeReplicationEnabled(true)
-                      .setPartitionCount(1))
+                  new UpdateStoreQueryParams().setNativeReplicationEnabled(true).setPartitionCount(1))
               .isError());
       TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, false);
       TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, false);
@@ -264,8 +261,7 @@ public class DataRecoveryTest {
           parentControllerClient
               .updateStore(
                   storeName,
-                  new UpdateStoreQueryParams().setLeaderFollowerModel(true)
-                      .setHybridRewindSeconds(10)
+                  new UpdateStoreQueryParams().setHybridRewindSeconds(10)
                       .setHybridOffsetLagThreshold(2)
                       .setHybridDataReplicationPolicy(DataReplicationPolicy.ACTIVE_ACTIVE)
                       .setNativeReplicationEnabled(true)
