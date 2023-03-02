@@ -717,9 +717,6 @@ public class TestUtils {
     version.setPartitionerConfig(partitionerConfig);
     doReturn(partitionerConfig).when(mockStore).getPartitionerConfig();
 
-    version.setLeaderFollowerModelEnabled(true);
-    doReturn(true).when(mockStore).isLeaderFollowerModelEnabled();
-
     version.setIncrementalPushEnabled(false);
     doReturn(false).when(mockStore).isIncrementalPushEnabled();
 

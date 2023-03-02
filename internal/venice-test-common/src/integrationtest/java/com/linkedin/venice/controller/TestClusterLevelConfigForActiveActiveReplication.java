@@ -79,9 +79,6 @@ public class TestClusterLevelConfigForActiveActiveReplication extends AbstractTe
 
     // Version 1 should exist.
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameHybrid).getVersions().size(), 1);
-    // L/F should be enabled by cluster-level config
-    Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameHybrid).isLeaderFollowerModelEnabled(), true);
-
     // Check store level active active is enabled or not
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameHybrid).isActiveActiveReplicationEnabled(), false);
     veniceAdmin.updateStore(
@@ -126,8 +123,6 @@ public class TestClusterLevelConfigForActiveActiveReplication extends AbstractTe
 
     // Version 1 should exist.
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameIncremental).getVersions().size(), 1);
-    // L/F should be enabled by cluster-level config
-    Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameIncremental).isLeaderFollowerModelEnabled(), true);
 
     // Check store level active active is enabled or not
     veniceAdmin.setIncrementalPushEnabled(clusterName, storeNameIncremental, false);
@@ -174,8 +169,6 @@ public class TestClusterLevelConfigForActiveActiveReplication extends AbstractTe
 
     // Version 1 should exist.
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameBatchOnly).getVersions().size(), 1);
-    // L/F should be enabled by cluster-level config
-    Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameBatchOnly).isLeaderFollowerModelEnabled(), true);
 
     // Store level active active should be enabled since this store is a batch-only store by default
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeNameBatchOnly).isActiveActiveReplicationEnabled(), true);

@@ -88,8 +88,6 @@ public class TestClusterLevelConfigForNativeReplication extends AbstractTestVeni
         false);
     // Version 1 should exist.
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).getVersions().size(), 1);
-    // L/F should be enabled by cluster-level config
-    Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).isLeaderFollowerModelEnabled(), true);
     // native replication should be enabled by cluster-level config
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).isNativeReplicationEnabled(), true);
     Assert.assertEquals(veniceAdmin.getStore(clusterName, storeName).getNativeReplicationSourceFabric(), "dc-batch");
