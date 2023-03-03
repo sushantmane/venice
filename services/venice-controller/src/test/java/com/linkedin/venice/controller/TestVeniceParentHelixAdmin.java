@@ -1837,7 +1837,6 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     // Update the store twice with the same parameter to make sure get methods in UpdateStoreQueryParams class can work
     // properly.
     parentAdmin.updateStore(clusterName, storeName, updateStoreQueryParams);
-    parentAdmin.updateStore(clusterName, storeName, new UpdateStoreQueryParams().setNativeReplicationEnabled(true));
 
     // Verify the correct config was sent via veniceWriter
     verify(veniceWriter, times(5)).put(keyCaptor.capture(), valueCaptor.capture(), schemaCaptor.capture());

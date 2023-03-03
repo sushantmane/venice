@@ -215,11 +215,6 @@ public class StoreInfo {
   private int bootstrapToOnlineTimeoutInHours = BOOTSTRAP_TO_ONLINE_TIMEOUT_IN_HOURS;
 
   /**
-   * Whether native replication should be enabled for this store.
-   */
-  private boolean nativeReplicationEnabled = false;
-
-  /**
    * Address to the kafka broker which holds the source of truth topic for this store version.
    */
   private String pushStreamSourceAddress = "";
