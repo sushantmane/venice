@@ -415,11 +415,6 @@ public class SystemStore extends AbstractStore {
   }
 
   @Override
-  public boolean isNativeReplicationEnabled() {
-    return zkSharedStore.isNativeReplicationEnabled();
-  }
-
-  @Override
   public Optional<Integer> getRmdVersionID() {
     return zkSharedStore.getRmdVersionID();
   }
@@ -427,11 +422,6 @@ public class SystemStore extends AbstractStore {
   @Override
   public void setRmdVersionID(Optional<Integer> rmdVersionID) {
     throwUnsupportedOperationException("Cannot set RmdVersionID here.");
-  }
-
-  @Override
-  public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    throwUnsupportedOperationException("setNativeReplicationEnabled");
   }
 
   @Override

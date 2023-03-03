@@ -98,13 +98,9 @@ public class OneTouchDataRecoveryTest {
       List<ControllerClient> dcControllerClientList = Arrays.asList(dc0Client, dc1Client);
       TestUtils.createAndVerifyStoreInAllRegions(storeName, parentControllerCli, dcControllerClientList);
       Assert.assertFalse(
-          parentControllerCli
-              .updateStore(
-                  storeName,
-                  new UpdateStoreQueryParams().setNativeReplicationEnabled(true).setPartitionCount(1))
-              .isError());
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, false);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, false);
+          parentControllerCli.updateStore(storeName, new UpdateStoreQueryParams().setPartitionCount(1)).isError());
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0Client, storeName, false);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1Client, storeName, false);
       VersionCreationResponse versionCreationResponse = parentControllerCli.requestTopicForWrites(
           storeName,
           1024,

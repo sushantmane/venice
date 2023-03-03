@@ -25,12 +25,6 @@ import static com.linkedin.venice.ConfigKeys.ENABLE_ACTIVE_ACTIVE_REPLICATION_AS
 import static com.linkedin.venice.ConfigKeys.ENABLE_ACTIVE_ACTIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH_STORE;
 import static com.linkedin.venice.ConfigKeys.ENABLE_HYBRID_PUSH_SSL_ALLOWLIST;
 import static com.linkedin.venice.ConfigKeys.ENABLE_HYBRID_PUSH_SSL_WHITELIST;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_FOR_BATCH_ONLY;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_FOR_HYBRID;
-import static com.linkedin.venice.ConfigKeys.ENABLE_NATIVE_REPLICATION_FOR_INCREMENTAL_PUSH;
 import static com.linkedin.venice.ConfigKeys.ENABLE_OFFLINE_PUSH_SSL_ALLOWLIST;
 import static com.linkedin.venice.ConfigKeys.ENABLE_OFFLINE_PUSH_SSL_WHITELIST;
 import static com.linkedin.venice.ConfigKeys.HELIX_REBALANCE_ALG;
@@ -124,47 +118,6 @@ public class VeniceControllerClusterConfig {
   private boolean enableOfflinePushSSLAllowlist;
   private boolean enableNearlinePushSSLAllowlist;
   private List<String> pushSSLAllowlist;
-
-  /**
-   * TODO: the follower 3 cluster level configs remains in the code base in case the new cluster level configs are not
-   *       working as expected. Once the new cluster level configs for native replication have been tested in prod, retire
-   *       the following configs.
-   */
-  /**
-   * When this option is enabled, all new batch-only store versions created will have native replication enabled so long
-   * as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledForBatchOnly;
-
-  /**
-   * When this option is enabled, all new incremental push enabled store versions created will have native replication
-   * enabled so long as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledForIncremental;
-
-  /**
-   * When this option is enabled, all new hybrid store versions created will have native replication enabled so long
-   * as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledForHybrid;
-
-  /**
-   * When this option is enabled, all new batch-only stores will have native replication enabled in store config so long
-   * as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledAsDefaultForBatchOnly;
-
-  /**
-   * When this option is enabled, all new incremental push enabled stores will have native replication enabled in store
-   * config so long as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledAsDefaultForIncremental;
-
-  /**
-   * When this option is enabled, all new hybrid stores will have native replication enabled in store config so long
-   * as the store has leader follower also enabled.
-   */
-  private boolean nativeReplicationEnabledAsDefaultForHybrid;
 
   private String nativeReplicationSourceFabricAsDefaultForBatchOnly;
   private String nativeReplicationSourceFabricAsDefaultForHybrid;
@@ -312,15 +265,6 @@ public class VeniceControllerClusterConfig {
       routingStrategy = RoutingStrategy.CONSISTENT_HASH;
     }
 
-    nativeReplicationEnabledForBatchOnly = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_BATCH_ONLY, false);
-    nativeReplicationEnabledAsDefaultForBatchOnly =
-        props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY, false);
-    nativeReplicationEnabledForIncremental = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_INCREMENTAL_PUSH, false);
-    nativeReplicationEnabledAsDefaultForIncremental =
-        props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH, false);
-    nativeReplicationEnabledForHybrid = props.getBoolean(ENABLE_NATIVE_REPLICATION_FOR_HYBRID, false);
-    nativeReplicationEnabledAsDefaultForHybrid =
-        props.getBoolean(ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID, false);
     nativeReplicationSourceFabricAsDefaultForBatchOnly =
         props.getString(NATIVE_REPLICATION_SOURCE_FABRIC_AS_DEFAULT_FOR_BATCH_ONLY_STORES, "");
     nativeReplicationSourceFabricAsDefaultForHybrid =
@@ -563,30 +507,6 @@ public class VeniceControllerClusterConfig {
 
   public long getKafkaMinLogCompactionLagInMs() {
     return kafkaMinLogCompactionLagInMs;
-  }
-
-  public boolean isNativeReplicationEnabledForBatchOnly() {
-    return nativeReplicationEnabledForBatchOnly;
-  }
-
-  public boolean isNativeReplicationEnabledAsDefaultForBatchOnly() {
-    return nativeReplicationEnabledAsDefaultForBatchOnly;
-  }
-
-  public boolean isNativeReplicationEnabledForIncremental() {
-    return nativeReplicationEnabledForIncremental;
-  }
-
-  public boolean isNativeReplicationEnabledAsDefaultForIncremental() {
-    return nativeReplicationEnabledAsDefaultForIncremental;
-  }
-
-  public boolean isNativeReplicationEnabledForHybrid() {
-    return nativeReplicationEnabledForHybrid;
-  }
-
-  public boolean isNativeReplicationEnabledAsDefaultForHybrid() {
-    return nativeReplicationEnabledAsDefaultForHybrid;
   }
 
   public boolean isActiveActiveReplicationEnabledAsDefaultForBatchOnly() {

@@ -1574,10 +1574,6 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     String storeName = Utils.getUniqueString("test-store");
     String pushJobId1 = "test-push-job-id-1";
     veniceAdmin.createStore(clusterName, storeName, "test-owner", KEY_SCHEMA, VALUE_SCHEMA);
-    /**
-     * Enable native replication.
-     */
-    veniceAdmin.updateStore(clusterName, storeName, new UpdateStoreQueryParams().setNativeReplicationEnabled(true));
 
     /**
      * Add version 1 without remote Kafka bootstrap servers.

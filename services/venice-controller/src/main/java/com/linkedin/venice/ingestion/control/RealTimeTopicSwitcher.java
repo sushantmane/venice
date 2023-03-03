@@ -68,8 +68,7 @@ public class RealTimeTopicSwitcher {
    * and destination topic.
    * @param rewindStartTimestamp to indicate the rewind start time for underlying replicators to start replicating
    *                             records from this timestamp.
-   * @param remoteKafkaUrls URLs of Kafka clusters which are sources of remote replication (either native replication
-   *                        is enabled or A/A is enabled)
+   * @param remoteKafkaUrls URLs of Kafka clusters which are sources of remote replication.
    * @throws TopicException
    */
   void sendTopicSwitch(
@@ -282,7 +281,7 @@ public class RealTimeTopicSwitcher {
 
     if (version.isActiveActiveReplicationEnabled()) {
       remoteKafkaUrls.addAll(activeActiveRealTimeSourceKafkaURLs);
-    } else if (version.isNativeReplicationEnabled() && (isAggregate(store) || (isIncrementalPush(version)))) {
+    } else if (isAggregate(store) || (isIncrementalPush(version))) {
       remoteKafkaUrls.add(aggregateRealTimeSourceKafkaUrl);
     }
     LOGGER.info(

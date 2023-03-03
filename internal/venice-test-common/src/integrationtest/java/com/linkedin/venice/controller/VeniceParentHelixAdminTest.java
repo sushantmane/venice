@@ -135,7 +135,6 @@ public class VeniceParentHelixAdminTest {
         // Configure the store to hybrid
         UpdateStoreQueryParams params = new UpdateStoreQueryParams().setHybridRewindSeconds(600)
             .setHybridOffsetLagThreshold(10000)
-            .setNativeReplicationEnabled(true)
             .setActiveActiveReplicationEnabled(true);
         assertCommand(parentControllerClient.updateStore(storeName, params));
         HybridStoreConfig hybridStoreConfig =

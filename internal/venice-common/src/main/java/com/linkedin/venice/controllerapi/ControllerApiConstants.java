@@ -89,7 +89,6 @@ public class ControllerApiConstants {
 
   public static final String STORE_VIEW = "store_view";
 
-  public static final String NATIVE_REPLICATION_ENABLED = "native_replication_enabled";
   public static final String PUSH_STREAM_SOURCE_ADDRESS = "push_stream_source_address";
 
   public static final String BACKUP_STRATEGY = "backup_strategy";

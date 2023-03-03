@@ -216,8 +216,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     Schema wcSchemaV2 = WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(valueSchemaV2);
 
     assertCommand(parentControllerClient.createNewStore(storeName, "owner", KEY_SCHEMA_STR, valueSchemaV1.toString()));
-    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setNativeReplicationEnabled(true)
-        .setActiveActiveReplicationEnabled(true)
+    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setChunkingEnabled(false)
         .setIncrementalPushEnabled(true)
@@ -453,8 +452,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     Schema wcSchemaV1 = WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(valueSchemaV1);
 
     assertCommand(parentControllerClient.createNewStore(storeName, "owner", KEY_SCHEMA_STR, valueSchemaV1.toString()));
-    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setNativeReplicationEnabled(true)
-        .setActiveActiveReplicationEnabled(true)
+    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setChunkingEnabled(false)
         .setIncrementalPushEnabled(true)
@@ -863,8 +861,7 @@ public class WriteComputeWithActiveActiveReplicationTest {
     Schema wcSchemaV1 = WriteComputeSchemaConverter.getInstance().convertFromValueRecordSchema(valueSchemaV1);
 
     assertCommand(parentControllerClient.createNewStore(storeName, "owner", KEY_SCHEMA_STR, valueSchemaV1.toString()));
-    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setNativeReplicationEnabled(true)
-        .setActiveActiveReplicationEnabled(true)
+    UpdateStoreQueryParams params = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setChunkingEnabled(false)
         .setIncrementalPushEnabled(true)

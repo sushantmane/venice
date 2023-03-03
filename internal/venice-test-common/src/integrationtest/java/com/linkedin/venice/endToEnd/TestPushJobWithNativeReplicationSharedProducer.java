@@ -139,8 +139,7 @@ public class TestPushJobWithNativeReplicationSharedProducer {
 
         UpdateStoreQueryParams updateStoreParams =
             new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
-                .setPartitionCount(partitionCount)
-                .setNativeReplicationEnabled(true);
+                .setPartitionCount(partitionCount);
 
         ControllerClient parentControllerClient = null;
 

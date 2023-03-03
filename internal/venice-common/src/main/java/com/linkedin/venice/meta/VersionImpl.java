@@ -125,16 +125,6 @@ public class VersionImpl implements Version {
   }
 
   @Override
-  public boolean isNativeReplicationEnabled() {
-    return this.storeVersion.nativeReplicationEnabled;
-  }
-
-  @Override
-  public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    this.storeVersion.nativeReplicationEnabled = nativeReplicationEnabled;
-  }
-
-  @Override
   public String getPushStreamSourceAddress() {
     return this.storeVersion.pushStreamSourceAddress.toString();
   }
@@ -362,8 +352,7 @@ public class VersionImpl implements Version {
         + getCreatedTime() + ", status=" + getStatus() + ", pushJobId='" + getPushJobId() + '\''
         + ", compressionStrategy='" + getCompressionStrategy() + '\'' + ", pushType=" + getPushType()
         + ", partitionCount=" + getPartitionCount() + ", partitionerConfig=" + getPartitionerConfig()
-        + ", nativeReplicationEnabled=" + isNativeReplicationEnabled() + ", pushStreamSourceAddress="
-        + getPushStreamSourceAddress() + ", replicationFactor=" + getReplicationFactor()
+        + ", pushStreamSourceAddress=" + getPushStreamSourceAddress() + ", replicationFactor=" + getReplicationFactor()
         + ", nativeReplicationSourceFabric=" + getNativeReplicationSourceFabric() + ", incrementalPushEnabled="
         + isIncrementalPushEnabled() + ", useVersionLevelIncrementalPushEnabled="
         + isUseVersionLevelIncrementalPushEnabled() + ", hybridConfig=" + getHybridStoreConfig()
@@ -416,7 +405,6 @@ public class VersionImpl implements Version {
     clonedVersion.setChunkingEnabled(isChunkingEnabled());
     clonedVersion.setRmdChunkingEnabled(isRmdChunkingEnabled());
     clonedVersion.setPushType(getPushType());
-    clonedVersion.setNativeReplicationEnabled(isNativeReplicationEnabled());
     clonedVersion.setPushStreamSourceAddress(getPushStreamSourceAddress());
     clonedVersion.setReplicationFactor(getReplicationFactor());
     clonedVersion.setNativeReplicationSourceFabric(getNativeReplicationSourceFabric());

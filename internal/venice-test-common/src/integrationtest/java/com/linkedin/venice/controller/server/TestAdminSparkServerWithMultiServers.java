@@ -1,5 +1,7 @@
 package com.linkedin.venice.controller.server;
 
+import static com.linkedin.venice.utils.TestUtils.assertCommand;
+
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controllerapi.ControllerClient;
 import com.linkedin.venice.controllerapi.ControllerResponse;
@@ -75,16 +77,15 @@ public class TestAdminSparkServerWithMultiServers {
     }
   }
 
+  @Test
   public void testListStoreWithConfigFilter() {
     // Add a store with native replication enabled
-    String nativeReplicationEnabledStore = Utils.getUniqueString("native-replication-store");
+    String batchOnlyStore = Utils.getUniqueString("batch-store");
     NewStoreResponse newStoreResponse =
-        controllerClient.createNewStore(nativeReplicationEnabledStore, "test", "\"string\"", "\"string\"");
+        assertCommand(controllerClient.createNewStore(batchOnlyStore, "test", "\"string\"", "\"string\""));
     Assert.assertFalse(newStoreResponse.isError());
-    ControllerResponse updateStoreResponse = controllerClient
-        .updateStore(nativeReplicationEnabledStore, new UpdateStoreQueryParams().setNativeReplicationEnabled(true));
-    Assert.assertFalse(updateStoreResponse.isError());
 
+    ControllerResponse updateStoreResponse;
     // Add a store with incremental push enabled
     String incrementalPushEnabledStore = Utils.getUniqueString("incremental-push-store");
     newStoreResponse = controllerClient.createNewStore(incrementalPushEnabledStore, "test", "\"string\"", "\"string\"");
@@ -96,15 +97,8 @@ public class TestAdminSparkServerWithMultiServers {
             .setHybridRewindSeconds(1L));
     Assert.assertFalse(updateStoreResponse.isError());
 
-    // List stores that have native replication enabled
-    MultiStoreResponse multiStoreResponse =
-        controllerClient.queryStoreList(false, Optional.of("nativeReplicationEnabled"), Optional.of("true"));
-    Assert.assertFalse(multiStoreResponse.isError());
-    Assert.assertEquals(multiStoreResponse.getStores().length, 1);
-    Assert.assertEquals(multiStoreResponse.getStores()[0], nativeReplicationEnabledStore);
-
     // List stores that have incremental push enabled
-    multiStoreResponse =
+    MultiStoreResponse multiStoreResponse =
         controllerClient.queryStoreList(false, Optional.of("incrementalPushEnabled"), Optional.of("true"));
     Assert.assertFalse(multiStoreResponse.isError());
     Assert.assertEquals(multiStoreResponse.getStores().length, 1);
@@ -139,7 +133,7 @@ public class TestAdminSparkServerWithMultiServers {
     Set<String> hybridStoresSet = new HashSet<>(Arrays.asList(multiStoreResponse.getStores()));
     Assert.assertTrue(hybridStoresSet.contains(hybridAggregateStore));
     Assert.assertTrue(hybridStoresSet.contains(hybridNonAggregateStore));
-    Assert.assertFalse(hybridStoresSet.contains(nativeReplicationEnabledStore));
+    Assert.assertFalse(hybridStoresSet.contains(batchOnlyStore));
     Assert.assertTrue(hybridStoresSet.contains(incrementalPushEnabledStore));
 
     // List hybrid stores that are on non-aggregate mode
@@ -150,7 +144,7 @@ public class TestAdminSparkServerWithMultiServers {
     Set<String> nonAggHybridStoresSet = new HashSet<>(Arrays.asList(multiStoreResponse.getStores()));
     Assert.assertFalse(nonAggHybridStoresSet.contains(hybridAggregateStore));
     Assert.assertTrue(nonAggHybridStoresSet.contains(hybridNonAggregateStore));
-    Assert.assertFalse(nonAggHybridStoresSet.contains(nativeReplicationEnabledStore));
+    Assert.assertFalse(nonAggHybridStoresSet.contains(batchOnlyStore));
     Assert.assertTrue(nonAggHybridStoresSet.contains(incrementalPushEnabledStore));
 
     // List hybrid stores that are on aggregate mode
@@ -161,7 +155,7 @@ public class TestAdminSparkServerWithMultiServers {
     Set<String> aggHybridStoresSet = new HashSet<>(Arrays.asList(multiStoreResponse.getStores()));
     Assert.assertTrue(aggHybridStoresSet.contains(hybridAggregateStore));
     Assert.assertFalse(aggHybridStoresSet.contains(hybridNonAggregateStore));
-    Assert.assertFalse(aggHybridStoresSet.contains(nativeReplicationEnabledStore));
+    Assert.assertFalse(aggHybridStoresSet.contains(batchOnlyStore));
     Assert.assertFalse(aggHybridStoresSet.contains(incrementalPushEnabledStore));
   }
 

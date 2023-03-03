@@ -45,7 +45,6 @@ public class StoreInfo {
     storeInfo.setMigrating(store.isMigrating());
     storeInfo.setMigrationDuplicateStore(store.isMigrationDuplicateStore());
     storeInfo.setName(store.getName());
-    storeInfo.setNativeReplicationEnabled(store.isNativeReplicationEnabled());
     storeInfo.setNativeReplicationSourceFabric(store.getNativeReplicationSourceFabric());
     storeInfo.setNumVersionsToPreserve(store.getNumVersionsToPreserve());
     storeInfo.setOwner(store.getOwner());
@@ -621,14 +620,6 @@ public class StoreInfo {
 
   public void setPushStreamSourceAddress(String sourceAddress) {
     this.pushStreamSourceAddress = sourceAddress;
-  }
-
-  public boolean isNativeReplicationEnabled() {
-    return this.nativeReplicationEnabled;
-  }
-
-  public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    this.nativeReplicationEnabled = nativeReplicationEnabled;
   }
 
   public void setLatestSuperSetValueSchemaId(int valueSchemaId) {

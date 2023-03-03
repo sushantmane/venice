@@ -594,8 +594,7 @@ public abstract class TestBatch {
         validator,
         new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
             .setHybridRewindSeconds(5)
-            .setHybridOffsetLagThreshold(2)
-            .setNativeReplicationEnabled(true));
+            .setHybridOffsetLagThreshold(2));
     // Re-push with Kafka Input
     testRepush(storeName, validator);
   }

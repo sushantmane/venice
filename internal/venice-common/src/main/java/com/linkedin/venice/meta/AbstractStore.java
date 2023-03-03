@@ -159,8 +159,6 @@ public abstract class AbstractStore implements Store {
         version.setPartitionerConfig(partitionerConfig.clone());
       }
 
-      version.setNativeReplicationEnabled(isNativeReplicationEnabled());
-
       version.setReplicationFactor(getReplicationFactor());
 
       version.setNativeReplicationSourceFabric(getNativeReplicationSourceFabric());

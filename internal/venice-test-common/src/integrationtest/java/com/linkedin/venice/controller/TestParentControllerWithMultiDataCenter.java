@@ -213,17 +213,13 @@ public class TestParentControllerWithMultiDataCenter {
           "The NewStoreResponse returned an error: " + newStoreResponse.getError());
 
       /**
-       * Send UpdateStore to child controller in the first data center; update 3 configs:
-       * 1. Storage quota set to 9527;
-       * 2. NR set to true.
+       * Send UpdateStore to child controller in the first data center; Set storage quota to 9527;
        */
       long expectedStorageQuotaInDC0 = 9527;
-      boolean expectedNativeReplicationConfigInDC0 = true;
       ControllerClient dc0Client =
           new ControllerClient(clusterName, childDatacenters.get(0).getControllerConnectString());
       UpdateStoreQueryParams updateStoreParams =
-          new UpdateStoreQueryParams().setStorageQuotaInByte(expectedStorageQuotaInDC0)
-              .setNativeReplicationEnabled(expectedNativeReplicationConfigInDC0);
+          new UpdateStoreQueryParams().setStorageQuotaInByte(expectedStorageQuotaInDC0);
       TestWriteUtils.updateStore(storeName, dc0Client, updateStoreParams);
 
       TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, false, true, () -> {
@@ -231,7 +227,6 @@ public class TestParentControllerWithMultiDataCenter {
         Assert.assertFalse(storeResponse.isError());
         StoreInfo storeInfo = storeResponse.getStore();
         Assert.assertEquals(storeInfo.getStorageQuotaInByte(), expectedStorageQuotaInDC0);
-        Assert.assertEquals(storeInfo.isNativeReplicationEnabled(), expectedNativeReplicationConfigInDC0);
       });
 
       /**
@@ -256,7 +251,6 @@ public class TestParentControllerWithMultiDataCenter {
          * so the below 3 configs in DC0 should remain unchanged.
          */
         Assert.assertEquals(storeInfo.getStorageQuotaInByte(), expectedStorageQuotaInDC0);
-        Assert.assertEquals(storeInfo.isNativeReplicationEnabled(), expectedNativeReplicationConfigInDC0);
       });
 
       /**
@@ -271,7 +265,6 @@ public class TestParentControllerWithMultiDataCenter {
        */
       StoreInfo parentStoreInfo = parentStoreResponse.getStore();
       long storageQuotaInParent = parentStoreInfo.getStorageQuotaInByte();
-      boolean nativeReplicationInParent = parentStoreInfo.isNativeReplicationEnabled();
 
       /**
        * Send an UpdateStore command to parent with "replicate-all-configs" flag turned on.
@@ -294,7 +287,6 @@ public class TestParentControllerWithMultiDataCenter {
          * Store configs in child datacenter should be identical to the store configs in parent
          */
         Assert.assertEquals(storeInfo.getStorageQuotaInByte(), storageQuotaInParent);
-        Assert.assertEquals(storeInfo.isNativeReplicationEnabled(), nativeReplicationInParent);
       });
 
       /**
@@ -337,7 +329,7 @@ public class TestParentControllerWithMultiDataCenter {
 
       // Enable AA on store
       UpdateStoreQueryParams updateStoreToEnableAARepl =
-          new UpdateStoreQueryParams().setNativeReplicationEnabled(true).setActiveActiveReplicationEnabled(true);
+          new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true);
       TestWriteUtils.updateStore(storeName, parentControllerClient, updateStoreToEnableAARepl);
       /**
        * Test Active/Active replication config enablement generates the active active metadata schema.

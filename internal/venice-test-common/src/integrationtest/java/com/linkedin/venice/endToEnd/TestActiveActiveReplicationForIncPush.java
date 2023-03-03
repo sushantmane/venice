@@ -154,7 +154,6 @@ public class TestActiveActiveReplicationForIncPush {
               .setHybridOffsetLagThreshold(TEST_TIMEOUT / 2)
               .setHybridRewindSeconds(2L)
               .setIncrementalPushEnabled(true)
-              .setNativeReplicationEnabled(true)
               .setNativeReplicationSourceFabric("dc-2");
       TestUtils.assertCommand(parentControllerClient.updateStore(storeName, updateStoreParams));
 
@@ -170,10 +169,10 @@ public class TestActiveActiveReplicationForIncPush {
       TestWriteUtils.updateStore(storeName, parentControllerClient, enableAARepl);
 
       // verify store configs
-      TestUtils.verifyDCConfigNativeAndActiveRepl(parentControllerClient, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0ControllerClient, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1ControllerClient, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc2ControllerClient, storeName, true, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(parentControllerClient, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0ControllerClient, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1ControllerClient, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc2ControllerClient, storeName, true);
 
       // Run a batch push first
       try (VenicePushJob job = new VenicePushJob("Test push job batch with NR + A/A all fabrics", propsBatch)) {

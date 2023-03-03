@@ -167,7 +167,6 @@ public class TestActiveActiveIngestion {
         .setStoreViews(viewConfig)
         .setHybridOffsetLagThreshold(8)
         .setChunkingEnabled(isChunkingEnabled)
-        .setNativeReplicationEnabled(true)
         .setPartitionCount(1);
     MetricsRepository metricsRepository = new MetricsRepository();
     createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, storeParms).close();
@@ -371,7 +370,6 @@ public class TestActiveActiveIngestion {
         .setHybridRewindSeconds(360)
         .setHybridOffsetLagThreshold(8)
         .setChunkingEnabled(isChunkingEnabled)
-        .setNativeReplicationEnabled(true)
         .setPartitionCount(1);
     MetricsRepository metricsRepository = new MetricsRepository();
     createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, storeParms).close();
@@ -550,8 +548,7 @@ public class TestActiveActiveIngestion {
     String valueSchemaStr = recordSchema.getField(DEFAULT_VALUE_FIELD_PROP).schema().toString();
     UpdateStoreQueryParams storeParms = new UpdateStoreQueryParams().setActiveActiveReplicationEnabled(true)
         .setHybridRewindSeconds(5)
-        .setHybridOffsetLagThreshold(2)
-        .setNativeReplicationEnabled(true);
+        .setHybridOffsetLagThreshold(2);
     createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, storeParms).close();
     // Create a new version
     VersionCreationResponse versionCreationResponse;

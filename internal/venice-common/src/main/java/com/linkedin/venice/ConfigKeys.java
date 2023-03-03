@@ -124,45 +124,6 @@ public class ConfigKeys {
   public static final String KAFKA_REPLICATION_FACTOR_RT_TOPICS = "kafka.replication.factor.rt.topics";
 
   /**
-   * TODO: the following 3 configs will be deprecated after the native replication migration is changed to a two-step
-   *       process: 1. Turn on the cluster level config that takes care of newly created stores; 2. Run admin command
-   *       to convert existing stores to native replication.
-   */
-  /**
-   * Cluster-level config to enable native replication for all batch-only stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_FOR_BATCH_ONLY = "enable.native.replication.for.batch.only";
-
-  /**
-   * Cluster-level config to enable native replication for all incremental push stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_FOR_INCREMENTAL_PUSH =
-      "enable.native.replication.for.incremental.push";
-
-  /**
-   * Cluster-level config to enable native replication for all hybrid stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_FOR_HYBRID = "enable.native.replication.for.hybrid";
-
-  /**
-   * Cluster-level config to enable native replication for new batch-only stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY =
-      "enable.native.replication.as.default.for.batch.only";
-
-  /**
-   * Cluster-level config to enable native replication for new incremental push stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_INCREMENTAL_PUSH =
-      "enable.native.replication.as.default.for.incremental.push";
-
-  /**
-   * Cluster-level config to enable native replication for new hybrid stores.
-   */
-  public static final String ENABLE_NATIVE_REPLICATION_AS_DEFAULT_FOR_HYBRID =
-      "enable.native.replication.as.default.for.hybrid";
-
-  /**
    * Cluster-level config to enable active-active replication for new batch-only stores.
    */
   public static final String ENABLE_ACTIVE_ACTIVE_REPLICATION_AS_DEFAULT_FOR_BATCH_ONLY_STORE =

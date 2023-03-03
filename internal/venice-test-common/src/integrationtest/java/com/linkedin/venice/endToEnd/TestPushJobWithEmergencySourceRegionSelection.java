@@ -117,7 +117,7 @@ public class TestPushJobWithEmergencySourceRegionSelection {
    * Verify that emergency source fabric override config overrides the store level NR source fabric
    */
   @Test(timeOut = TEST_TIMEOUT, dataProvider = "storeSize")
-  public void testNativeReplicationForBatchPushWithEmergencySourceOverride(int recordCount, int partitionCount)
+  public void testReplicationForBatchPushWithEmergencySourceOverride(int recordCount, int partitionCount)
       throws Exception {
     String clusterName = CLUSTER_NAMES[0];
     File inputDir = getTempDataDirectory();
@@ -135,7 +135,6 @@ public class TestPushJobWithEmergencySourceRegionSelection {
     UpdateStoreQueryParams updateStoreParams =
         new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
             .setPartitionCount(partitionCount)
-            .setNativeReplicationEnabled(true)
             .setNativeReplicationSourceFabric("dc-1")
             .setActiveActiveReplicationEnabled(true);
 
@@ -157,9 +156,9 @@ public class TestPushJobWithEmergencySourceRegionSelection {
        * Check the update store command in parent controller has been propagated into child controllers, before
        * sending any commands directly into child controllers, which can help avoid race conditions.
        */
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc2Client, storeName, true, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0Client, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1Client, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc2Client, storeName, true);
     }
 
     try (VenicePushJob job = new VenicePushJob("Test push job", props)) {

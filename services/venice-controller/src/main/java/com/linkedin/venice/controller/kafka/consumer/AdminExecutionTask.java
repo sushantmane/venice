@@ -11,7 +11,6 @@ import com.linkedin.venice.controller.kafka.protocol.admin.AbortMigration;
 import com.linkedin.venice.controller.kafka.protocol.admin.AddVersion;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureActiveActiveReplicationForCluster;
-import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureNativeReplicationForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.CreateStoragePersona;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteAllVersions;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteOldVersion;
@@ -227,9 +226,6 @@ public class AdminExecutionTask implements Callable<Void> {
           break;
         case SUPERSET_SCHEMA_CREATION:
           handleSupersetSchemaCreation((SupersetSchemaCreation) adminOperation.payloadUnion);
-          break;
-        case CONFIGURE_NATIVE_REPLICATION_FOR_CLUSTER:
-          handleEnableNativeReplicationForCluster((ConfigureNativeReplicationForCluster) adminOperation.payloadUnion);
           break;
         case CONFIGURE_ACTIVE_ACTIVE_REPLICATION_FOR_CLUSTER:
           handleEnableActiveActiveReplicationForCluster(
@@ -495,7 +491,7 @@ public class AdminExecutionTask implements Callable<Void> {
       params.setLargestUsedVersionNumber(message.largestUsedVersionNumber);
     }
 
-    params.setNativeReplicationEnabled(message.nativeReplicationEnabled)
+    params
         .setPushStreamSourceAddress(
             message.pushStreamSourceAddress == null ? null : message.pushStreamSourceAddress.toString())
         .setBackupVersionRetentionMs(message.backupVersionRetentionMs);
@@ -635,24 +631,6 @@ public class AdminExecutionTask implements Callable<Void> {
           replicationMetadataVersionId,
           message.versionSwapDeferred);
     }
-  }
-
-  private void handleEnableNativeReplicationForCluster(ConfigureNativeReplicationForCluster message) {
-    String clusterName = message.clusterName.toString();
-    VeniceUserStoreType storeType = VeniceUserStoreType.valueOf(message.storeType.toString().toUpperCase());
-    boolean enableNativeReplication = message.enabled;
-    Optional<String> nativeReplicationSourceFabric = (message.nativeReplicationSourceRegion == null)
-        ? Optional.empty()
-        : Optional.of(message.nativeReplicationSourceRegion.toString());
-    Optional<String> regionsFilter =
-        (message.regionsFilter == null) ? Optional.empty() : Optional.of(message.regionsFilter.toString());
-    admin.configureNativeReplication(
-        clusterName,
-        storeType,
-        Optional.of(storeName),
-        enableNativeReplication,
-        nativeReplicationSourceFabric,
-        regionsFilter);
   }
 
   private void handleEnableActiveActiveReplicationForCluster(ConfigureActiveActiveReplicationForCluster message) {

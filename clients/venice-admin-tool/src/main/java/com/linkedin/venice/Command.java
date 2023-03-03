@@ -54,7 +54,6 @@ import static com.linkedin.venice.Arg.KEY_SCHEMA;
 import static com.linkedin.venice.Arg.LARGEST_USED_VERSION_NUMBER;
 import static com.linkedin.venice.Arg.MESSAGE_COUNT;
 import static com.linkedin.venice.Arg.MIGRATION_PUSH_STRATEGY;
-import static com.linkedin.venice.Arg.NATIVE_REPLICATION_ENABLED;
 import static com.linkedin.venice.Arg.NATIVE_REPLICATION_SOURCE_FABRIC;
 import static com.linkedin.venice.Arg.NUM_VERSIONS_TO_PRESERVE;
 import static com.linkedin.venice.Arg.OFFSET;
@@ -208,7 +207,7 @@ public enum Command {
           CHUNKING_ENABLED, RMD_CHUNKING_ENABLED, BATCH_GET_LIMIT, NUM_VERSIONS_TO_PRESERVE, WRITE_COMPUTATION_ENABLED,
           READ_COMPUTATION_ENABLED, BACKUP_STRATEGY, AUTO_SCHEMA_REGISTER_FOR_PUSHJOB_ENABLED, INCREMENTAL_PUSH_ENABLED,
           BOOTSTRAP_TO_ONLINE_TIMEOUT_IN_HOUR, HYBRID_STORE_DISK_QUOTA_ENABLED, REGULAR_VERSION_ETL_ENABLED,
-          FUTURE_VERSION_ETL_ENABLED, ETLED_PROXY_USER_ACCOUNT, NATIVE_REPLICATION_ENABLED, PUSH_STREAM_SOURCE_ADDRESS,
+          FUTURE_VERSION_ETL_ENABLED, ETLED_PROXY_USER_ACCOUNT, PUSH_STREAM_SOURCE_ADDRESS,
           BACKUP_VERSION_RETENTION_DAY, REPLICATION_FACTOR, NATIVE_REPLICATION_SOURCE_FABRIC, REPLICATE_ALL_CONFIGS,
           ACTIVE_ACTIVE_REPLICATION_ENABLED, REGIONS_FILTER, DISABLE_META_STORE, DISABLE_DAVINCI_PUSH_STATUS_STORE,
           STORAGE_PERSONA, STORE_VIEW_CONFIGS }
@@ -335,16 +334,6 @@ public enum Command {
   REMOVE_FROM_STORE_ACL(
       "remove-from-store-acl", "Remove a principal from ACL's for an existing store",
       new Arg[] { URL, CLUSTER, STORE, PRINCIPAL }, new Arg[] { READABILITY, WRITEABILITY }
-  ),
-  ENABLE_NATIVE_REPLICATION_FOR_CLUSTER(
-      "enable-native-replication-for-cluster",
-      "enable native replication for certain stores (batch-only, hybrid-only, incremental-push, hybrid-or-incremental, all) in a cluster",
-      new Arg[] { URL, CLUSTER, STORE_TYPE }, new Arg[] { REGIONS_FILTER, NATIVE_REPLICATION_SOURCE_FABRIC }
-  ),
-  DISABLE_NATIVE_REPLICATION_FOR_CLUSTER(
-      "disable-native-replication-for-cluster",
-      "disable native replication for certain stores (batch-only, hybrid-only, incremental-push, hybrid-or-incremental, all) in a cluster",
-      new Arg[] { URL, CLUSTER, STORE_TYPE }, new Arg[] { REGIONS_FILTER, NATIVE_REPLICATION_SOURCE_FABRIC }
   ),
   ENABLE_ACTIVE_ACTIVE_REPLICATION_FOR_CLUSTER(
       "enable-active-active-replication-for-cluster",

@@ -174,14 +174,12 @@ public class TestUtils {
   public static ControllerResponse updateStoreToHybrid(
       String storeName,
       ControllerClient parentControllerClient,
-      Optional<Boolean> enableNativeReplication,
       Optional<Boolean> enableActiveActiveReplication,
       Optional<Boolean> enableChunking) {
     UpdateStoreQueryParams params = new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
         .setHybridRewindSeconds(25L)
         .setHybridOffsetLagThreshold(1L);
 
-    enableNativeReplication.ifPresent(params::setNativeReplicationEnabled);
     enableActiveActiveReplication.ifPresent(params::setActiveActiveReplicationEnabled);
     enableChunking.ifPresent(params::setChunkingEnabled);
 
@@ -660,18 +658,13 @@ public class TestUtils {
     });
   }
 
-  public static void verifyDCConfigNativeAndActiveRepl(
+  public static void verifyDCConfigActiveActiveReplication(
       ControllerClient controllerClient,
       String storeName,
-      boolean enabledNR,
       boolean enabledAA) {
     TestUtils.waitForNonDeterministicAssertion(20, TimeUnit.SECONDS, true, () -> {
       StoreResponse storeResponse = controllerClient.getStore(storeName);
       Assert.assertFalse(storeResponse.isError());
-      Assert.assertEquals(
-          storeResponse.getStore().isNativeReplicationEnabled(),
-          enabledNR,
-          "The native replication config does not match.");
       Assert.assertEquals(
           storeResponse.getStore().isActiveActiveReplicationEnabled(),
           enabledAA,
@@ -724,9 +717,6 @@ public class TestUtils {
     doReturn(false).when(mockStore).isHybrid();
 
     version.setBufferReplayEnabledForHybrid(true);
-
-    version.setNativeReplicationEnabled(false);
-    doReturn(false).when(mockStore).isNativeReplicationEnabled();
 
     version.setPushStreamSourceAddress("");
     doReturn("").when(mockStore).getPushStreamSourceAddress();

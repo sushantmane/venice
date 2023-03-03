@@ -79,7 +79,6 @@ public class DataRecoveryManager implements Closeable {
     if (store == null) {
       throw new VeniceNoStoreException(storeName, clusterName);
     }
-    dataRecoveryVersion.setNativeReplicationEnabled(store.isNativeReplicationEnabled());
     dataRecoveryVersion.setNativeReplicationSourceFabric(sourceFabric);
     dataRecoveryVersion.setDataRecoveryVersionConfig(new DataRecoveryVersionConfigImpl(sourceFabric, false));
 
@@ -136,9 +135,6 @@ public class DataRecoveryManager implements Closeable {
     }
     if (store.isMigrating()) {
       throw new VeniceException("Data recovery is not allowed during store migration");
-    }
-    if (!store.isNativeReplicationEnabled()) {
-      throw new VeniceException("Native replication is required for data recovery");
     }
     // In parent controller we have the information to check if source and destination fabric store configurations will
     // allow data recovery or not.

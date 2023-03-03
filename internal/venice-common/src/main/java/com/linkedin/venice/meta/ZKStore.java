@@ -200,7 +200,6 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
     setWriteComputationEnabled(store.isWriteComputationEnabled());
     setReadComputationEnabled(store.isReadComputationEnabled());
     setBootstrapToOnlineTimeoutInHours(store.getBootstrapToOnlineTimeoutInHours());
-    setNativeReplicationEnabled(store.isNativeReplicationEnabled());
     setBackupStrategy(store.getBackupStrategy());
     setSchemaAutoRegisterFromPushJobEnabled(store.isSchemaAutoRegisterFromPushJobEnabled());
     setLatestSuperSetValueSchemaId(store.getLatestSuperSetValueSchemaId());
@@ -611,11 +610,6 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
   }
 
   @Override
-  public boolean isNativeReplicationEnabled() {
-    return this.storeProperties.nativeReplicationEnabled;
-  }
-
-  @Override
   public Optional<Integer> getRmdVersionID() {
     final int rmdVersionID = this.storeProperties.replicationMetadataVersionID;
     return rmdVersionID == -1 ? Optional.empty() : Optional.of(rmdVersionID);
@@ -624,11 +618,6 @@ public class ZKStore extends AbstractStore implements DataModelBackedStructure<S
   @Override
   public void setRmdVersionID(Optional<Integer> rmdVersionID) {
     this.storeProperties.replicationMetadataVersionID = rmdVersionID.orElse(-1);
-  }
-
-  @Override
-  public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    this.storeProperties.nativeReplicationEnabled = nativeReplicationEnabled;
   }
 
   @Override

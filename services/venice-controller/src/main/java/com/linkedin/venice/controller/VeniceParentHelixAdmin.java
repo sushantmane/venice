@@ -24,7 +24,6 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.HYBRID_ST
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.INCREMENTAL_PUSH_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.LARGEST_USED_VERSION_NUMBER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.MIGRATION_DUPLICATE_STORE;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.NATIVE_REPLICATION_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NATIVE_REPLICATION_SOURCE_FABRIC;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NUM_VERSIONS_TO_PRESERVE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.OFFSET_LAG_TO_GO_ONLINE;
@@ -79,7 +78,6 @@ import com.linkedin.venice.controller.kafka.protocol.admin.AbortMigration;
 import com.linkedin.venice.controller.kafka.protocol.admin.AddVersion;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
 import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureActiveActiveReplicationForCluster;
-import com.linkedin.venice.controller.kafka.protocol.admin.ConfigureNativeReplicationForCluster;
 import com.linkedin.venice.controller.kafka.protocol.admin.CreateStoragePersona;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteAllVersions;
 import com.linkedin.venice.controller.kafka.protocol.admin.DeleteOldVersion;
@@ -1682,10 +1680,7 @@ public class VeniceParentHelixAdmin implements Admin {
     addVersion.versionNum = version.getNumber();
     addVersion.numberOfPartitions = numberOfPartitions;
     addVersion.pushType = pushType.getValue();
-    // Check whether native replication is enabled
-    if (version.isNativeReplicationEnabled()) {
-      addVersion.pushStreamSourceAddress = version.getPushStreamSourceAddress();
-    }
+    addVersion.pushStreamSourceAddress = version.getPushStreamSourceAddress();
     if (version.getHybridStoreConfig() != null) {
       addVersion.rewindTimeInSecondsOverride = version.getHybridStoreConfig().getRewindTimeInSeconds();
     } else {
@@ -2206,7 +2201,6 @@ public class VeniceParentHelixAdmin implements Admin {
       Optional<Boolean> regularVersionETLEnabled = params.getRegularVersionETLEnabled();
       Optional<Boolean> futureVersionETLEnabled = params.getFutureVersionETLEnabled();
       Optional<String> etledUserProxyAccount = params.getETLedProxyUserAccount();
-      Optional<Boolean> nativeReplicationEnabled = params.getNativeReplicationEnabled();
       Optional<String> pushStreamSourceAddress = params.getPushStreamSourceAddress();
       Optional<Long> backupVersionRetentionMs = params.getBackupVersionRetentionMs();
       Optional<Integer> replicationFactor = params.getReplicationFactor();
@@ -2257,11 +2251,6 @@ public class VeniceParentHelixAdmin implements Admin {
        * TODO: We should build an UpdateStoreHelper that takes current store config and update command as input, and
        *       return whether the update command is valid.
        */
-      validateActiveActiveReplicationEnableConfigs(activeActiveReplicationEnabled, nativeReplicationEnabled, currStore);
-
-      setStore.nativeReplicationEnabled =
-          nativeReplicationEnabled.map(addToUpdatedConfigList(updatedConfigsList, NATIVE_REPLICATION_ENABLED))
-              .orElseGet(currStore::isNativeReplicationEnabled);
       setStore.pushStreamSourceAddress =
           pushStreamSourceAddress.map(addToUpdatedConfigList(updatedConfigsList, PUSH_STREAM_SOURCE_ADDRESS))
               .orElseGet(currStore::getPushStreamSourceAddress);
@@ -2630,28 +2619,6 @@ public class VeniceParentHelixAdmin implements Admin {
   @Override
   public void updateClusterConfig(String clusterName, UpdateClusterConfigQueryParams params) {
     getVeniceHelixAdmin().updateClusterConfig(clusterName, params);
-  }
-
-  private void validateActiveActiveReplicationEnableConfigs(
-      Optional<Boolean> activeActiveReplicationEnabledOptional,
-      Optional<Boolean> nativeReplicationEnabledOptional,
-      Store store) {
-    final boolean activeActiveReplicationEnabled = activeActiveReplicationEnabledOptional.orElse(false);
-    if (!activeActiveReplicationEnabled) {
-      return;
-    }
-
-    final boolean nativeReplicationEnabled = nativeReplicationEnabledOptional.isPresent()
-        ? nativeReplicationEnabledOptional.get()
-        : store.isNativeReplicationEnabled();
-
-    if (!nativeReplicationEnabled) {
-      throw new VeniceHttpException(
-          HttpStatus.SC_BAD_REQUEST,
-          "Active/Active Replication cannot be enabled for store " + store.getName()
-              + " since Native Replication is not enabled on it.",
-          ErrorType.INVALID_CONFIG);
-    }
   }
 
   /**
@@ -4338,32 +4305,6 @@ public class VeniceParentHelixAdmin implements Admin {
         LOGGER.info("Store {} is migrating! Skipping acl deletion!", storeName);
       }
     }
-  }
-
-  /**
-   * @see Admin#configureNativeReplication(String, VeniceUserStoreType, Optional, boolean, Optional, Optional)
-   */
-  @Override
-  public void configureNativeReplication(
-      String clusterName,
-      VeniceUserStoreType storeType,
-      Optional<String> storeName,
-      boolean enableNativeReplicationForCluster,
-      Optional<String> newSourceRegion,
-      Optional<String> regionsFilter) {
-    ConfigureNativeReplicationForCluster migrateClusterToNativeReplication =
-        (ConfigureNativeReplicationForCluster) AdminMessageType.CONFIGURE_NATIVE_REPLICATION_FOR_CLUSTER
-            .getNewInstance();
-    migrateClusterToNativeReplication.clusterName = clusterName;
-    migrateClusterToNativeReplication.storeType = storeType.toString();
-    migrateClusterToNativeReplication.enabled = enableNativeReplicationForCluster;
-    migrateClusterToNativeReplication.nativeReplicationSourceRegion = newSourceRegion.orElse(null);
-    migrateClusterToNativeReplication.regionsFilter = regionsFilter.orElse(null);
-
-    AdminOperation message = new AdminOperation();
-    message.operationType = AdminMessageType.CONFIGURE_NATIVE_REPLICATION_FOR_CLUSTER.getValue();
-    message.payloadUnion = migrateClusterToNativeReplication;
-    sendAdminMessageAndWaitForConsumed(clusterName, null, message);
   }
 
   /**

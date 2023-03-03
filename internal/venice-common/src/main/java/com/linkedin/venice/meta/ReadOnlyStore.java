@@ -323,16 +323,6 @@ public class ReadOnlyStore implements Store {
     }
 
     @Override
-    public boolean isNativeReplicationEnabled() {
-      return this.delegate.isNativeReplicationEnabled();
-    }
-
-    @Override
-    public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public String getPushStreamSourceAddress() {
       return this.delegate.getPushStreamSourceAddress();
     }
@@ -979,11 +969,6 @@ public class ReadOnlyStore implements Store {
   }
 
   @Override
-  public boolean isNativeReplicationEnabled() {
-    return this.delegate.isNativeReplicationEnabled();
-  }
-
-  @Override
   public Optional<Integer> getRmdVersionID() {
     return this.delegate.getRmdVersionID();
   }
@@ -991,11 +976,6 @@ public class ReadOnlyStore implements Store {
   @Override
   public void setRmdVersionID(Optional<Integer> rmdVersionID) {
     throw new UnsupportedOperationException("This class is read-only. Hence set/write operation is not allowed");
-  }
-
-  @Override
-  public void setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    throw new UnsupportedOperationException();
   }
 
   @Override

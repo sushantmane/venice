@@ -300,14 +300,11 @@ public class CreateVersion extends AbstractRoute {
               responseTopic = Version.composeRealTimeTopic(storeName);
               // disable amplificationFactor logic on real-time topic
               responseObject.setAmplificationFactor(1);
-
-              if (version.isNativeReplicationEnabled()) {
-                /**
-                 * For incremental push with RT policy store the push job produces to parent corp kafka cluster. We should not override the
-                 * source fabric in such cases with NR source fabric.
-                 */
-                overrideSourceFabric = false;
-              }
+              /**
+               * For incremental push with RT policy store the push job produces to parent corp kafka cluster. We should not override the
+               * source fabric in such cases with NR source fabric.
+               */
+              overrideSourceFabric = false;
             } else {
               responseTopic = version.kafkaTopicName();
             }
@@ -320,7 +317,7 @@ public class CreateVersion extends AbstractRoute {
             } else {
               responseObject.setCompressionStrategy(version.getCompressionStrategy());
             }
-            if (version.isNativeReplicationEnabled() && overrideSourceFabric) {
+            if (overrideSourceFabric) {
               String childDataCenterKafkaBootstrapServer = version.getPushStreamSourceAddress();
               if (childDataCenterKafkaBootstrapServer != null) {
                 responseObject.setKafkaBootstrapServers(childDataCenterKafkaBootstrapServer);
@@ -334,8 +331,7 @@ public class CreateVersion extends AbstractRoute {
                   clusterName,
                   emergencySourceRegion.orElse(null),
                   sourceGridFabric.orElse(null),
-                  isActiveActiveReplicationEnabledInAllRegion.get(),
-                  version.isNativeReplicationEnabled());
+                  isActiveActiveReplicationEnabledInAllRegion.get());
               LOGGER.info(
                   "Incremental push job final source region address is: {}",
                   responseObject.getKafkaBootstrapServers());
@@ -414,15 +410,10 @@ public class CreateVersion extends AbstractRoute {
       String clusterName,
       String emergencySourceRegion,
       String pushJobSourceGridFabric,
-      boolean isAAEnabledInAllRegions,
-      boolean isNativeReplicationEnabled) {
-    if (!isAAEnabledInAllRegions && isNativeReplicationEnabled) {
-      // P2: When AA is not enabled in all the regions we use aggregate RT address, if it is available,
-      // for inc-pushes if native-replication is enabled.
+      boolean isAAEnabledInAllRegions) {
+    if (!isAAEnabledInAllRegions) {
+      // P2: When AA is not enabled in all the regions, for inc-pushes we use aggregate RT address, if it is available.
       admin.getAggregateRealTimeTopicSource(clusterName).ifPresent(response::setKafkaBootstrapServers);
-      return;
-    } else if (!isAAEnabledInAllRegions) {
-      // When AA is not enabled in all regions and native replication is also disabled, don't do anything.
       return;
     }
 

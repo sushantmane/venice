@@ -34,6 +34,7 @@ import static com.linkedin.venice.utils.TestUtils.updateStoreToHybrid;
 import static com.linkedin.venice.utils.TestUtils.waitForNonDeterministicAssertion;
 import static com.linkedin.venice.utils.TestWriteUtils.STRING_SCHEMA;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -94,7 +95,6 @@ import java.util.stream.IntStream;
 import org.apache.helix.HelixAdmin;
 import org.apache.helix.manager.zk.ZKHelixAdmin;
 import org.apache.helix.model.IdealState;
-import org.apache.http.HttpStatus;
 import org.apache.samza.config.MapConfig;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
@@ -280,61 +280,20 @@ public class ActiveActiveReplicationForHybridTest {
   }
 
   @Test(timeOut = TEST_TIMEOUT)
-  public void testEnableNRisRequiredBeforeEnablingAA() {
+  public void testCanEnableAndDisableActiveActiveReplication() {
     String storeName = Utils.getUniqueString("test-store");
     String anotherStoreName = Utils.getUniqueString("test-store");
     try {
       assertCommand(parentControllerClient.createNewStore(storeName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-
-      // Expect the request to fail since AA cannot be enabled without enabling NR
-      try {
-        updateStoreToHybrid(
-            storeName,
-            parentControllerClient,
-            Optional.of(false),
-            Optional.of(true),
-            Optional.of(false));
-        fail("The update store command should not have succeeded since AA cannot be enabled without enabling NR.");
-      } catch (AssertionError e) {
-        assertTrue(e.getMessage().contains("Http Status " + HttpStatus.SC_BAD_REQUEST)); // Must contain the correct
-                                                                                         // HTTP status code
-      }
-
       // Expect the request to succeed
-      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(true), Optional.of(false));
+      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(false));
+      StoreResponse response1 = assertCommand(parentControllerClient.getStore(storeName));
+      assertTrue(response1.getStore().isActiveActiveReplicationEnabled());
 
-      // Create a new store
-      assertCommand(parentControllerClient.createNewStore(anotherStoreName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-
-      // Enable NR
-      updateStoreToHybrid(
-          anotherStoreName,
-          parentControllerClient,
-          Optional.of(true),
-          Optional.of(false),
-          Optional.of(false));
-
-      // Enable AA after NR is enabled (expect to succeed)
-      updateStoreToHybrid(
-          anotherStoreName,
-          parentControllerClient,
-          Optional.empty(),
-          Optional.of(true),
-          Optional.of(false));
-
-      // Disable NR and enable AA (expect to fail)
-      try {
-        updateStoreToHybrid(
-            anotherStoreName,
-            parentControllerClient,
-            Optional.of(false),
-            Optional.of(true),
-            Optional.of(false));
-        fail("The update store command should not have succeeded since AA cannot be enabled without enabling NR.");
-      } catch (AssertionError e) {
-        assertTrue(e.getMessage().contains("Http Status " + HttpStatus.SC_BAD_REQUEST)); // Must contain the correct
-                                                                                         // HTTP status code
-      }
+      // Disable AA
+      updateStoreToHybrid(anotherStoreName, parentControllerClient, Optional.of(false), Optional.of(false));
+      StoreResponse response2 = assertCommand(parentControllerClient.getStore(storeName));
+      assertFalse(response2.getStore().isActiveActiveReplicationEnabled());
     } finally {
       deleteStores(storeName, anotherStoreName);
     }
@@ -347,12 +306,7 @@ public class ActiveActiveReplicationForHybridTest {
     String storeName = Utils.getUniqueString("test-store");
     try {
       assertCommand(parentControllerClient.createNewStore(storeName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-      updateStoreToHybrid(
-          storeName,
-          parentControllerClient,
-          Optional.of(true),
-          Optional.of(true),
-          Optional.of(isChunkingEnabled));
+      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(isChunkingEnabled));
 
       // Empty push to create a version
       ControllerResponse controllerResponse = assertCommand(
@@ -544,7 +498,7 @@ public class ActiveActiveReplicationForHybridTest {
     String storeName = Utils.getUniqueString("test-store");
     try {
       assertCommand(parentControllerClient.createNewStore(storeName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(true), Optional.of(false));
+      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(false));
 
       // Empty push to create a version
       assertCommand(parentControllerClient.emptyPush(storeName, Utils.getUniqueString("empty-hybrid-push"), 1L));
@@ -566,12 +520,7 @@ public class ActiveActiveReplicationForHybridTest {
     String storeName = Utils.getUniqueString("test-store");
     try {
       assertCommand(parentControllerClient.createNewStore(storeName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-      updateStoreToHybrid(
-          storeName,
-          parentControllerClient,
-          Optional.of(true),
-          Optional.of(true),
-          Optional.of(chunkingEnabled));
+      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(chunkingEnabled));
 
       // Empty push to create a version
       assertCommand(
@@ -758,7 +707,7 @@ public class ActiveActiveReplicationForHybridTest {
 
     try {
       assertCommand(parentControllerClient.createNewStore(storeName, "owner", STRING_SCHEMA, STRING_SCHEMA));
-      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(true), Optional.of(true));
+      updateStoreToHybrid(storeName, parentControllerClient, Optional.of(true), Optional.of(true));
       // Empty push to create a version
       ControllerResponse response = assertCommand(
           parentControllerClient

@@ -24,7 +24,6 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.HYBRID_ST
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.INCREMENTAL_PUSH_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.LARGEST_USED_VERSION_NUMBER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.MIGRATION_DUPLICATE_STORE;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.NATIVE_REPLICATION_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NATIVE_REPLICATION_SOURCE_FABRIC;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NUM_VERSIONS_TO_PRESERVE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.OFFSET_LAG_TO_GO_ONLINE;
@@ -109,7 +108,6 @@ public class UpdateStoreQueryParams extends QueryParams {
             .setHybridStoreDiskQuotaEnabled(srcStore.isHybridStoreDiskQuotaEnabled())
             .setIncrementalPushEnabled(srcStore.isIncrementalPushEnabled())
             .setLargestUsedVersionNumber(srcStore.getLargestUsedVersionNumber())
-            .setNativeReplicationEnabled(srcStore.isNativeReplicationEnabled())
             .setNativeReplicationSourceFabric(srcStore.getNativeReplicationSourceFabric())
             .setNumVersionsToPreserve(srcStore.getNumVersionsToPreserve())
             .setOwner(srcStore.getOwner())
@@ -446,10 +444,6 @@ public class UpdateStoreQueryParams extends QueryParams {
     return getInteger(BOOTSTRAP_TO_ONLINE_TIMEOUT_IN_HOURS);
   }
 
-  public UpdateStoreQueryParams setNativeReplicationEnabled(boolean nativeReplicationEnabled) {
-    return putBoolean(NATIVE_REPLICATION_ENABLED, nativeReplicationEnabled);
-  }
-
   public UpdateStoreQueryParams setStoreViews(Map<String, String> viewMap) {
     return (UpdateStoreQueryParams) putStringMap(STORE_VIEW, viewMap);
   }
@@ -502,10 +496,6 @@ public class UpdateStoreQueryParams extends QueryParams {
 
   public Optional<String> getETLedProxyUserAccount() {
     return Optional.ofNullable(params.get(ETLED_PROXY_USER_ACCOUNT));
-  }
-
-  public Optional<Boolean> getNativeReplicationEnabled() {
-    return getBoolean(NATIVE_REPLICATION_ENABLED);
   }
 
   public Optional<String> getPushStreamSourceAddress() {

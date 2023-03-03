@@ -136,11 +136,10 @@ public class DataRecoveryTest {
                   new UpdateStoreQueryParams().setHybridRewindSeconds(10)
                       .setHybridOffsetLagThreshold(2)
                       .setHybridDataReplicationPolicy(DataReplicationPolicy.AGGREGATE)
-                      .setNativeReplicationEnabled(true)
                       .setPartitionCount(1))
               .isError());
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, false);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, false);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0Client, storeName, false);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1Client, storeName, false);
       Assert.assertFalse(
           parentControllerClient.emptyPush(storeName, "empty-push-" + System.currentTimeMillis(), 1000).isError());
       TestUtils.waitForNonDeterministicPushCompletion(
@@ -183,13 +182,9 @@ public class DataRecoveryTest {
       List<ControllerClient> dcControllerClientList = Arrays.asList(dc0Client, dc1Client);
       TestUtils.createAndVerifyStoreInAllRegions(storeName, parentControllerClient, dcControllerClientList);
       Assert.assertFalse(
-          parentControllerClient
-              .updateStore(
-                  storeName,
-                  new UpdateStoreQueryParams().setNativeReplicationEnabled(true).setPartitionCount(1))
-              .isError());
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, false);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, false);
+          parentControllerClient.updateStore(storeName, new UpdateStoreQueryParams().setPartitionCount(1)).isError());
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0Client, storeName, false);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1Client, storeName, false);
       VersionCreationResponse versionCreationResponse = parentControllerClient.requestTopicForWrites(
           storeName,
           1024,
@@ -261,12 +256,11 @@ public class DataRecoveryTest {
                   new UpdateStoreQueryParams().setHybridRewindSeconds(10)
                       .setHybridOffsetLagThreshold(2)
                       .setHybridDataReplicationPolicy(DataReplicationPolicy.ACTIVE_ACTIVE)
-                      .setNativeReplicationEnabled(true)
                       .setActiveActiveReplicationEnabled(true)
                       .setPartitionCount(1))
               .isError());
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc0Client, storeName, true, true);
-      TestUtils.verifyDCConfigNativeAndActiveRepl(dc1Client, storeName, true, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc0Client, storeName, true);
+      TestUtils.verifyDCConfigActiveActiveReplication(dc1Client, storeName, true);
       Assert.assertFalse(
           parentControllerClient.emptyPush(storeName, "empty-push-" + System.currentTimeMillis(), 1000).isError());
       String versionTopic = Version.composeKafkaTopic(storeName, 1);

@@ -252,13 +252,9 @@ public interface Store {
 
   void setPushStreamSourceAddress(String sourceAddress);
 
-  boolean isNativeReplicationEnabled();
-
   Optional<Integer> getRmdVersionID();
 
   void setRmdVersionID(Optional<Integer> rmdVersionID);
-
-  void setNativeReplicationEnabled(boolean nativeReplicationEnabled);
 
   BackupStrategy getBackupStrategy();
 

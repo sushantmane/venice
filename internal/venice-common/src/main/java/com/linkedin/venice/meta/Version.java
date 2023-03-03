@@ -98,10 +98,6 @@ public interface Version extends Comparable<Version>, DataModelBackedStructure<S
 
   void setCompressionStrategy(CompressionStrategy compressionStrategy);
 
-  boolean isNativeReplicationEnabled();
-
-  void setNativeReplicationEnabled(boolean nativeReplicationEnabled);
-
   String getPushStreamSourceAddress();
 
   void setPushStreamSourceAddress(String address);
