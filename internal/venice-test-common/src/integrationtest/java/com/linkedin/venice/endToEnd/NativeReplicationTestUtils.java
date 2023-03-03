@@ -1,5 +1,7 @@
 package com.linkedin.venice.endToEnd;
 
+import static com.linkedin.venice.utils.TestUtils.assertCommand;
+
 import com.linkedin.venice.client.store.AvroGenericStoreClient;
 import com.linkedin.venice.client.store.ClientConfig;
 import com.linkedin.venice.client.store.ClientFactory;
@@ -21,16 +23,10 @@ public class NativeReplicationTestUtils {
   public static void verifyDCConfigNativeRepl(
       List<ControllerClient> controllerClients,
       String storeName,
-      boolean enabled,
       Optional<String> nativeReplicationSourceOptional) {
     for (ControllerClient controllerClient: controllerClients) {
       TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
-        StoreResponse storeResponse = controllerClient.getStore(storeName);
-        Assert.assertFalse(storeResponse.isError());
-        Assert.assertEquals(
-            storeResponse.getStore().isNativeReplicationEnabled(),
-            enabled,
-            "The native replication config does not match.");
+        StoreResponse storeResponse = assertCommand(controllerClient.getStore(storeName));
         nativeReplicationSourceOptional.ifPresent(
             s -> Assert.assertEquals(
                 storeResponse.getStore().getNativeReplicationSourceFabric(),
@@ -38,13 +34,6 @@ public class NativeReplicationTestUtils {
                 "Native replication source doesn't match"));
       });
     }
-  }
-
-  public static void verifyDCConfigNativeRepl(
-      List<ControllerClient> controllerClients,
-      String storeName,
-      boolean enabled) {
-    verifyDCConfigNativeRepl(controllerClients, storeName, enabled, Optional.empty());
   }
 
   public static void verifyIncrementalPushData(

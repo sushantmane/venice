@@ -12,6 +12,8 @@ import static com.linkedin.venice.hadoop.VenicePushJob.DEFAULT_VALUE_FIELD_PROP;
 import static com.linkedin.venice.hadoop.VenicePushJob.SEND_CONTROL_MESSAGES_DIRECTLY;
 import static com.linkedin.venice.hadoop.VenicePushJob.SOURCE_GRID_FABRIC;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.createStoreForJob;
+import static com.linkedin.venice.utils.IntegrationTestPushUtils.defaultVPJProps;
+import static com.linkedin.venice.utils.TestUtils.assertCommand;
 import static com.linkedin.venice.utils.TestWriteUtils.getTempDataDirectory;
 
 import com.linkedin.venice.client.store.AvroGenericStoreClient;
@@ -25,7 +27,6 @@ import com.linkedin.venice.integration.utils.VeniceMultiClusterWrapper;
 import com.linkedin.venice.integration.utils.VeniceTwoLayerMultiRegionMultiClusterWrapper;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.VeniceUserStoreType;
-import com.linkedin.venice.utils.IntegrationTestPushUtils;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.TestWriteUtils;
 import com.linkedin.venice.utils.Time;
@@ -114,36 +115,22 @@ public class TestPushJobWithSourceGridFabricSelection {
     // config is
     // dc-0 by default.
     try (ControllerClient parentControllerClient = new ControllerClient(clusterName, parentControllerUrls)) {
-      Assert.assertFalse(
-          parentControllerClient
-              .configureNativeReplicationForCluster(
-                  true,
-                  VeniceUserStoreType.BATCH_ONLY.toString(),
-                  Optional.empty(),
-                  Optional.of(String.join(",", parentControllerRegionName, dcNames[0], dcNames[1])))
-              .isError());
-      Assert.assertFalse(
-          parentControllerClient
-              .configureActiveActiveReplicationForCluster(
-                  true,
-                  VeniceUserStoreType.BATCH_ONLY.toString(),
-                  Optional.of(String.join(",", parentControllerRegionName, dcNames[0])))
-              .isError());
+      assertCommand(
+          parentControllerClient.configureActiveActiveReplicationForCluster(
+              true,
+              VeniceUserStoreType.BATCH_ONLY.toString(),
+              Optional.of(String.join(",", parentControllerRegionName, dcNames[0]))));
     }
 
-    Properties props =
-        IntegrationTestPushUtils.defaultVPJProps(multiRegionMultiClusterWrapper, inputDirPath, storeName);
+    Properties props = defaultVPJProps(multiRegionMultiClusterWrapper, inputDirPath, storeName);
     props.put(SEND_CONTROL_MESSAGES_DIRECTLY, true);
     props.put(SOURCE_GRID_FABRIC, dcNames[1]);
 
     String keySchemaStr = recordSchema.getField(DEFAULT_KEY_FIELD_PROP).schema().toString();
     String valueSchemaStr = recordSchema.getField(DEFAULT_VALUE_FIELD_PROP).schema().toString();
-
-    // Enable L/F and native replication features.
     UpdateStoreQueryParams updateStoreParams =
         new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
             .setPartitionCount(partitionCount)
-            .setNativeReplicationEnabled(true)
             .setNativeReplicationSourceFabric(dcNames[0]);
 
     createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, updateStoreParams).close();
@@ -158,14 +145,12 @@ public class TestPushJobWithSourceGridFabricSelection {
 
     // Enable A/A in all regions now start another batch push. Verify the batch push source address is dc-1.
     try (ControllerClient parentControllerClient = new ControllerClient(clusterName, parentControllerUrls)) {
-      // Enable hybrid config, Leader/Follower state model and A/A replication policy
-      Assert.assertFalse(
-          parentControllerClient
-              .configureActiveActiveReplicationForCluster(
-                  true,
-                  VeniceUserStoreType.BATCH_ONLY.toString(),
-                  Optional.of(String.join(",", parentControllerRegionName, dcNames[0], dcNames[1])))
-              .isError());
+      // Enable hybrid config and A/A replication policy
+      assertCommand(
+          parentControllerClient.configureActiveActiveReplicationForCluster(
+              true,
+              VeniceUserStoreType.BATCH_ONLY.toString(),
+              Optional.of(String.join(",", parentControllerRegionName, dcNames[0], dcNames[1]))));
     }
 
     try (VenicePushJob job = new VenicePushJob("Test push job 2", props)) {

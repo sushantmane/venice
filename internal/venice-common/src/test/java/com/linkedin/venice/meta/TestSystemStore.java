@@ -89,7 +89,6 @@ public class TestSystemStore {
     assertFalse(systemStore.isReadComputationEnabled());
     assertEquals(systemStore.getBootstrapToOnlineTimeoutInHours(), 24);
     assertEquals(systemStore.getPushStreamSourceAddress(), "");
-    assertFalse(systemStore.isNativeReplicationEnabled());
     assertEquals(systemStore.getBackupStrategy(), BackupStrategy.DELETE_ON_NEW_PUSH_START);
     assertFalse(systemStore.isSchemaAutoRegisterFromPushJobEnabled());
     assertEquals(systemStore.getLatestSuperSetValueSchemaId(), -1);
@@ -124,7 +123,6 @@ public class TestSystemStore {
     assertThrows(() -> systemStore.setReadComputationEnabled(true));
     assertThrows(() -> systemStore.setBootstrapToOnlineTimeoutInHours(12));
     assertThrows(() -> systemStore.setPushStreamSourceAddress(""));
-    assertThrows(() -> systemStore.setNativeReplicationEnabled(true));
     assertThrows(() -> systemStore.setBackupStrategy(BackupStrategy.KEEP_MIN_VERSIONS));
     assertThrows(() -> systemStore.setSchemaAutoRegisterFromPushJobEnabled(true));
     assertThrows(() -> systemStore.setLatestSuperSetValueSchemaId(1));

@@ -760,9 +760,6 @@ public abstract class StoreIngestionTaskTest {
 
     version.setBufferReplayEnabledForHybrid(true);
 
-    version.setNativeReplicationEnabled(isNativeReplicationEnabled);
-    doReturn(isNativeReplicationEnabled).when(mockStore).isNativeReplicationEnabled();
-
     version.setPushStreamSourceAddress("");
     doReturn("").when(mockStore).getPushStreamSourceAddress();
 
@@ -3088,7 +3085,6 @@ public abstract class StoreIngestionTaskTest {
     doReturn(1).when(version).getPartitionCount();
     doReturn(null).when(version).getPartitionerConfig();
     doReturn(VersionStatus.ONLINE).when(version).getStatus();
-    doReturn(true).when(version).isNativeReplicationEnabled();
     doReturn("localhost").when(version).getPushStreamSourceAddress();
 
     Store store = mock(Store.class);

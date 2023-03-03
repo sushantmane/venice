@@ -29,7 +29,6 @@ import com.linkedin.venice.utils.TestWriteUtils;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -141,20 +140,9 @@ public class TestPushJobWithNativeReplicationSharedProducer {
             new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
                 .setPartitionCount(partitionCount);
 
-        ControllerClient parentControllerClient = null;
-
-        parentControllerClient = createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, updateStoreParams);
+        ControllerClient parentControllerClient =
+            createStoreForJob(clusterName, keySchemaStr, valueSchemaStr, props, updateStoreParams);
         parentControllerClients[i] = parentControllerClient;
-
-        try (
-            ControllerClient dc0Client =
-                new ControllerClient(clusterName, childDatacenters.get(0).getControllerConnectString());
-            ControllerClient dc1Client =
-                new ControllerClient(clusterName, childDatacenters.get(1).getControllerConnectString())) {
-
-          // verify the update store command has taken effect before starting the push job.
-          NativeReplicationTestUtils.verifyDCConfigNativeRepl(Arrays.asList(dc0Client, dc1Client), storeName, true);
-        }
       }
 
       LOGGER.info("Finished setting up stores");
