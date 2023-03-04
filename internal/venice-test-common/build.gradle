@@ -210,10 +210,10 @@ task generateGHCI() {
   appendToGHCI(paramFileContent, targetFilePath, staticAnalysis, 20, staticAnalysisFlowGradleArgs)
   jobs << staticAnalysis
   def unitTestsAndCodeCoverage = "UnitTestsAndCodeCoverage"
-  appendToGHCI(paramFileContent, targetFilePath, unitTestsAndCodeCoverage, 60, "jacocoTestCoverageVerification diffCoverage --continue")
+  appendToGHCI(paramFileContent, targetFilePath, unitTestsAndCodeCoverage, 60, "-DmaxParallelForks=4  --parallel jacocoTestCoverageVerification diffCoverage --continue")
   jobs << unitTestsAndCodeCoverage
 
-  def integTestGradleArgs = common + "-DforkEvery=1 -DmaxParallelForks=1 integrationTest"
+  def integTestGradleArgs = common + "-DforkEvery=0 -DmaxParallelForks=1 integrationTest"
   integrationTestBuckets.each { name, patterns ->
     def flowName = "IntegrationTests" + name
     jobs << flowName
