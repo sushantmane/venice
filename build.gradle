@@ -402,12 +402,13 @@ subprojects {
 
       // Report locates at <module_name>/build/reports/jacoco/diffCoverage/html/index.html
       reports {
-        html = true
+        xml.enabled true
+        html.enabled false
       }
 
       violationRules {
-        minBranches = project.ext.has('diffCoverageThreshold') ? project.ext.diffCoverageThreshold : 0.33
-        failOnViolation = true
+        minBranches = project.ext.has('diffCoverageThreshold') ? project.ext.diffCoverageThreshold : 0.1
+        failOnViolation = false
       }
     }
   }

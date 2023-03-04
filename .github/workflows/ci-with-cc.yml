@@ -1,0 +1,39 @@
+name: VeniceCI
+
+on: [push, pull_request]
+
+jobs:
+  UnitTestsAndCodeCoverage:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        jdk: [11]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.jdk }}
+          distribution: 'microsoft'
+          cache: 'gradle'
+      - shell: bash
+        run: |
+          git remote set-head origin --auto
+          git remote add upstream https://github.com/linkedin/venice
+          git fetch upstream
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: ":clients:venice-push-job:jacocoTestCoverageVerification"
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          version: "v0.1.15"
