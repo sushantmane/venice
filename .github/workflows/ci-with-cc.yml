@@ -31,7 +31,7 @@ jobs:
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: ":clients:venice-push-job:jacocoTestCoverageVerification"
+          arguments: " :clients:venice-push-job:jacocoTestCoverageVerification"
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:

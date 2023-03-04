@@ -402,8 +402,8 @@ subprojects {
 
       // Report locates at <module_name>/build/reports/jacoco/diffCoverage/html/index.html
       reports {
-        xml.enabled true
-        html.enabled false
+        xml = true
+        html = false
       }
 
       violationRules {
