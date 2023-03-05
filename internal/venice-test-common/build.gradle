@@ -167,6 +167,9 @@ integrationTestBuckets.each { name, patterns ->
       }
     }
     configure integrationTestConfigs
+    useTestNG {
+      listeners = ['com.linkedin.venice.VeniceTestListener']
+    }
   }
 }
 
@@ -178,7 +181,11 @@ task integrationTestZ(type: Test) {
       }
     }
   }
+
   configure integrationTestConfigs
+  useTestNG {
+    listeners = ['com.linkedin.venice.VeniceTestListener']
+  }
 }
 
 task generateGHCI() {
@@ -281,6 +288,7 @@ ext {
   jacocoCoverageThreshold = 0.00
   diffCoverageThreshold = 0.00
 }
+
 
 publishing {
   publications {
