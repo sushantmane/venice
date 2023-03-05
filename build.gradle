@@ -409,7 +409,7 @@ subprojects {
       reports {
         html = true
         xml = true
-        xml.destination file("${buildDir}/reports/jacoco/jacoco-1.xml")
+//        xml.destination file("${buildDir}/reports/jacoco/jacoco-1.xml")
       }
 
       violationRules {
