@@ -377,6 +377,30 @@ subprojects {
 
   jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
+
+    sourceSets {
+      main {
+        java {
+          exclude 'internal/alpini/**'
+        }
+      }
+    }
+    executionData fileTree(project.rootDir.absolutePath).exclude("**/alpini/**")..include("**/build/jacoco/*.exec").exclude("**/alpini/**")
+
+
+    files(classDirectories.files.collect {
+      fileTree(dir: it, exclude: [
+          '**/enum/**',
+          '**/util/**',
+      ])
+    })
+
+    reports {
+      xml.enabled false
+      csv.enabled true
+      xml.destination file("${buildDir}/reports/jacoco/jacoco.xml")
+      csv.destination file("${buildDir}/reports/jacoco/jacoco.csv")
+    }
   }
 
   afterEvaluate {
