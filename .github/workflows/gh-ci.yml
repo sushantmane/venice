@@ -107,6 +107,6 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: iTA.log
+          name: iT${{ matrix.buckets }}.log
           path: internal/venice-test-common/build/integration-test.log
           retention-days: 1
