@@ -378,19 +378,9 @@ subprojects {
   jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
 
-    sourceSets {
-      main {
-        java {
-          exclude 'internal/alpini/**'
-        }
-      }
-    }
-
     reports {
-      xml.enabled false
-      csv.enabled true
+      xml.enabled true
       xml.destination file("${buildDir}/reports/jacoco/jacoco.xml")
-      csv.destination file("${buildDir}/reports/jacoco/jacoco.csv")
     }
   }
 
@@ -418,6 +408,8 @@ subprojects {
       // Report locates at <module_name>/build/reports/jacoco/diffCoverage/html/index.html
       reports {
         html = true
+        xml = true
+        xml.destination file("${buildDir}/reports/jacoco/jacoco-1.xml")
       }
 
       violationRules {
