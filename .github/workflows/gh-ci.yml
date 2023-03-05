@@ -102,7 +102,7 @@ jobs:
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTest"${{ matrix.jdk }}
+          arguments: --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTest${{ matrix.buckets }}
       - name: Upload test logs on failure
         if: success() || failure()
         uses: actions/upload-artifact@v3
