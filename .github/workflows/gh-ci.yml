@@ -140,6 +140,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestB"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTB.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsC:
     strategy:
@@ -170,6 +177,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestC"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTC.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsD:
     strategy:
@@ -200,6 +214,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestD"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTD.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsE:
     strategy:
@@ -230,6 +251,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestE"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTE.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsF:
     strategy:
@@ -260,6 +288,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestF"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTF.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsG:
     strategy:
@@ -290,6 +325,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestG"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTG.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsH:
     strategy:
@@ -320,6 +362,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestH"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTH.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsI:
     strategy:
@@ -350,6 +399,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestI"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTI.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsJ:
     strategy:
@@ -380,6 +436,14 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestJ"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTJ.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
+
 
   IntegrationTestsK:
     strategy:
@@ -410,6 +474,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestK"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTK.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsL:
     strategy:
@@ -440,6 +511,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestL"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTL.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsM:
     strategy:
@@ -470,6 +548,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestM"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTM.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsN:
     strategy:
@@ -500,6 +585,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestN"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTN.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsO:
     strategy:
@@ -530,6 +622,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestO"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTO.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsP:
     strategy:
@@ -560,6 +659,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestP"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTP.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsQ:
     strategy:
@@ -590,6 +696,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestQ"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTQ.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
 
   IntegrationTestsZ:
     strategy:
@@ -620,6 +733,14 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestZ"
+      - name: Upload test logs on failure
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: iTZ.log
+          path: internal/venice-test-common/build/integration-test.log
+          retention-days: 1
+
 
   DummyStep:
     strategy:
