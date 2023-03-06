@@ -16,7 +16,6 @@
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -28,11 +27,15 @@
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "$GradleArguments"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 

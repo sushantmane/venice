@@ -30,7 +30,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -42,13 +41,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   UnitTestsAndCodeCoverage:
@@ -68,7 +71,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -80,13 +82,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "jacocoTestCoverageVerification diffCoverage --continue"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsA:
@@ -106,7 +112,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -118,13 +123,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestA"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsB:
@@ -144,7 +153,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -156,13 +164,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestB"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsC:
@@ -182,7 +194,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -194,13 +205,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestC"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsD:
@@ -220,7 +235,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -232,13 +246,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestD"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsE:
@@ -258,7 +276,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -270,13 +287,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestE"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsF:
@@ -296,7 +317,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -308,13 +328,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestF"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsG:
@@ -334,7 +358,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -346,13 +369,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestG"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsH:
@@ -372,7 +399,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -384,13 +410,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestH"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsI:
@@ -410,7 +440,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -422,13 +451,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestI"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsJ:
@@ -448,7 +481,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -460,13 +492,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestJ"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsK:
@@ -486,7 +522,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -498,13 +533,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestK"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsL:
@@ -524,7 +563,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -536,13 +574,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestL"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsM:
@@ -562,7 +604,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -574,13 +615,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestM"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsN:
@@ -600,7 +645,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -612,13 +656,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestN"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsO:
@@ -638,7 +686,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -650,13 +697,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestO"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsP:
@@ -676,7 +727,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -688,13 +738,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestP"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsQ:
@@ -714,7 +768,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -726,13 +779,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestQ"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   IntegrationTestsZ:
@@ -752,7 +809,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -764,13 +820,17 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestZ"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
   DummyStep:
@@ -791,7 +851,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
           distribution: 'microsoft'
-          cache: 'gradle'
       - shell: bash
         run: |
           git remote set-head origin --auto
@@ -803,12 +862,16 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "clean"
-      - name: Upload test logs on failure
+      - name: Package artifacts
+        run:  |
+          mkdir ${{ github.job }}-logs && find internal/venice-test-common/build/test-results/* -name "*.xml" -exec cp "{}" ${{ github.job }}-logs \;
+          tar -zcvf ${{ github.job }}-logs.tar.gz ${{ github.job }}-logs
+      - name: Upload Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.job }}.logs
-          path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 2
+          name: ${{ github.job }}-logs.tar.gz
+          path: ${{ github.job }}-logs.tar.gz
+          retention-days: 5
 
 
