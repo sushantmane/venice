@@ -29,6 +29,7 @@
         with:
           arguments: "$GradleArguments"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs

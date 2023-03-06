@@ -43,6 +43,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DmaxParallelForks=2 --parallel -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -80,6 +81,7 @@ jobs:
         with:
           arguments: "-DmaxParallelForks=2  --parallel -x :internal:venice-avro-compatibility-test:test jacocoTestCoverageVerification diffCoverage --continue"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -117,6 +119,7 @@ jobs:
         with:
           arguments: "-DmaxParallelForks=2 --parallel :internal:venice-avro-compatibility-test:test --continue"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -154,6 +157,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestA"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -191,6 +195,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestB"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -228,6 +233,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestC"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -265,6 +271,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestD"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -302,6 +309,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestE"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -339,6 +347,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestF"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -376,6 +385,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestG"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -413,6 +423,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestH"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -450,6 +461,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestI"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -487,6 +499,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestJ"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -524,6 +537,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestK"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -561,6 +575,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestL"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -598,6 +613,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestM"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -635,6 +651,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestN"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -672,6 +689,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestO"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -709,6 +727,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestP"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -746,6 +765,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestQ"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -783,6 +803,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestZ"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
@@ -821,6 +842,7 @@ jobs:
         with:
           arguments: "clean"
       - name: Upload test logs on failure
+        if: {{ contains(github.job, 'IntegrationTests') && success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
