@@ -168,7 +168,7 @@ integrationTestBuckets.each { name, patterns ->
     }
     configure integrationTestConfigs
     useTestNG {
-      listeners = ['com.linkedin.venice.testng.VeniceSuiteListener', 'com.linkedin.venice.VeniceTestListener']
+      listeners = ['com.linkedin.venice.VeniceTestListener']
     }
   }
 }
@@ -184,7 +184,7 @@ task integrationTestZ(type: Test) {
 
   configure integrationTestConfigs
   useTestNG {
-    listeners = ['com.linkedin.venice.testng.VeniceSuiteListener', 'com.linkedin.venice.VeniceTestListener']
+    listeners = ['com.linkedin.venice.VeniceTestListener']
   }
 }
 
