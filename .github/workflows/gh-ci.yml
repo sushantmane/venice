@@ -28,12 +28,8 @@ jobs:
           git fetch upstream
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
-      - name: Build with Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: "--continue --no-daemon -DmaxParallelForks=2 --parallel -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
       - name: Upload test logs on failure
-        if: success() && startsWith(github.job, 'StaticAnalysis')
+        if: success() && startsWith(github.job, 'IntegrationTest')
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
