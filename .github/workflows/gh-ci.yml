@@ -3,7 +3,7 @@ name: VeniceCI
 on: [push, pull_request]
 
 jobs:
-  StaticAnalysis:
+  IntegrationTestA:
     strategy:
       fail-fast: false
       matrix:
