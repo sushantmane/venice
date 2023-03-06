@@ -29,10 +29,10 @@
         with:
           arguments: "$GradleArguments"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 

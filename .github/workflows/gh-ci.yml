@@ -43,12 +43,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   UnitTestsAndCodeCoverage:
@@ -81,12 +81,12 @@ jobs:
         with:
           arguments: "jacocoTestCoverageVerification diffCoverage --continue"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsA:
@@ -119,12 +119,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestA"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsB:
@@ -157,12 +157,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestB"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsC:
@@ -195,12 +195,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestC"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsD:
@@ -233,12 +233,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestD"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsE:
@@ -271,12 +271,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestE"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsF:
@@ -309,12 +309,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestF"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsG:
@@ -347,12 +347,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestG"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsH:
@@ -385,12 +385,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestH"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsI:
@@ -423,12 +423,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestI"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsJ:
@@ -461,12 +461,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestJ"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsK:
@@ -499,12 +499,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestK"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsL:
@@ -537,12 +537,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestL"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsM:
@@ -575,12 +575,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestM"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsN:
@@ -613,12 +613,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestN"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsO:
@@ -651,12 +651,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestO"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsP:
@@ -689,12 +689,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestP"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsQ:
@@ -727,12 +727,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestQ"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   IntegrationTestsZ:
@@ -765,12 +765,12 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTestZ"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
   DummyStep:
@@ -804,11 +804,11 @@ jobs:
         with:
           arguments: "clean"
       - name: Upload test logs on failure
-        if: failure() && ${{ github.job }} == IntegrationTests*
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
           path: internal/venice-test-common/build/test-results/*/TEST-*.xml
-          retention-days: 1
+          retention-days: 2
 
 
