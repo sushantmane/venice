@@ -33,7 +33,7 @@ jobs:
         with:
           arguments: "--continue --no-daemon -DmaxParallelForks=2 --parallel -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
       - name: Upload test logs on failure
-        if: {{ success() && startsWith(github.job, '  StaticAnalysis') }}
+        if: success() && startsWith(github.job, 'StaticAnalysis')
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}.logs
