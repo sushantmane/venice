@@ -42,14 +42,14 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "--continue --no-daemon -DmaxParallelForks=2 --parallel -Pspotallbugs clean check -x spotlessCheck -x test -x integrationTest -x jacocoTestCoverageVerification"
-      - name: Package build artifacts
+      - name: Package Build Artifacts
         shell: bash
         run: |
-          mkdir ../artifacts
-          find . -path "**/build/reports/*" -or -path "**/build/test-results/*" | xargs tar cvf - | (cd ../artifacts/ ; tar xfp -)
-          mv ../artifacts ${{ github.job }}-artifacts
+          mkdir ${{ github.job }}-artifacts
+          find . -path "**/build/reports/*" -or -path "**/build/test-results/*" > artifacts.list
+          rsync --files-from=artifacts.list . ${{ github.job }}-artifacts
           tar -zcvf ${{ github.job }}-artifacts.tar.gz ${{ github.job }}-artifacts
-      - name: Upload Logs
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}-artifacts
@@ -86,14 +86,14 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: "-DmaxParallelForks=2  --parallel -x :internal:venice-avro-compatibility-test:test jacocoTestCoverageVerification diffCoverage --continue"
-      - name: Package build artifacts
+      - name: Package Build Artifacts
         shell: bash
         run: |
-          mkdir ../artifacts
-          find . -path "**/build/reports/*" -or -path "**/build/test-results/*" | xargs tar cvf - | (cd ../artifacts/ ; tar xfp -)
-          mv ../artifacts ${{ github.job }}-artifacts
+          mkdir ${{ github.job }}-artifacts
+          find . -path "**/build/reports/*" -or -path "**/build/test-results/*" > artifacts.list
+          rsync --files-from=artifacts.list . ${{ github.job }}-artifacts
           tar -zcvf ${{ github.job }}-artifacts.tar.gz ${{ github.job }}-artifacts
-      - name: Upload Logs
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ github.job }}-artifacts
