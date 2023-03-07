@@ -383,6 +383,11 @@ subprojects {
 
   jacocoTestReport {
     dependsOn test // tests are required to run before generating the report
+
+    reports {
+      html.enabled true
+      xml.enabled true
+    }
   }
 
   afterEvaluate {
@@ -409,6 +414,7 @@ subprojects {
       // Report locates at <module_name>/build/reports/jacoco/diffCoverage/html/index.html
       reports {
         html = true
+        xml = true
       }
 
       violationRules {
