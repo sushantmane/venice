@@ -2,9 +2,11 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 
@@ -14,9 +16,20 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 public class ApacheKafkaProducerCallback implements Callback {
   private final PubSubProducerCallback pubsubProducerCallback;
   private final CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
+  private final KafkaProducer kafkaProducer;
+  private final Boolean closeNow;
 
   public ApacheKafkaProducerCallback(PubSubProducerCallback pubsubProducerCallback) {
+    this(pubsubProducerCallback, null, false);
+  }
+
+  public ApacheKafkaProducerCallback(
+      PubSubProducerCallback pubsubProducerCallback,
+      KafkaProducer kafkaProducer,
+      Boolean closeNow) {
     this.pubsubProducerCallback = pubsubProducerCallback;
+    this.kafkaProducer = kafkaProducer;
+    this.closeNow = closeNow;
   }
 
   /**
@@ -46,6 +59,11 @@ public class ApacheKafkaProducerCallback implements Callback {
    */
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
+    if (kafkaProducer != null && closeNow) {
+      kafkaProducer.close(Duration.ofMillis(0));
+      return;
+    }
+
     PubSubProduceResult produceResult = new ApacheKafkaProduceResult(metadata);
     if (exception != null) {
       produceResultFuture.completeExceptionally(exception);
