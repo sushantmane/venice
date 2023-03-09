@@ -45,6 +45,10 @@ public class ApacheKafkaProducerConfig {
     this(new VeniceProperties(allVeniceProperties), null, null, true);
   }
 
+  public ApacheKafkaProducerConfig(Properties allVeniceProperties, boolean strictConfigs) {
+    this(new VeniceProperties(allVeniceProperties), null, null, strictConfigs);
+  }
+
   public ApacheKafkaProducerConfig(
       VeniceProperties allVeniceProperties,
       String brokerAddressToOverride,

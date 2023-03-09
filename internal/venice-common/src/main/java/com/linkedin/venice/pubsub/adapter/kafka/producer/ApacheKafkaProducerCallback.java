@@ -60,7 +60,7 @@ public class ApacheKafkaProducerCallback implements Callback {
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
     if (kafkaProducer != null && closeNow) {
-      kafkaProducer.close(Duration.ofMillis(0));
+      kafkaProducer.close(Duration.ZERO);
       return;
     }
 

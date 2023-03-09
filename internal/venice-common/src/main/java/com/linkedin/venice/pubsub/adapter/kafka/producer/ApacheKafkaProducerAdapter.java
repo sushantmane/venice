@@ -34,7 +34,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   private final ApacheKafkaProducerConfig producerConfig;
   // When the following flag is set to true, a first callback that sees it will close the producer.
   // This prevents subsequent callback processing and message transfers.
-  private Boolean closeNowFromCallback = false;
+  private Boolean closeFromCallback = false;
 
   /**
    * @param producerConfig contains producer configs
@@ -86,7 +86,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
     ApacheKafkaProducerCallback kafkaCallback =
-        new ApacheKafkaProducerCallback(pubsubProducerCallback, producer, closeNowFromCallback);
+        new ApacheKafkaProducerCallback(pubsubProducerCallback, producer, closeFromCallback);
     try {
       producer.send(record, kafkaCallback);
       return kafkaCallback.getProduceResultFuture();
@@ -121,7 +121,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
       producer.flush(closeTimeOutMs, TimeUnit.MILLISECONDS);
       LOGGER.info("Flushed all the messages in producer before closing");
     } else {
-      closeNowFromCallback = true;
+      closeFromCallback = true;
     }
     producer.close(Duration.ofMillis(closeTimeOutMs));
     // Recycle the internal buffer allocated by KafkaProducer ASAP.
@@ -153,5 +153,10 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   @Override
   public String getBrokerAddress() {
     return producerConfig.getBrokerAddress();
+  }
+
+  // this method package-private for testing purposes
+  void closeFromCallback() {
+    closeFromCallback = true;
   }
 }
