@@ -14,6 +14,7 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.adapter.SimplePubSubProducerCallbackImpl;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
 import java.time.Duration;
 import java.util.Collections;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -46,15 +48,13 @@ import org.testng.annotations.Test;
  * 2) Do NOT use this class for testing general venice code paths.
  * 3) Whenever possible tests should be against {@link ApacheKafkaProducerAdapter} and not {@link org.apache.kafka.clients.producer.KafkaProducer}
  */
-public class ApacheKafkaProducerTest {
-  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerTest.class);
+public class ApacheKafkaProducerAdapterITest {
+  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerAdapterITest.class);
 
   private ZkServerWrapper zkServerWrapper;
   private KafkaBrokerWrapper kafkaBrokerWrapper;
   // todo: AdminClient should be replaced with KafkaAdminClientAdapter when it is available
   private AdminClient kafkaAdminClient;
-
-  private ApacheKafkaProducerAdapter kafkaProducerAdapter;
 
   @BeforeClass(alwaysRun = true)
   public void setupKafka() {
@@ -143,8 +143,22 @@ public class ApacheKafkaProducerTest {
 
     producer.closeFromCallback(); // close producer immediately
 
-    System.out.println(m0BlockingCallback + " - " + m0Future);
+    LOGGER.info("Unblocking sender");
+    // now unblock sender
+    m0BlockingCallback.mutex.lock();
+    try {
+      m0BlockingCallback.block = false;
+      m0BlockingCallback.blockCv.signal();
+    } finally {
+      m0BlockingCallback.mutex.unlock();
+    }
+    TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> assertTrue(m1Future.isDone()));
+
     produceResults.forEach((key, value) -> System.out.println(key + " - " + value));
+    System.out.println("m0 --> " + m0BlockingCallback + " - " + m0Future);
+    System.out.println("m1 --> " + m1SimpleCallback + " - " + m1Future);
+
+    producer.sendMessage(topicName, null, getDummyKey(), null, null, new SimplePubSubProducerCallbackImpl()).get();
 
     //
     // try {
@@ -175,7 +189,7 @@ public class ApacheKafkaProducerTest {
 
     @Override
     public void onCompletion(PubSubProduceResult produceResult, Exception exception) {
-      LOGGER.info("Blocking callback invoked for key: {}. Executing thread will be blocked", kafkaKey);
+      LOGGER.info("Blocking callback invoked. Executing thread will be blocked. Key: {}", kafkaKey);
       mutex.lock();
       try {
         while (block) {
@@ -188,7 +202,7 @@ public class ApacheKafkaProducerTest {
       } finally {
         mutex.unlock();
       }
-      LOGGER.info("Blocking callback invoked for key:{} has unblocked executing thread", kafkaKey);
+      LOGGER.info("Callback thread has unblocked executing thread. Key: {}", kafkaKey);
     }
   }
 
