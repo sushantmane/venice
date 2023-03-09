@@ -44,4 +44,21 @@ public class ApacheKafkaProduceResultFuture implements Future<PubSubProduceResul
       throws InterruptedException, ExecutionException, TimeoutException {
     return new ApacheKafkaProduceResult(recordMetadataFuture.get(timeout, unit));
   }
+
+  @Override
+  public String toString() {
+    if (!recordMetadataFuture.isDone()) {
+      return "null";
+    }
+    if (recordMetadataFuture.isCancelled()) {
+      return "cancelled";
+    }
+    try {
+      return get().toString();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

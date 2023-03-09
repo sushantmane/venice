@@ -3,7 +3,6 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BATCH_SIZE;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_LINGER_MS;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_VALUE_SERIALIZER;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -11,18 +10,22 @@ import static org.testng.Assert.assertTrue;
 import com.linkedin.venice.integration.utils.KafkaBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.ZkServerWrapper;
+import com.linkedin.venice.kafka.protocol.GUID;
+import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.kafka.protocol.ProducerMetadata;
+import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +38,6 @@ import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.config.TopicConfig;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.testng.annotations.AfterClass;
@@ -93,10 +95,18 @@ public class ApacheKafkaProducerAdapterITest {
     return new KafkaKey(MessageType.PUT, Utils.getUniqueString("key-").getBytes());
   }
 
-  private byte[] getDummyVal(int size) {
-    byte[] bytes = new byte[size];
-    new Random().nextBytes(bytes);
-    return bytes;
+  private KafkaMessageEnvelope getDummyVal() {
+    KafkaMessageEnvelope messageEnvelope = new KafkaMessageEnvelope();
+    messageEnvelope.producerMetadata = new ProducerMetadata();
+    messageEnvelope.producerMetadata.messageTimestamp = 0;
+    messageEnvelope.producerMetadata.messageSequenceNumber = 0;
+    messageEnvelope.producerMetadata.segmentNumber = 0;
+    messageEnvelope.producerMetadata.producerGUID = new GUID();
+    Put put = new Put();
+    put.putValue = ByteBuffer.allocate(1024);
+    put.replicationMetadataPayload = ByteBuffer.allocate(0);
+    messageEnvelope.payloadUnion = put;
+    return messageEnvelope;
   }
 
   @Test
@@ -112,7 +122,7 @@ public class ApacheKafkaProducerAdapterITest {
     properties.put(KAFKA_BOOTSTRAP_SERVERS, kafkaBrokerWrapper.getAddress());
     properties.put(KAFKA_LINGER_MS, 0);
     properties.put(KAFKA_BATCH_SIZE, batchSize);
-    properties.put(KAFKA_VALUE_SERIALIZER, ByteArraySerializer.class.getName());
+    // properties.put(KAFKA_VALUE_SERIALIZER, ByteArraySerializer.class.getName());
     ApacheKafkaProducerConfig producerConfig = new ApacheKafkaProducerConfig(properties, false);
     ApacheKafkaProducerAdapter producer = new ApacheKafkaProducerAdapter(producerConfig);
 
@@ -120,11 +130,12 @@ public class ApacheKafkaProducerAdapterITest {
     KafkaKey m0Key = getDummyKey();
     SimpleBlockingCallback m0BlockingCallback = new SimpleBlockingCallback("m0Key");
     Future<PubSubProduceResult> m0Future =
-        producer.sendMessage(topicName, null, m0Key, getDummyVal(batchSize), null, m0BlockingCallback);
+        producer.sendMessage(topicName, null, m0Key, getDummyVal(), null, m0BlockingCallback);
 
     KafkaKey m1Key = getDummyKey();
     SimpleLoggingPubSubProducerCallbackImpl m1SimpleCallback = new SimpleLoggingPubSubProducerCallbackImpl("m1Key");
-    Future<PubSubProduceResult> m1Future = producer.sendMessage(topicName, null, m1Key, null, null, m1SimpleCallback);
+    Future<PubSubProduceResult> m1Future =
+        producer.sendMessage(topicName, null, m1Key, getDummyVal(), null, m1SimpleCallback);
 
     // wait until producer's sender(ioThread) is blocked
     m0BlockingCallback.mutex.lock();
@@ -143,7 +154,7 @@ public class ApacheKafkaProducerAdapterITest {
     for (int i = 0; i < 100; i++) {
       KafkaKey mKey = getDummyKey();
       SimpleLoggingPubSubProducerCallbackImpl callback = new SimpleLoggingPubSubProducerCallbackImpl("" + i);
-      produceResults.put(callback, producer.sendMessage(topicName, null, mKey, null, null, callback));
+      produceResults.put(callback, producer.sendMessage(topicName, null, mKey, getDummyVal(), null, callback));
     }
 
     // let's make sure that none of the m1 to m99 are ACKed by Kafka yet
@@ -176,7 +187,8 @@ public class ApacheKafkaProducerAdapterITest {
 
         KafkaKey mKey = getDummyKey();
         SimpleLoggingPubSubProducerCallbackImpl callback = new SimpleLoggingPubSubProducerCallbackImpl("post-" + i);
-        Future<PubSubProduceResult> resultFuture = producer.sendMessage(topicName, null, mKey, null, null, callback);
+        Future<PubSubProduceResult> resultFuture =
+            producer.sendMessage(topicName, null, mKey, getDummyVal(), null, callback);
         LOGGER.info("send record for:", resultFuture);
         PubSubProduceResult produceResult = resultFuture.get();
         assertNotNull(produceResult);
