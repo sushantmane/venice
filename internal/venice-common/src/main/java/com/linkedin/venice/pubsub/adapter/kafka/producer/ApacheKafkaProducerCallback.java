@@ -16,20 +16,17 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 public class ApacheKafkaProducerCallback implements Callback {
   private final PubSubProducerCallback pubsubProducerCallback;
   private final CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
-  private final KafkaProducer kafkaProducer;
-  private final Boolean closeNow;
+  private final ApacheKafkaProducerAdapter producerAdapter;
 
   public ApacheKafkaProducerCallback(PubSubProducerCallback pubsubProducerCallback) {
-    this(pubsubProducerCallback, null, false);
+    this(pubsubProducerCallback, null);
   }
 
   public ApacheKafkaProducerCallback(
       PubSubProducerCallback pubsubProducerCallback,
-      KafkaProducer kafkaProducer,
-      Boolean closeNow) {
+      ApacheKafkaProducerAdapter producerAdapter) {
     this.pubsubProducerCallback = pubsubProducerCallback;
-    this.kafkaProducer = kafkaProducer;
-    this.closeNow = closeNow;
+    this.producerAdapter = producerAdapter;
   }
 
   /**
@@ -59,7 +56,8 @@ public class ApacheKafkaProducerCallback implements Callback {
    */
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
-    if (kafkaProducer != null && closeNow) {
+    KafkaProducer kafkaProducer = producerAdapter.getInternalProducer();
+    if (kafkaProducer != null && producerAdapter.shouldCloseFromCallback()) {
       kafkaProducer.close(Duration.ZERO);
       return;
     }

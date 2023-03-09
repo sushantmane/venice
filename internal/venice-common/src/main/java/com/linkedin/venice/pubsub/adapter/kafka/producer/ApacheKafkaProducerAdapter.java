@@ -85,11 +85,10 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    ApacheKafkaProducerCallback kafkaCallback =
-        new ApacheKafkaProducerCallback(pubsubProducerCallback, producer, closeFromCallback);
+    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback, this);
     try {
-      producer.send(record, kafkaCallback);
-      return kafkaCallback.getProduceResultFuture();
+      return new ApacheKafkaProduceResultFuture(producer.send(record, kafkaCallback));
+      // return kafkaCallback.getProduceResultFuture();
     } catch (Exception e) {
       throw new VeniceException(
           "Got an error while trying to produce message into Kafka. Topic: '" + record.topic() + "', partition: "
@@ -158,5 +157,13 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   // this method package-private for testing purposes
   void closeFromCallback() {
     closeFromCallback = true;
+  }
+
+  boolean shouldCloseFromCallback() {
+    return closeFromCallback;
+  }
+
+  KafkaProducer getInternalProducer() {
+    return producer;
   }
 }
