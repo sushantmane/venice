@@ -32,6 +32,8 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
 
   private KafkaProducer<KafkaKey, KafkaMessageEnvelope> producer;
   private final ApacheKafkaProducerConfig producerConfig;
+  private boolean forceCloseFromCallback = false;
+  private boolean issuedCloseFromCallback = false;
 
   /**
    * @param producerConfig contains producer configs
@@ -82,7 +84,7 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
         key,
         value,
         ApacheKafkaUtils.convertToKafkaSpecificHeaders(pubsubMessageHeaders));
-    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback);
+    ApacheKafkaProducerCallback kafkaCallback = new ApacheKafkaProducerCallback(pubsubProducerCallback, this);
     try {
       producer.send(record, kafkaCallback);
       return kafkaCallback.getProduceResultFuture();
@@ -116,8 +118,14 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
       // Flush out all the messages in the producer buffer
       producer.flush(closeTimeOutMs, TimeUnit.MILLISECONDS);
       LOGGER.info("Flushed all the messages in producer before closing");
+      producer.close(Duration.ofMillis(closeTimeOutMs));
+    } else {
+      forceCloseFromCallback = true;
+      // If there are no records in producer's buffer, there won't be any callbacks invocations.
+      // To make sure that the producer is cancelled let's cancel it from here as well.
+      producer.close(Duration.ZERO);
     }
-    producer.close(Duration.ofMillis(closeTimeOutMs));
+
     // Recycle the internal buffer allocated by KafkaProducer ASAP.
     producer = null;
   }
@@ -147,5 +155,21 @@ public class ApacheKafkaProducerAdapter implements PubSubProducerAdapter {
   @Override
   public String getBrokerAddress() {
     return producerConfig.getBrokerAddress();
+  }
+
+  boolean isForceCloseFromCallback() {
+    return forceCloseFromCallback;
+  }
+
+  boolean hasIssuedCloseFromCallback() {
+    return issuedCloseFromCallback;
+  }
+
+  void setIssuedCloseFromCallback() {
+    issuedCloseFromCallback = true;
+  }
+
+  KafkaProducer getInternalProducer() {
+    return producer;
   }
 }

@@ -143,7 +143,7 @@ public class ApacheKafkaProducerAdapterITest {
    * 2) doFlush == false: upon forceful close (timeout 0 and no flushing) producer doesn't forget to complete
    *                      any Future that it returned in response to sendMessage() call.
    */
-  @Test(timeOut = MS_PER_MINUTE, dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
+  @Test(timeOut = MS_PER_MINUTE, dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class, invocationCount = 200)
   public void testProducerCloseDoesNotLeaveAnyFuturesIncomplete(boolean doFlush) throws InterruptedException {
     Map<String, String> topicProps = Collections.singletonMap(RETENTION_MS_CONFIG, Long.toString(Long.MAX_VALUE));
     createTopic(topicName, 1, 1, topicProps);
@@ -223,12 +223,11 @@ public class ApacheKafkaProducerAdapterITest {
     for (Map.Entry<PubSubProducerCallbackSimpleImpl, Future<PubSubProduceResult>> entry: produceResults.entrySet()) {
       PubSubProducerCallbackSimpleImpl cb = entry.getKey();
       Future<PubSubProduceResult> future = entry.getValue();
-      waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> assertTrue(cb.isInvoked()));
       waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> assertTrue(future.isDone()));
       assertFalse(future.isCancelled());
-
       if (doFlush) {
         try {
+          assertTrue(cb.isInvoked());
           PubSubProduceResult produceResult = future.get();
           assertNotNull(produceResult);
           assertNotEquals(produceResult.getOffset(), -1);
@@ -236,16 +235,14 @@ public class ApacheKafkaProducerAdapterITest {
         } catch (Exception notExpected) {
           fail("When flush is enabled all messages should be sent to Kafka successfully");
         }
-        continue;
-      }
-
-      assertNotNull(cb.getException().getMessage());
-      assertTrue(cb.getException().getMessage().contains("Producer is closed forcefully."));
-      try {
-        future.get();
-        fail("Exceptionally completed future should throw an exception");
-      } catch (Exception expected) {
-        LOGGER.info("As expected an exception was received - {}", expected.toString()); // make spotbugs happy
+      } else {
+        try {
+          assertFalse(cb.isInvoked());
+          future.get();
+          fail("Exceptionally completed future should throw an exception");
+        } catch (Exception expected) {
+          LOGGER.info("As expected an exception was received - {}", expected.toString()); // make spotbugs happy
+        }
       }
     }
   }

@@ -1,22 +1,37 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
+import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
  * A Kafka specific callback which wraps generic {@link PubSubProducerCallback}
  */
 public class ApacheKafkaProducerCallback implements Callback {
+  private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaProducerCallback.class);
+
   private final PubSubProducerCallback pubsubProducerCallback;
   private final CompletableFuture<PubSubProduceResult> produceResultFuture = new CompletableFuture<>();
+  private final ApacheKafkaProducerAdapter producerAdapter;
 
   public ApacheKafkaProducerCallback(PubSubProducerCallback pubsubProducerCallback) {
+    this(pubsubProducerCallback, null);
+  }
+
+  public ApacheKafkaProducerCallback(
+      PubSubProducerCallback pubsubProducerCallback,
+      ApacheKafkaProducerAdapter producerAdapter) {
     this.pubsubProducerCallback = pubsubProducerCallback;
+    this.producerAdapter = producerAdapter;
   }
 
   /**
@@ -46,6 +61,23 @@ public class ApacheKafkaProducerCallback implements Callback {
    */
   @Override
   public void onCompletion(RecordMetadata metadata, Exception exception) {
+    // short-circuit
+    if (producerAdapter != null
+        && (producerAdapter.isForceCloseFromCallback() || producerAdapter.hasIssuedCloseFromCallback())) {
+      // We need to mark Future complete to prevent indefinite blocking
+      produceResultFuture.completeExceptionally(new VeniceException("Producer closed forcefully"));
+      if (producerAdapter.hasIssuedCloseFromCallback()) {
+        return;
+      }
+      KafkaProducer kafkaProducer = producerAdapter.getInternalProducer();
+      if (kafkaProducer != null) {
+        LOGGER.info("Closing producer for topic: {}", metadata.topic());
+        kafkaProducer.close(Duration.ZERO);
+        producerAdapter.setIssuedCloseFromCallback();
+      }
+      return;
+    }
+
     PubSubProduceResult produceResult = new ApacheKafkaProduceResult(metadata);
     if (exception != null) {
       produceResultFuture.completeExceptionally(exception);
