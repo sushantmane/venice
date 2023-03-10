@@ -10,6 +10,10 @@ import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
 
 
+/**
+ * In-memory logger appender that works with log4j2.
+ * Use this class judiciously, and its intended use only in tests.
+ */
 public class InMemoryLogAppender extends AbstractAppender {
   private final List<String> logs = new ArrayList<>(128);
 
