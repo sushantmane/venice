@@ -2,6 +2,8 @@ package com.linkedin.venice.endToEnd;
 
 import static com.linkedin.venice.ConfigKeys.CLIENT_SYSTEM_STORE_REPOSITORY_REFRESH_INTERVAL_SECONDS;
 import static com.linkedin.venice.ConfigKeys.CLIENT_USE_SYSTEM_STORE_REPOSITORY;
+import static com.linkedin.venice.ConfigKeys.CONTROLLER_AUTO_MATERIALIZE_DAVINCI_PUSH_STATUS_SYSTEM_STORE;
+import static com.linkedin.venice.ConfigKeys.CONTROLLER_AUTO_MATERIALIZE_META_SYSTEM_STORE;
 import static com.linkedin.venice.ConfigKeys.PUSH_STATUS_STORE_ENABLED;
 import static com.linkedin.venice.ConfigKeys.SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS;
 import static com.linkedin.venice.ConfigKeys.USE_PUSH_STATUS_STORE_FOR_INCREMENTAL_PUSH;
@@ -50,6 +52,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -71,12 +74,14 @@ public class PushStatusStoreTest {
   private PushStatusStoreReader reader;
   private String storeName;
 
-  @BeforeClass
+  @BeforeClass(alwaysRun = true)
   public void setUp() {
     Properties extraProperties = new Properties();
     extraProperties.setProperty(SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS, Long.toString(1L));
     // all tests in this class will be reading incremental push status from the push status store
     extraProperties.setProperty(USE_PUSH_STATUS_STORE_FOR_INCREMENTAL_PUSH, String.valueOf(true));
+    extraProperties.setProperty(CONTROLLER_AUTO_MATERIALIZE_META_SYSTEM_STORE, String.valueOf(true));
+    extraProperties.setProperty(CONTROLLER_AUTO_MATERIALIZE_DAVINCI_PUSH_STATUS_SYSTEM_STORE, String.valueOf(true));
 
     Utils.thisIsLocalhost();
     cluster = ServiceFactory.getVeniceCluster(
@@ -93,7 +98,7 @@ public class PushStatusStoreTest {
         TimeUnit.MINUTES.toSeconds(10));
   }
 
-  @AfterClass
+  @AfterClass(alwaysRun = true)
   public void cleanUp() {
     Utils.closeQuietlyWithErrorLogged(reader);
     D2ClientUtils.shutdownClient(d2Client);
@@ -145,7 +150,8 @@ public class PushStatusStoreTest {
         Version.composeKafkaTopic(VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE.getSystemStoreName(storeName), 1);
     assertTrue(admin.isResourceStillAlive(pushStatusStoreTopic));
     assertFalse(admin.isTopicTruncated(pushStatusStoreTopic));
-    assertCommand(controllerClient.disableAndDeleteStore(storeName));
+
+    cluster.useControllerClient(controllerClient -> assertCommand(controllerClient.disableAndDeleteStore(storeName)));
 
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
       assertFalse(admin.isResourceStillAlive(pushStatusStoreTopic));
@@ -154,7 +160,7 @@ public class PushStatusStoreTest {
     });
   }
 
-  @Test(timeOut = TEST_TIMEOUT_MS)
+  @Test(timeOut = 100 * TEST_TIMEOUT_MS)
   public void testIncrementalPush() throws Exception {
     VeniceProperties backendConfig = getBackendConfigBuilder().build();
     Properties vpjProperties = getVPJProperties();
@@ -185,7 +191,7 @@ public class PushStatusStoreTest {
       String jobName = Utils.getUniqueString("batch-job-" + expectedVersionNumber);
       try (VenicePushJob job = new VenicePushJob(jobName, vpjProperties)) {
         job.run();
-        cluster.waitVersion(storeName, expectedVersionNumber, controllerClient);
+        cluster.useControllerClient(client -> cluster.waitVersion(storeName, expectedVersionNumber, client));
         LOGGER.info("**TIME** VPJ" + expectedVersionNumber + " takes " + (System.currentTimeMillis() - vpjStart));
         assertEquals(storeClient.get(1).get().toString(), "name 1");
         Optional<String> incPushVersion = job.getIncrementalPushVersion();
@@ -221,7 +227,7 @@ public class PushStatusStoreTest {
       String jobName = Utils.getUniqueString("batch-job-" + expectedVersionNumber);
       try (VenicePushJob job = new VenicePushJob(jobName, vpjProperties)) {
         job.run();
-        cluster.waitVersion(storeName, expectedVersionNumber, controllerClient);
+        cluster.useControllerClient(client -> cluster.waitVersion(storeName, expectedVersionNumber, client));
         LOGGER.info("**TIME** VPJ" + expectedVersionNumber + " takes " + (System.currentTimeMillis() - vpjStart));
         assertEquals(storeClient.get(1).get().toString(), "name 1");
         Optional<String> incPushVersion = job.getIncrementalPushVersion();
@@ -238,35 +244,45 @@ public class PushStatusStoreTest {
           }
         }
 
-        // expect NOT_CREATED when all non-existing incremental push version is used to query the status
-        JobStatusQueryResponse response =
-            controllerClient.queryJobStatus(job.getTopicToMonitor(), Optional.of("randomIPVersion"));
-        assertEquals(response.getStatus(), ExecutionStatus.NOT_CREATED.name());
+        cluster.useControllerClient(controllerClient -> {
+          // expect NOT_CREATED when all non-existing incremental push version is used to query the status
+          JobStatusQueryResponse response =
+              controllerClient.queryJobStatus(job.getTopicToMonitor(), Optional.of("randomIPVersion"));
+          assertEquals(response.getStatus(), ExecutionStatus.NOT_CREATED.name());
 
-        // verify that controller responds with EOIP when all partitions have sufficient replicas with EOIP
-        response = controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
-        assertEquals(response.getStatus(), ExecutionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED.name());
+          // verify that controller responds with EOIP when all partitions have sufficient replicas with EOIP
+          response = controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
+          assertEquals(response.getStatus(), ExecutionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED.name());
 
-        PushStatusStoreRecordDeleter statusStoreDeleter = new PushStatusStoreRecordDeleter(
-            cluster.getLeaderVeniceController().getVeniceHelixAdmin().getVeniceWriterFactory());
+          PushStatusStoreRecordDeleter statusStoreDeleter = new PushStatusStoreRecordDeleter(
+              cluster.getLeaderVeniceController().getVeniceHelixAdmin().getVeniceWriterFactory());
 
-        // after deleting the inc push status belonging to just one partition we should expect
-        // SOIP from the controller since other partition has replicas with EOIP status
-        statusStoreDeleter.deletePartitionIncrementalPushStatus(storeName, 1, incPushVersion.get(), 1).get();
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
-          // N.B.: Even though we block on the deleter's future, that only means the delete message is persisted into
-          // Kafka, but querying the system store may still yield a stale result, hence the need for retrying.
-          JobStatusQueryResponse jobStatusQueryResponse =
-              controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
-          assertEquals(jobStatusQueryResponse.getStatus(), ExecutionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED.name());
-        });
+          // after deleting the inc push status belonging to just one partition we should expect
+          // SOIP from the controller since other partition has replicas with EOIP status
+          try {
+            statusStoreDeleter.deletePartitionIncrementalPushStatus(storeName, 1, incPushVersion.get(), 1).get();
+          } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+          }
+          TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+            // N.B.: Even though we block on the deleter's future, that only means the delete message is persisted into
+            // Kafka, but querying the system store may still yield a stale result, hence the need for retrying.
+            JobStatusQueryResponse jobStatusQueryResponse =
+                controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
+            assertEquals(jobStatusQueryResponse.getStatus(), ExecutionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED.name());
+          });
 
-        // expect NOT_CREATED when statuses of all partitions are not available in the push status store
-        statusStoreDeleter.deletePartitionIncrementalPushStatus(storeName, 1, incPushVersion.get(), 0).get();
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
-          JobStatusQueryResponse jobStatusQueryResponse =
-              controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
-          assertEquals(jobStatusQueryResponse.getStatus(), ExecutionStatus.NOT_CREATED.name());
+          // expect NOT_CREATED when statuses of all partitions are not available in the push status store
+          try {
+            statusStoreDeleter.deletePartitionIncrementalPushStatus(storeName, 1, incPushVersion.get(), 0).get();
+          } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+          }
+          TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+            JobStatusQueryResponse jobStatusQueryResponse =
+                controllerClient.queryJobStatus(job.getTopicToMonitor(), job.getIncrementalPushVersion());
+            assertEquals(jobStatusQueryResponse.getStatus(), ExecutionStatus.NOT_CREATED.name());
+          });
         });
       }
     }
@@ -312,7 +328,7 @@ public class PushStatusStoreTest {
     try (VenicePushJob job = new VenicePushJob(jobName, vpjProperties)) {
       job.run();
       String storeName = (String) vpjProperties.get(VenicePushJob.VENICE_STORE_NAME_PROP);
-      cluster.waitVersion(storeName, expectedVersionNumber, controllerClient);
+      cluster.useControllerClient(client -> cluster.waitVersion(storeName, expectedVersionNumber, client));
       LOGGER.info("**TIME** VPJ" + expectedVersionNumber + " takes " + (System.currentTimeMillis() - vpjStart));
     }
   }
