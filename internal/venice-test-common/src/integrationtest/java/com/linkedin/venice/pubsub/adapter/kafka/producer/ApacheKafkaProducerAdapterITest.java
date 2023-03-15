@@ -142,7 +142,7 @@ public class ApacheKafkaProducerAdapterITest {
    * 2) doFlush == false: upon forceful close (timeout 0 and no flushing) producer doesn't forget to complete
    *                      any Future that it returned in response to sendMessage() call.
    */
-  @Test(timeOut = 90 * MS_PER_SECOND, dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
+  @Test(timeOut = 90 * MS_PER_SECOND, dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class, invocationCount = 100)
   public void testProducerCloseDoesNotLeaveAnyFuturesIncomplete(boolean doFlush) throws InterruptedException {
     Map<String, String> topicProps = Collections.singletonMap(RETENTION_MS_CONFIG, Long.toString(Long.MAX_VALUE));
     createTopic(topicName, 1, 1, topicProps);
