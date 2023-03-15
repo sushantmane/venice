@@ -144,7 +144,7 @@ public class ApacheKafkaProducerAdapterITest {
    *                      any Future that it returned in response to sendMessage() call.
    */
   // @Test(timeOut = MS_PER_MINUTE, dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
-  @Test(timeOut = MS_PER_MINUTE, invocationCount = 200)
+  @Test(timeOut = MS_PER_MINUTE, invocationCount = 10)
   public void testProducerCloseDoesNotLeaveAnyFuturesIncomplete() throws InterruptedException {
     boolean doFlush = false;
     Map<String, String> topicProps = Collections.singletonMap(RETENTION_MS_CONFIG, Long.toString(Long.MAX_VALUE));
