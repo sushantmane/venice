@@ -20,7 +20,7 @@ public class PubSubProducerCallbackSimpleImpl implements PubSubProducerCallback 
     this.produceResult = produceResult;
     this.exception = exception;
     this.isInvoked = true;
-    LOGGER.info("{} has been invoked", this);
+    LOGGER.info("{} has been invoked. ProduceResult:{}, Exception:{}", this, produceResult, exception);
   }
 
   public boolean isInvoked() {
