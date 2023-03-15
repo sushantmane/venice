@@ -184,8 +184,16 @@ public class ApacheKafkaProducerAdapterITest {
 
     // Initiate close in another thread as it close() call waits for ioThread to finish.
     // Since we're blocking ioThread in m0's callback calling it from current thread would lead to deadlock.
-    Thread closeProducerThread = new Thread(() -> producerAdapter.close(doFlush ? Integer.MAX_VALUE : 0, doFlush));
+
+    CountDownLatch closeInitiated = new CountDownLatch(1);
+
+    Thread closeProducerThread = new Thread(() -> {
+      closeInitiated.countDown();
+      producerAdapter.close(doFlush ? Integer.MAX_VALUE : 0, doFlush);
+    });
     closeProducerThread.start();
+    closeInitiated.await();
+    Thread.sleep(500);
 
     // Let's make sure that none of the m2 to m99 are ACKed by Kafka yet
     produceResults.forEach((cb, future) -> {
