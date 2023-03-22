@@ -98,7 +98,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
   private final String clusterName;
   private final boolean standalone;
   private final ZkServerWrapper zkServerWrapper;
-  private final KafkaBrokerWrapper kafkaBrokerWrapper;
+  private final PubSubBackendWrapper pubSubBackendWrapper;
 
   private final int defaultReplicaFactor;
   private final int defaultPartitionSize;
@@ -136,7 +136,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
       String clusterName,
       boolean standalone,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBackendWrapper pubSubBackendWrapper,
       Map<Integer, VeniceControllerWrapper> veniceControllerWrappers,
       Map<Integer, VeniceServerWrapper> veniceServerWrappers,
       Map<Integer, VeniceRouterWrapper> veniceRouterWrappers,
@@ -154,7 +154,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     this.standalone = standalone;
     this.clusterName = clusterName;
     this.zkServerWrapper = zkServerWrapper;
-    this.kafkaBrokerWrapper = kafkaBrokerWrapper;
+    this.pubSubBackendWrapper = pubSubBackendWrapper;
     this.veniceControllerWrappers = veniceControllerWrappers;
     this.veniceServerWrappers = veniceServerWrappers;
     this.veniceRouterWrappers = veniceRouterWrappers;
@@ -181,13 +181,13 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     }
 
     ZkServerWrapper zkServerWrapper = options.getZkServerWrapper();
-    KafkaBrokerWrapper kafkaBrokerWrapper = options.getKafkaBrokerWrapper();
+    PubSubBackendWrapper pubSubBackendWrapper = options.getKafkaBrokerWrapper();
     try {
       if (zkServerWrapper == null) {
         zkServerWrapper = ServiceFactory.getZkServer();
       }
-      if (kafkaBrokerWrapper == null) {
-        kafkaBrokerWrapper = ServiceFactory.getKafkaBroker(zkServerWrapper);
+      if (pubSubBackendWrapper == null) {
+        pubSubBackendWrapper = ServiceFactory.getKafkaBroker(zkServerWrapper);
       }
 
       // Setup D2 for controller
@@ -207,7 +207,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         }
 
         VeniceControllerWrapper veniceControllerWrapper = ServiceFactory.getVeniceController(
-            new VeniceControllerCreateOptions.Builder(options.getClusterName(), zkServerWrapper, kafkaBrokerWrapper)
+            new VeniceControllerCreateOptions.Builder(options.getClusterName(), zkServerWrapper, pubSubBackendWrapper)
                 .replicationFactor(options.getReplicationFactor())
                 .partitionSize(options.getPartitionSize())
                 .rebalanceDelayMs(options.getRebalanceDelayMs())
@@ -231,7 +231,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
             options.getRegionName(),
             options.getClusterName(),
             zkServerWrapper,
-            kafkaBrokerWrapper,
+            pubSubBackendWrapper,
             options.isSslToStorageNodes(),
             clusterToD2,
             options.getExtraProperties());
@@ -268,7 +268,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         VeniceServerWrapper veniceServerWrapper = ServiceFactory.getVeniceServer(
             options.getRegionName(),
             options.getClusterName(),
-            kafkaBrokerWrapper,
+            pubSubBackendWrapper,
             zkAddress,
             featureProperties,
             options.getExtraProperties(),
@@ -290,7 +290,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
        * so we can assume they're reliable enough.
        */
       ZkServerWrapper finalZkServerWrapper = zkServerWrapper;
-      KafkaBrokerWrapper finalKafkaBrokerWrapper = kafkaBrokerWrapper;
+      PubSubBackendWrapper finalPubSubBackendWrapper = pubSubBackendWrapper;
       return (serviceName) -> {
         VeniceClusterWrapper veniceClusterWrapper = null;
         try {
@@ -299,7 +299,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
               options.getClusterName(),
               options.isStandalone(),
               finalZkServerWrapper,
-              finalKafkaBrokerWrapper,
+              finalPubSubBackendWrapper,
               veniceControllerWrappers,
               veniceServerWrappers,
               veniceRouterWrappers,
@@ -365,7 +365,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
       veniceRouterWrappers.values().forEach(Utils::closeQuietlyWithErrorLogged);
       veniceServerWrappers.values().forEach(Utils::closeQuietlyWithErrorLogged);
       veniceControllerWrappers.values().forEach(Utils::closeQuietlyWithErrorLogged);
-      IOUtils.closeQuietly(kafkaBrokerWrapper);
+      IOUtils.closeQuietly(pubSubBackendWrapper);
       IOUtils.closeQuietly(zkServerWrapper);
       throw e;
     }
@@ -414,7 +414,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     veniceServerWrappers.values().forEach(Utils::closeQuietlyWithErrorLogged);
     veniceControllerWrappers.values().forEach(Utils::closeQuietlyWithErrorLogged);
     if (standalone) {
-      Utils.closeQuietlyWithErrorLogged(kafkaBrokerWrapper);
+      Utils.closeQuietlyWithErrorLogged(pubSubBackendWrapper);
       Utils.closeQuietlyWithErrorLogged(zkServerWrapper);
     }
 
@@ -453,8 +453,8 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     return zkServerWrapper;
   }
 
-  public KafkaBrokerWrapper getKafka() {
-    return kafkaBrokerWrapper;
+  public PubSubBackendWrapper getKafka() {
+    return pubSubBackendWrapper;
   }
 
   public synchronized List<VeniceControllerWrapper> getVeniceControllers() {
@@ -523,7 +523,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
 
   public VeniceControllerWrapper addVeniceController(Properties properties) {
     VeniceControllerWrapper veniceControllerWrapper = ServiceFactory.getVeniceController(
-        new VeniceControllerCreateOptions.Builder(clusterName, zkServerWrapper, kafkaBrokerWrapper)
+        new VeniceControllerCreateOptions.Builder(clusterName, zkServerWrapper, pubSubBackendWrapper)
             .regionName(regionName)
             .replicationFactor(defaultReplicaFactor)
             .partitionSize(defaultPartitionSize)
@@ -552,7 +552,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
         regionName,
         clusterName,
         zkServerWrapper,
-        kafkaBrokerWrapper,
+        pubSubBackendWrapper,
         sslToStorageNodes,
         clusterToD2,
         properties);
@@ -576,7 +576,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     VeniceServerWrapper veniceServerWrapper = ServiceFactory.getVeniceServer(
         regionName,
         clusterName,
-        kafkaBrokerWrapper,
+        pubSubBackendWrapper,
         zkServerWrapper.getAddress(),
         featureProperties,
         new Properties(),
@@ -597,7 +597,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     VeniceServerWrapper veniceServerWrapper = ServiceFactory.getVeniceServer(
         regionName,
         clusterName,
-        kafkaBrokerWrapper,
+        pubSubBackendWrapper,
         zkServerWrapper.getAddress(),
         new Properties(),
         properties,
@@ -612,7 +612,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
     VeniceServerWrapper veniceServerWrapper = ServiceFactory.getVeniceServer(
         regionName,
         clusterName,
-        kafkaBrokerWrapper,
+        pubSubBackendWrapper,
         zkServerWrapper.getAddress(),
         featureProperties,
         configProperties,
@@ -762,7 +762,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
    */
   public VeniceWriter<String, String, byte[]> getVeniceWriter(String storeVersionName) {
     Properties properties = new Properties();
-    properties.put(KAFKA_BOOTSTRAP_SERVERS, kafkaBrokerWrapper.getAddress());
+    properties.put(KAFKA_BOOTSTRAP_SERVERS, pubSubBackendWrapper.getAddress());
     properties.put(ZOOKEEPER_ADDRESS, zkServerWrapper.getAddress());
     VeniceWriterFactory factory = TestUtils.getVeniceWriterFactory(properties);
     String stringSchema = "\"string\"";
@@ -777,7 +777,7 @@ public class VeniceClusterWrapper extends ProcessWrapper {
 
   public VeniceWriter<String, String, byte[]> getSslVeniceWriter(String storeVersionName) {
     Properties properties = new Properties();
-    properties.put(KAFKA_BOOTSTRAP_SERVERS, kafkaBrokerWrapper.getSSLAddress());
+    properties.put(KAFKA_BOOTSTRAP_SERVERS, pubSubBackendWrapper.getSSLAddress());
     properties.put(ZOOKEEPER_ADDRESS, zkServerWrapper.getAddress());
     properties.putAll(KafkaSSLUtils.getLocalKafkaClientSSLConfig());
     VeniceWriterFactory factory = TestUtils.getVeniceWriterFactory(properties);

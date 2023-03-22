@@ -81,7 +81,7 @@ public class VeniceRouterWrapper extends ProcessWrapper implements MetricsAware 
       String regionName,
       String clusterName,
       ZkServerWrapper zkServerWrapper,
-      KafkaBrokerWrapper kafkaBrokerWrapper,
+      PubSubBackendWrapper pubSubBackendWrapper,
       boolean sslToStorageNodes,
       Map<String, String> clusterToD2,
       Properties properties) {
@@ -104,7 +104,7 @@ public class VeniceRouterWrapper extends ProcessWrapper implements MetricsAware 
           .put(LISTENER_PORT, port)
           .put(LISTENER_SSL_PORT, sslPort)
           .put(ZOOKEEPER_ADDRESS, zkAddress)
-          .put(KAFKA_BOOTSTRAP_SERVERS, kafkaBrokerWrapper.getAddress())
+          .put(KAFKA_BOOTSTRAP_SERVERS, pubSubBackendWrapper.getAddress())
           .put(SSL_TO_STORAGE_NODES, sslToStorageNodes)
           .put(CLUSTER_TO_D2, TestUtils.getClusterToD2String(finalClusterToD2))
           .put(ROUTER_THROTTLE_CLIENT_SSL_HANDSHAKES, true)
