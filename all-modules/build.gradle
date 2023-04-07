@@ -1,3 +1,7 @@
+plugins {
+  id 'com.github.johnrengelman.shadow'
+}
+
 // This module depends on all other Venice modules. Its primary purpose is to help scripts identify all venice modules
 // via transitive dependencies instead of enumerating all modules individually.
 dependencies {
@@ -6,5 +10,16 @@ dependencies {
       implementation project(subproject.path)
     }
   }
+  implementation libraries.commonsCli
   implementation project(path: ':internal:venice-test-common', configuration: 'integrationTestUtils')
+}
+
+
+jar {
+  shadowJar.archiveName = "venice-launcher-${project.version}.${extension}"
+  manifest {
+    attributes = ['Implementation-Title'  : 'Venice Launcher',
+                  'Implementation-Version': project.version,
+                  'Main-Class'            : 'com.linkedin.venice.VeniceLauncher']
+  }
 }
