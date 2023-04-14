@@ -24,7 +24,7 @@ import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
 
-class KafkaBrokerFactory implements PubSubBrokerFactory {
+class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.KafkaBrokerWrapper> {
   private static final Logger LOGGER = LogManager.getLogger(ServiceFactory.class);
   // Class-level state and APIs
   public static final String SERVICE_NAME = "Kafka";
@@ -39,7 +39,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory {
    * @return a function which yields a {@link KafkaBrokerWrapper} instance
    */
   @Override
-  public StatefulServiceProvider<PubSubBrokerWrapper> generateService(PubSubBrokerConfigs configs) {
+  public StatefulServiceProvider<KafkaBrokerWrapper> generateService(PubSubBrokerConfigs configs) {
     return (String serviceName, File dir) -> {
       int port = Utils.getFreePort();
       int sslPort = Utils.getFreePort();
@@ -53,6 +53,9 @@ class KafkaBrokerFactory implements PubSubBrokerFactory {
         shouldCloseZkServer = true;
         zkServerWrapper = ServiceFactory.getZkServer();
       }
+
+      KafkaConfig kafkaConfig1 = new KafkaConfig(configMap, true);
+      System.out.println(kafkaConfig1);
 
       // Essential configs
       configMap.put(KafkaConfig.ZkConnectProp(), zkServerWrapper.getAddress());
@@ -100,7 +103,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory {
    * This class contains a Kafka Broker, and provides facilities for cleaning up
    * its side effects when we're done using it.
    */
-  private static class KafkaBrokerWrapper extends PubSubBrokerWrapper {
+  protected static class KafkaBrokerWrapper extends PubSubBrokerWrapper {
     private static final Logger LOGGER = LogManager.getLogger(KafkaBrokerWrapper.class);
     private final int sslPort;
     // Instance-level state and APIs
@@ -118,7 +121,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory {
      * @param kafkaServer the Kafka instance to wrap
      * @param dataDirectory where Kafka keeps its log
      */
-    private KafkaBrokerWrapper(
+    protected KafkaBrokerWrapper(
         KafkaConfig kafkaConfig,
         KafkaServer kafkaServer,
         File dataDirectory,
@@ -134,6 +137,10 @@ class KafkaBrokerFactory implements PubSubBrokerFactory {
       this.zkServerWrapper = zkServerWrapper;
       this.shouldCloseZkServer = shouldCloseZkServer;
       pubSubClientsFactory = new PubSubClientsFactory(new ApacheKafkaProducerAdapterFactory());
+    }
+
+    public String getZkAddress() {
+      return zkServerWrapper.getAddress();
     }
 
     @Override
