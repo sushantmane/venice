@@ -37,7 +37,6 @@ import com.linkedin.venice.server.VeniceServerContext;
 import com.linkedin.venice.servicediscovery.ServiceDiscoveryAnnouncer;
 import com.linkedin.venice.tehuti.MetricsAware;
 import com.linkedin.venice.utils.ForkedJavaProcess;
-import com.linkedin.venice.utils.KafkaSSLUtils;
 import com.linkedin.venice.utils.PropertyBuilder;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.TestUtils;
@@ -228,7 +227,7 @@ public class VeniceServerWrapper extends ProcessWrapper implements MetricsAware 
           .put(configProperties);
       if (sslToKafka) {
         serverPropsBuilder.put(KAFKA_SECURITY_PROTOCOL, SecurityProtocol.SSL.name);
-        serverPropsBuilder.put(KafkaSSLUtils.getLocalCommonKafkaSSLConfig());
+        serverPropsBuilder.put(KafkaTestUtils.getLocalCommonKafkaSSLConfig());
         if (isKafkaOpenSSLEnabled) {
           serverPropsBuilder.put(SERVER_ENABLE_KAFKA_OPENSSL, true);
         }

@@ -5,7 +5,6 @@ import static com.linkedin.venice.integration.utils.ProcessWrapper.DEFAULT_HOST_
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.PubSubClientsFactory;
-import com.linkedin.venice.utils.KafkaSSLUtils;
 import com.linkedin.venice.utils.TestMockTime;
 import com.linkedin.venice.utils.Utils;
 import java.io.File;
@@ -54,9 +53,6 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
         zkServerWrapper = ServiceFactory.getZkServer();
       }
 
-      KafkaConfig kafkaConfig1 = new KafkaConfig(configMap, true);
-      System.out.println(kafkaConfig1);
-
       // Essential configs
       configMap.put(KafkaConfig.ZkConnectProp(), zkServerWrapper.getAddress());
       configMap.put(KafkaConfig.PortProp(), port);
@@ -73,7 +69,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
       configMap.put(KafkaConfig.LogCleanerEnableProp(), LOG_CLEANER_ENABLE);
 
       // Setup ssl related configs for kafka.
-      Properties sslConfig = KafkaSSLUtils.getLocalKafkaBrokerSSlConfig(DEFAULT_HOST_NAME, port, sslPort);
+      Properties sslConfig = KafkaTestUtils.getLocalKafkaBrokerSSlConfig(DEFAULT_HOST_NAME, port, sslPort);
       sslConfig.entrySet().stream().forEach(entry -> configMap.put((String) entry.getKey(), entry.getValue()));
       KafkaConfig kafkaConfig = new KafkaConfig(configMap, true);
       KafkaServer kafkaServer = KafkaBrokerWrapper.instantiateNewKafkaServer(kafkaConfig, configs.getMockTime());

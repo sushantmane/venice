@@ -102,7 +102,7 @@ public class SslUtils {
    * @param resource -- System resource name
    * @return the path to the local key store location
    */
-  protected static String getPathForResource(String resource) {
+  public static String getPathForResource(String resource) {
     String systemTempDir = System.getProperty("java.io.tmpdir");
     String subDir = "venice-keys-" + UUID.randomUUID();
     File tempDir = new File(systemTempDir, subDir);

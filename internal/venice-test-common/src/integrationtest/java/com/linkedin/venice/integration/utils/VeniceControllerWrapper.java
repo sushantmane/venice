@@ -59,7 +59,6 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.adapter.kafka.admin.ApacheKafkaAdminAdapter;
 import com.linkedin.venice.servicediscovery.ServiceDiscoveryAnnouncer;
 import com.linkedin.venice.stats.TehutiUtils;
-import com.linkedin.venice.utils.KafkaSSLUtils;
 import com.linkedin.venice.utils.PropertyBuilder;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.TestUtils;
@@ -212,7 +211,7 @@ public class VeniceControllerWrapper extends ProcessWrapper {
 
         if (options.isSslToKafka()) {
           builder.put(KAFKA_SECURITY_PROTOCOL, SecurityProtocol.SSL.name);
-          builder.put(KafkaSSLUtils.getLocalCommonKafkaSSLConfig());
+          builder.put(KafkaTestUtils.getLocalCommonKafkaSSLConfig());
         }
 
         String fabricAllowList = "";
