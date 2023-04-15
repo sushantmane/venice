@@ -73,7 +73,7 @@ public class TestIncrementalPush {
     cluster.useControllerClient(controllerClient -> controllerClient.deleteStore(storeName));
   }
 
-  @Test(timeOut = 2 * Time.MS_PER_MINUTE)
+  @Test(timeOut = 2 * Time.MS_PER_MINUTE, invocationCount = 200)
   public void testGetOfflineStatusIncrementalPush() {
     // store version 1
     VersionCreationResponse v1Response = cluster.getNewVersion(storeName);
