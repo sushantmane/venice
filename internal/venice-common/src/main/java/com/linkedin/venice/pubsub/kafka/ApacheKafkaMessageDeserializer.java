@@ -1,4 +1,4 @@
 package com.linkedin.venice.pubsub.kafka;
 
-public abstract class PubSubMessageDeserializer {
+public abstract class ApacheKafkaMessageDeserializer {
 }
