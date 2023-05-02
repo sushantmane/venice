@@ -11,5 +11,5 @@ public interface PubSubPosition {
 
   int hashCode();
 
-  static PubSubPosition fromBytes(byte[] bytes);
+//  static PubSubPosition fromBytes(byte[] bytes);
 }
