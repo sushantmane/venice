@@ -12,11 +12,11 @@ import org.apache.avro.Schema;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-//public interface PubSubMessageDeserializer<K, V, OFFSET, INPUT, OUTPUT extends PubSubMessage<K, V, OFFSET>> {
-//  OUTPUT deserialize(INPUT input, PubSubTopicPartition topicPartition);
-//}
 
-
+/**
+ * This class should be extended by all pubsub message deserializers to convert from the pubsub specific
+ * message format to PubSubMessage.
+ */
 public abstract class PubSubMessageDeserializer<POSITION> {
   private static final Logger LOGGER = LogManager.getLogger(PubSubMessageDeserializer.class);
 
@@ -65,7 +65,7 @@ public abstract class PubSubMessageDeserializer<POSITION> {
       value = valueSerializer.deserialize(valueBytes, getEnvelope(key.getKeyHeaderByte()));
     }
     // TODO: Put the message container in an object pool as well
-    return new ImmutablePubSubMessage<KafkaKey, KafkaMessageEnvelope>(
+    return new ImmutablePubSubMessage<>(
         key,
         value,
         topicPartition,
