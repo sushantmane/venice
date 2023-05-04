@@ -7,9 +7,9 @@ import com.linkedin.venice.controller.ZkAdminTopicMetadataAccessor;
 import com.linkedin.venice.controller.stats.AdminConsumptionStats;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
-import com.linkedin.venice.pubsub.adapter.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -41,7 +41,7 @@ public class AdminConsumerService extends AbstractVeniceService {
 
   private final PubSubTopicRepository pubSubTopicRepository;
   private final String localKafkaServerUrl;
-  private final KafkaPubSubMessageDeserializer pubSubMessageDeserializer;
+  private final PubSubMessageDeserializer pubSubMessageDeserializer;
 
   public AdminConsumerService(
       String cluster,
@@ -49,7 +49,7 @@ public class AdminConsumerService extends AbstractVeniceService {
       VeniceControllerConfig config,
       MetricsRepository metricsRepository,
       PubSubTopicRepository pubSubTopicRepository,
-      KafkaPubSubMessageDeserializer pubSubMessageDeserializer) {
+      PubSubMessageDeserializer pubSubMessageDeserializer) {
     this.config = config;
     this.admin = admin;
     this.adminTopicMetadataAccessor =

@@ -7,10 +7,10 @@ import com.linkedin.davinci.stats.KafkaConsumerServiceStats;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.adapter.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.service.AbstractVeniceService;
@@ -96,7 +96,7 @@ public abstract class KafkaConsumerService extends AbstractVeniceService {
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final TopicExistenceChecker topicExistenceChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
-      final KafkaPubSubMessageDeserializer pubSubDeserializer,
+      final PubSubMessageDeserializer pubSubDeserializer,
       final Time time,
       final KafkaConsumerServiceStats statsOverride,
       final boolean isKafkaConsumerOffsetCollectionEnabled) {
@@ -389,7 +389,7 @@ public abstract class KafkaConsumerService extends AbstractVeniceService {
         long sharedConsumerNonExistingTopicCleanupDelayMS,
         TopicExistenceChecker topicExistenceChecker,
         boolean liveConfigBasedKafkaThrottlingEnabled,
-        KafkaPubSubMessageDeserializer pubSubDeserializer,
+        PubSubMessageDeserializer pubSubDeserializer,
         Time time,
         KafkaConsumerServiceStats stats,
         boolean isKafkaConsumerOffsetCollectionEnabled);

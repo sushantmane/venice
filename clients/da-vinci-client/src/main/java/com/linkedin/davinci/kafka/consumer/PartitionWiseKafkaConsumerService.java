@@ -2,9 +2,9 @@ package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.davinci.stats.KafkaConsumerServiceStats;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.adapter.kafka.KafkaPubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.throttle.EventThrottler;
@@ -52,7 +52,7 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final TopicExistenceChecker topicExistenceChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
-      KafkaPubSubMessageDeserializer pubSubDeserializer,
+      PubSubMessageDeserializer pubSubDeserializer,
       final Time time,
       final KafkaConsumerServiceStats stats,
       final boolean isKafkaConsumerOffsetCollectionEnabled) {
