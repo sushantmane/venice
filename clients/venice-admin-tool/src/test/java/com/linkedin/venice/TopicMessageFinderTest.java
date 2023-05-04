@@ -61,9 +61,9 @@ public class TopicMessageFinderTest {
         new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic(topic), assignedPartition);
 
     PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> pubSubMessage1 =
-        new ImmutablePubSubMessage<>(kafkaKey, messageEnvelope, pubSubTopicPartition, 0, 0, 20);
+        new ImmutablePubSubMessage<>(kafkaKey, messageEnvelope, pubSubTopicPartition, 0L, 0, 20);
     PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> pubSubMessage2 =
-        new ImmutablePubSubMessage<>(kafkaKey, messageEnvelope2, pubSubTopicPartition, 0, 0, 10);
+        new ImmutablePubSubMessage<>(kafkaKey, messageEnvelope2, pubSubTopicPartition, 0L, 0, 10);
 
     List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> pubSubMessageList = new ArrayList<>();
     pubSubMessageList.add(pubSubMessage1);
