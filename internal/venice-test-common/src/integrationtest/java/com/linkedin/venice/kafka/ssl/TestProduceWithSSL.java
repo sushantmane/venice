@@ -16,7 +16,6 @@ import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.hadoop.VenicePushJob;
 import com.linkedin.venice.hadoop.input.kafka.KafkaInputRecordReader;
-import com.linkedin.venice.integration.utils.KafkaTestUtils;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceClusterCreateOptions;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
@@ -41,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.kafka.common.config.SslConfigs;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -137,18 +135,18 @@ public class TestProduceWithSSL {
           Integer.toString(4 * 1024 * 1024));
 
       // put cert into hadoop user credentials.
-      Properties sslProps = KafkaTestUtils.getLocalCommonKafkaSSLConfig();
-      byte[] keyStoreCert = readFile(sslProps.getProperty(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG));
-      byte[] trustStoreCert = readFile(sslProps.getProperty(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG));
+      SslUtils.VeniceTlsConfiguration tlsConfiguration = SslUtils.getTlsConfiguration();
+      byte[] keyStoreCert = readFile(tlsConfiguration.getKeyStorePath());
+      byte[] trustStoreCert = readFile(tlsConfiguration.getTrustStorePath());
       Credentials credentials = new Credentials();
       credentials.addSecretKey(new Text(keyStorePropertyName), keyStoreCert);
       credentials.addSecretKey(new Text(trustStorePropertyName), trustStoreCert);
       credentials.addSecretKey(
           new Text(keyStorePwdPropertyName),
-          sslProps.getProperty(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG).getBytes(StandardCharsets.UTF_8));
+          tlsConfiguration.getKeyStorePassword().getBytes(StandardCharsets.UTF_8));
       credentials.addSecretKey(
           new Text(keyPwdPropertyName),
-          sslProps.getProperty(SslConfigs.SSL_KEY_PASSWORD_CONFIG).getBytes(StandardCharsets.UTF_8));
+          tlsConfiguration.getKeyPassphrase().getBytes(StandardCharsets.UTF_8));
       UserGroupInformation.getCurrentUser().addCredentials(credentials);
       // Setup token file
       String filePath = getTempDataDirectory().getAbsolutePath() + "/testHadoopToken";

@@ -227,7 +227,7 @@ public class VeniceServerWrapper extends ProcessWrapper implements MetricsAware 
           .put(configProperties);
       if (sslToKafka) {
         serverPropsBuilder.put(KAFKA_SECURITY_PROTOCOL, SecurityProtocol.SSL.name);
-        serverPropsBuilder.put(KafkaTestUtils.getLocalCommonKafkaSSLConfig());
+        serverPropsBuilder.put(KafkaTestUtils.getLocalCommonKafkaSSLConfig(SslUtils.getTlsConfiguration()));
         if (isKafkaOpenSSLEnabled) {
           serverPropsBuilder.put(SERVER_ENABLE_KAFKA_OPENSSL, true);
         }

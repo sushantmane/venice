@@ -5,6 +5,8 @@ import static com.linkedin.venice.integration.utils.ProcessWrapper.DEFAULT_HOST_
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.PubSubClientsFactory;
+import com.linkedin.venice.utils.SslUtils;
+import com.linkedin.venice.utils.SslUtils.VeniceTlsConfiguration;
 import com.linkedin.venice.utils.TestMockTime;
 import com.linkedin.venice.utils.Utils;
 import java.io.File;
@@ -69,7 +71,11 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
       configMap.put(KafkaConfig.LogCleanerEnableProp(), LOG_CLEANER_ENABLE);
 
       // Setup ssl related configs for kafka.
-      Properties sslConfig = KafkaTestUtils.getLocalKafkaBrokerSSlConfig(DEFAULT_HOST_NAME, port, sslPort);
+
+      VeniceTlsConfiguration tlsConfiguration = SslUtils.getTlsConfiguration();
+      Properties sslConfig =
+          KafkaTestUtils.getLocalKafkaBrokerSSlConfig(tlsConfiguration, DEFAULT_HOST_NAME, port, sslPort);
+
       sslConfig.entrySet().stream().forEach(entry -> configMap.put((String) entry.getKey(), entry.getValue()));
       KafkaConfig kafkaConfig = new KafkaConfig(configMap, true);
       KafkaServer kafkaServer = KafkaBrokerWrapper.instantiateNewKafkaServer(kafkaConfig, configs.getMockTime());
@@ -81,6 +87,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
           zkServerWrapper,
           shouldCloseZkServer,
           configs.getMockTime(),
+          tlsConfiguration,
           sslPort);
     };
   }
@@ -109,6 +116,7 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
     private final ZkServerWrapper zkServerWrapper;
     private final boolean shouldCloseZkServer;
     private final PubSubClientsFactory pubSubClientsFactory;
+    private final VeniceTlsConfiguration tlsConfiguration;
 
     /**
      * The constructor is private because {@link KafkaBrokerFactory#generateService(PubSubBrokerConfigs)} should be
@@ -124,15 +132,17 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
         ZkServerWrapper zkServerWrapper,
         boolean shouldCloseZkServer,
         TestMockTime mockTime,
+        VeniceTlsConfiguration tlsConfiguration,
         int sslPort) {
       super(SERVICE_NAME, dataDirectory);
       this.kafkaConfig = kafkaConfig;
       this.kafkaServer = kafkaServer;
       this.mockTime = mockTime;
+      this.tlsConfiguration = tlsConfiguration;
       this.sslPort = sslPort;
       this.zkServerWrapper = zkServerWrapper;
       this.shouldCloseZkServer = shouldCloseZkServer;
-      pubSubClientsFactory = new PubSubClientsFactory(new ApacheKafkaProducerAdapterFactory());
+      this.pubSubClientsFactory = new PubSubClientsFactory(new ApacheKafkaProducerAdapterFactory());
     }
 
     public String getZkAddress() {
@@ -152,6 +162,11 @@ class KafkaBrokerFactory implements PubSubBrokerFactory<KafkaBrokerFactory.Kafka
     @Override
     public int getSslPort() {
       return sslPort;
+    }
+
+    @Override
+    public VeniceTlsConfiguration getTlsConfiguration() {
+      return tlsConfiguration;
     }
 
     @Override
