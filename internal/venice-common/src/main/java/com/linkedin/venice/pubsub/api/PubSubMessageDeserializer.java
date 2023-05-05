@@ -17,7 +17,7 @@ import org.apache.logging.log4j.Logger;
  * This class should be extended by all pubsub message deserializers to convert from the pubsub specific
  * message format to PubSubMessage.
  */
-public abstract class PubSubMessageDeserializer<POSITION> {
+public class PubSubMessageDeserializer<POSITION> {
   private static final Logger LOGGER = LogManager.getLogger(PubSubMessageDeserializer.class);
 
   public static final String VENICE_TRANSPORT_PROTOCOL_HEADER = "vtp";
