@@ -3,7 +3,7 @@
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: $TimeOut
     outputs:

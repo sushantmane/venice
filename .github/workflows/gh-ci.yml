@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -75,7 +75,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -118,7 +118,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -161,7 +161,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -204,7 +204,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -247,7 +247,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -290,7 +290,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -333,7 +333,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -376,7 +376,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -419,7 +419,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -462,7 +462,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -505,7 +505,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -548,7 +548,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -591,7 +591,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -634,7 +634,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -677,7 +677,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -720,7 +720,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -763,7 +763,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -806,7 +806,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -849,7 +849,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -892,7 +892,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -935,7 +935,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     outputs:
@@ -1006,7 +1006,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     outputs:
@@ -1077,7 +1077,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        jdk: [11]
+        jdk: [11, 17]
     runs-on: ${{ matrix.os }}
     needs: [ValidateGradleWrapper, StaticAnalysis, UnitTestsAndCodeCoverage, AvroCompatibilityTests, IntegrationTestsA, IntegrationTestsB, IntegrationTestsC, IntegrationTestsD, IntegrationTestsE, IntegrationTestsF, IntegrationTestsG, IntegrationTestsH, IntegrationTestsI, IntegrationTestsJ, IntegrationTestsK, IntegrationTestsL, IntegrationTestsM, IntegrationTestsN, IntegrationTestsO, IntegrationTestsP, IntegrationTestsQ, IntegrationTestsZ, AlpiniUnitTests, AlpiniFunctionalTests]
     timeout-minutes: 120
