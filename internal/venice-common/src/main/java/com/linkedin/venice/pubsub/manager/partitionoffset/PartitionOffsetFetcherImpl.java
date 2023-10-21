@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import static com.linkedin.venice.offsets.OffsetRecord.LOWEST_OFFSET;
 

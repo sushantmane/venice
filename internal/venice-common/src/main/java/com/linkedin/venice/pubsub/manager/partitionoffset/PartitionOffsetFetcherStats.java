@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.TehutiUtils;

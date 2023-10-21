@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 

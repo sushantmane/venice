@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import com.linkedin.venice.annotation.Threadsafe;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
