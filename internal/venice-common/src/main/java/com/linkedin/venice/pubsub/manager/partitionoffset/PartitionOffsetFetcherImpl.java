@@ -1,10 +1,11 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import static com.linkedin.venice.offsets.OffsetRecord.LOWEST_OFFSET;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
@@ -42,8 +43,6 @@ import org.apache.logging.log4j.Logger;
 public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
   private static final List<Class<? extends Throwable>> PUBSUB_RETRIABLE_FAILURES =
       Collections.singletonList(PubSubClientRetriableException.class);
-  public static final Duration DEFAULT_KAFKA_OFFSET_API_TIMEOUT = Duration.ofMinutes(1);
-  public static final long NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION = -1;
   private static final int KAFKA_POLLING_RETRY_MAX_ATTEMPT = 3;
 
   private final Logger logger;
@@ -66,7 +65,6 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
         LogManager.getLogger(PartitionOffsetFetcherImpl.class.getSimpleName() + " [" + kafkaBootstrapServers + "]");
   }
 
-  @Override
   public Int2LongMap getTopicLatestOffsets(PubSubTopic topic) {
     try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
       List<PubSubTopicPartitionInfo> partitionInfoList = pubSubConsumer.get().partitionsFor(topic);
@@ -79,13 +77,37 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
           .collect(Collectors.toList());
 
       Map<PubSubTopicPartition, Long> offsetsByTopicPartitions =
-          pubSubConsumer.get().endOffsets(topicPartitions, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+          pubSubConsumer.get().endOffsets(topicPartitions, PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
       Int2LongMap offsetsByTopicPartitionIds = new Int2LongOpenHashMap(offsetsByTopicPartitions.size());
       for (Map.Entry<PubSubTopicPartition, Long> offsetByTopicPartition: offsetsByTopicPartitions.entrySet()) {
         offsetsByTopicPartitionIds
             .put(offsetByTopicPartition.getKey().getPartitionNumber(), offsetByTopicPartition.getValue().longValue());
       }
       return offsetsByTopicPartitionIds;
+    }
+  }
+
+  /**
+   * @return the beginning offset of a topic/partition. Synchronized because it calls #getConsumer()
+   */
+  private long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) throws PubSubTopicDoesNotExistException {
+    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
+      if (!kafkaAdminWrapper.get()
+          .containsTopicWithExpectationAndRetry(pubSubTopicPartition.getPubSubTopic(), 3, true)) {
+        throw new PubSubTopicDoesNotExistException(
+            "Topic " + pubSubTopicPartition.getPubSubTopic() + " does not exist!");
+      }
+      if (pubSubTopicPartition.getPartitionNumber() < 0) {
+        throw new IllegalArgumentException(
+            "Cannot retrieve latest offsets for invalid partition " + pubSubTopicPartition.getPartitionNumber());
+      }
+      Long offset =
+          pubSubConsumer.get().beginningOffset(pubSubTopicPartition, PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      if (offset == null) {
+        throw new VeniceException(
+            "offset result returned from beginningOffsets does not contain entry: " + pubSubTopicPartition);
+      }
+      return offset;
     }
   }
 
@@ -102,7 +124,9 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
       }
 
       Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumer.get()
-          .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+          .endOffsets(
+              Collections.singletonList(pubSubTopicPartition),
+              PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
       Long offset = offsetMap.get(pubSubTopicPartition);
       if (offset != null) {
         return offset;
@@ -113,7 +137,6 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
     }
   }
 
-  @Override
   public long getPartitionLatestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries) {
     if (retries < 1) {
       throw new IllegalArgumentException("Invalid retries. Got: " + retries);
@@ -131,6 +154,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
     }
     throw lastException;
   }
+  // ------------------ DONE ------------------
 
   @Override
   public long getPartitionOffsetByTime(PubSubTopicPartition pubSubTopicPartition, long timestamp) {
@@ -157,227 +181,6 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
           Duration.ofMinutes(1),
           PUBSUB_RETRIABLE_FAILURES);
       return topicPartitionOffset;
-    }
-  }
-
-  private Long endOffsetsWithRetry(PubSubTopicPartition partition) {
-    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
-      Long topicPartitionOffset = RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
-          () -> pubSubConsumer.get().endOffset(partition),
-          25,
-          Duration.ofMillis(100),
-          Duration.ofSeconds(5),
-          Duration.ofMinutes(1),
-          PUBSUB_RETRIABLE_FAILURES);
-      return topicPartitionOffset;
-    }
-  }
-
-  @Override
-  public long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries) {
-    if (retries < 1) {
-      throw new IllegalArgumentException("Invalid retries. Got: " + retries);
-    }
-    int attempt = 0;
-    long timestamp;
-    PubSubOpTimeoutException lastException = new PubSubOpTimeoutException("This exception should not be thrown");
-    while (attempt < retries) {
-      try {
-        timestamp = getProducerTimestampOfLastDataRecord(pubSubTopicPartition);
-        return timestamp;
-      } catch (PubSubOpTimeoutException e) {// topic and partition is listed in the exception object
-        logger.warn(
-            "Failed to get producer timestamp on the latest data record. Retries remaining: {}",
-            retries - attempt,
-            e);
-        lastException = e;
-        attempt++;
-      }
-    }
-    throw lastException;
-  }
-
-  /**
-   * If the topic is empty or all the messages are truncated (startOffset==endOffset), return -1;
-   * otherwise, return the producer timestamp of the last message in the selected partition of a topic
-   */
-  private long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition)
-      throws PubSubTopicDoesNotExistException {
-    List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> lastConsumedRecords =
-        consumeLatestRecords(pubSubTopicPartition, 1);
-    if (lastConsumedRecords.isEmpty()) {
-      return NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
-    }
-
-    // Check the latest record as the first attempt
-    PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> lastRecord = lastConsumedRecords.iterator().next();
-    if (!lastRecord.getKey().isControlMessage()) {
-      return lastRecord.getValue().producerMetadata.messageTimestamp;
-    }
-
-    // Second attempt and read 60 records this time. There could be several control messages at the end of a RT
-    // partition
-    // if multiple Samza jobs write to this topic partition. 60 should be sufficient.
-    final int lastRecordsCount = 60;
-    logger.info(
-        "The last record in topic partition {} is a control message. Hence, try to find the "
-            + "last data record among the last {} records from the end of that partition",
-        pubSubTopicPartition,
-        lastRecordsCount);
-
-    lastConsumedRecords = consumeLatestRecords(pubSubTopicPartition, lastRecordsCount);
-    if (lastConsumedRecords.isEmpty()) {
-      // Topic partition becomes empty and it can happen if the topic gets truncated after the first attempt and before
-      // this second attempt. This case should happen very rarely.
-      logger.warn(
-          "Second attempt to find producer timestamp from topic partition {} by consuming the last"
-              + " {} record(s) consumed no record. Assume the topic partition is empty.",
-          pubSubTopicPartition,
-          lastRecordsCount);
-      return NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
-    }
-    Iterator<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumerRecordsIterator =
-        lastConsumedRecords.iterator();
-
-    Long latestDataRecordProducerTimestamp = null;
-    Long startOffset = null;
-    int recordsCount = 0;
-
-    while (consumerRecordsIterator.hasNext()) {
-      PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record = consumerRecordsIterator.next();
-      startOffset = (startOffset == null ? record.getOffset() : startOffset);
-      recordsCount++;
-
-      if (record.getKey().isControlMessage()) {
-        continue;
-      }
-      latestDataRecordProducerTimestamp = record.getValue().producerMetadata.messageTimestamp;
-    }
-    if (latestDataRecordProducerTimestamp == null) {
-      // It is quite impossible to have no data record in this many records from the end of that partition
-      throw new VeniceException(
-          String.format(
-              "Failed to find latest data record producer timestamp in topic partition %s "
-                  + "since no data record is found in the last %d records starting from offset %d",
-              pubSubTopicPartition,
-              recordsCount,
-              startOffset));
-    }
-    return latestDataRecordProducerTimestamp;
-  }
-
-  /**
-   * This method retrieves last {@code lastRecordsCount} records from a topic partition and there are 4 steps below.
-   *  1. Find the current end offset N
-   *  2. Seek back {@code lastRecordsCount} records from the end offset N
-   *  3. Keep consuming records until the last consumed offset is greater than or equal to N
-   *  4. Return all consumed records
-   *
-   * There are 2 things to note:
-   *   1. When this method returns, these returned records are not necessarily the "last" records because after step 2,
-   *      there could be more records produced to this topic partition and this method only consume records until the end
-   *      offset retrieved at the above step 2.
-   *
-   *   2. This method might return more than {@code lastRecordsCount} records since the consumer poll method gets a batch
-   *      of consumer records each time and the batch size is arbitrary.
-   */
-  private List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumeLatestRecords(
-      final PubSubTopicPartition pubSubTopicPartition,
-      final int lastRecordsCount) {
-
-    if (pubSubTopicPartition.getPartitionNumber() < 0) {
-      throw new IllegalArgumentException(
-          "Cannot retrieve latest producer timestamp for invalid topic partition " + pubSubTopicPartition);
-    }
-    if (lastRecordsCount < 1) {
-      throw new IllegalArgumentException(
-          "Last record count must be greater than or equal to 1. Got: " + lastRecordsCount);
-    }
-
-    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
-      if (!kafkaAdminWrapper.get()
-          .containsTopicWithExpectationAndRetry(pubSubTopicPartition.getPubSubTopic(), 3, true)) {
-        throw new PubSubTopicDoesNotExistException(pubSubTopicPartition.getPubSubTopic());
-      }
-      try {
-        Map<PubSubTopicPartition, Long> offsetByTopicPartition = pubSubConsumer.get()
-            .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
-        if (offsetByTopicPartition == null || !offsetByTopicPartition.containsKey(pubSubTopicPartition)) {
-          throw new VeniceException(
-              "Got no results of finding end offsets for topic partition: " + pubSubTopicPartition);
-        }
-        final long latestOffset = offsetByTopicPartition.get(pubSubTopicPartition);
-
-        if (latestOffset <= 0) {
-          // Empty topic
-          return Collections.emptyList();
-        } else {
-          Long earliestOffset =
-              pubSubConsumer.get().beginningOffset(pubSubTopicPartition, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
-          if (earliestOffset == null) {
-            throw new VeniceException(
-                "Got no results of finding the earliest offset for topic partition: " + pubSubTopicPartition);
-          }
-          if (earliestOffset == latestOffset) {
-            // Empty topic
-            return Collections.emptyList();
-          } else {
-            // poll the last message and retrieve the producer timestamp
-            final long startConsumeOffset = Math.max(latestOffset - lastRecordsCount, earliestOffset);
-            pubSubConsumer.get().subscribe(pubSubTopicPartition, startConsumeOffset - 1);
-            List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> allConsumedRecords =
-                new ArrayList<>(lastRecordsCount);
-
-            // Keep consuming records from that topic partition until the last consumed record's offset is greater or
-            // equal
-            // to the partition end offset retrieved before.
-            do {
-              List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> oneBatchConsumedRecords =
-                  Collections.emptyList();
-              int currAttempt = 0;
-
-              while (currAttempt++ < KAFKA_POLLING_RETRY_MAX_ATTEMPT && oneBatchConsumedRecords.isEmpty()) {
-                logger.info(
-                    "Trying to get records from topic partition {} from offset {} to its log end "
-                        + "offset. Attempt# {} / {}",
-                    pubSubTopicPartition,
-                    startConsumeOffset,
-                    currAttempt,
-                    KAFKA_POLLING_RETRY_MAX_ATTEMPT);
-
-                oneBatchConsumedRecords =
-                    pubSubConsumer.get().poll(kafkaOperationTimeout.toMillis()).get(pubSubTopicPartition);
-              }
-              if (oneBatchConsumedRecords.isEmpty()) {
-                /**
-                 * Failed the job if we cannot get the last offset of the topic.
-                 */
-                String errorMsg = "Failed to get the last record from topic-partition: " + pubSubTopicPartition
-                    + " after " + KAFKA_POLLING_RETRY_MAX_ATTEMPT + " attempts";
-                logger.error(errorMsg);
-                throw new VeniceException(errorMsg);
-              }
-              logger.info(
-                  "Consumed {} record(s) from topic partition {}",
-                  oneBatchConsumedRecords.size(),
-                  pubSubTopicPartition);
-
-              allConsumedRecords.addAll(oneBatchConsumedRecords);
-            } while (allConsumedRecords.get(allConsumedRecords.size() - 1).getOffset() + 1 < latestOffset);
-
-            return allConsumedRecords;
-          }
-        }
-      } finally {
-        pubSubConsumer.get().unSubscribe(pubSubTopicPartition);
-      }
-    }
-  }
-
-  @Override
-  public List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic) {
-    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
-      return pubSubConsumer.get().partitionsFor(topic);
     }
   }
 
@@ -477,26 +280,225 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
     }
   }
 
+  private Long endOffsetsWithRetry(PubSubTopicPartition partition) {
+    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
+      Long topicPartitionOffset = RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
+          () -> pubSubConsumer.get().endOffset(partition),
+          25,
+          Duration.ofMillis(100),
+          Duration.ofSeconds(5),
+          Duration.ofMinutes(1),
+          PUBSUB_RETRIABLE_FAILURES);
+      return topicPartitionOffset;
+    }
+  }
+
+  @Override
+  public long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries) {
+    if (retries < 1) {
+      throw new IllegalArgumentException("Invalid retries. Got: " + retries);
+    }
+    int attempt = 0;
+    long timestamp;
+    PubSubOpTimeoutException lastException = new PubSubOpTimeoutException("This exception should not be thrown");
+    while (attempt < retries) {
+      try {
+        timestamp = getProducerTimestampOfLastDataRecord(pubSubTopicPartition);
+        return timestamp;
+      } catch (PubSubOpTimeoutException e) {// topic and partition is listed in the exception object
+        logger.warn(
+            "Failed to get producer timestamp on the latest data record. Retries remaining: {}",
+            retries - attempt,
+            e);
+        lastException = e;
+        attempt++;
+      }
+    }
+    throw lastException;
+  }
+
   /**
-   * @return the beginning offset of a topic/partition. Synchronized because it calls #getConsumer()
+   * If the topic is empty or all the messages are truncated (startOffset==endOffset), return -1;
+   * otherwise, return the producer timestamp of the last message in the selected partition of a topic
    */
-  private long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) throws PubSubTopicDoesNotExistException {
+  private long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition)
+      throws PubSubTopicDoesNotExistException {
+    List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> lastConsumedRecords =
+        consumeLatestRecords(pubSubTopicPartition, 1);
+    if (lastConsumedRecords.isEmpty()) {
+      return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+    }
+
+    // Check the latest record as the first attempt
+    PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> lastRecord = lastConsumedRecords.iterator().next();
+    if (!lastRecord.getKey().isControlMessage()) {
+      return lastRecord.getValue().producerMetadata.messageTimestamp;
+    }
+
+    // Second attempt and read 60 records this time. There could be several control messages at the end of a RT
+    // partition
+    // if multiple Samza jobs write to this topic partition. 60 should be sufficient.
+    final int lastRecordsCount = 60;
+    logger.info(
+        "The last record in topic partition {} is a control message. Hence, try to find the "
+            + "last data record among the last {} records from the end of that partition",
+        pubSubTopicPartition,
+        lastRecordsCount);
+
+    lastConsumedRecords = consumeLatestRecords(pubSubTopicPartition, lastRecordsCount);
+    if (lastConsumedRecords.isEmpty()) {
+      // Topic partition becomes empty and it can happen if the topic gets truncated after the first attempt and before
+      // this second attempt. This case should happen very rarely.
+      logger.warn(
+          "Second attempt to find producer timestamp from topic partition {} by consuming the last"
+              + " {} record(s) consumed no record. Assume the topic partition is empty.",
+          pubSubTopicPartition,
+          lastRecordsCount);
+      return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+    }
+    Iterator<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumerRecordsIterator =
+        lastConsumedRecords.iterator();
+
+    Long latestDataRecordProducerTimestamp = null;
+    Long startOffset = null;
+    int recordsCount = 0;
+
+    while (consumerRecordsIterator.hasNext()) {
+      PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record = consumerRecordsIterator.next();
+      startOffset = (startOffset == null ? record.getOffset() : startOffset);
+      recordsCount++;
+
+      if (record.getKey().isControlMessage()) {
+        continue;
+      }
+      latestDataRecordProducerTimestamp = record.getValue().producerMetadata.messageTimestamp;
+    }
+    if (latestDataRecordProducerTimestamp == null) {
+      // It is quite impossible to have no data record in this many records from the end of that partition
+      throw new VeniceException(
+          String.format(
+              "Failed to find latest data record producer timestamp in topic partition %s "
+                  + "since no data record is found in the last %d records starting from offset %d",
+              pubSubTopicPartition,
+              recordsCount,
+              startOffset));
+    }
+    return latestDataRecordProducerTimestamp;
+  }
+
+  /**
+   * This method retrieves last {@code lastRecordsCount} records from a topic partition and there are 4 steps below.
+   *  1. Find the current end offset N
+   *  2. Seek back {@code lastRecordsCount} records from the end offset N
+   *  3. Keep consuming records until the last consumed offset is greater than or equal to N
+   *  4. Return all consumed records
+   *
+   * There are 2 things to note:
+   *   1. When this method returns, these returned records are not necessarily the "last" records because after step 2,
+   *      there could be more records produced to this topic partition and this method only consume records until the end
+   *      offset retrieved at the above step 2.
+   *
+   *   2. This method might return more than {@code lastRecordsCount} records since the consumer poll method gets a batch
+   *      of consumer records each time and the batch size is arbitrary.
+   */
+  private List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumeLatestRecords(
+      final PubSubTopicPartition pubSubTopicPartition,
+      final int lastRecordsCount) {
+
+    if (pubSubTopicPartition.getPartitionNumber() < 0) {
+      throw new IllegalArgumentException(
+          "Cannot retrieve latest producer timestamp for invalid topic partition " + pubSubTopicPartition);
+    }
+    if (lastRecordsCount < 1) {
+      throw new IllegalArgumentException(
+          "Last record count must be greater than or equal to 1. Got: " + lastRecordsCount);
+    }
+
     try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
       if (!kafkaAdminWrapper.get()
           .containsTopicWithExpectationAndRetry(pubSubTopicPartition.getPubSubTopic(), 3, true)) {
-        throw new PubSubTopicDoesNotExistException(
-            "Topic " + pubSubTopicPartition.getPubSubTopic() + " does not exist!");
+        throw new PubSubTopicDoesNotExistException(pubSubTopicPartition.getPubSubTopic());
       }
-      if (pubSubTopicPartition.getPartitionNumber() < 0) {
-        throw new IllegalArgumentException(
-            "Cannot retrieve latest offsets for invalid partition " + pubSubTopicPartition.getPartitionNumber());
+      try {
+        Map<PubSubTopicPartition, Long> offsetByTopicPartition = pubSubConsumer.get()
+            .endOffsets(
+                Collections.singletonList(pubSubTopicPartition),
+                PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+        if (offsetByTopicPartition == null || !offsetByTopicPartition.containsKey(pubSubTopicPartition)) {
+          throw new VeniceException(
+              "Got no results of finding end offsets for topic partition: " + pubSubTopicPartition);
+        }
+        final long latestOffset = offsetByTopicPartition.get(pubSubTopicPartition);
+
+        if (latestOffset <= 0) {
+          // Empty topic
+          return Collections.emptyList();
+        } else {
+          Long earliestOffset = pubSubConsumer.get()
+              .beginningOffset(pubSubTopicPartition, PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+          if (earliestOffset == null) {
+            throw new VeniceException(
+                "Got no results of finding the earliest offset for topic partition: " + pubSubTopicPartition);
+          }
+          if (earliestOffset == latestOffset) {
+            // Empty topic
+            return Collections.emptyList();
+          } else {
+            // poll the last message and retrieve the producer timestamp
+            final long startConsumeOffset = Math.max(latestOffset - lastRecordsCount, earliestOffset);
+            pubSubConsumer.get().subscribe(pubSubTopicPartition, startConsumeOffset - 1);
+            List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> allConsumedRecords =
+                new ArrayList<>(lastRecordsCount);
+
+            // Keep consuming records from that topic partition until the last consumed record's offset is greater or
+            // equal
+            // to the partition end offset retrieved before.
+            do {
+              List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> oneBatchConsumedRecords =
+                  Collections.emptyList();
+              int currAttempt = 0;
+
+              while (currAttempt++ < KAFKA_POLLING_RETRY_MAX_ATTEMPT && oneBatchConsumedRecords.isEmpty()) {
+                logger.info(
+                    "Trying to get records from topic partition {} from offset {} to its log end "
+                        + "offset. Attempt# {} / {}",
+                    pubSubTopicPartition,
+                    startConsumeOffset,
+                    currAttempt,
+                    KAFKA_POLLING_RETRY_MAX_ATTEMPT);
+
+                oneBatchConsumedRecords =
+                    pubSubConsumer.get().poll(kafkaOperationTimeout.toMillis()).get(pubSubTopicPartition);
+              }
+              if (oneBatchConsumedRecords.isEmpty()) {
+                /**
+                 * Failed the job if we cannot get the last offset of the topic.
+                 */
+                String errorMsg = "Failed to get the last record from topic-partition: " + pubSubTopicPartition
+                    + " after " + KAFKA_POLLING_RETRY_MAX_ATTEMPT + " attempts";
+                logger.error(errorMsg);
+                throw new VeniceException(errorMsg);
+              }
+              logger.info(
+                  "Consumed {} record(s) from topic partition {}",
+                  oneBatchConsumedRecords.size(),
+                  pubSubTopicPartition);
+
+              allConsumedRecords.addAll(oneBatchConsumedRecords);
+            } while (allConsumedRecords.get(allConsumedRecords.size() - 1).getOffset() + 1 < latestOffset);
+
+            return allConsumedRecords;
+          }
+        }
+      } finally {
+        pubSubConsumer.get().unSubscribe(pubSubTopicPartition);
       }
-      Long offset = pubSubConsumer.get().beginningOffset(pubSubTopicPartition, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
-      if (offset == null) {
-        throw new VeniceException(
-            "offset result returned from beginningOffsets does not contain entry: " + pubSubTopicPartition);
-      }
-      return offset;
+    }
+  }
+
+  public List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic) {
+    try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
+      return pubSubConsumer.get().partitionsFor(topic);
     }
   }
 

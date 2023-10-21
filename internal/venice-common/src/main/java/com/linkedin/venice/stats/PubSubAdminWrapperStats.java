@@ -8,8 +8,7 @@ import io.tehuti.metrics.stats.Avg;
 import io.tehuti.metrics.stats.Max;
 import io.tehuti.metrics.stats.Min;
 import io.tehuti.metrics.stats.OccurrenceRate;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 
@@ -23,7 +22,7 @@ public class PubSubAdminWrapperStats extends AbstractVeniceStats {
     IS_TOPIC_DELETION_UNDER_WAY, DESCRIBE_TOPICS, CONTAINS_TOPIC_WITH_RETRY, CLOSE
   }
 
-  private final Map<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> sensorsByTypes;
+  private final EnumMap<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> sensorsByTypes;
 
   /**
    * This singleton function will guarantee for a unique pair of MetricsRepository and stat prefix,
@@ -41,11 +40,10 @@ public class PubSubAdminWrapperStats extends AbstractVeniceStats {
 
   private PubSubAdminWrapperStats(MetricsRepository metricsRepository, String resourceName) {
     super(metricsRepository, resourceName);
-    Map<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> tmpRateSensorsByTypes =
-        new HashMap<>(OCCURRENCE_LATENCY_SENSOR_TYPE.values().length);
+    sensorsByTypes = new EnumMap<>(OCCURRENCE_LATENCY_SENSOR_TYPE.class);
     for (OCCURRENCE_LATENCY_SENSOR_TYPE sensorType: OCCURRENCE_LATENCY_SENSOR_TYPE.values()) {
       final String sensorName = sensorType.name().toLowerCase();
-      tmpRateSensorsByTypes.put(
+      sensorsByTypes.put(
           sensorType,
           registerSensorIfAbsent(
               sensorName,
@@ -55,8 +53,6 @@ public class PubSubAdminWrapperStats extends AbstractVeniceStats {
               new Avg(),
               TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + sensorName)));
     }
-
-    this.sensorsByTypes = Collections.unmodifiableMap(tmpRateSensorsByTypes);
   }
 
   public void recordLatency(OCCURRENCE_LATENCY_SENSOR_TYPE sensor_type, long requestLatencyMs) {

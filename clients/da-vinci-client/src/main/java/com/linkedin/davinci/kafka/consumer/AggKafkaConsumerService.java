@@ -5,7 +5,6 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.davinci.ingestion.consumption.ConsumedDataReceiver;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.kafka.TopicManagerRepository;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
@@ -14,6 +13,7 @@ import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.manager.TopicManagerContext.PubSubPropertiesSupplier;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.throttle.EventThrottler;
 import com.linkedin.venice.utils.SystemTime;
@@ -53,12 +53,12 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
   private final Map<String, String> kafkaClusterUrlToAliasMap;
   private final Object2IntMap<String> kafkaClusterUrlToIdMap;
   private final PubSubMessageDeserializer pubSubDeserializer;
-  private final TopicManagerRepository.SSLPropertiesSupplier sslPropertiesSupplier;
   private final Function<String, String> kafkaClusterUrlResolver;
+  private final PubSubPropertiesSupplier pubSubPropertiesSupplier;
 
   public AggKafkaConsumerService(
       final PubSubConsumerAdapterFactory consumerFactory,
-      TopicManagerRepository.SSLPropertiesSupplier sslPropertiesSupplier,
+      final PubSubPropertiesSupplier pubSubPropertiesSupplier,
       final VeniceServerConfig serverConfig,
       final EventThrottler bandwidthThrottler,
       final EventThrottler recordsThrottler,
@@ -81,8 +81,8 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     this.kafkaClusterUrlToIdMap = serverConfig.getKafkaClusterUrlToIdMap();
     this.isKafkaConsumerOffsetCollectionEnabled = serverConfig.isKafkaConsumerOffsetCollectionEnabled();
     this.pubSubDeserializer = pubSubDeserializer;
-    this.sslPropertiesSupplier = sslPropertiesSupplier;
     this.kafkaClusterUrlResolver = serverConfig.getKafkaClusterUrlResolver();
+    this.pubSubPropertiesSupplier = pubSubPropertiesSupplier;
     LOGGER.info("Successfully initialized AggKafkaConsumerService");
   }
 
@@ -122,8 +122,8 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
    * @param consumerProperties consumer properties that are used to create {@link KafkaConsumerService}
    */
   public synchronized KafkaConsumerService createKafkaConsumerService(final Properties consumerProperties) {
-    String kafkaUrl = consumerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
-    Properties properties = sslPropertiesSupplier.get(kafkaUrl).toProperties();
+    final String kafkaUrl = consumerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
+    Properties properties = pubSubPropertiesSupplier.get(kafkaUrl).toProperties();
     consumerProperties.putAll(properties);
     if (kafkaUrl == null || kafkaUrl.isEmpty()) {
       throw new IllegalArgumentException("Kafka URL must be set in the consumer properties config. Got: " + kafkaUrl);
