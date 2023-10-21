@@ -230,19 +230,18 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
     int attemptCount = 1;
     ConsumerRecords<byte[], byte[]> records = ConsumerRecords.empty();
     Map<PubSubTopicPartition, List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> polledPubSubMessages =
-        new HashMap<>();
+        Collections.emptyMap();
     while (attemptCount <= config.getConsumerPollRetryTimes() && !Thread.currentThread().isInterrupted()) {
       try {
         records = kafkaConsumer.poll(Duration.ofMillis(timeoutMs));
+        polledPubSubMessages = new HashMap<>(records.partitions().size());
         for (TopicPartition topicPartition: records.partitions()) {
           PubSubTopicPartition pubSubTopicPartition = assignments.get(topicPartition);
           List<ConsumerRecord<byte[], byte[]>> topicPartitionConsumerRecords = records.records(topicPartition);
           List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionPubSubMessages =
               new ArrayList<>(topicPartitionConsumerRecords.size());
           for (ConsumerRecord<byte[], byte[]> consumerRecord: topicPartitionConsumerRecords) {
-            PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> pubSubMessage =
-                deserialize(consumerRecord, pubSubTopicPartition);
-            topicPartitionPubSubMessages.add(pubSubMessage);
+            topicPartitionPubSubMessages.add(deserialize(consumerRecord, pubSubTopicPartition));
           }
           polledPubSubMessages.put(pubSubTopicPartition, topicPartitionPubSubMessages);
         }

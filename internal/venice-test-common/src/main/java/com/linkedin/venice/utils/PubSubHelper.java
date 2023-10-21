@@ -6,11 +6,19 @@ import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import java.nio.ByteBuffer;
 
 
 public class PubSubHelper {
   public static KafkaKey getDummyKey() {
+    return getDummyKey(false);
+  }
+
+  public static KafkaKey getDummyKey(boolean isControlMessage) {
+    if (isControlMessage) {
+      return new KafkaKey(MessageType.CONTROL_MESSAGE, Utils.getUniqueString("dummyCmKey").getBytes());
+    }
     return new KafkaKey(MessageType.PUT, Utils.getUniqueString("dummyKey").getBytes());
   }
 
@@ -30,5 +38,53 @@ public class PubSubHelper {
     put.replicationMetadataPayload = ByteBuffer.allocate(0);
     value.payloadUnion = put;
     return value;
+  }
+
+  public static MutablePubSubMessage getDummyPubSubMessage(boolean isControlMessage) {
+    return new MutablePubSubMessage().setKey(getDummyKey(isControlMessage)).setValue(getDummyValue());
+  }
+
+  // mutable publish-sub message
+  public static class MutablePubSubMessage {
+    private KafkaKey key;
+    private KafkaMessageEnvelope value;
+    private PubSubTopicPartition topicPartition;
+    private long offset;
+
+    public KafkaKey getKey() {
+      return key;
+    }
+
+    public KafkaMessageEnvelope getValue() {
+      return value;
+    }
+
+    public PubSubTopicPartition getTopicPartition() {
+      return topicPartition;
+    }
+
+    public Long getOffset() {
+      return offset;
+    }
+
+    public MutablePubSubMessage setKey(KafkaKey key) {
+      this.key = key;
+      return this;
+    }
+
+    public MutablePubSubMessage setValue(KafkaMessageEnvelope value) {
+      this.value = value;
+      return this;
+    }
+
+    public MutablePubSubMessage setTopicPartition(PubSubTopicPartition topicPartition) {
+      this.topicPartition = topicPartition;
+      return this;
+    }
+
+    public MutablePubSubMessage setOffset(long offset) {
+      this.offset = offset;
+      return this;
+    }
   }
 }
