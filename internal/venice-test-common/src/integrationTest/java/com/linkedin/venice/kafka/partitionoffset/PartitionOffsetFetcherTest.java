@@ -10,6 +10,7 @@ import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -46,7 +47,7 @@ public class PartitionOffsetFetcherTest {
         pubSubBrokerWrapper.getPubSubClientsFactory().getConsumerAdapterFactory();
     Properties properties = new Properties();
     properties.setProperty(KAFKA_BOOTSTRAP_SERVERS, pubSubBrokerWrapper.getAddress());
-    try (PartitionOffsetFetcher fetcher = PartitionOffsetFetcherFactory.createDefaultPartitionOffsetFetcher(
+    try (PartitionOffsetFetcher fetcher = TopicManager.createDefaultPartitionOffsetFetcher(
         pubSubConsumerAdapterFactory,
         new VeniceProperties(properties),
         pubSubBrokerWrapper.getAddress(),

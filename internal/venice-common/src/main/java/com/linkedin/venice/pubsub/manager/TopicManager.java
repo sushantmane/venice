@@ -2,15 +2,20 @@ package com.linkedin.venice.pubsub.manager;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.linkedin.venice.kafka.partitionoffset.InstrumentedPartitionOffsetFetcher;
 import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcher;
-import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcherFactory;
+import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcherImpl;
+import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcherStats;
+import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.pubsub.PubSubConstants;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubInstrumentedAdminAdapter;
+import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
@@ -18,10 +23,14 @@ import com.linkedin.venice.pubsub.api.exceptions.PubSubClientRetriableException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicExistsException;
+import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
+import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Utils;
+import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.lazy.Lazy;
+import com.linkedin.venice.utils.pools.LandFillObjectPool;
 import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
@@ -103,7 +112,7 @@ public class TopicManager implements Closeable {
       return pubSubWriteOnlyAdmin;
     });
 
-    this.partitionOffsetFetcher = PartitionOffsetFetcherFactory.createDefaultPartitionOffsetFetcher(
+    this.partitionOffsetFetcher = createDefaultPartitionOffsetFetcher(
         topicManagerContext.getPubSubConsumerAdapterFactory(),
         topicManagerContext.getPubSubProperties(pubSubClusterAddress),
         pubSubClusterAddress,
@@ -652,6 +661,11 @@ public class TopicManager implements Closeable {
     return this.pubSubClusterAddress;
   }
 
+  // For testing only
+  public void setTopicConfigCache(Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache) {
+    this.topicConfigCache = topicConfigCache;
+  }
+
   @Override
   public synchronized void close() {
     Utils.closeQuietlyWithErrorLogged(partitionOffsetFetcher);
@@ -659,8 +673,34 @@ public class TopicManager implements Closeable {
     pubSubWriteOnlyAdminAdapter.ifPresent(Utils::closeQuietlyWithErrorLogged);
   }
 
-  // For testing only
-  public void setTopicConfigCache(Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache) {
-    this.topicConfigCache = topicConfigCache;
+  public static PartitionOffsetFetcher createDefaultPartitionOffsetFetcher(
+      PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory,
+      VeniceProperties veniceProperties,
+      String pubSubBootstrapServers,
+      Lazy<PubSubAdminAdapter> kafkaAdminWrapper,
+      long kafkaOperationTimeoutMs,
+      Optional<MetricsRepository> optionalMetricsRepository) {
+    PubSubMessageDeserializer pubSubMessageDeserializer = new PubSubMessageDeserializer(
+        new KafkaValueSerializer(),
+        new LandFillObjectPool<>(KafkaMessageEnvelope::new),
+        new LandFillObjectPool<>(KafkaMessageEnvelope::new));
+    PartitionOffsetFetcher partitionOffsetFetcher = new PartitionOffsetFetcherImpl(
+        kafkaAdminWrapper,
+        Lazy.of(
+            () -> pubSubConsumerAdapterFactory
+                .create(veniceProperties, false, pubSubMessageDeserializer, pubSubBootstrapServers)),
+        kafkaOperationTimeoutMs,
+        pubSubBootstrapServers);
+    if (optionalMetricsRepository.isPresent()) {
+      return new InstrumentedPartitionOffsetFetcher(
+          partitionOffsetFetcher,
+          new PartitionOffsetFetcherStats(
+              optionalMetricsRepository.get(),
+              "PartitionOffsetFetcherStats_" + pubSubBootstrapServers),
+          new SystemTime());
+    } else {
+      return partitionOffsetFetcher;
+    }
   }
+
 }
