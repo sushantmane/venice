@@ -4,18 +4,19 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_MIN_IN_SYNC_REPLICAS_RT_TOPIC
 import static com.linkedin.venice.ConfigKeys.KAFKA_REPLICATION_FACTOR;
 import static com.linkedin.venice.ConfigKeys.KAFKA_REPLICATION_FACTOR_RT_TOPICS;
 import static com.linkedin.venice.VeniceConstants.REWIND_TIME_DECIDED_BY_SERVER;
-import static com.linkedin.venice.kafka.TopicManager.DEFAULT_KAFKA_REPLICATION_FACTOR;
+import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_KAFKA_REPLICATION_FACTOR;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -189,7 +190,7 @@ public class RealTimeTopicSwitcher {
     long rewindTimeInMs = hybridStoreConfig.get().getRewindTimeInSeconds() * Time.MS_PER_SECOND;
     if (version.getDataRecoveryVersionConfig() != null) {
       // Override the user rewind if the version is under data recovery to avoid data loss when user have short rewind.
-      rewindTimeInMs = Math.min(TopicManager.BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN, rewindTimeInMs);
+      rewindTimeInMs = Math.min(PubSubConstants.BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN, rewindTimeInMs);
     }
     switch (hybridStoreConfig.get().getBufferReplayPolicy()) {
       // TODO to get a more deterministic timestamp across colo we could use the timestamp from the SOP/EOP control

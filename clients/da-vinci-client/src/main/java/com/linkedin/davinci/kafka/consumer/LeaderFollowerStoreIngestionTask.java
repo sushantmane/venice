@@ -32,7 +32,6 @@ import com.linkedin.venice.exceptions.VeniceTimeoutException;
 import com.linkedin.venice.exceptions.validation.DuplicateDataException;
 import com.linkedin.venice.exceptions.validation.FatalDataValidationException;
 import com.linkedin.venice.guid.GuidUtils;
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.kafka.protocol.ControlMessage;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.Put;
@@ -45,6 +44,7 @@ import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
+import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
@@ -228,7 +228,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       isDataRecovery = true;
       dataRecoverySourceVersionNumber = version.getDataRecoveryVersionConfig().getDataRecoverySourceVersionNumber();
       if (isHybridMode()) {
-        dataRecoveryCompletionTimeLagThresholdInMs = TopicManager.BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN / 2;
+        dataRecoveryCompletionTimeLagThresholdInMs = PubSubConstants.BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN / 2;
         LOGGER.info(
             "Data recovery info for topic: {}, source kafka url: {}, time lag threshold for completion: {}",
             getVersionTopic(),
@@ -910,7 +910,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     long topicPartitionOffset =
         getTopicManager(kafkaURL.toString()).getPartitionOffsetByTime(pubSubTopicPartition, rewindStartTimestamp);
     /**
-     * {@link com.linkedin.venice.kafka.TopicManager#getPartitionOffsetByTime} will always return the next offset
+     * {@link TopicManager#getPartitionOffsetByTime} will always return the next offset
      * to consume, but {@link ApacheKafkaConsumer#subscribe} is always
      * seeking the next offset, so we will deduct 1 from the returned offset here.
      */

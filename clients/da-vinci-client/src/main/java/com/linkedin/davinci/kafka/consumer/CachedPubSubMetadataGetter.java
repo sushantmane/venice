@@ -2,11 +2,11 @@ package com.linkedin.davinci.kafka.consumer;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.stats.StatsErrorCode;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.util.Map;
@@ -44,7 +44,7 @@ class CachedPubSubMetadataGetter {
    * the value will be 1 offset greater than what's expected.
    */
   long getOffset(TopicManager topicManager, PubSubTopic pubSubTopic, int partitionId) {
-    final String sourcePubSubServer = topicManager.getPubSubBootstrapServers();
+    final String sourcePubSubServer = topicManager.getPubSubClusterAddress();
     PubSubTopicPartition pubSubTopicPartition = new PubSubTopicPartitionImpl(pubSubTopic, partitionId);
     try {
       return fetchMetadata(
@@ -60,7 +60,7 @@ class CachedPubSubMetadataGetter {
   }
 
   long getEarliestOffset(TopicManager topicManager, PubSubTopicPartition pubSubTopicPartition) {
-    final String sourcePubSubServer = topicManager.getPubSubBootstrapServers();
+    final String sourcePubSubServer = topicManager.getPubSubClusterAddress();
     try {
       return fetchMetadata(
           new PubSubMetadataCacheKey(sourcePubSubServer, pubSubTopicPartition),
@@ -77,7 +77,7 @@ class CachedPubSubMetadataGetter {
   long getProducerTimestampOfLastDataMessage(TopicManager topicManager, PubSubTopicPartition pubSubTopicPartition) {
     try {
       return fetchMetadata(
-          new PubSubMetadataCacheKey(topicManager.getPubSubBootstrapServers(), pubSubTopicPartition),
+          new PubSubMetadataCacheKey(topicManager.getPubSubClusterAddress(), pubSubTopicPartition),
           lastProducerTimestampCache,
           () -> topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, DEFAULT_MAX_RETRY));
     } catch (PubSubTopicDoesNotExistException e) {
@@ -90,7 +90,7 @@ class CachedPubSubMetadataGetter {
   boolean containsTopic(TopicManager topicManager, PubSubTopic pubSubTopic) {
     return fetchMetadata(
         new PubSubMetadataCacheKey(
-            topicManager.getPubSubBootstrapServers(),
+            topicManager.getPubSubClusterAddress(),
             new PubSubTopicPartitionImpl(pubSubTopic, -1)),
         topicExistenceCache,
         () -> topicManager.containsTopic(pubSubTopic));

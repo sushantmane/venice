@@ -5,12 +5,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.stats.StatsErrorCode;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -33,14 +33,14 @@ public class CachedPubSubMetadataGetterTest {
     PubSubTopicPartition testTopicPartition = new PubSubTopicPartitionImpl(testTopic, partition);
     String testBrokerUrl = "I_Am_A_Broker_dot_com.com";
     Long earliestOffset = 1L;
-    when(mockTopicManager.getPubSubBootstrapServers()).thenReturn(testBrokerUrl);
+    when(mockTopicManager.getPubSubClusterAddress()).thenReturn(testBrokerUrl);
     when(mockTopicManager.getPartitionEarliestOffsetAndRetry(any(), anyInt())).thenReturn(earliestOffset);
     Assert.assertEquals(
         (Long) cachedPubSubMetadataGetter.getEarliestOffset(mockTopicManager, testTopicPartition),
         earliestOffset);
 
     TopicManager mockTopicManagerThatThrowsException = mock(TopicManager.class);
-    when(mockTopicManagerThatThrowsException.getPubSubBootstrapServers()).thenReturn(testBrokerUrl);
+    when(mockTopicManagerThatThrowsException.getPubSubClusterAddress()).thenReturn(testBrokerUrl);
     when(mockTopicManagerThatThrowsException.getPartitionEarliestOffsetAndRetry(any(), anyInt()))
         .thenThrow(PubSubTopicDoesNotExistException.class);
 

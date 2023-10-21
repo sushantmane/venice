@@ -1,6 +1,5 @@
 package com.linkedin.venice.controller;
 
-import static com.linkedin.venice.ConfigConstants.DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_MIN_IN_SYNC_REPLICAS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_OVER_SSL;
@@ -9,8 +8,6 @@ import static com.linkedin.venice.ConfigKeys.PUSH_STATUS_STORE_DERIVED_SCHEMA_ID
 import static com.linkedin.venice.ConfigKeys.SSL_KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.SSL_TO_KAFKA_LEGACY;
 import static com.linkedin.venice.controller.UserSystemStoreLifeCycleHelper.AUTO_META_SYSTEM_STORE_PUSH_ID_PREFIX;
-import static com.linkedin.venice.kafka.TopicManager.DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
-import static com.linkedin.venice.kafka.TopicManager.DEFAULT_KAFKA_OPERATION_TIMEOUT_MS;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_OFFSET_LAG_THRESHOLD;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_HYBRID_TIME_LAG_THRESHOLD;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_REWIND_TIME_IN_SECONDS;
@@ -104,8 +101,6 @@ import com.linkedin.venice.helix.ZkClientFactory;
 import com.linkedin.venice.helix.ZkRoutersClusterManager;
 import com.linkedin.venice.helix.ZkStoreConfigAccessor;
 import com.linkedin.venice.ingestion.control.RealTimeTopicSwitcher;
-import com.linkedin.venice.kafka.TopicManager;
-import com.linkedin.venice.kafka.TopicManagerRepository;
 import com.linkedin.venice.kafka.protocol.enums.ControlMessageType;
 import com.linkedin.venice.meta.BackupStrategy;
 import com.linkedin.venice.meta.BufferReplayPolicy;
@@ -155,6 +150,9 @@ import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConf
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.pubsub.manager.TopicManagerContext;
+import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.pushmonitor.ExecutionStatusWithDetails;
 import com.linkedin.venice.pushmonitor.KillOfflinePushMessage;
@@ -341,7 +339,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   private final long deprecatedJobTopicMaxRetentionMs;
   private final HelixReadOnlyStoreConfigRepository storeConfigRepo;
   private final VeniceWriterFactory veniceWriterFactory;
-  private final PubSubConsumerAdapterFactory veniceConsumerFactory;
+  private final PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory;
   private final int minNumberOfStoreVersionsToPreserve;
   private final StoreGraveyard storeGraveyard;
   private final Map<String, String> participantMessageStoreRTTMap;
@@ -491,18 +489,17 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     this.zkClient.subscribeStateChanges(new ZkClientStatusStats(metricsRepository, "controller-zk-client"));
     this.adapterSerializer = new HelixAdapterSerializer();
 
-    this.veniceConsumerFactory = pubSubClientsFactory.getConsumerAdapterFactory();
-    this.topicManagerRepository = TopicManagerRepository.builder()
-        .setPubSubTopicRepository(pubSubTopicRepository)
-        .setMetricsRepository(metricsRepository)
-        .setLocalKafkaBootstrapServers(getKafkaBootstrapServers(isSslToKafka()))
-        .setTopicDeletionStatusPollIntervalMs(DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS)
-        .setTopicMinLogCompactionLagMs(DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS)
-        .setKafkaOperationTimeoutMs(DEFAULT_KAFKA_OPERATION_TIMEOUT_MS)
-        .setPubSubProperties(this::getPubSubSSLPropertiesFromControllerConfig)
-        .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
-        .setPubSubConsumerAdapterFactory(veniceConsumerFactory)
-        .build();
+    this.pubSubConsumerAdapterFactory = pubSubClientsFactory.getConsumerAdapterFactory();
+
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubTopicRepository(pubSubTopicRepository)
+            .setMetricsRepository(metricsRepository)
+            .setPubSubProperties(this::getPubSubSSLPropertiesFromControllerConfig)
+            .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
+            .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
+            .build();
+    this.topicManagerRepository =
+        new TopicManagerRepository(topicManagerContext, getKafkaBootstrapServers(isSslToKafka()));
 
     this.allowlistAccessor = new ZkAllowlistAccessor(zkClient, adapterSerializer);
     this.executionIdAccessor = new ZkExecutionIdAccessor(zkClient, adapterSerializer);
@@ -3419,12 +3416,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       LOGGER.info(
           "Topic {} does not exist in Kafka cluster {}, will skip the truncation",
           kafkaTopicName,
-          topicManager.getPubSubBootstrapServers());
+          topicManager.getPubSubClusterAddress());
     } catch (Exception e) {
       LOGGER.warn(
           "Unable to update the retention for topic {} in Kafka cluster {}, will skip the truncation",
           kafkaTopicName,
-          topicManager.getPubSubBootstrapServers(),
+          topicManager.getPubSubClusterAddress(),
           e);
     }
     return false;
@@ -6543,8 +6540,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    * @return a <code>PubSubClientFactory</code> object used by the Venice controller to create Pubsub clients.
    */
   @Override
-  public PubSubConsumerAdapterFactory getVeniceConsumerFactory() {
-    return veniceConsumerFactory;
+  public PubSubConsumerAdapterFactory getPubSubConsumerAdapterFactory() {
+    return pubSubConsumerAdapterFactory;
   }
 
   @Override

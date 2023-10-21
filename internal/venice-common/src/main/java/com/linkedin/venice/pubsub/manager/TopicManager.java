@@ -1,4 +1,4 @@
-package com.linkedin.venice.kafka;
+package com.linkedin.venice.pubsub.manager;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -6,7 +6,6 @@ import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcher;
 import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcherFactory;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.Store;
-import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
@@ -31,9 +30,9 @@ import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -51,33 +50,13 @@ import org.apache.logging.log4j.Logger;
  * use the same consumer: PubSubConsumerAdapter is not safe for multi-threaded access.
  */
 public class TopicManager implements Closeable {
-  private static final int FAST_KAFKA_OPERATION_TIMEOUT_MS = Time.MS_PER_SECOND;
-  protected static final long ETERNAL_TOPIC_RETENTION_POLICY_MS = Long.MAX_VALUE;
-
-  public static final long DEFAULT_TOPIC_RETENTION_POLICY_MS = 5 * Time.MS_PER_DAY;
-  public static final long BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN = 2 * Time.MS_PER_DAY;
-
-  public static final int DEFAULT_KAFKA_OPERATION_TIMEOUT_MS = 30 * Time.MS_PER_SECOND;
-  public static final int MAX_TOPIC_DELETE_RETRIES = 3;
-  public static final int DEFAULT_KAFKA_REPLICATION_FACTOR = 3;
-
-  /**
-   * Default setting is that no log compaction should happen for hybrid store version topics
-   * if the messages are produced within 24 hours; otherwise servers could encounter MISSING
-   * data DIV errors for reprocessing jobs which could potentially generate lots of
-   * duplicate keys.
-   */
-  public static final long DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS = 24 * Time.MS_PER_HOUR;
-
-  private static final List<Class<? extends Throwable>> CREATE_TOPIC_RETRIABLE_EXCEPTIONS =
-      Collections.unmodifiableList(Arrays.asList(PubSubOpTimeoutException.class, PubSubClientRetriableException.class));
 
   // Immutable state
   private final Logger logger;
-  private final String pubSubBootstrapServers;
-  private final long kafkaOperationTimeoutMs;
-  private final long topicMinLogCompactionLagMs;
-  private final PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory;
+  private final TopicManagerContext topicManagerContext;
+  private final String pubSubClusterAddress;
+  private final PubSubTopicRepository pubSubTopicRepository;
+
   // TODO: Use single PubSubAdminAdapter for both read and write operations
   private final Lazy<PubSubAdminAdapter> pubSubWriteOnlyAdminAdapter;
   private final Lazy<PubSubAdminAdapter> pubSubReadOnlyAdminAdapter;
@@ -88,27 +67,23 @@ public class TopicManager implements Closeable {
   Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache =
       Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-  public TopicManager(TopicManagerRepository.Builder builder, String pubSubBootstrapServers) {
-    String pubSubServersForLogger = Utils.getSanitizedStringForLogger(pubSubBootstrapServers);
-    this.logger = LogManager.getLogger(this.getClass().getSimpleName() + " [" + pubSubServersForLogger + "]");
-    this.kafkaOperationTimeoutMs = builder.getKafkaOperationTimeoutMs();
-    this.topicMinLogCompactionLagMs = builder.getTopicMinLogCompactionLagMs();
-    this.pubSubAdminAdapterFactory = builder.getPubSubAdminAdapterFactory();
-    this.pubSubBootstrapServers = pubSubBootstrapServers;
-
-    TopicManagerRepository.SSLPropertiesSupplier pubSubProperties = builder.getPubSubProperties();
-    PubSubTopicRepository pubSubTopicRepository = builder.getPubSubTopicRepository();
-
-    Optional<MetricsRepository> optionalMetricsRepository = Optional.ofNullable(builder.getMetricsRepository());
+  public TopicManager(TopicManagerContext topicManagerContext, String pubSubClusterAddress) {
+    this.logger = LogManager.getLogger(
+        TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
+    this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
+    this.topicManagerContext = topicManagerContext;
+    this.pubSubTopicRepository = topicManagerContext.getPubSubTopicRepository();
+    Optional<MetricsRepository> optionalMetricsRepository =
+        Optional.ofNullable(topicManagerContext.getMetricsRepository());
 
     this.pubSubReadOnlyAdminAdapter = Lazy.of(() -> {
-      PubSubAdminAdapter pubSubReadOnlyAdmin =
-          pubSubAdminAdapterFactory.create(pubSubProperties.get(pubSubBootstrapServers), pubSubTopicRepository);
+      PubSubAdminAdapter pubSubReadOnlyAdmin = topicManagerContext.getPubSubAdminAdapterFactory()
+          .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
       pubSubReadOnlyAdmin = createInstrumentedPubSubAdmin(
           optionalMetricsRepository,
           "ReadOnlyKafkaAdminStats",
           pubSubReadOnlyAdmin,
-          pubSubBootstrapServers);
+          pubSubClusterAddress);
       logger.info(
           "{} is using read-only pubsub admin client of class: {}",
           this.getClass().getSimpleName(),
@@ -117,13 +92,13 @@ public class TopicManager implements Closeable {
     });
 
     this.pubSubWriteOnlyAdminAdapter = Lazy.of(() -> {
-      PubSubAdminAdapter pubSubWriteOnlyAdmin =
-          pubSubAdminAdapterFactory.create(pubSubProperties.get(pubSubBootstrapServers), pubSubTopicRepository);
+      PubSubAdminAdapter pubSubWriteOnlyAdmin = topicManagerContext.getPubSubAdminAdapterFactory()
+          .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
       pubSubWriteOnlyAdmin = createInstrumentedPubSubAdmin(
           optionalMetricsRepository,
           "WriteOnlyKafkaAdminStats",
           pubSubWriteOnlyAdmin,
-          pubSubBootstrapServers);
+          pubSubClusterAddress);
       logger.info(
           "{} is using write-only pubsub admin client of class: {}",
           this.getClass().getSimpleName(),
@@ -132,12 +107,13 @@ public class TopicManager implements Closeable {
     });
 
     this.partitionOffsetFetcher = PartitionOffsetFetcherFactory.createDefaultPartitionOffsetFetcher(
-        builder.getPubSubConsumerAdapterFactory(),
-        pubSubProperties.get(pubSubBootstrapServers),
-        pubSubBootstrapServers,
+        topicManagerContext.getPubSubConsumerAdapterFactory(),
+        topicManagerContext.getPubSubProperties(pubSubClusterAddress),
+        pubSubClusterAddress,
         pubSubReadOnlyAdminAdapter,
-        kafkaOperationTimeoutMs,
+        topicManagerContext.getPubSubOperationTimeoutMs(),
         optionalMetricsRepository);
+    logger.info("Created TopicManager for PubSub cluster address: {}", pubSubClusterAddress);
   }
 
   private PubSubAdminAdapter createInstrumentedPubSubAdmin(
@@ -167,7 +143,7 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value #DEFAULT_KAFKA_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
    *
    * @see {@link #createTopic(PubSubTopic, int, int, boolean, boolean, Optional)}
    */
@@ -187,13 +163,13 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value #DEFAULT_KAFKA_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
    *
    * @param topicName Name for the new topic
    * @param numPartitions number of partitions
    * @param replication replication factor
    * @param eternal if true, the topic will have "infinite" (~250 mil years) retention
-   *                if false, its retention will be set to {@link #DEFAULT_TOPIC_RETENTION_POLICY_MS} by default
+   *                if false, its retention will be set to {@link PubSubConstants#DEFAULT_TOPIC_RETENTION_POLICY_MS} by default
    * @param logCompaction whether to enable log compaction on the topic
    * @param minIsr if present, will apply the specified min.isr to this topic,
    *               if absent, Kafka cluster defaults will be used
@@ -210,9 +186,9 @@ public class TopicManager implements Closeable {
       boolean useFastKafkaOperationTimeout) {
     long retentionTimeMs;
     if (eternal) {
-      retentionTimeMs = ETERNAL_TOPIC_RETENTION_POLICY_MS;
+      retentionTimeMs = PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS;
     } else {
-      retentionTimeMs = DEFAULT_TOPIC_RETENTION_POLICY_MS;
+      retentionTimeMs = PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS;
     }
     createTopic(
         topicName,
@@ -226,7 +202,7 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value #DEFAULT_KAFKA_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
    *
    * @param topicName Name for the new topic
    * @param numPartitions number of partitions
@@ -248,10 +224,14 @@ public class TopicManager implements Closeable {
       boolean useFastKafkaOperationTimeout) {
 
     long startTime = System.currentTimeMillis();
-    long deadlineMs =
-        startTime + (useFastKafkaOperationTimeout ? FAST_KAFKA_OPERATION_TIMEOUT_MS : kafkaOperationTimeoutMs);
-    PubSubTopicConfiguration pubSubTopicConfiguration =
-        new PubSubTopicConfiguration(Optional.of(retentionTimeMs), logCompaction, minIsr, topicMinLogCompactionLagMs);
+    long deadlineMs = startTime + (useFastKafkaOperationTimeout
+        ? PubSubConstants.FAST_KAFKA_OPERATION_TIMEOUT_MS
+        : topicManagerContext.getPubSubOperationTimeoutMs());
+    PubSubTopicConfiguration pubSubTopicConfiguration = new PubSubTopicConfiguration(
+        Optional.of(retentionTimeMs),
+        logCompaction,
+        minIsr,
+        topicManagerContext.getTopicMinLogCompactionLagMs());
     logger.info(
         "Creating topic: {} partitions: {} replication: {}, configuration: {}",
         topicName,
@@ -266,8 +246,11 @@ public class TopicManager implements Closeable {
           10,
           Duration.ofMillis(200),
           Duration.ofSeconds(1),
-          Duration.ofMillis(useFastKafkaOperationTimeout ? FAST_KAFKA_OPERATION_TIMEOUT_MS : kafkaOperationTimeoutMs),
-          CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
+          Duration.ofMillis(
+              useFastKafkaOperationTimeout
+                  ? PubSubConstants.FAST_KAFKA_OPERATION_TIMEOUT_MS
+                  : topicManagerContext.getPubSubOperationTimeoutMs()),
+          PubSubConstants.CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
     } catch (Exception e) {
       if (ExceptionUtils.recursiveClassEquals(e, PubSubTopicExistsException.class)) {
         logger.info("Topic: {} already exists, will update retention policy.", topicName);
@@ -283,7 +266,7 @@ public class TopicManager implements Closeable {
       }
     }
     waitUntilTopicCreated(topicName, numPartitions, deadlineMs);
-    boolean eternal = retentionTimeMs == ETERNAL_TOPIC_RETENTION_POLICY_MS;
+    boolean eternal = retentionTimeMs == PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS;
     logger.info("Successfully created {}topic: {}", eternal ? "eternal " : "", topicName);
   }
 
@@ -331,7 +314,7 @@ public class TopicManager implements Closeable {
           "Updated topic: {} with retention.ms: {} in cluster [{}]",
           topicName,
           expectedRetentionInMs,
-          this.pubSubBootstrapServers);
+          this.pubSubClusterAddress);
       return true;
     }
     // Retention time has already been updated for this topic before
@@ -359,7 +342,7 @@ public class TopicManager implements Closeable {
       if (minLogCompactionLagMs > 0) {
         expectedMinLogCompactionLagMs = minLogCompactionLagMs;
       } else {
-        expectedMinLogCompactionLagMs = topicMinLogCompactionLagMs;
+        expectedMinLogCompactionLagMs = topicManagerContext.getTopicMinLogCompactionLagMs();
       }
     }
 
@@ -494,10 +477,14 @@ public class TopicManager implements Closeable {
 
     logger.info("Deleting topic: {}", pubSubTopic);
     try {
-      pubSubWriteOnlyAdminAdapter.get().deleteTopic(pubSubTopic, Duration.ofMillis(kafkaOperationTimeoutMs));
+      pubSubWriteOnlyAdminAdapter.get()
+          .deleteTopic(pubSubTopic, Duration.ofMillis(topicManagerContext.getPubSubOperationTimeoutMs()));
       logger.info("Topic: {} has been deleted", pubSubTopic);
     } catch (PubSubOpTimeoutException e) {
-      logger.warn("Failed to delete topic: {} after {} ms", pubSubTopic, kafkaOperationTimeoutMs);
+      logger.warn(
+          "Failed to delete topic: {} after {} ms",
+          pubSubTopic,
+          topicManagerContext.getPubSubOperationTimeoutMs());
     } catch (PubSubTopicDoesNotExistException e) {
       // No-op. Topic is deleted already, consider this as a successful deletion.
     } catch (PubSubClientRetriableException | PubSubClientException e) {
@@ -513,9 +500,13 @@ public class TopicManager implements Closeable {
 
   public void ensureTopicIsDeletedAndBlockWithRetry(PubSubTopic pubSubTopic) {
     int attempts = 0;
-    while (attempts++ < MAX_TOPIC_DELETE_RETRIES) {
+    while (attempts++ < PubSubConstants.MAX_TOPIC_DELETE_RETRIES) {
       try {
-        logger.debug("Deleting topic: {} with retry attempt {} / {}", pubSubTopic, attempts, MAX_TOPIC_DELETE_RETRIES);
+        logger.debug(
+            "Deleting topic: {} with retry attempt {} / {}",
+            pubSubTopic,
+            attempts,
+            PubSubConstants.MAX_TOPIC_DELETE_RETRIES);
         ensureTopicIsDeletedAndBlock(pubSubTopic);
         return;
       } catch (PubSubClientRetriableException e) {
@@ -525,8 +516,8 @@ public class TopicManager implements Closeable {
             pubSubTopic,
             errorMessage,
             attempts,
-            MAX_TOPIC_DELETE_RETRIES);
-        if (attempts == MAX_TOPIC_DELETE_RETRIES) {
+            PubSubConstants.MAX_TOPIC_DELETE_RETRIES);
+        if (attempts == PubSubConstants.MAX_TOPIC_DELETE_RETRIES) {
           logger.error("Topic deletion for topic {} {}! Giving up!!", pubSubTopic, errorMessage, e);
           throw e;
         }
@@ -660,8 +651,8 @@ public class TopicManager implements Closeable {
     return partitionOffsetFetcher.partitionsFor(topic);
   }
 
-  public String getPubSubBootstrapServers() {
-    return this.pubSubBootstrapServers;
+  public String getPubSubClusterAddress() {
+    return this.pubSubClusterAddress;
   }
 
   @Override
@@ -677,13 +668,13 @@ public class TopicManager implements Closeable {
   }
 
   /**
-   * The default retention time for the RT topic is defined in {@link TopicManager#DEFAULT_TOPIC_RETENTION_POLICY_MS},
+   * The default retention time for the RT topic is defined in {@link PubSubConstants#DEFAULT_TOPIC_RETENTION_POLICY_MS},
    * but if the rewind time is larger than this, then the RT topic's retention time needs to be set even higher,
    * in order to guarantee that buffer replays do not lose data. In order to achieve this, the retention time is
    * set to the max of either:
    *
-   * 1. {@link TopicManager#DEFAULT_TOPIC_RETENTION_POLICY_MS}; or
-   * 2. {@link HybridStoreConfig#getRewindTimeInSeconds()} + {@link Store#getBootstrapToOnlineTimeoutInHours()} + {@value #BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN};
+   * 1. {@link PubSubConstants#DEFAULT_TOPIC_RETENTION_POLICY_MS}; or
+   * 2. {@link HybridStoreConfig#getRewindTimeInSeconds()} + {@link Store#getBootstrapToOnlineTimeoutInHours()} + {@value PubSubConstants#BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN};
    *
    * This is a convenience function, and thus must be ignored by the JSON machinery.
    *
@@ -692,7 +683,8 @@ public class TopicManager implements Closeable {
   public static long getExpectedRetentionTimeInMs(Store store, HybridStoreConfig hybridConfig) {
     long rewindTimeInMs = hybridConfig.getRewindTimeInSeconds() * Time.MS_PER_SECOND;
     long bootstrapToOnlineTimeInMs = (long) store.getBootstrapToOnlineTimeoutInHours() * Time.MS_PER_HOUR;
-    long minimumRetentionInMs = rewindTimeInMs + bootstrapToOnlineTimeInMs + BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN;
-    return Math.max(minimumRetentionInMs, TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+    long minimumRetentionInMs =
+        rewindTimeInMs + bootstrapToOnlineTimeInMs + PubSubConstants.BUFFER_REPLAY_MINIMAL_SAFETY_MARGIN;
+    return Math.max(minimumRetentionInMs, PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
   }
 }

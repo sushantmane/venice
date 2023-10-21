@@ -1,7 +1,6 @@
 package com.linkedin.venice.kafka;
 
-import static com.linkedin.venice.kafka.TopicManager.DEFAULT_KAFKA_OPERATION_TIMEOUT_MS;
-import static com.linkedin.venice.kafka.TopicManager.MAX_TOPIC_DELETE_RETRIES;
+import static com.linkedin.venice.pubsub.PubSubConstants.MAX_TOPIC_DELETE_RETRIES;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
@@ -46,6 +45,9 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.pubsub.manager.TopicManagerContext;
+import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.MockInMemoryAdminAdapter;
@@ -108,17 +110,16 @@ public class TopicManagerTest {
     PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory = mock(PubSubConsumerAdapterFactory.class);
     doReturn(mockInMemoryConsumer).when(pubSubConsumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
 
-    topicManager = TopicManagerRepository.builder()
-        .setPubSubProperties(k -> VeniceProperties.empty())
-        .setPubSubTopicRepository(pubSubTopicRepository)
-        .setLocalKafkaBootstrapServers("localhost:1234")
-        .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
-        .setPubSubAdminAdapterFactory(pubSubAdminAdapterFactory)
-        .setKafkaOperationTimeoutMs(500L)
-        .setTopicDeletionStatusPollIntervalMs(100L)
-        .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
-        .build()
-        .getTopicManager();
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
+            .setPubSubAdminAdapterFactory(pubSubAdminAdapterFactory)
+            .setPubSubOperationTimeoutMs(500L)
+            .setTopicDeletionStatusPollIntervalMs(100L)
+            .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
+            .build();
+    topicManager = new TopicManagerRepository(topicManagerContext, "localhost:1234").getTopicManager();
   }
 
   protected PubSubProducerAdapter createPubSubProducerAdapter() {
@@ -253,14 +254,14 @@ public class TopicManagerTest {
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithEternalRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithEternalRetentionPolicy),
-        TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
 
     PubSubTopic topicNameWithDefaultRetentionPolicy = getTopic();
     topicManager.createTopic(topicNameWithDefaultRetentionPolicy, 1, 1, false); /* should be noop */
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithDefaultRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithDefaultRetentionPolicy),
-        TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
   }
 
   @Test
@@ -282,13 +283,13 @@ public class TopicManagerTest {
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithEternalRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithEternalRetentionPolicy),
-        TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
 
     topicManager.createTopic(topicNameWithDefaultRetentionPolicy, 1, 1, false); /* should be noop */
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithDefaultRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithDefaultRetentionPolicy),
-        TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
   }
 
   @Test
@@ -415,8 +416,8 @@ public class TopicManagerTest {
     Assert.assertTrue(
         topicRetentions.size() > 3,
         "There should be at least 3 topics, " + "which were created by this test");
-    Assert.assertEquals(topicRetentions.get(topic1).longValue(), TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
-    Assert.assertEquals(topicRetentions.get(topic2).longValue(), TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+    Assert.assertEquals(topicRetentions.get(topic1).longValue(), PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+    Assert.assertEquals(topicRetentions.get(topic2).longValue(), PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
     Assert.assertEquals(topicRetentions.get(topic3).longValue(), 5000);
 
     long deprecatedTopicRetentionMaxMs = 5000;
@@ -530,17 +531,20 @@ public class TopicManagerTest {
     PubSubConsumerAdapterFactory consumerAdapterFactory = mock(PubSubConsumerAdapterFactory.class);
     doReturn(mockPubSubConsumer).when(consumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
     doReturn(mockPubSubAdminAdapter).when(adminAdapterFactory).create(any(), eq(pubSubTopicRepository));
-    try (TopicManager topicManagerForThisTest = TopicManagerRepository.builder()
-        .setPubSubProperties(k -> VeniceProperties.empty())
-        .setPubSubTopicRepository(pubSubTopicRepository)
-        .setLocalKafkaBootstrapServers(localPubSubBrokerAddress)
-        .setPubSubAdminAdapterFactory(adminAdapterFactory)
-        .setPubSubConsumerAdapterFactory(consumerAdapterFactory)
-        .setKafkaOperationTimeoutMs(DEFAULT_KAFKA_OPERATION_TIMEOUT_MS)
-        .setTopicDeletionStatusPollIntervalMs(100)
-        .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
-        .build()
-        .getTopicManager()) {
+
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setPubSubAdminAdapterFactory(adminAdapterFactory)
+            .setPubSubConsumerAdapterFactory(consumerAdapterFactory)
+            .setTopicDeletionStatusPollIntervalMs(100)
+            .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
+            .build();
+
+    try (
+        TopicManagerRepository topicManagerRepository =
+            new TopicManagerRepository(topicManagerContext, localPubSubBrokerAddress);
+        TopicManager topicManagerForThisTest = topicManagerRepository.getTopicManager()) {
       Assert.assertThrows(
           PubSubOpTimeoutException.class,
           () -> topicManagerForThisTest.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, 10));
