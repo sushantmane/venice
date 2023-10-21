@@ -1,22 +1,17 @@
-package com.linkedin.venice.kafka.partitionoffset;
+package com.linkedin.venice.pubsub.manager.partitionoffset;
 
 import com.linkedin.venice.annotation.Threadsafe;
-import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
-import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
-import java.util.List;
 
 
 @Threadsafe
 public interface PartitionOffsetFetcher extends Closeable {
-  Int2LongMap getTopicLatestOffsets(PubSubTopic topic);
+  // Int2LongMap getTopicLatestOffsets(PubSubTopic topic);
 
-  long getPartitionLatestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
+  // long getPartitionLatestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
 
-  long getPartitionEarliestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
-
+  // long getPartitionEarliestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
   long getPartitionOffsetByTime(PubSubTopicPartition pubSubTopicPartition, long timestamp);
 
   /**
@@ -29,7 +24,7 @@ public interface PartitionOffsetFetcher extends Closeable {
    */
   long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries);
 
-  List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic);
+  // List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic);
 
   long getOffsetByTimeIfOutOfRange(PubSubTopicPartition pubSubTopicPartition, long timestamp);
 

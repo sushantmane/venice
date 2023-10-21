@@ -1,7 +1,6 @@
 package com.linkedin.venice.kafka;
 
-import static com.linkedin.venice.kafka.TopicManager.DEFAULT_KAFKA_OPERATION_TIMEOUT_MS;
-import static com.linkedin.venice.kafka.TopicManager.MAX_TOPIC_DELETE_RETRIES;
+import static com.linkedin.venice.pubsub.PubSubConstants.MAX_TOPIC_DELETE_RETRIES;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
@@ -14,7 +13,6 @@ import static org.mockito.Mockito.times;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.kafka.partitionoffset.PartitionOffsetFetcherImpl;
 import com.linkedin.venice.kafka.protocol.ControlMessage;
 import com.linkedin.venice.kafka.protocol.EndOfPush;
 import com.linkedin.venice.kafka.protocol.GUID;
@@ -46,6 +44,9 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.pubsub.manager.TopicManagerContext;
+import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.MockInMemoryAdminAdapter;
@@ -53,6 +54,7 @@ import com.linkedin.venice.unit.kafka.consumer.MockInMemoryConsumer;
 import com.linkedin.venice.unit.kafka.consumer.poll.RandomPollStrategy;
 import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducerAdapter;
 import com.linkedin.venice.utils.AvroRecordUtils;
+import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
@@ -108,17 +110,16 @@ public class TopicManagerTest {
     PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory = mock(PubSubConsumerAdapterFactory.class);
     doReturn(mockInMemoryConsumer).when(pubSubConsumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
 
-    topicManager = TopicManagerRepository.builder()
-        .setPubSubProperties(k -> VeniceProperties.empty())
-        .setPubSubTopicRepository(pubSubTopicRepository)
-        .setLocalKafkaBootstrapServers("localhost:1234")
-        .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
-        .setPubSubAdminAdapterFactory(pubSubAdminAdapterFactory)
-        .setKafkaOperationTimeoutMs(500L)
-        .setTopicDeletionStatusPollIntervalMs(100L)
-        .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
-        .build()
-        .getTopicManager();
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
+            .setPubSubAdminAdapterFactory(pubSubAdminAdapterFactory)
+            .setPubSubOperationTimeoutMs(500L)
+            .setTopicDeletionStatusPollIntervalMs(100L)
+            .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
+            .build();
+    topicManager = new TopicManagerRepository(topicManagerContext, "localhost:1234").getTopicManager();
   }
 
   protected PubSubProducerAdapter createPubSubProducerAdapter() {
@@ -192,7 +193,7 @@ public class TopicManagerTest {
     produceRandomPubSubMessage(topic, true, timestamp - 1000);
     produceRandomPubSubMessage(topic, true, timestamp); // This timestamp is expected to be retrieved
 
-    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1);
+    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, 1);
     Assert.assertEquals(retrievedTimestamp, timestamp);
   }
 
@@ -206,7 +207,7 @@ public class TopicManagerTest {
     produceRandomPubSubMessage(topic, true, timestamp); // This timestamp is expected to be retrieved
     produceRandomPubSubMessage(topic, false, timestamp + 1000); // produce a control message
 
-    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1);
+    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, 1);
     Assert.assertEquals(retrievedTimestamp, timestamp);
 
     // Produce more data records to this topic partition
@@ -218,15 +219,15 @@ public class TopicManagerTest {
     for (int i = 1; i <= 3; i++) {
       produceRandomPubSubMessage(topic, false, timestamp + i * 1000L);
     }
-    retrievedTimestamp = topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1);
+    retrievedTimestamp = topicManager.getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, 1);
     Assert.assertEquals(retrievedTimestamp, timestamp);
   }
 
   @Test
   public void testGetProducerTimestampOfLastDataRecordOnEmptyTopic() {
     final PubSubTopicPartition emptyTopicPartition = new PubSubTopicPartitionImpl(getTopic(), 0);
-    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataRecord(emptyTopicPartition, 1);
-    Assert.assertEquals(retrievedTimestamp, PartitionOffsetFetcherImpl.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
+    long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataMessageWithRetries(emptyTopicPartition, 1);
+    Assert.assertEquals(retrievedTimestamp, PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
   }
 
   @Test
@@ -243,7 +244,7 @@ public class TopicManagerTest {
     PubSubTopicPartition pubSubTopicPartition = new PubSubTopicPartitionImpl(topic, 0);
     Assert.assertThrows(
         VeniceException.class,
-        () -> topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1));
+        () -> topicManager.getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, 1));
   }
 
   @Test
@@ -253,14 +254,14 @@ public class TopicManagerTest {
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithEternalRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithEternalRetentionPolicy),
-        TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
 
     PubSubTopic topicNameWithDefaultRetentionPolicy = getTopic();
     topicManager.createTopic(topicNameWithDefaultRetentionPolicy, 1, 1, false); /* should be noop */
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithDefaultRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithDefaultRetentionPolicy),
-        TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
   }
 
   @Test
@@ -282,13 +283,13 @@ public class TopicManagerTest {
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithEternalRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithEternalRetentionPolicy),
-        TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
 
     topicManager.createTopic(topicNameWithDefaultRetentionPolicy, 1, 1, false); /* should be noop */
     Assert.assertTrue(topicManager.containsTopicAndAllPartitionsAreOnline(topicNameWithDefaultRetentionPolicy));
     Assert.assertEquals(
         topicManager.getTopicRetention(topicNameWithDefaultRetentionPolicy),
-        TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+        PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
   }
 
   @Test
@@ -415,8 +416,8 @@ public class TopicManagerTest {
     Assert.assertTrue(
         topicRetentions.size() > 3,
         "There should be at least 3 topics, " + "which were created by this test");
-    Assert.assertEquals(topicRetentions.get(topic1).longValue(), TopicManager.ETERNAL_TOPIC_RETENTION_POLICY_MS);
-    Assert.assertEquals(topicRetentions.get(topic2).longValue(), TopicManager.DEFAULT_TOPIC_RETENTION_POLICY_MS);
+    Assert.assertEquals(topicRetentions.get(topic1).longValue(), PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS);
+    Assert.assertEquals(topicRetentions.get(topic2).longValue(), PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS);
     Assert.assertEquals(topicRetentions.get(topic3).longValue(), 5000);
 
     long deprecatedTopicRetentionMaxMs = 5000;
@@ -484,7 +485,7 @@ public class TopicManagerTest {
     PubSubTopic nonExistingTopic = pubSubTopicRepository.getTopic(TestUtils.getUniqueTopicString("non-existing-topic"));
     Assert.assertThrows(
         PubSubTopicDoesNotExistException.class,
-        () -> topicManager.getPartitionLatestOffsetAndRetry(new PubSubTopicPartitionImpl(nonExistingTopic, 0), 10));
+        () -> topicManager.getLatestOffsetWithRetries(new PubSubTopicPartitionImpl(nonExistingTopic, 0), 10));
   }
 
   @Test
@@ -492,7 +493,8 @@ public class TopicManagerTest {
     PubSubTopic nonExistingTopic = pubSubTopicRepository.getTopic(TestUtils.getUniqueTopicString("non-existing-topic"));
     Assert.assertThrows(
         PubSubTopicDoesNotExistException.class,
-        () -> topicManager.getProducerTimestampOfLastDataRecord(new PubSubTopicPartitionImpl(nonExistingTopic, 0), 10));
+        () -> topicManager
+            .getProducerTimestampOfLastDataMessageWithRetries(new PubSubTopicPartitionImpl(nonExistingTopic, 0), 10));
   }
 
   @Test
@@ -530,20 +532,23 @@ public class TopicManagerTest {
     PubSubConsumerAdapterFactory consumerAdapterFactory = mock(PubSubConsumerAdapterFactory.class);
     doReturn(mockPubSubConsumer).when(consumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
     doReturn(mockPubSubAdminAdapter).when(adminAdapterFactory).create(any(), eq(pubSubTopicRepository));
-    try (TopicManager topicManagerForThisTest = TopicManagerRepository.builder()
-        .setPubSubProperties(k -> VeniceProperties.empty())
-        .setPubSubTopicRepository(pubSubTopicRepository)
-        .setLocalKafkaBootstrapServers(localPubSubBrokerAddress)
-        .setPubSubAdminAdapterFactory(adminAdapterFactory)
-        .setPubSubConsumerAdapterFactory(consumerAdapterFactory)
-        .setKafkaOperationTimeoutMs(DEFAULT_KAFKA_OPERATION_TIMEOUT_MS)
-        .setTopicDeletionStatusPollIntervalMs(100)
-        .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
-        .build()
-        .getTopicManager()) {
+
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setPubSubAdminAdapterFactory(adminAdapterFactory)
+            .setPubSubConsumerAdapterFactory(consumerAdapterFactory)
+            .setTopicDeletionStatusPollIntervalMs(100)
+            .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
+            .build();
+
+    try (
+        TopicManagerRepository topicManagerRepository =
+            new TopicManagerRepository(topicManagerContext, localPubSubBrokerAddress);
+        TopicManager topicManagerForThisTest = topicManagerRepository.getTopicManager()) {
       Assert.assertThrows(
           PubSubOpTimeoutException.class,
-          () -> topicManagerForThisTest.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, 10));
+          () -> topicManagerForThisTest.getLatestOffsetWithRetries(pubSubTopicPartition, 10));
     }
   }
 
@@ -614,9 +619,8 @@ public class TopicManagerTest {
         BufferReplayPolicy.REWIND_FROM_EOP);
 
     // Since bootstrapToOnlineTimeout + rewind time + buffer (2 days) < 5 days, retention will be set to 5 days
-    Assert.assertEquals(
-        TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind),
-        5 * Time.MS_PER_DAY);
+    Assert
+        .assertEquals(StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind), 5 * Time.MS_PER_DAY);
   }
 
   @Test
@@ -636,9 +640,8 @@ public class TopicManagerTest {
 
     // Since bootstrapToOnlineTimeout + rewind time + buffer (2 days) > 5 days, retention will be set to the computed
     // value
-    Assert.assertEquals(
-        TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind),
-        7 * Time.MS_PER_DAY);
+    Assert
+        .assertEquals(StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind), 7 * Time.MS_PER_DAY);
   }
 
   @Test

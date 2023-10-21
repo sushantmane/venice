@@ -315,20 +315,34 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
     return topicPartitionsOffsetsTracker != null ? topicPartitionsOffsetsTracker.getEndOffset(topic, partition) : -1;
   }
 
+  /**
+   * @return get the offset of the first message with timestamp greater than or equal to the target timestamp.
+   *          {@code null} will be returned for the partition if there is no such message.
+   */
   @Override
   public Long offsetForTime(PubSubTopicPartition pubSubTopicPartition, long timestamp, Duration timeout) {
-    TopicPartition topicPartition =
-        new TopicPartition(pubSubTopicPartition.getPubSubTopic().getName(), pubSubTopicPartition.getPartitionNumber());
-    Map<TopicPartition, OffsetAndTimestamp> topicPartitionOffsetMap =
-        this.kafkaConsumer.offsetsForTimes(Collections.singletonMap(topicPartition, timestamp), timeout);
-    if (topicPartitionOffsetMap.isEmpty()) {
-      return -1L;
+    try {
+      TopicPartition topicPartition =
+          new TopicPartition(pubSubTopicPartition.getTopicName(), pubSubTopicPartition.getPartitionNumber());
+      Map<TopicPartition, OffsetAndTimestamp> topicPartitionOffsetMap =
+          this.kafkaConsumer.offsetsForTimes(Collections.singletonMap(topicPartition, timestamp), timeout);
+      if (topicPartitionOffsetMap.isEmpty()) {
+        return -1L;
+      }
+      OffsetAndTimestamp offsetAndTimestamp = topicPartitionOffsetMap.get(topicPartition);
+      if (offsetAndTimestamp == null) {
+        return null;
+      }
+      return offsetAndTimestamp.offset();
+    } catch (TimeoutException e) {
+      throw new PubSubOpTimeoutException(
+          "Timed out while getting offset for time: " + timestamp + " for: " + pubSubTopicPartition,
+          e);
+    } catch (Exception e) {
+      throw new PubSubClientException(
+          "Failed to fetch offset for time: " + timestamp + " for: " + pubSubTopicPartition,
+          e);
     }
-    OffsetAndTimestamp offsetAndTimestamp = topicPartitionOffsetMap.get(topicPartition);
-    if (offsetAndTimestamp == null) {
-      return null;
-    }
-    return offsetAndTimestamp.offset();
   }
 
   @Override

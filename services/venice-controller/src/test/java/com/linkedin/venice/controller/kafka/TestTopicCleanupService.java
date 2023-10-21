@@ -16,15 +16,14 @@ import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.VeniceControllerMultiClusterConfig;
 import com.linkedin.venice.helix.HelixReadOnlyStoreConfigRepository;
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.meta.StoreConfig;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.system.store.MetaStoreWriter;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Utils;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +32,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.kafka.common.PartitionInfo;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -361,11 +359,7 @@ public class TestTopicCleanupService {
 
     // Topic is with partition count: 3
     int partitionCnt = 3;
-    List<PartitionInfo> partitionInfoList = new ArrayList<>();
-    for (int i = 0; i < partitionCnt; ++i) {
-      partitionInfoList.add(new PartitionInfo(versionTopic.getName(), i, null, null, null));
-    }
-    doReturn(partitionInfoList).when(topicManager).partitionsFor(versionTopic);
+    when(topicManager.getPartitionCount(versionTopic)).thenReturn(partitionCnt);
 
     MetaStoreWriter metaStoreWriter = mock(MetaStoreWriter.class);
     doReturn(metaStoreWriter).when(admin).getMetaStoreWriter();
