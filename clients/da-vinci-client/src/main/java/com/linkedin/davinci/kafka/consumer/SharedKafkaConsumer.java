@@ -293,13 +293,13 @@ class SharedKafkaConsumer implements PubSubConsumerAdapter {
   }
 
   @Override
-  public long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
-    return delegate.getOffsetLag(pubSubTopicPartition);
+  public long getConsumerLagBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
+    return delegate.getConsumerLagBasedOnMetrics(pubSubTopicPartition);
   }
 
   @Override
-  public long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
-    return delegate.getLatestOffset(pubSubTopicPartition);
+  public long getEndOffsetBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
+    return delegate.getEndOffsetBasedOnMetrics(pubSubTopicPartition);
   }
 
   @Override

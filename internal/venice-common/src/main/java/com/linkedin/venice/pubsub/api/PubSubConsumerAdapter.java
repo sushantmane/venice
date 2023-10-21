@@ -127,8 +127,16 @@ public interface PubSubConsumerAdapter extends AutoCloseable, Closeable {
    * @return The offset lag, which is zero or a positive value if a valid lag was collected by the consumer,
    *         or -1 if the lag cannot be determined or is not applicable.
    */
-  default long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
+  default long getConsumerLagBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     return -1;
+  }
+
+  @Deprecated
+  /**
+   * @deprecated use {@link #getConsumerLagBasedOnMetrics(PubSubTopicPartition)} instead
+   */
+  default long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
+    return getConsumerLagBasedOnMetrics(pubSubTopicPartition);
   }
 
   /**
@@ -139,8 +147,16 @@ public interface PubSubConsumerAdapter extends AutoCloseable, Closeable {
    * @return The latest offset, which is zero or a positive value if an offset was collected by the consumer,
    *         or -1 if the offset cannot be determined or is not applicable.
    */
-  default long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  default long getEndOffsetBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     return -1;
+  }
+
+  @Deprecated
+  /**
+   * @deprecated use {@link #getEndOffsetBasedOnMetrics(PubSubTopicPartition)} instead
+   */
+  default long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    return getEndOffsetBasedOnMetrics(pubSubTopicPartition);
   }
 
   /**
