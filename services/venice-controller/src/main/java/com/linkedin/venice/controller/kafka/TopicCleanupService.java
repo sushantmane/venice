@@ -5,11 +5,11 @@ import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.VeniceControllerMultiClusterConfig;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixReadOnlyStoreConfigRepository;
-import com.linkedin.venice.kafka.TopicManager;
 import com.linkedin.venice.meta.StoreConfig;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.system.store.MetaStoreWriter;
 import com.linkedin.venice.utils.Time;
@@ -359,7 +359,7 @@ public class TopicCleanupService extends AbstractVeniceService {
       /**
        * Find out the total number of partition of version topic, and we will use this info to clean up replica statuses for each partition.
        */
-      int partitionCount = topicManager.partitionsFor(topic).size();
+      int partitionCount = topicManager.getPartitionCount(topic);
       MetaStoreWriter metaStoreWriter = admin.getMetaStoreWriter();
       for (int i = 0; i < partitionCount; ++i) {
         metaStoreWriter.deleteStoreReplicaStatus(clusterName, storeName, version, i);

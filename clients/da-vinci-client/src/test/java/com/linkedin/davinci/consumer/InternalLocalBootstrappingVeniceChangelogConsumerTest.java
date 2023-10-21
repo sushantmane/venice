@@ -138,8 +138,8 @@ public class InternalLocalBootstrappingVeniceChangelogConsumerTest {
     Set<PubSubTopicPartition> assignments = ImmutableSet.of(topicPartition_0, topicPartition_1);
     pubSubConsumer = mock(PubSubConsumerAdapter.class);
     doReturn(assignments).when(pubSubConsumer).getAssignment();
-    doReturn(LOWEST_OFFSET).when(pubSubConsumer).getLatestOffset(topicPartition_0);
-    doReturn(LOWEST_OFFSET).when(pubSubConsumer).getLatestOffset(topicPartition_1);
+    doReturn(LOWEST_OFFSET).when(pubSubConsumer).getEndOffsetBasedOnMetrics(topicPartition_0);
+    doReturn(LOWEST_OFFSET).when(pubSubConsumer).getEndOffsetBasedOnMetrics(topicPartition_1);
     doReturn(0L).when(pubSubConsumer).endOffset(topicPartition_0);
     doReturn(0L).when(pubSubConsumer).endOffset(topicPartition_1);
     when(pubSubConsumer.poll(anyLong())).thenReturn(new HashMap<>());
@@ -184,8 +184,8 @@ public class InternalLocalBootstrappingVeniceChangelogConsumerTest {
     PubSubTopicPartition topicPartition_1 = new PubSubTopicPartitionImpl(changeCaptureTopic, 1);
     Set<PubSubTopicPartition> assignments = ImmutableSet.of(topicPartition_0, topicPartition_1);
     doReturn(assignments).when(pubSubConsumer).getAssignment();
-    doReturn(0L).when(pubSubConsumer).getLatestOffset(topicPartition_0);
-    doReturn(0L).when(pubSubConsumer).getLatestOffset(topicPartition_1);
+    doReturn(0L).when(pubSubConsumer).getEndOffsetBasedOnMetrics(topicPartition_0);
+    doReturn(0L).when(pubSubConsumer).getEndOffsetBasedOnMetrics(topicPartition_1);
     doReturn(1L).when(pubSubConsumer).endOffset(topicPartition_0);
     doReturn(1L).when(pubSubConsumer).endOffset(topicPartition_1);
     when(pubSubConsumer.poll(anyLong())).thenReturn(new HashMap<>());

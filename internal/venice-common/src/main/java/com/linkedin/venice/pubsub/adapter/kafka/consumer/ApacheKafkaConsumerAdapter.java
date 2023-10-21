@@ -329,14 +329,14 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
   }
 
   @Override
-  public long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
+  public long getConsumerLagBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     String topic = pubSubTopicPartition.getPubSubTopic().getName();
     int partition = pubSubTopicPartition.getPartitionNumber();
     return topicPartitionsOffsetsTracker != null ? topicPartitionsOffsetsTracker.getOffsetLag(topic, partition) : -1;
   }
 
   @Override
-  public long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  public long getEndOffsetBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     String topic = pubSubTopicPartition.getPubSubTopic().getName();
     int partition = pubSubTopicPartition.getPartitionNumber();
     return topicPartitionsOffsetsTracker != null ? topicPartitionsOffsetsTracker.getEndOffset(topic, partition) : -1;
