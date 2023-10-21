@@ -17,6 +17,7 @@ import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -160,7 +161,7 @@ public class RealTimeTopicSwitcher {
           srcTopicName,
           partitionCount,
           replicationFactor,
-          TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig.get()),
+          StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig.get()),
           false, // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
           minISR,
           false);
@@ -169,7 +170,7 @@ public class RealTimeTopicSwitcher {
        * If real-time topic already exists, check whether its retention time is correct.
        */
       long topicRetentionTimeInMs = getTopicManager().getTopicRetention(srcTopicName);
-      long expectedRetentionTimeMs = TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig.get());
+      long expectedRetentionTimeMs = StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig.get());
       if (topicRetentionTimeInMs != expectedRetentionTimeMs) {
         getTopicManager().updateTopicRetention(srcTopicName, expectedRetentionTimeMs);
       }

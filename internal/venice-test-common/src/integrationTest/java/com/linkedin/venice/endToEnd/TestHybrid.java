@@ -98,6 +98,7 @@ import com.linkedin.venice.utils.ByteUtils;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
 import com.linkedin.venice.utils.Pair;
+import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.TestMockTime;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.TestWriteUtils;
@@ -255,7 +256,7 @@ public class TestHybrid {
       assertEquals(
           topicManager.getTopicRetention(
               sharedVenice.getPubSubTopicRepository().getTopic(Version.composeRealTimeTopic(storeName))),
-          TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig),
+          StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig),
           "RT retention not configured properly");
       // Make sure RT retention is updated when the rewind time is updated
       long newStreamingRewindSeconds = 600;
@@ -265,7 +266,7 @@ public class TestHybrid {
       assertEquals(
           topicManager.getTopicRetention(
               sharedVenice.getPubSubTopicRepository().getTopic(Version.composeRealTimeTopic(storeName))),
-          TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig),
+          StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig),
           "RT retention not updated properly");
     }
   }

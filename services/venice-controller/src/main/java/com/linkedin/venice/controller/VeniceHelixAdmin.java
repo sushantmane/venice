@@ -200,6 +200,7 @@ import com.linkedin.venice.utils.RedundantExceptionFilter;
 import com.linkedin.venice.utils.RegionUtils;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.SslUtils;
+import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -2511,7 +2512,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                       realTimeTopic,
                       numberOfPartitions,
                       clusterConfig.getKafkaReplicationFactorRTTopics(),
-                      TopicManager.getExpectedRetentionTimeInMs(store, store.getHybridStoreConfig()),
+                      StoreUtils.getExpectedRetentionTimeInMs(store, store.getHybridStoreConfig()),
                       false,
                       // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
                       clusterConfig.getMinInSyncReplicasRealTimeTopics(),
@@ -2522,7 +2523,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                       getTopicManager().getCachedTopicConfig(realTimeTopic);
                   long topicRetentionTimeInMs = getTopicManager().getTopicRetention(pubSubTopicConfiguration);
                   long expectedRetentionTimeMs =
-                      TopicManager.getExpectedRetentionTimeInMs(store, store.getHybridStoreConfig());
+                      StoreUtils.getExpectedRetentionTimeInMs(store, store.getHybridStoreConfig());
                   if (topicRetentionTimeInMs != expectedRetentionTimeMs) {
                     getTopicManager()
                         .updateTopicRetention(realTimeTopic, expectedRetentionTimeMs, pubSubTopicConfiguration);
@@ -4346,7 +4347,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             if (getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic)) {
               // RT already exists, ensure the retention is correct
               getTopicManager()
-                  .updateTopicRetention(rtTopic, TopicManager.getExpectedRetentionTimeInMs(store, finalHybridConfig));
+                  .updateTopicRetention(rtTopic, StoreUtils.getExpectedRetentionTimeInMs(store, finalHybridConfig));
             }
           }
           return store;
@@ -4496,7 +4497,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         // Ensure the topic retention is rolled back too
         getTopicManager().updateTopicRetention(
             rtTopic,
-            TopicManager.getExpectedRetentionTimeInMs(originalStore, originalStore.getHybridStoreConfig()));
+            StoreUtils.getExpectedRetentionTimeInMs(originalStore, originalStore.getHybridStoreConfig()));
       }
       LOGGER.info(
           "Successfully rolled back changes to store: {} in cluster: {}. Will now throw the original exception: {}.",

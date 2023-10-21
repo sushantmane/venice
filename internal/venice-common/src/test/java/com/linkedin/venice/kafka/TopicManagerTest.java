@@ -55,6 +55,7 @@ import com.linkedin.venice.unit.kafka.consumer.MockInMemoryConsumer;
 import com.linkedin.venice.unit.kafka.consumer.poll.RandomPollStrategy;
 import com.linkedin.venice.unit.kafka.producer.MockInMemoryProducerAdapter;
 import com.linkedin.venice.utils.AvroRecordUtils;
+import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
@@ -618,9 +619,8 @@ public class TopicManagerTest {
         BufferReplayPolicy.REWIND_FROM_EOP);
 
     // Since bootstrapToOnlineTimeout + rewind time + buffer (2 days) < 5 days, retention will be set to 5 days
-    Assert.assertEquals(
-        TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind),
-        5 * Time.MS_PER_DAY);
+    Assert
+        .assertEquals(StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind), 5 * Time.MS_PER_DAY);
   }
 
   @Test
@@ -640,9 +640,8 @@ public class TopicManagerTest {
 
     // Since bootstrapToOnlineTimeout + rewind time + buffer (2 days) > 5 days, retention will be set to the computed
     // value
-    Assert.assertEquals(
-        TopicManager.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind),
-        7 * Time.MS_PER_DAY);
+    Assert
+        .assertEquals(StoreUtils.getExpectedRetentionTimeInMs(store, hybridStoreConfig2DayRewind), 7 * Time.MS_PER_DAY);
   }
 
   @Test
