@@ -738,4 +738,8 @@ public class TopicManager implements Closeable {
   public boolean containsTopicCached(PubSubTopic pubSubTopic) {
     return cachedPubSubMetadataGetter.containsTopic(this, pubSubTopic);
   }
+
+  public void invalidateCache(PubSubTopic pubSubTopic) {
+    // todo(sushant): invalidate cache for all partitions of this topic
+  }
 }
