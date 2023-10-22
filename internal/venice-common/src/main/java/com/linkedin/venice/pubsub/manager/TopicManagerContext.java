@@ -14,15 +14,18 @@ import io.tehuti.metrics.MetricsRepository;
 import java.util.Objects;
 
 
+/**
+ * A context object that contains all the dependencies needed by {@link TopicManager}.
+ */
 public class TopicManagerContext {
-  private final long pubSubOperationTimeoutMs;
-  private final long topicDeletionStatusPollIntervalMs;
-  private final long topicMinLogCompactionLagMs;
   private final PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory;
   private final PubSubConsumerAdapterFactory<PubSubConsumerAdapter> pubSubConsumerAdapterFactory;
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
   private final PubSubPropertiesSupplier pubSubPropertiesSupplier;
+  private final long pubSubOperationTimeoutMs;
+  private final long topicDeletionStatusPollIntervalMs;
+  private final long topicMinLogCompactionLagMs;
   private final long topicOffsetCheckIntervalMs;
 
   private TopicManagerContext(Builder builder) {
@@ -91,14 +94,14 @@ public class TopicManagerContext {
   }
 
   public static class Builder {
-    private long pubSubOperationTimeoutMs = DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
-    private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
-    private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory;
     private PubSubConsumerAdapterFactory<PubSubConsumerAdapter> pubSubConsumerAdapterFactory;
     private PubSubTopicRepository pubSubTopicRepository;
     private MetricsRepository metricsRepository;
     private PubSubPropertiesSupplier pubSubPropertiesSupplier;
+    private long pubSubOperationTimeoutMs = DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+    private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
+    private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
