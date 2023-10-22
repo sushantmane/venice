@@ -337,7 +337,7 @@ public class TopicManager implements Closeable {
     return false;
   }
 
-  public synchronized void updateTopicCompactionPolicy(PubSubTopic topic, boolean expectedLogCompacted) {
+  public void updateTopicCompactionPolicy(PubSubTopic topic, boolean expectedLogCompacted) {
     updateTopicCompactionPolicy(topic, expectedLogCompacted, -1);
   }
 
@@ -349,10 +349,8 @@ public class TopicManager implements Closeable {
    *                              override the default config
    * @throws PubSubTopicDoesNotExistException, if the topic doesn't exist
    */
-  public synchronized void updateTopicCompactionPolicy(
-      PubSubTopic topic,
-      boolean expectedLogCompacted,
-      long minLogCompactionLagMs) throws PubSubTopicDoesNotExistException {
+  public void updateTopicCompactionPolicy(PubSubTopic topic, boolean expectedLogCompacted, long minLogCompactionLagMs)
+      throws PubSubTopicDoesNotExistException {
     long expectedMinLogCompactionLagMs = 0l;
     if (expectedLogCompacted) {
       if (minLogCompactionLagMs > 0) {
@@ -593,9 +591,7 @@ public class TopicManager implements Closeable {
    * @return true if the topic exists and all its partitions have at least one in-sync replica
    *         false if the topic does not exist at all or if it exists but isn't completely available
    */
-  public synchronized boolean containsTopicAndAllPartitionsAreOnline(
-      PubSubTopic topic,
-      Integer expectedPartitionCount) {
+  public boolean containsTopicAndAllPartitionsAreOnline(PubSubTopic topic, Integer expectedPartitionCount) {
     if (!containsTopic(topic)) {
       return false;
     }
