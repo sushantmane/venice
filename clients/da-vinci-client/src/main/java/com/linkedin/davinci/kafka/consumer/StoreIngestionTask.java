@@ -1449,7 +1449,12 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       LOGGER.error("Error while closing venice view writer", e);
     }
 
-    topicManagerRepository.getTopicManager().invalidateCache(versionTopic);
+    if (topicManagerRepository != null) {
+      List<TopicManager> topicManagers = topicManagerRepository.getAllTopicManagers();
+      for (TopicManager topicManager: topicManagers) {
+        topicManager.invalidateCache(versionTopic);
+      }
+    }
 
     close();
     synchronized (this) {

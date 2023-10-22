@@ -4,6 +4,8 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.utils.lazy.Lazy;
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,6 +45,10 @@ public class TopicManagerRepository implements Closeable {
   public TopicManager getTopicManager(String pubSubClusterAddress) {
     return topicManagersMap
         .computeIfAbsent(pubSubClusterAddress, k -> new TopicManager(topicManagerContext, pubSubClusterAddress));
+  }
+
+  public List<TopicManager> getAllTopicManagers() {
+    return new ArrayList<>(topicManagersMap.values());
   }
 
   // TODO: use async and concurrent close
