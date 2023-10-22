@@ -1297,8 +1297,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           }
 
           // Fall back to calculate offset lag in the old way
-          return (cachedPubSubMetadataGetter
-              .getOffset(getTopicManager(kafkaSourceAddress), currentLeaderTopic, pcs.getUserPartition()) - 1)
+          return (getTopicManager(kafkaSourceAddress).getOffset(currentLeaderTopic, pcs.getUserPartition()) - 1)
               - pcs.getLeaderConsumedUpstreamRTOffset(kafkaSourceAddress);
         })
         .sum();

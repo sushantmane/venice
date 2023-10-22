@@ -6,6 +6,7 @@ import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
+import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
@@ -67,6 +68,7 @@ public class TopicManager implements Closeable {
   private final Lazy<PubSubAdminAdapter> pubSubWriteOnlyAdminAdapter;
   private final Lazy<PubSubAdminAdapter> pubSubReadOnlyAdminAdapter;
   private final PartitionOffsetFetcher partitionOffsetFetcher;
+  private final CachedPubSubMetadataGetter cachedPubSubMetadataGetter;
 
   // It's expensive to grab the topic config over and over again, and it changes infrequently. So we temporarily cache
   // queried configs.
@@ -78,9 +80,17 @@ public class TopicManager implements Closeable {
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
     this.topicManagerContext = topicManagerContext;
+    logger.info(
+        "Creating TopicManager for PubSub cluster address: {} with context: {}",
+        pubSubClusterAddress,
+        topicManagerContext);
+
     this.pubSubTopicRepository = topicManagerContext.getPubSubTopicRepository();
     Optional<MetricsRepository> optionalMetricsRepository =
         Optional.ofNullable(topicManagerContext.getMetricsRepository());
+
+    this.cachedPubSubMetadataGetter =
+        new CachedPubSubMetadataGetter(topicManagerContext.getTopicOffsetCheckIntervalMs());
 
     this.pubSubReadOnlyAdminAdapter = Lazy.of(() -> {
       PubSubAdminAdapter pubSubReadOnlyAdmin = topicManagerContext.getPubSubAdminAdapterFactory()
@@ -703,4 +713,29 @@ public class TopicManager implements Closeable {
     }
   }
 
+  /*------------------------- CachedPubSubMetadataGetter -------------------------*/
+  public long getOffset(PubSubTopic pubSubTopic, int partitionId) {
+    return cachedPubSubMetadataGetter.getOffset(this, pubSubTopic, partitionId);
+  }
+
+  public long getOffset(PubSubTopicPartition pubSubTopicPartition) {
+    return cachedPubSubMetadataGetter
+        .getOffset(this, pubSubTopicPartition.getPubSubTopic(), pubSubTopicPartition.getPartitionNumber());
+  }
+
+  public long getEarliestOffset(PubSubTopic pubSubTopic, int partitionId) {
+    return getEarliestOffset(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
+  }
+
+  public long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    return cachedPubSubMetadataGetter.getEarliestOffset(this, pubSubTopicPartition);
+  }
+
+  public long getProducerTimestampOfLastDataMessage(PubSubTopicPartition pubSubTopicPartition) {
+    return cachedPubSubMetadataGetter.getProducerTimestampOfLastDataMessage(this, pubSubTopicPartition);
+  }
+
+  public boolean containsTopicCached(PubSubTopic pubSubTopic) {
+    return cachedPubSubMetadataGetter.containsTopic(this, pubSubTopic);
+  }
 }

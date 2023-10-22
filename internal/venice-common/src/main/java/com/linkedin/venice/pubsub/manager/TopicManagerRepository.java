@@ -40,10 +40,9 @@ public class TopicManagerRepository implements Closeable {
     return localTopicManager.get();
   }
 
-  public TopicManager getTopicManager(String destPubSubClusterAddress) {
-    return topicManagersMap.computeIfAbsent(
-        destPubSubClusterAddress,
-        k -> new TopicManager(topicManagerContext, destPubSubClusterAddress));
+  public TopicManager getTopicManager(String pubSubClusterAddress) {
+    return topicManagersMap
+        .computeIfAbsent(pubSubClusterAddress, k -> new TopicManager(topicManagerContext, pubSubClusterAddress));
   }
 
   // TODO: use async and concurrent close

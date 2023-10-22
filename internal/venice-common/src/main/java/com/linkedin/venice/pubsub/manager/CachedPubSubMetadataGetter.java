@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
  * Because get real-time topic offset, get producer timestamp, and check topic existence are expensive, so we will only
  * retrieve such information after the predefined ttlMs
  */
-public class CachedPubSubMetadataGetter {
+class CachedPubSubMetadataGetter {
   private static final Logger LOGGER = LogManager.getLogger(CachedPubSubMetadataGetter.class);
   private static final int DEFAULT_MAX_RETRY = 10;
 
@@ -30,7 +30,7 @@ public class CachedPubSubMetadataGetter {
   private final Map<PubSubMetadataCacheKey, ValueAndExpiryTime<Long>> offsetCache;
   private final Map<PubSubMetadataCacheKey, ValueAndExpiryTime<Long>> lastProducerTimestampCache;
 
-  public CachedPubSubMetadataGetter(long timeToLiveMs) {
+  CachedPubSubMetadataGetter(long timeToLiveMs) {
     this.ttlNs = MILLISECONDS.toNanos(timeToLiveMs);
     this.topicExistenceCache = new VeniceConcurrentHashMap<>();
     this.offsetCache = new VeniceConcurrentHashMap<>();
@@ -42,7 +42,7 @@ public class CachedPubSubMetadataGetter {
    * return the next available offset rather the latest used offset. Therefore,
    * the value will be 1 offset greater than what's expected.
    */
-  public long getOffset(TopicManager topicManager, PubSubTopic pubSubTopic, int partitionId) {
+  long getOffset(TopicManager topicManager, PubSubTopic pubSubTopic, int partitionId) {
     final String sourcePubSubServer = topicManager.getPubSubClusterAddress();
     PubSubTopicPartition pubSubTopicPartition = new PubSubTopicPartitionImpl(pubSubTopic, partitionId);
     try {
@@ -58,7 +58,7 @@ public class CachedPubSubMetadataGetter {
     }
   }
 
-  public long getEarliestOffset(TopicManager topicManager, PubSubTopicPartition pubSubTopicPartition) {
+  long getEarliestOffset(TopicManager topicManager, PubSubTopicPartition pubSubTopicPartition) {
     final String sourcePubSubServer = topicManager.getPubSubClusterAddress();
     try {
       return fetchMetadata(
@@ -73,9 +73,7 @@ public class CachedPubSubMetadataGetter {
     }
   }
 
-  public long getProducerTimestampOfLastDataMessage(
-      TopicManager topicManager,
-      PubSubTopicPartition pubSubTopicPartition) {
+  long getProducerTimestampOfLastDataMessage(TopicManager topicManager, PubSubTopicPartition pubSubTopicPartition) {
     try {
       return fetchMetadata(
           new PubSubMetadataCacheKey(topicManager.getPubSubClusterAddress(), pubSubTopicPartition),
@@ -88,7 +86,7 @@ public class CachedPubSubMetadataGetter {
     }
   }
 
-  public boolean containsTopic(TopicManager topicManager, PubSubTopic pubSubTopic) {
+  boolean containsTopic(TopicManager topicManager, PubSubTopic pubSubTopic) {
     return fetchMetadata(
         new PubSubMetadataCacheKey(
             topicManager.getPubSubClusterAddress(),

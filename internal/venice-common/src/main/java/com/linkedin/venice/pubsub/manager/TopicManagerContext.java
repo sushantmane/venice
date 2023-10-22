@@ -23,6 +23,7 @@ public class TopicManagerContext {
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
   private final PubSubPropertiesSupplier pubSubPropertiesSupplier;
+  private final long topicOffsetCheckIntervalMs;
 
   private TopicManagerContext(Builder builder) {
     this.pubSubOperationTimeoutMs = builder.pubSubOperationTimeoutMs;
@@ -33,6 +34,7 @@ public class TopicManagerContext {
     this.pubSubTopicRepository = builder.pubSubTopicRepository;
     this.metricsRepository = builder.metricsRepository;
     this.pubSubPropertiesSupplier = builder.pubSubPropertiesSupplier;
+    this.topicOffsetCheckIntervalMs = builder.topicOffsetCheckIntervalMs;
   }
 
   public long getPubSubOperationTimeoutMs() {
@@ -71,6 +73,10 @@ public class TopicManagerContext {
     return pubSubPropertiesSupplier.get(pubSubBootstrapServers);
   }
 
+  public long getTopicOffsetCheckIntervalMs() {
+    return topicOffsetCheckIntervalMs;
+  }
+
   public interface PubSubPropertiesSupplier {
     VeniceProperties get(String pubSubBootstrapServers);
   }
@@ -79,9 +85,9 @@ public class TopicManagerContext {
   public String toString() {
     return "TopicManagerContext{" + ", pubSubOperationTimeoutMs=" + pubSubOperationTimeoutMs
         + ", topicDeletionStatusPollIntervalMs=" + topicDeletionStatusPollIntervalMs + ", topicMinLogCompactionLagMs="
-        + topicMinLogCompactionLagMs + ", pubSubAdminAdapterFactory="
-        + pubSubAdminAdapterFactory.getClass().getSimpleName() + ", pubSubConsumerAdapterFactory="
-        + pubSubConsumerAdapterFactory.getClass().getSimpleName() + '}';
+        + topicMinLogCompactionLagMs + ", topicOffsetCheckIntervalMs=" + topicOffsetCheckIntervalMs
+        + ", pubSubAdminAdapterFactory=" + pubSubAdminAdapterFactory.getClass().getSimpleName()
+        + ", pubSubConsumerAdapterFactory=" + pubSubConsumerAdapterFactory.getClass().getSimpleName() + '}';
   }
 
   public static class Builder {
@@ -93,6 +99,7 @@ public class TopicManagerContext {
     private PubSubTopicRepository pubSubTopicRepository;
     private MetricsRepository metricsRepository;
     private PubSubPropertiesSupplier pubSubPropertiesSupplier;
+    private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
       this.pubSubOperationTimeoutMs = pubSubOperationTimeoutMs;
@@ -137,6 +144,11 @@ public class TopicManagerContext {
     public Builder setPubSubProperties(PubSubPropertiesSupplier pubSubPropertiesSupplier) {
       this.pubSubPropertiesSupplier =
           Objects.requireNonNull(pubSubPropertiesSupplier, "pubSubPropertiesSupplier cannot be null");
+      return this;
+    }
+
+    public Builder setTopicOffsetCheckIntervalMs(long topicOffsetCheckIntervalMs) {
+      this.topicOffsetCheckIntervalMs = topicOffsetCheckIntervalMs;
       return this;
     }
 
