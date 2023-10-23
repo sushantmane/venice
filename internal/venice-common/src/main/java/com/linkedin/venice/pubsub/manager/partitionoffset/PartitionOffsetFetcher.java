@@ -29,7 +29,7 @@ public interface PartitionOffsetFetcher extends Closeable {
    */
   long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries);
 
-  List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic);
+  List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic);
 
   long getOffsetByTimeIfOutOfRange(PubSubTopicPartition pubSubTopicPartition, long timestamp);
 

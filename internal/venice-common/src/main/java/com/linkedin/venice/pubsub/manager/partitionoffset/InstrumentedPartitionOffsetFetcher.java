@@ -88,9 +88,9 @@ public class InstrumentedPartitionOffsetFetcher implements PartitionOffsetFetche
   }
 
   @Override
-  public List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic) {
+  public List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic) {
     final long startTimeMs = time.getMilliseconds();
-    List<PubSubTopicPartitionInfo> res = partitionOffsetFetcher.partitionsFor(topic);
+    List<PubSubTopicPartitionInfo> res = partitionOffsetFetcher.getTopicPartitionInfo(topic);
     stats.recordLatency(
         PartitionOffsetFetcherStats.OCCURRENCE_LATENCY_SENSOR_TYPE.PARTITIONS_FOR,
         Utils.calculateDurationMs(time, startTimeMs));

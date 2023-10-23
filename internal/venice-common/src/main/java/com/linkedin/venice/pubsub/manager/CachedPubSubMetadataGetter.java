@@ -11,6 +11,7 @@ import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
@@ -46,10 +47,13 @@ class CachedPubSubMetadataGetter {
     final String sourcePubSubServer = topicManager.getPubSubClusterAddress();
     PubSubTopicPartition pubSubTopicPartition = new PubSubTopicPartitionImpl(pubSubTopic, partitionId);
     try {
-      return fetchMetadata(
-          new PubSubMetadataCacheKey(sourcePubSubServer, pubSubTopicPartition),
-          offsetCache,
-          () -> topicManager.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, DEFAULT_MAX_RETRY));
+      return fetchMetadata(new PubSubMetadataCacheKey(sourcePubSubServer, pubSubTopicPartition), offsetCache, () -> {
+        try {
+          return topicManager.getPartitionEarliestOffsetWithRetriesAsync(pubSubTopicPartition, DEFAULT_MAX_RETRY).get();
+        } catch (InterruptedException | ExecutionException e) {
+          throw new RuntimeException(e);
+        }
+      });
     } catch (PubSubTopicDoesNotExistException e) {
       // It's observed in production that with java based admin client the topic may not be found temporarily, return
       // error code
@@ -64,7 +68,7 @@ class CachedPubSubMetadataGetter {
       return fetchMetadata(
           new PubSubMetadataCacheKey(sourcePubSubServer, pubSubTopicPartition),
           offsetCache,
-          () -> topicManager.getPartitionEarliestOffsetAndRetry(pubSubTopicPartition, DEFAULT_MAX_RETRY));
+          () -> topicManager.getPartitionEarliestOffsetWithRetries(pubSubTopicPartition, DEFAULT_MAX_RETRY));
     } catch (PubSubTopicDoesNotExistException e) {
       // It's observed in production that with java based admin client the topic may not be found temporarily, return
       // error code

@@ -77,7 +77,7 @@ public class TopicManagerIntegrationTest extends TopicManagerTest {
     Runnable[] tasks = { () -> topicManager.getPartitionOffsetByTime(pubSubTopicPartition, checkTimestamp),
         () -> topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1),
         () -> topicManager.getPartitionCount(topic),
-        () -> topicManager.getPartitionEarliestOffsetAndRetry(pubSubTopicPartition, 1),
+        () -> topicManager.getPartitionEarliestOffsetWithRetries(pubSubTopicPartition, 1),
         () -> topicManager.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, 1),
         () -> topicManager.getTopicLatestOffsets(topic) };
 

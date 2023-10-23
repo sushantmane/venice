@@ -33,14 +33,14 @@ public class CachedPubSubMetadataGetterTest {
     String testBrokerUrl = "I_Am_A_Broker_dot_com.com";
     Long earliestOffset = 1L;
     when(mockTopicManager.getPubSubClusterAddress()).thenReturn(testBrokerUrl);
-    when(mockTopicManager.getPartitionEarliestOffsetAndRetry(any(), anyInt())).thenReturn(earliestOffset);
+    when(mockTopicManager.getPartitionEarliestOffsetWithRetries(any(), anyInt())).thenReturn(earliestOffset);
     Assert.assertEquals(
         (Long) cachedPubSubMetadataGetter.getEarliestOffset(mockTopicManager, testTopicPartition),
         earliestOffset);
 
     TopicManager mockTopicManagerThatThrowsException = mock(TopicManager.class);
     when(mockTopicManagerThatThrowsException.getPubSubClusterAddress()).thenReturn(testBrokerUrl);
-    when(mockTopicManagerThatThrowsException.getPartitionEarliestOffsetAndRetry(any(), anyInt()))
+    when(mockTopicManagerThatThrowsException.getPartitionEarliestOffsetWithRetries(any(), anyInt()))
         .thenThrow(PubSubTopicDoesNotExistException.class);
 
     // Even though we're passing a weird topic manager, we should have cached the last value, so this should return the

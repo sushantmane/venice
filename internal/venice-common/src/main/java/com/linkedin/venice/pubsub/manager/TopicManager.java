@@ -42,6 +42,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -561,7 +562,7 @@ public class TopicManager implements Closeable {
     if (!containsTopic(topic)) {
       return false;
     }
-    List<PubSubTopicPartitionInfo> partitionInfoList = partitionOffsetFetcher.partitionsFor(topic);
+    List<PubSubTopicPartitionInfo> partitionInfoList = topicMetadataFetcher.getTopicPartitionInfo(topic);
     if (partitionInfoList == null) {
       logger.warn("getConsumer().partitionsFor() returned null for topic: {}", topic);
       return false;
@@ -605,12 +606,19 @@ public class TopicManager implements Closeable {
     return partitionOffsetFetcher.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, retries);
   }
 
+  // Make cache call TopicMetadataFetcher.getTopicLatestOffsets directly
+  public CompletableFuture<Long> getPartitionEarliestOffsetWithRetriesAsync(
+      PubSubTopicPartition pubSubTopicPartition,
+      int retries) {
+    return topicMetadataFetcher.getPartitionEarliestOffsetWithRetriesAsync(pubSubTopicPartition, retries);
+  }
+
   public long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries) {
     return partitionOffsetFetcher.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, retries);
   }
 
-  public long getPartitionEarliestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries) {
-    return partitionOffsetFetcher.getPartitionEarliestOffsetAndRetry(pubSubTopicPartition, retries);
+  public long getPartitionEarliestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
+    return topicMetadataFetcher.getPartitionEarliestOffsetWithRetries(pubSubTopicPartition, retries);
   }
 
   /**
@@ -621,17 +629,17 @@ public class TopicManager implements Closeable {
   }
 
   /**
-   * Get a list of {@link PubSubTopicPartitionInfo} objects for the specified topic.
-   * @param topic
-   * @return
+   * Get information about all partitions for a given topic.
+   * @param pubSubTopic the topic to get partition info for
+   * @return a list of {@link PubSubTopicPartitionInfo} for the given topic
    */
-  public List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic) {
-    return null;
+  public List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic pubSubTopic) {
+    return topicMetadataFetcher.getTopicPartitionInfo(pubSubTopic);
   }
 
+  // todo: evaluate if we can get topic partition count from admin clients instead of consumer clients
   public int getPartitionCount(PubSubTopic pubSubTopic) {
-    // get partition count from admin client
-    return partitionOffsetFetcher.partitionsFor(pubSubTopic).size();
+    return getTopicPartitionInfo(pubSubTopic).size();
   }
 
   public String getPubSubClusterAddress() {

@@ -391,7 +391,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
   }
 
   @Override
-  public List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic) {
+  public List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic) {
     try (AutoCloseableLock ignore = AutoCloseableLock.of(adminConsumerLock)) {
       return pubSubConsumer.get().partitionsFor(topic);
     }
