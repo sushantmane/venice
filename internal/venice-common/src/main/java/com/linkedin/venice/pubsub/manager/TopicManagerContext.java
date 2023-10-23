@@ -28,6 +28,7 @@ public class TopicManagerContext {
   private final long topicMinLogCompactionLagMs;
   private final long topicOffsetCheckIntervalMs;
   private final int topicMetadataFetcherPoolSize;
+  private final int topicMetadataFetcherThreadPoolSize;
 
   private TopicManagerContext(Builder builder) {
     this.pubSubOperationTimeoutMs = builder.pubSubOperationTimeoutMs;
@@ -40,6 +41,7 @@ public class TopicManagerContext {
     this.pubSubPropertiesSupplier = builder.pubSubPropertiesSupplier;
     this.topicOffsetCheckIntervalMs = builder.topicOffsetCheckIntervalMs;
     this.topicMetadataFetcherPoolSize = builder.topicMetadataFetcherPoolSize;
+    this.topicMetadataFetcherThreadPoolSize = builder.topicMetadataFetcherThreadPoolSize;
   }
 
   public long getPubSubOperationTimeoutMs() {
@@ -86,6 +88,10 @@ public class TopicManagerContext {
     return topicMetadataFetcherPoolSize;
   }
 
+  public int getTopicMetadataFetcherThreadPoolSize() {
+    return topicMetadataFetcherThreadPoolSize;
+  }
+
   public interface PubSubPropertiesSupplier {
     VeniceProperties get(String pubSubBootstrapServers);
   }
@@ -95,7 +101,8 @@ public class TopicManagerContext {
     return "TopicManagerContext{" + ", pubSubOperationTimeoutMs=" + pubSubOperationTimeoutMs
         + ", topicDeletionStatusPollIntervalMs=" + topicDeletionStatusPollIntervalMs + ", topicMinLogCompactionLagMs="
         + topicMinLogCompactionLagMs + ", topicOffsetCheckIntervalMs=" + topicOffsetCheckIntervalMs
-        + ", topicMetadataFetcherPoolSize=" + topicMetadataFetcherPoolSize + ", pubSubAdminAdapterFactory="
+        + ", topicMetadataFetcherPoolSize=" + topicMetadataFetcherPoolSize + ", topicMetadataFetcherThreadPoolSize="
+        + topicMetadataFetcherThreadPoolSize + ", pubSubAdminAdapterFactory="
         + pubSubAdminAdapterFactory.getClass().getSimpleName() + ", pubSubConsumerAdapterFactory="
         + pubSubConsumerAdapterFactory.getClass().getSimpleName() + '}';
   }
@@ -110,7 +117,8 @@ public class TopicManagerContext {
     private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
     private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
-    private int topicMetadataFetcherPoolSize = 1;
+    private int topicMetadataFetcherPoolSize = 2; // 2 fetchers per broker
+    private int topicMetadataFetcherThreadPoolSize = Runtime.getRuntime().availableProcessors();
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
       this.pubSubOperationTimeoutMs = pubSubOperationTimeoutMs;
@@ -164,7 +172,18 @@ public class TopicManagerContext {
     }
 
     public Builder setTopicMetadataFetcherPoolSize(int topicMetadataFetcherPoolSize) {
+      if (topicMetadataFetcherPoolSize < 1) {
+        throw new IllegalArgumentException("topicMetadataFetcherPoolSize must be at least 1");
+      }
       this.topicMetadataFetcherPoolSize = topicMetadataFetcherPoolSize;
+      return this;
+    }
+
+    public Builder setTopicMetadataFetcherThreadPoolSize(int topicMetadataFetcherThreadPoolSize) {
+      if (topicMetadataFetcherThreadPoolSize < 1) {
+        throw new IllegalArgumentException("topicMetadataFetcherThreadPoolSize must be at least 1");
+      }
+      this.topicMetadataFetcherThreadPoolSize = topicMetadataFetcherThreadPoolSize;
       return this;
     }
 

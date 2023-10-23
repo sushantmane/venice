@@ -3,6 +3,9 @@ package com.linkedin.venice.pubsub.manager;
 import com.linkedin.venice.annotation.NotThreadsafe;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
+import com.linkedin.venice.utils.lazy.Lazy;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -16,17 +19,23 @@ import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
  */
 @NotThreadsafe
 class TopicMetadataFetcher {
-  private final PubSubAdminAdapter pubSubAdminAdapter;
-  private final PubSubConsumerAdapter pubSubConsumerAdapter;
-  private final String pubSubClusterAddress;
+  private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcher.class);
 
-  TopicMetadataFetcher(
-      PubSubAdminAdapter pubSubAdminAdapter,
-      PubSubConsumerAdapter pubSubConsumerAdapter,
-      String pubSubClusterAddress) {
-    this.pubSubAdminAdapter = pubSubAdminAdapter;
-    this.pubSubConsumerAdapter = pubSubConsumerAdapter;
-    this.pubSubClusterAddress = pubSubClusterAddress;
+  private final String pubSubClusterAddress;
+  private final Lazy<PubSubAdminAdapter> pubSubAdminAdapterLazy;
+  private final Lazy<PubSubConsumerAdapter> pubSubConsumerAdapterLazy;
+
+  TopicMetadataFetcher(TopicMetadataFetcherContext fetcherContext) {
+    this.pubSubClusterAddress = fetcherContext.getPubSubClusterAddress();
+    this.pubSubAdminAdapterLazy = fetcherContext.getPubSubAdminAdapterLazy();
+    this.pubSubConsumerAdapterLazy = Lazy.of(
+        () -> fetcherContext.getPubSubConsumerAdapterFactory()
+            .create(
+                fetcherContext.getPubSubProperties(pubSubClusterAddress),
+                false,
+                fetcherContext.getPubSubMessageDeserializer(),
+                pubSubClusterAddress));
+    ;
   }
 
 }

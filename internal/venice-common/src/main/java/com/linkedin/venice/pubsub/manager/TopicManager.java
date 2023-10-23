@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub.manager;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
@@ -24,6 +25,7 @@ import com.linkedin.venice.pubsub.manager.partitionoffset.InstrumentedPartitionO
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcher;
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherImpl;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
+import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.SystemTime;
@@ -44,6 +46,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,10 +67,22 @@ public class TopicManager implements Closeable {
 
   private final String pubSubClusterAddress;
   private final TopicManagerContext topicManagerContext;
-  private final BlockingQueue<TopicMetadataFetcher> topicMetadataFetcherPool;
-  private final Lazy<PubSubAdminAdapter> pubSubAdminAdapterShared;
+  private final Lazy<PubSubAdminAdapter> pubSubAdminAdapterShared = Lazy.of(this::createdPubSubAdminAdapter);
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
+
+  /**
+   * All metadata operations that are carried out by pubsub consumer should be done via TopicMetadataFetcher
+   * obtained from this pool. PubSubConsumerAdapter is not thread-safe, so we need to use a pool to make sure
+   * that only one thread is using a consumer at a time.
+   */
+  private final BlockingQueue<TopicMetadataFetcher> topicMetadataFetcherPool;
+
+  /**
+   * This thread pool is used to run TopicMetadataFetcher. We use a thread pool to make sure that we don't
+   * create too many threads and not monopolize ForkJoinPool.commonPool().
+   */
+  private final ThreadPoolExecutor topicMetadataFetcherThreadPool;
 
   // old fellas
   private final PartitionOffsetFetcher partitionOffsetFetcher;
@@ -78,71 +93,74 @@ public class TopicManager implements Closeable {
   Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache =
       Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-  public TopicManager(TopicManagerContext topicManagerContext, String pubSubClusterAddress) {
+  public TopicManager(TopicManagerContext tmContext, String pubSubClusterAddress) {
     this.logger = LogManager.getLogger(
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
-    this.topicManagerContext = topicManagerContext;
-    this.pubSubTopicRepository = topicManagerContext.getPubSubTopicRepository();
-    this.metricsRepository = topicManagerContext.getMetricsRepository();
-    this.topicMetadataFetcherPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
-    this.topicMetadataFetcherPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
-
-    this.cachedPubSubMetadataGetter =
-        new CachedPubSubMetadataGetter(topicManagerContext.getTopicOffsetCheckIntervalMs());
-
-    this.pubSubAdminAdapterShared = Lazy.of(() -> {
-      PubSubAdminAdapter pubSubAdminAdapter = topicManagerContext.getPubSubAdminAdapterFactory()
-          .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
-      pubSubAdminAdapter = createInstrumentedPubSubAdmin(
-          metricsRepository,
-          "TopicManagerPubSubAdminStats",
-          pubSubAdminAdapter,
-          pubSubClusterAddress);
-      logger
-          .info("TopicManager is using read-only pubsub admin client of class: {}", pubSubAdminAdapter.getClassName());
-      return pubSubAdminAdapter;
-    });
+    this.topicManagerContext = tmContext;
+    this.pubSubTopicRepository = tmContext.getPubSubTopicRepository();
+    this.metricsRepository = tmContext.getMetricsRepository();
+    this.topicMetadataFetcherPool = new LinkedBlockingQueue<>(tmContext.getTopicMetadataFetcherPoolSize());
 
     this.partitionOffsetFetcher = createDefaultPartitionOffsetFetcher(
-        topicManagerContext.getPubSubConsumerAdapterFactory(),
-        topicManagerContext.getPubSubProperties(pubSubClusterAddress),
+        tmContext.getPubSubConsumerAdapterFactory(),
+        tmContext.getPubSubProperties(pubSubClusterAddress),
         pubSubClusterAddress,
         pubSubAdminAdapterShared,
-        topicManagerContext.getPubSubOperationTimeoutMs(),
+        tmContext.getPubSubOperationTimeoutMs(),
         metricsRepository);
 
-    logger.info(
-        "Created TopicManager for PubSub cluster address: {} with context: {}",
-        pubSubClusterAddress,
-        topicManagerContext);
-  }
-
-  private PubSubAdminAdapter createInstrumentedPubSubAdmin(
-      MetricsRepository metricsRepository,
-      String statsNamePrefix,
-      PubSubAdminAdapter pubSubAdmin,
-      String pubSubBootstrapServers) {
-    if (metricsRepository != null) {
-      // Use pub sub bootstrap server to identify which pub sub admin client stats it is
-      final String pubSubAdminStatsName =
-          String.format("%s_%s_%s", statsNamePrefix, pubSubAdmin.getClassName(), pubSubBootstrapServers);
-      PubSubAdminAdapter instrumentedPubSubAdminAdapter =
-          new PubSubInstrumentedAdminAdapter(pubSubAdmin, metricsRepository, pubSubAdminStatsName);
-      logger.info(
-          "Created instrumented pubsub admin client for pubsub cluster with bootstrap "
-              + "servers: {} and with stat name prefix: {}",
-          pubSubBootstrapServers,
-          statsNamePrefix);
-      return instrumentedPubSubAdminAdapter;
-    } else {
-      logger.info(
-          "Created non-instrumented pubsub admin client for pubsub cluster with bootstrap servers: {}",
-          pubSubBootstrapServers);
-      return pubSubAdmin;
+    TopicMetadataFetcherContext.Builder fetcherContextBuilder =
+        new TopicMetadataFetcherContext.Builder().setPubSubClusterAddress(pubSubClusterAddress)
+            .setPubSubAdminAdapterLazy(pubSubAdminAdapterShared)
+            .setPubSubConsumerAdapterFactory(tmContext.getPubSubConsumerAdapterFactory())
+            .setPubSubProperties(tmContext.getPubSubProperties(pubSubClusterAddress))
+            .setPubSubMessageDeserializer(PubSubMessageDeserializer.getInstance());
+    for (int i = 0; i < tmContext.getTopicMetadataFetcherPoolSize(); i++) {
+      fetcherContextBuilder.setFetcherId(i);
+      TopicMetadataFetcher topicMetadataFetcher = new TopicMetadataFetcher(fetcherContextBuilder.build());
+      if (!topicMetadataFetcherPool.offer(topicMetadataFetcher)) {
+        throw new VeniceException("Failed to initialize topicMetadataFetcherPool");
+      }
     }
+    this.topicMetadataFetcherThreadPool = new ThreadPoolExecutor(
+        tmContext.getTopicMetadataFetcherThreadPoolSize(),
+        tmContext.getTopicMetadataFetcherThreadPoolSize(),
+        15L,
+        TimeUnit.MINUTES,
+        new LinkedBlockingQueue<>(),
+        new DaemonThreadFactory("TopicMetadataFetcherThreadPool"));
+    this.topicMetadataFetcherThreadPool.allowCoreThreadTimeOut(true);
+
+    this.cachedPubSubMetadataGetter = new CachedPubSubMetadataGetter(tmContext.getTopicOffsetCheckIntervalMs());
+
+    logger.info(
+        "Created topic manager for the pubsub cluster address: {} with context: {}",
+        pubSubClusterAddress,
+        tmContext);
   }
 
+  /**
+   * A method used for lazy instantiation of pubsub admin client
+   */
+  private PubSubAdminAdapter createdPubSubAdminAdapter() {
+    logger.info("Creating pubsub admin client for bootstrap servers: {}", pubSubClusterAddress);
+    PubSubAdminAdapter pubSubAdminAdapter = topicManagerContext.getPubSubAdminAdapterFactory()
+        .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
+    if (metricsRepository != null) {
+      String statsName = "TopicManagerPubSubAdminClient" + "_" + pubSubClusterAddress;
+      pubSubAdminAdapter = new PubSubInstrumentedAdminAdapter(pubSubAdminAdapter, metricsRepository, statsName);
+    }
+    logger.info(
+        "Created pubsub admin client of type: {} for bootstrap servers: {}",
+        pubSubAdminAdapter.getClassName(),
+        pubSubClusterAddress);
+    return pubSubAdminAdapter;
+  }
+
+  /**
+   * Use the following method to access the pubsub admin client
+   */
   private PubSubAdminAdapter getAdminClient() {
     return pubSubAdminAdapterShared.get();
   }
