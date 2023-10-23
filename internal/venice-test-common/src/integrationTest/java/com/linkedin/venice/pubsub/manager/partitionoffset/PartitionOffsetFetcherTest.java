@@ -15,7 +15,6 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.lazy.Lazy;
-import java.util.Optional;
 import java.util.Properties;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -53,7 +52,7 @@ public class PartitionOffsetFetcherTest {
         pubSubBrokerWrapper.getAddress(),
         Lazy.of(() -> pubSubAdminAdapterFactory.create(new VeniceProperties(properties), pubSubTopicRepository)),
         Time.MS_PER_SECOND,
-        Optional.empty())) {
+        null)) {
       String topic = Utils.getUniqueString("topic") + "_v1";
       PubSubTopicPartition pubSubTopicPartition =
           new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic(topic), 0);
