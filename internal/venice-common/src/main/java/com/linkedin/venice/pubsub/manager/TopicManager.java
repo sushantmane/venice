@@ -62,7 +62,7 @@ public class TopicManager implements Closeable {
 
   private final String pubSubClusterAddress;
   private final TopicManagerContext topicManagerContext;
-  private final Lazy<PubSubAdminAdapter> pubSubAdminAdapterShared = Lazy.of(this::createdPubSubAdminAdapter);
+  private final Lazy<PubSubAdminAdapter> lazySharedPubSubAdminAdapter = Lazy.of(this::createdPubSubAdminAdapter);
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
 
@@ -89,12 +89,12 @@ public class TopicManager implements Closeable {
         tmContext.getPubSubConsumerAdapterFactory(),
         tmContext.getPubSubProperties(pubSubClusterAddress),
         pubSubClusterAddress,
-        pubSubAdminAdapterShared,
+        lazySharedPubSubAdminAdapter,
         tmContext.getPubSubOperationTimeoutMs(),
         metricsRepository);
 
     this.topicMetadataFetcherPool =
-        new TopicMetadataFetcherPool(pubSubClusterAddress, tmContext, pubSubAdminAdapterShared);
+        new TopicMetadataFetcherPool(pubSubClusterAddress, tmContext, lazySharedPubSubAdminAdapter);
 
     this.cachedPubSubMetadataGetter = new CachedPubSubMetadataGetter(tmContext.getTopicOffsetCheckIntervalMs());
 
@@ -126,7 +126,7 @@ public class TopicManager implements Closeable {
    * Use the following method to access the pubsub admin client
    */
   private PubSubAdminAdapter getAdminClient() {
-    return pubSubAdminAdapterShared.get();
+    return lazySharedPubSubAdminAdapter.get();
   }
 
   /**
@@ -647,7 +647,7 @@ public class TopicManager implements Closeable {
   @Override
   public synchronized void close() {
     Utils.closeQuietlyWithErrorLogged(partitionOffsetFetcher);
-    pubSubAdminAdapterShared.ifPresent(Utils::closeQuietlyWithErrorLogged);
+    lazySharedPubSubAdminAdapter.ifPresent(Utils::closeQuietlyWithErrorLogged);
   }
 
   public static PartitionOffsetFetcher createDefaultPartitionOffsetFetcher(

@@ -29,7 +29,7 @@ class TopicMetadataFetcher implements Closeable {
 
   TopicMetadataFetcher(TopicMetadataFetcherContext fetcherContext) {
     this.pubSubClusterAddress = fetcherContext.getPubSubClusterAddress();
-    this.pubSubAdminAdapterLazy = fetcherContext.getPubSubAdminAdapterLazy();
+    this.pubSubAdminAdapterLazy = fetcherContext.getLazyPubSubAdminAdapter();
     this.pubSubConsumerAdapterLazy = Lazy.of(
         () -> fetcherContext.getPubSubConsumerAdapterFactory()
             .create(

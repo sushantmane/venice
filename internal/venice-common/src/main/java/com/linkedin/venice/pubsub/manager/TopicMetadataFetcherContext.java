@@ -9,7 +9,7 @@ import com.linkedin.venice.utils.lazy.Lazy;
 
 class TopicMetadataFetcherContext {
   private final String pubSubClusterAddress;
-  private final Lazy<PubSubAdminAdapter> pubSubAdminAdapterLazy;
+  private final Lazy<PubSubAdminAdapter> lazyPubSubAdminAdapter;
   private final PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory;
   private final PubSubMessageDeserializer pubSubMessageDeserializer;
   private final VeniceProperties pubSubProperties;
@@ -17,7 +17,7 @@ class TopicMetadataFetcherContext {
 
   private TopicMetadataFetcherContext(Builder builder) {
     this.pubSubClusterAddress = builder.pubSubClusterAddress;
-    this.pubSubAdminAdapterLazy = builder.pubSubAdminAdapterLazy;
+    this.lazyPubSubAdminAdapter = builder.lazyPubSubAdminAdapter;
     this.pubSubConsumerAdapterFactory = builder.pubSubConsumerAdapterFactory;
     this.pubSubProperties = builder.pubSubProperties;
     this.pubSubMessageDeserializer = builder.pubSubMessageDeserializer;
@@ -28,8 +28,8 @@ class TopicMetadataFetcherContext {
     return pubSubClusterAddress;
   }
 
-  public Lazy<PubSubAdminAdapter> getPubSubAdminAdapterLazy() {
-    return pubSubAdminAdapterLazy;
+  public Lazy<PubSubAdminAdapter> getLazyPubSubAdminAdapter() {
+    return lazyPubSubAdminAdapter;
   }
 
   public PubSubConsumerAdapterFactory getPubSubConsumerAdapterFactory() {
@@ -51,7 +51,7 @@ class TopicMetadataFetcherContext {
   static class Builder {
     private String pubSubClusterAddress;
     private VeniceProperties pubSubProperties;
-    private Lazy<PubSubAdminAdapter> pubSubAdminAdapterLazy;
+    private Lazy<PubSubAdminAdapter> lazyPubSubAdminAdapter;
     private PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory;
     private PubSubMessageDeserializer pubSubMessageDeserializer;
     private int fetcherId = -1;
@@ -66,8 +66,8 @@ class TopicMetadataFetcherContext {
       return this;
     }
 
-    public Builder setPubSubAdminAdapterLazy(Lazy<PubSubAdminAdapter> pubSubAdminAdapterLazy) {
-      this.pubSubAdminAdapterLazy = pubSubAdminAdapterLazy;
+    public Builder setLazyPubSubAdminAdapter(Lazy<PubSubAdminAdapter> lazyPubSubAdminAdapter) {
+      this.lazyPubSubAdminAdapter = lazyPubSubAdminAdapter;
       return this;
     }
 

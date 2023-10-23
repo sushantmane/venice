@@ -34,12 +34,12 @@ public class TopicMetadataFetcherPool implements Closeable {
   public TopicMetadataFetcherPool(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
-      Lazy<PubSubAdminAdapter> pubSubAdminAdapterShared) {
+      Lazy<PubSubAdminAdapter> lazySharedPubSubAdminAdapter) {
     topicMetadataFetcherPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
 
     TopicMetadataFetcherContext.Builder fetcherContextBuilder =
         new TopicMetadataFetcherContext.Builder().setPubSubClusterAddress(pubSubClusterAddress)
-            .setPubSubAdminAdapterLazy(pubSubAdminAdapterShared)
+            .setLazyPubSubAdminAdapter(lazySharedPubSubAdminAdapter)
             .setPubSubConsumerAdapterFactory(topicManagerContext.getPubSubConsumerAdapterFactory())
             .setPubSubProperties(topicManagerContext.getPubSubProperties(pubSubClusterAddress))
             .setPubSubMessageDeserializer(PubSubMessageDeserializer.getInstance());
