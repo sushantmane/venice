@@ -3,23 +3,31 @@ package com.linkedin.venice.pubsub.manager;
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT;
 
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
+import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
+import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.lazy.Lazy;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongMaps;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -147,5 +155,57 @@ public class TopicMetadataFetcher implements Closeable {
     for (Closeable closeable: closeables) {
       Utils.closeQuietlyWithErrorLogged(closeable);
     }
+  }
+
+  /*------------------------- PUBLIC APIs -------------------------*/
+
+  // API#1: Get the latest offset for all partitions of a topic
+  public Int2LongMap getTopicLatestOffsets(PubSubTopic topic) {
+    PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
+    try {
+      List<PubSubTopicPartitionInfo> partitionInfoList = pubSubConsumerAdapter.partitionsFor(topic);
+      if (partitionInfoList == null || partitionInfoList.isEmpty()) {
+        LOGGER.warn("Unexpected! Topic: {} has a null partition set, returning empty map for latest offsets", topic);
+        return Int2LongMaps.EMPTY_MAP;
+      }
+      List<PubSubTopicPartition> topicPartitions = partitionInfoList.stream()
+          .map(partitionInfo -> new PubSubTopicPartitionImpl(topic, partitionInfo.partition()))
+          .collect(Collectors.toList());
+
+      Map<PubSubTopicPartition, Long> offsetsByTopicPartitions =
+          pubSubConsumerAdapter.endOffsets(topicPartitions, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+      Int2LongMap offsetsByTopicPartitionIds = new Int2LongOpenHashMap(offsetsByTopicPartitions.size());
+      for (Map.Entry<PubSubTopicPartition, Long> offsetByTopicPartition: offsetsByTopicPartitions.entrySet()) {
+        offsetsByTopicPartitionIds
+            .put(offsetByTopicPartition.getKey().getPartitionNumber(), offsetByTopicPartition.getValue().longValue());
+      }
+      return offsetsByTopicPartitionIds;
+    } finally {
+      releaseConsumer(pubSubConsumerAdapter);
+    }
+  }
+
+  interface PubSubMetadataFetcher {
+    Int2LongMap getTopicLatestOffsets(PubSubTopic topic); //done
+
+    long getPartitionLatestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
+
+    long getPartitionEarliestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries);
+
+    long getPartitionOffsetByTime(PubSubTopicPartition pubSubTopicPartition, long timestamp);
+
+    /**
+     * Get the producer timestamp of the last data message (non-control message) in the given topic partition. In other
+     * words, if the last message in a topic partition is a control message, this method should keep looking at its previous
+     * message(s) until it finds one that is not a control message and gets its producer timestamp.
+     * @param pubSubTopicPartition
+     * @param retries
+     * @return producer timestamp
+     */
+    long getProducerTimestampOfLastDataRecord(PubSubTopicPartition pubSubTopicPartition, int retries);
+
+    List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic);
+
+    long getOffsetByTimeIfOutOfRange(PubSubTopicPartition pubSubTopicPartition, long timestamp);
   }
 }

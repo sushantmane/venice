@@ -598,7 +598,7 @@ public class TopicManager implements Closeable {
    * @return a Map of partition to the latest offset, or an empty map if there's any problem
    */
   public Int2LongMap getTopicLatestOffsets(PubSubTopic topic) {
-    return partitionOffsetFetcher.getTopicLatestOffsets(topic);
+    return topicMetadataFetcher.getTopicLatestOffsets(topic);
   }
 
   public long getPartitionLatestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries) {
