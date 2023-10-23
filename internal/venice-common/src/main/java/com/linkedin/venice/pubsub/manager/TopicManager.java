@@ -66,7 +66,7 @@ public class TopicManager implements Closeable {
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
 
-  private final TopicMetadataFetcherPool topicMetadataFetcherPool;
+  private final TopicMetadataFetcher topicMetadataFetcher;
 
   // old fellas
   private final PartitionOffsetFetcher partitionOffsetFetcher;
@@ -93,8 +93,7 @@ public class TopicManager implements Closeable {
         tmContext.getPubSubOperationTimeoutMs(),
         metricsRepository);
 
-    this.topicMetadataFetcherPool =
-        new TopicMetadataFetcherPool(pubSubClusterAddress, tmContext, lazySharedPubSubAdminAdapter);
+    this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, tmContext, lazySharedPubSubAdminAdapter);
 
     this.cachedPubSubMetadataGetter = new CachedPubSubMetadataGetter(tmContext.getTopicOffsetCheckIntervalMs());
 

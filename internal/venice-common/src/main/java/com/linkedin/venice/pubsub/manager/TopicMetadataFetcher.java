@@ -24,10 +24,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-public class TopicMetadataFetcherPool implements Closeable {
+public class TopicMetadataFetcher implements Closeable {
 
   // logger
-  private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcherPool.class);
+  private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcher.class);
 
   /**
    * Blocking queue is used to ensure single-threaded access to the consumer as they are not thread-safe.
@@ -39,7 +39,7 @@ public class TopicMetadataFetcherPool implements Closeable {
 
   private final PubSubAdminAdapter pubSubAdminAdapter;
 
-  public TopicMetadataFetcherPool(
+  public TopicMetadataFetcher(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
       Lazy<PubSubAdminAdapter> lazySharedPubSubAdminAdapter) {
