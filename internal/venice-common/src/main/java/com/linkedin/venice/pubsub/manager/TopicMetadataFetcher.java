@@ -4,6 +4,8 @@ import com.linkedin.venice.annotation.NotThreadsafe;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.utils.lazy.Lazy;
+import java.io.Closeable;
+import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,7 +20,7 @@ import org.apache.logging.log4j.Logger;
  * This class is only intended to be used by the TopicManager.
  */
 @NotThreadsafe
-class TopicMetadataFetcher {
+class TopicMetadataFetcher implements Closeable {
   private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcher.class);
 
   private final String pubSubClusterAddress;
@@ -38,4 +40,12 @@ class TopicMetadataFetcher {
     ;
   }
 
+  @Override
+  public void close() throws IOException {
+    try {
+      pubSubConsumerAdapterLazy.get().close();
+    } catch (Exception e) {
+      LOGGER.error("Failed to close pubSubConsumerAdapterLazy", e);
+    }
+  }
 }

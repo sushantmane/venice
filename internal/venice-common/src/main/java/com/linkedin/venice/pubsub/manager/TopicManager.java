@@ -37,6 +37,7 @@ import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,7 @@ public class TopicManager implements Closeable {
    * that only one thread is using a consumer at a time.
    */
   private final BlockingQueue<TopicMetadataFetcher> topicMetadataFetcherPool;
+  private final List<Closeable> closeables = new ArrayList<>(2);
 
   /**
    * This thread pool is used to run TopicMetadataFetcher. We use a thread pool to make sure that we don't
@@ -119,6 +121,7 @@ public class TopicManager implements Closeable {
     for (int i = 0; i < tmContext.getTopicMetadataFetcherPoolSize(); i++) {
       fetcherContextBuilder.setFetcherId(i);
       TopicMetadataFetcher topicMetadataFetcher = new TopicMetadataFetcher(fetcherContextBuilder.build());
+      closeables.add(topicMetadataFetcher);
       if (!topicMetadataFetcherPool.offer(topicMetadataFetcher)) {
         throw new VeniceException("Failed to initialize topicMetadataFetcherPool");
       }
@@ -684,6 +687,10 @@ public class TopicManager implements Closeable {
   public synchronized void close() {
     Utils.closeQuietlyWithErrorLogged(partitionOffsetFetcher);
     pubSubAdminAdapterShared.ifPresent(Utils::closeQuietlyWithErrorLogged);
+    topicMetadataFetcherThreadPool.shutdownNow();
+    for (Closeable closeable: closeables) {
+      Utils.closeQuietlyWithErrorLogged(closeable);
+    }
   }
 
   public static PartitionOffsetFetcher createDefaultPartitionOffsetFetcher(
