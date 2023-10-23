@@ -32,7 +32,7 @@ public class TopicManagerRepository implements Closeable {
     this.localTopicManager = Lazy.of(
         () -> topicManagersMap.computeIfAbsent(
             this.localPubSubClusterAddress,
-            k -> new TopicManager(topicManagerContext, this.localPubSubClusterAddress)));
+            k -> new TopicManager(this.localPubSubClusterAddress, topicManagerContext)));
   }
 
   /**
@@ -44,7 +44,7 @@ public class TopicManagerRepository implements Closeable {
 
   public TopicManager getTopicManager(String pubSubClusterAddress) {
     return topicManagersMap
-        .computeIfAbsent(pubSubClusterAddress, k -> new TopicManager(topicManagerContext, pubSubClusterAddress));
+        .computeIfAbsent(pubSubClusterAddress, k -> new TopicManager(pubSubClusterAddress, topicManagerContext));
   }
 
   public List<TopicManager> getAllTopicManagers() {

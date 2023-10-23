@@ -2,7 +2,6 @@ package com.linkedin.venice.pubsub.manager;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
@@ -25,7 +24,6 @@ import com.linkedin.venice.pubsub.manager.partitionoffset.InstrumentedPartitionO
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcher;
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherImpl;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
-import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.SystemTime;
@@ -37,7 +35,6 @@ import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -45,9 +42,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -72,19 +66,7 @@ public class TopicManager implements Closeable {
   private final PubSubTopicRepository pubSubTopicRepository;
   private final MetricsRepository metricsRepository;
 
-  /**
-   * All metadata operations that are carried out by pubsub consumer should be done via TopicMetadataFetcher
-   * obtained from this pool. PubSubConsumerAdapter is not thread-safe, so we need to use a pool to make sure
-   * that only one thread is using a consumer at a time.
-   */
-  private final BlockingQueue<TopicMetadataFetcher> topicMetadataFetcherPool;
-  private final List<Closeable> closeables = new ArrayList<>(2);
-
-  /**
-   * This thread pool is used to run TopicMetadataFetcher. We use a thread pool to make sure that we don't
-   * create too many threads and not monopolize ForkJoinPool.commonPool().
-   */
-  private final ThreadPoolExecutor topicMetadataFetcherThreadPool;
+  private final TopicMetadataFetcherPool topicMetadataFetcherPool;
 
   // old fellas
   private final PartitionOffsetFetcher partitionOffsetFetcher;
@@ -95,14 +77,13 @@ public class TopicManager implements Closeable {
   Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache =
       Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-  public TopicManager(TopicManagerContext tmContext, String pubSubClusterAddress) {
+  public TopicManager(String pubSubClusterAddress, TopicManagerContext tmContext) {
     this.logger = LogManager.getLogger(
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
     this.topicManagerContext = tmContext;
     this.pubSubTopicRepository = tmContext.getPubSubTopicRepository();
     this.metricsRepository = tmContext.getMetricsRepository();
-    this.topicMetadataFetcherPool = new LinkedBlockingQueue<>(tmContext.getTopicMetadataFetcherPoolSize());
 
     this.partitionOffsetFetcher = createDefaultPartitionOffsetFetcher(
         tmContext.getPubSubConsumerAdapterFactory(),
@@ -112,28 +93,8 @@ public class TopicManager implements Closeable {
         tmContext.getPubSubOperationTimeoutMs(),
         metricsRepository);
 
-    TopicMetadataFetcherContext.Builder fetcherContextBuilder =
-        new TopicMetadataFetcherContext.Builder().setPubSubClusterAddress(pubSubClusterAddress)
-            .setPubSubAdminAdapterLazy(pubSubAdminAdapterShared)
-            .setPubSubConsumerAdapterFactory(tmContext.getPubSubConsumerAdapterFactory())
-            .setPubSubProperties(tmContext.getPubSubProperties(pubSubClusterAddress))
-            .setPubSubMessageDeserializer(PubSubMessageDeserializer.getInstance());
-    for (int i = 0; i < tmContext.getTopicMetadataFetcherPoolSize(); i++) {
-      fetcherContextBuilder.setFetcherId(i);
-      TopicMetadataFetcher topicMetadataFetcher = new TopicMetadataFetcher(fetcherContextBuilder.build());
-      closeables.add(topicMetadataFetcher);
-      if (!topicMetadataFetcherPool.offer(topicMetadataFetcher)) {
-        throw new VeniceException("Failed to initialize topicMetadataFetcherPool");
-      }
-    }
-    this.topicMetadataFetcherThreadPool = new ThreadPoolExecutor(
-        tmContext.getTopicMetadataFetcherThreadPoolSize(),
-        tmContext.getTopicMetadataFetcherThreadPoolSize(),
-        15L,
-        TimeUnit.MINUTES,
-        new LinkedBlockingQueue<>(),
-        new DaemonThreadFactory("TopicMetadataFetcherThreadPool"));
-    this.topicMetadataFetcherThreadPool.allowCoreThreadTimeOut(true);
+    this.topicMetadataFetcherPool =
+        new TopicMetadataFetcherPool(pubSubClusterAddress, tmContext, pubSubAdminAdapterShared);
 
     this.cachedPubSubMetadataGetter = new CachedPubSubMetadataGetter(tmContext.getTopicOffsetCheckIntervalMs());
 
@@ -687,10 +648,6 @@ public class TopicManager implements Closeable {
   public synchronized void close() {
     Utils.closeQuietlyWithErrorLogged(partitionOffsetFetcher);
     pubSubAdminAdapterShared.ifPresent(Utils::closeQuietlyWithErrorLogged);
-    topicMetadataFetcherThreadPool.shutdownNow();
-    for (Closeable closeable: closeables) {
-      Utils.closeQuietlyWithErrorLogged(closeable);
-    }
   }
 
   public static PartitionOffsetFetcher createDefaultPartitionOffsetFetcher(
