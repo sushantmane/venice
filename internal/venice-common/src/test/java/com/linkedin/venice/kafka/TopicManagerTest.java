@@ -47,7 +47,6 @@ import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistExceptio
 import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.pubsub.manager.TopicManagerContext;
 import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
-import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherImpl;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.MockInMemoryAdminAdapter;
@@ -228,7 +227,7 @@ public class TopicManagerTest {
   public void testGetProducerTimestampOfLastDataRecordOnEmptyTopic() {
     final PubSubTopicPartition emptyTopicPartition = new PubSubTopicPartitionImpl(getTopic(), 0);
     long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataRecord(emptyTopicPartition, 1);
-    Assert.assertEquals(retrievedTimestamp, PartitionOffsetFetcherImpl.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
+    Assert.assertEquals(retrievedTimestamp, PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
   }
 
   @Test

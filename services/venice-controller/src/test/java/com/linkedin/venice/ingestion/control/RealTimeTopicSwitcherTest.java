@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import org.apache.kafka.common.PartitionInfo;
 import org.mockito.ArgumentCaptor;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -76,7 +75,6 @@ public class RealTimeTopicSwitcherTest {
     PubSubTopic destTopic = pubSubTopicRepository.getTopic("testTopic_v1");
     Store mockStore = mock(Store.class);
     HybridStoreConfig mockHybridConfig = mock(HybridStoreConfig.class);
-    List<PartitionInfo> partitionInfos = new ArrayList<>();
     VeniceWriter<byte[], byte[], byte[]> mockVeniceWriter = mock(VeniceWriter.class);
 
     doReturn(true).when(mockStore).isHybrid();
@@ -88,8 +86,6 @@ public class RealTimeTopicSwitcherTest {
     doReturn(REWIND_FROM_EOP).when(mockHybridConfig).getBufferReplayPolicy();
     doReturn(true).when(mockTopicManager).containsTopicAndAllPartitionsAreOnline(srcTopic);
     doReturn(true).when(mockTopicManager).containsTopicAndAllPartitionsAreOnline(destTopic);
-    doReturn(partitionInfos).when(mockTopicManager).partitionsFor(srcTopic);
-    doReturn(partitionInfos).when(mockTopicManager).partitionsFor(destTopic);
     doReturn(mockVeniceWriter).when(mockVeniceWriterFactory).createVeniceWriter(any(VeniceWriterOptions.class));
 
     leaderStorageNodeReplicator.switchToRealTimeTopic(
@@ -108,7 +104,6 @@ public class RealTimeTopicSwitcherTest {
     PubSubTopic destTopic = pubSubTopicRepository.getTopic("testTopic_v1");
     Store mockStore = mock(Store.class);
     HybridStoreConfig mockHybridConfig = mock(HybridStoreConfig.class);
-    List<PartitionInfo> partitionInfos = new ArrayList<>();
     VeniceWriter<byte[], byte[], byte[]> mockVeniceWriter = mock(VeniceWriter.class);
 
     doReturn(true).when(mockStore).isHybrid();
@@ -122,8 +117,6 @@ public class RealTimeTopicSwitcherTest {
     doReturn(DataReplicationPolicy.AGGREGATE).when(mockHybridConfig).getDataReplicationPolicy();
     doReturn(true).when(mockTopicManager).containsTopicAndAllPartitionsAreOnline(srcTopic);
     doReturn(true).when(mockTopicManager).containsTopicAndAllPartitionsAreOnline(destTopic);
-    doReturn(partitionInfos).when(mockTopicManager).partitionsFor(srcTopic);
-    doReturn(partitionInfos).when(mockTopicManager).partitionsFor(destTopic);
     doReturn(mockVeniceWriter).when(mockVeniceWriterFactory).createVeniceWriter(any(VeniceWriterOptions.class));
 
     leaderStorageNodeReplicator.switchToRealTimeTopic(

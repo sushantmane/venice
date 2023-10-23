@@ -76,7 +76,7 @@ public class TopicManagerIntegrationTest extends TopicManagerTest {
     // Put all topic manager calls related to partition offset fetcher with admin and consumer here.
     Runnable[] tasks = { () -> topicManager.getPartitionOffsetByTime(pubSubTopicPartition, checkTimestamp),
         () -> topicManager.getProducerTimestampOfLastDataRecord(pubSubTopicPartition, 1),
-        () -> topicManager.partitionsFor(topic),
+        () -> topicManager.getPartitionCount(topic),
         () -> topicManager.getPartitionEarliestOffsetAndRetry(pubSubTopicPartition, 1),
         () -> topicManager.getPartitionLatestOffsetAndRetry(pubSubTopicPartition, 1),
         () -> topicManager.getTopicLatestOffsets(topic) };

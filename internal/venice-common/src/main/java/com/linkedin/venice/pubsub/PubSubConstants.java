@@ -3,6 +3,7 @@ package com.linkedin.venice.pubsub;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientRetriableException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.utils.Time;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -42,4 +43,6 @@ public class PubSubConstants {
    * Default value of sleep interval for polling topic deletion status from ZK.
    */
   public static final int DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS = 2 * Time.MS_PER_SECOND;
+  public static final Duration DEFAULT_KAFKA_OFFSET_API_TIMEOUT = Duration.ofMinutes(1);
+  public static final long NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION = -1;
 }

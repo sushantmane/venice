@@ -3763,7 +3763,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         }
         PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(store.getName()));
         if (topicManager.containsTopic(realTimeTopic)
-            && topicManager.partitionsFor(realTimeTopic).size() == newPartitionCount) {
+            && topicManager.getPartitionCount(realTimeTopic) == newPartitionCount) {
           LOGGER.info("Allow updating store " + store.getName() + " partition count to " + newPartitionCount);
           return;
         }

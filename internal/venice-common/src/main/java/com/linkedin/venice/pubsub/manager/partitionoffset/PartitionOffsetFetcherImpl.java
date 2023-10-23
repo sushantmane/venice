@@ -5,6 +5,7 @@ import static com.linkedin.venice.offsets.OffsetRecord.LOWEST_OFFSET;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
@@ -43,8 +44,6 @@ import org.apache.logging.log4j.Logger;
 public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
   private static final List<Class<? extends Throwable>> PUBSUB_RETRIABLE_FAILURES =
       Collections.singletonList(PubSubClientRetriableException.class);
-  public static final Duration DEFAULT_KAFKA_OFFSET_API_TIMEOUT = Duration.ofMinutes(1);
-  public static final long NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION = -1;
   private static final int KAFKA_POLLING_RETRY_MAX_ATTEMPT = 3;
 
   private final Logger logger;
@@ -80,7 +79,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
           .collect(Collectors.toList());
 
       Map<PubSubTopicPartition, Long> offsetsByTopicPartitions =
-          pubSubConsumer.get().endOffsets(topicPartitions, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+          pubSubConsumer.get().endOffsets(topicPartitions, PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
       Int2LongMap offsetsByTopicPartitionIds = new Int2LongOpenHashMap(offsetsByTopicPartitions.size());
       for (Map.Entry<PubSubTopicPartition, Long> offsetByTopicPartition: offsetsByTopicPartitions.entrySet()) {
         offsetsByTopicPartitionIds
@@ -103,7 +102,9 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
       }
 
       Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumer.get()
-          .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+          .endOffsets(
+              Collections.singletonList(pubSubTopicPartition),
+              PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
       Long offset = offsetMap.get(pubSubTopicPartition);
       if (offset != null) {
         return offset;
@@ -219,7 +220,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
     List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> lastConsumedRecords =
         consumeLatestRecords(pubSubTopicPartition, 1);
     if (lastConsumedRecords.isEmpty()) {
-      return NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+      return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
     }
 
     // Check the latest record as the first attempt
@@ -247,7 +248,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
               + " {} record(s) consumed no record. Assume the topic partition is empty.",
           pubSubTopicPartition,
           lastRecordsCount);
-      return NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+      return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
     }
     Iterator<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumerRecordsIterator =
         lastConsumedRecords.iterator();
@@ -314,7 +315,9 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
       }
       try {
         Map<PubSubTopicPartition, Long> offsetByTopicPartition = pubSubConsumer.get()
-            .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+            .endOffsets(
+                Collections.singletonList(pubSubTopicPartition),
+                PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
         if (offsetByTopicPartition == null || !offsetByTopicPartition.containsKey(pubSubTopicPartition)) {
           throw new VeniceException(
               "Got no results of finding end offsets for topic partition: " + pubSubTopicPartition);
@@ -325,8 +328,8 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
           // Empty topic
           return Collections.emptyList();
         } else {
-          Long earliestOffset =
-              pubSubConsumer.get().beginningOffset(pubSubTopicPartition, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+          Long earliestOffset = pubSubConsumer.get()
+              .beginningOffset(pubSubTopicPartition, PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
           if (earliestOffset == null) {
             throw new VeniceException(
                 "Got no results of finding the earliest offset for topic partition: " + pubSubTopicPartition);
@@ -504,7 +507,8 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
         throw new IllegalArgumentException(
             "Cannot retrieve latest offsets for invalid partition " + pubSubTopicPartition.getPartitionNumber());
       }
-      Long offset = pubSubConsumer.get().beginningOffset(pubSubTopicPartition, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+      Long offset =
+          pubSubConsumer.get().beginningOffset(pubSubTopicPartition, PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
       if (offset == null) {
         throw new VeniceException(
             "offset result returned from beginningOffsets does not contain entry: " + pubSubTopicPartition);

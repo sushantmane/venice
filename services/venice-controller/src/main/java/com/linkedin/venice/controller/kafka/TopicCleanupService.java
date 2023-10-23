@@ -359,7 +359,7 @@ public class TopicCleanupService extends AbstractVeniceService {
       /**
        * Find out the total number of partition of version topic, and we will use this info to clean up replica statuses for each partition.
        */
-      int partitionCount = topicManager.partitionsFor(topic).size();
+      int partitionCount = topicManager.getPartitionCount(topic);
       MetaStoreWriter metaStoreWriter = admin.getMetaStoreWriter();
       for (int i = 0; i < partitionCount; ++i) {
         metaStoreWriter.deleteStoreReplicaStatus(clusterName, storeName, version, i);

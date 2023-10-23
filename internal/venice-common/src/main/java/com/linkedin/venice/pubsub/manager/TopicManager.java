@@ -23,7 +23,6 @@ import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicExistsException;
 import com.linkedin.venice.pubsub.manager.partitionoffset.InstrumentedPartitionOffsetFetcher;
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcher;
 import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherImpl;
-import com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherStats;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
@@ -661,7 +660,12 @@ public class TopicManager implements Closeable {
    * @return
    */
   public List<PubSubTopicPartitionInfo> partitionsFor(PubSubTopic topic) {
-    return partitionOffsetFetcher.partitionsFor(topic);
+    return null;
+  }
+
+  public int getPartitionCount(PubSubTopic pubSubTopic) {
+    // get partition count from admin client
+    return partitionOffsetFetcher.partitionsFor(pubSubTopic).size();
   }
 
   public String getPubSubClusterAddress() {
@@ -701,7 +705,7 @@ public class TopicManager implements Closeable {
     if (optionalMetricsRepository.isPresent()) {
       return new InstrumentedPartitionOffsetFetcher(
           partitionOffsetFetcher,
-          new PartitionOffsetFetcherStats(
+          new InstrumentedPartitionOffsetFetcher.PartitionOffsetFetcherStats(
               optionalMetricsRepository.get(),
               "PartitionOffsetFetcherStats_" + pubSubBootstrapServers),
           new SystemTime());
@@ -709,6 +713,8 @@ public class TopicManager implements Closeable {
       return partitionOffsetFetcher;
     }
   }
+
+  /*------------------------- TopicManager - Updated APIs -------------------------*/
 
   /*------------------------- CachedPubSubMetadataGetter -------------------------*/
   public long getLatestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {

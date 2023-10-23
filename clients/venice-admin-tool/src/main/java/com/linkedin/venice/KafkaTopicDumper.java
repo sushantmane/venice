@@ -1,7 +1,7 @@
 package com.linkedin.venice;
 
 import static com.linkedin.venice.chunking.ChunkKeyValueTransformer.KeyType.WITH_VALUE_CHUNK;
-import static com.linkedin.venice.pubsub.manager.partitionoffset.PartitionOffsetFetcherImpl.DEFAULT_KAFKA_OFFSET_API_TIMEOUT;
+import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT;
 
 import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.venice.chunking.ChunkKeyValueTransformer;

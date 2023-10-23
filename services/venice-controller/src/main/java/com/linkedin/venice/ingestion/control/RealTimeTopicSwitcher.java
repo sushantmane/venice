@@ -97,7 +97,7 @@ public class RealTimeTopicSwitcher {
       throw new PubSubTopicDoesNotExistException(
           errorPrefix + " topic " + topicWhereToSendTheTopicSwitch + " does not exist.");
     }
-    int destinationPartitionCount = getTopicManager().partitionsFor(topicWhereToSendTheTopicSwitch).size();
+    int destinationPartitionCount = getTopicManager().getPartitionCount(topicWhereToSendTheTopicSwitch);
     List<CharSequence> sourceClusters = new ArrayList<>();
     if (!remoteKafkaUrls.isEmpty()) {
       sourceClusters.addAll(remoteKafkaUrls);
