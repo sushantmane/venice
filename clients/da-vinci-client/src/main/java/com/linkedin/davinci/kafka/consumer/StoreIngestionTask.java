@@ -756,7 +756,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
        * Currently, we make it a sloppy in case Kafka topic have duplicate messages.
        * TODO: find a better solution
        */
-      final long versionTopicPartitionOffset = getTopicManager(localKafkaServer).getOffset(versionTopic, partitionId);
+      final long versionTopicPartitionOffset =
+          getTopicManager(localKafkaServer).getLatestOffsetCached(versionTopic, partitionId);
       isLagAcceptable =
           versionTopicPartitionOffset <= partitionConsumptionState.getLatestProcessedLocalVersionTopicOffset()
               + SLOPPY_OFFSET_CATCHUP_THRESHOLD;
@@ -862,8 +863,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
                     lagMeasurementTopic);
               }
             } else {
-              long latestProducerTimestampInTopic =
-                  getTopicManager(lagMeasurementKafkaUrl).getProducerTimestampOfLastDataMessage(pubSubTopicPartition);
+              long latestProducerTimestampInTopic = getTopicManager(lagMeasurementKafkaUrl)
+                  .getProducerTimestampOfLastDataMessageCached(pubSubTopicPartition);
               if (latestProducerTimestampInTopic < 0
                   || latestProducerTimestampInTopic <= latestConsumedProducerTimestamp) {
                 timestampLagIsAcceptable = true;
@@ -1878,7 +1879,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
      * @see CachedPubSubMetadataGetter#getOffset(TopicManager, String, int)
      * TODO: Refactor this using PubSubTopicPartition.
      */
-    return getTopicManager(kafkaUrl).getOffset(versionTopic, partition);
+    return getTopicManager(kafkaUrl).getLatestOffsetCached(versionTopic, partition);
   }
 
   protected long getPartitionOffsetLag(String kafkaSourceAddress, PubSubTopic topic, int partition) {

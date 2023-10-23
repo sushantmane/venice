@@ -539,6 +539,7 @@ public class TopicManager implements Closeable {
     }
   }
 
+  // TODO (sushant): Evaluate if we need synchronized here
   public synchronized Set<PubSubTopic> listTopics() {
     return pubSubReadOnlyAdminAdapter.get().listAllTopics();
   }
@@ -710,24 +711,19 @@ public class TopicManager implements Closeable {
   }
 
   /*------------------------- CachedPubSubMetadataGetter -------------------------*/
-  public long getOffset(PubSubTopic pubSubTopic, int partitionId) {
+  public long getLatestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
     return cachedPubSubMetadataGetter.getOffset(this, pubSubTopic, partitionId);
   }
 
-  public long getOffset(PubSubTopicPartition pubSubTopicPartition) {
-    return cachedPubSubMetadataGetter
-        .getOffset(this, pubSubTopicPartition.getPubSubTopic(), pubSubTopicPartition.getPartitionNumber());
+  public long getEarliestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
+    return getEarliestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
   }
 
-  public long getEarliestOffset(PubSubTopic pubSubTopic, int partitionId) {
-    return getEarliestOffset(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
-  }
-
-  public long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  public long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
     return cachedPubSubMetadataGetter.getEarliestOffset(this, pubSubTopicPartition);
   }
 
-  public long getProducerTimestampOfLastDataMessage(PubSubTopicPartition pubSubTopicPartition) {
+  public long getProducerTimestampOfLastDataMessageCached(PubSubTopicPartition pubSubTopicPartition) {
     return cachedPubSubMetadataGetter.getProducerTimestampOfLastDataMessage(this, pubSubTopicPartition);
   }
 
@@ -735,7 +731,7 @@ public class TopicManager implements Closeable {
     return cachedPubSubMetadataGetter.containsTopic(this, pubSubTopic);
   }
 
+  // todo(sushant): invalidate cache for all partitions of this topic
   public void invalidateCache(PubSubTopic pubSubTopic) {
-    // todo(sushant): invalidate cache for all partitions of this topic
   }
 }
