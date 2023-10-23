@@ -1,8 +1,13 @@
 package com.linkedin.venice.pubsub.manager;
 
+import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_KAFKA_OFFSET_API_TIMEOUT;
+
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
+import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
+import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.lazy.Lazy;
@@ -14,80 +19,126 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 public class TopicMetadataFetcherPool implements Closeable {
-  /**
-   * All metadata operations that are carried out by pubsub consumer should be done via TopicMetadataFetcher
-   * obtained from this pool. PubSubConsumerAdapter is not thread-safe, so we need to use a pool to make sure
-   * that only one thread is using a consumer at a time.
-   */
-  private final BlockingQueue<TopicMetadataFetcher> topicMetadataFetcherPool;
-  private final List<Closeable> closeables = new ArrayList<>(2);
+
+  // logger
+  private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcherPool.class);
 
   /**
-   * This thread pool is used to run TopicMetadataFetcher. We use a thread pool to make sure that we don't
-   * create too many threads and not monopolize ForkJoinPool.commonPool().
+   * Blocking queue is used to ensure single-threaded access to the consumer as they are not thread-safe.
    */
-  private final ThreadPoolExecutor topicMetadataFetcherThreadPool;
+  private final BlockingQueue<PubSubConsumerAdapter> pubSubConsumerPool;
+  private final List<Closeable> closeables = new ArrayList<>(2);
+
+  private final ThreadPoolExecutor threadPoolExecutor;
+
+  private final PubSubAdminAdapter pubSubAdminAdapter;
 
   public TopicMetadataFetcherPool(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
       Lazy<PubSubAdminAdapter> lazySharedPubSubAdminAdapter) {
-    topicMetadataFetcherPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
+    pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
+    pubSubAdminAdapter = lazySharedPubSubAdminAdapter.get();
 
-    TopicMetadataFetcherContext.Builder fetcherContextBuilder =
-        new TopicMetadataFetcherContext.Builder().setPubSubClusterAddress(pubSubClusterAddress)
-            .setLazyPubSubAdminAdapter(lazySharedPubSubAdminAdapter)
-            .setPubSubConsumerAdapterFactory(topicManagerContext.getPubSubConsumerAdapterFactory())
-            .setPubSubProperties(topicManagerContext.getPubSubProperties(pubSubClusterAddress))
-            .setPubSubMessageDeserializer(PubSubMessageDeserializer.getInstance());
+    PubSubMessageDeserializer pubSubMessageDeserializer = PubSubMessageDeserializer.getInstance();
     for (int i = 0; i < topicManagerContext.getTopicMetadataFetcherPoolSize(); i++) {
-      fetcherContextBuilder.setFetcherId(i);
-      TopicMetadataFetcher topicMetadataFetcher = new TopicMetadataFetcher(fetcherContextBuilder.build());
-      closeables.add(topicMetadataFetcher);
-      if (!topicMetadataFetcherPool.offer(topicMetadataFetcher)) {
+      PubSubConsumerAdapter pubSubConsumerAdapter = topicManagerContext.getPubSubConsumerAdapterFactory()
+          .create(
+              topicManagerContext.getPubSubProperties(pubSubClusterAddress),
+              false,
+              pubSubMessageDeserializer,
+              pubSubClusterAddress);
+
+      closeables.add(pubSubConsumerAdapter);
+      if (!pubSubConsumerPool.offer(pubSubConsumerAdapter)) {
         throw new VeniceException("Failed to initialize topicMetadataFetcherPool");
       }
     }
 
-    topicMetadataFetcherThreadPool = new ThreadPoolExecutor(
+    threadPoolExecutor = new ThreadPoolExecutor(
         topicManagerContext.getTopicMetadataFetcherThreadPoolSize(),
         topicManagerContext.getTopicMetadataFetcherThreadPoolSize(),
         15L,
         TimeUnit.MINUTES,
         new LinkedBlockingQueue<>(),
         new DaemonThreadFactory("TopicMetadataFetcherThreadPool"));
-    topicMetadataFetcherThreadPool.allowCoreThreadTimeOut(true);
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
   }
 
-  // acquire a TopicMetadataFetcher from the pool
-  private TopicMetadataFetcher acquire() {
+  // acquire the consumer from the pool
+  private PubSubConsumerAdapter acquireConsumer() {
     try {
-      return topicMetadataFetcherPool.take();
+      return pubSubConsumerPool.take();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new VeniceException("Interrupted while acquiring topicMetadataFetcher", e);
+      throw new VeniceException("Interrupted while acquiring pubSubConsumerAdapter", e);
     }
   }
 
-  // release a TopicMetadataFetcher to the pool
-  private void release(TopicMetadataFetcher topicMetadataFetcher) {
+  // release the consumer back to the pool
+  private void releaseConsumer(PubSubConsumerAdapter pubSubConsumerAdapter) {
     try {
-      topicMetadataFetcherPool.put(topicMetadataFetcher);
+      pubSubConsumerPool.put(pubSubConsumerAdapter);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new VeniceException("Interrupted while releasing topicMetadataFetcher", e);
+      throw new VeniceException("Interrupted while releasing pubSubConsumerAdapter", e);
+    }
+  }
+
+  public long getPartitionEarliestOffsetAndRetry(PubSubTopicPartition pubSubTopicPartition, int retries) {
+    return getEndOffset(pubSubTopicPartition, retries, this::getEarliestOffset);
+  }
+
+  private long getEndOffset(
+      PubSubTopicPartition pubSubTopicPartition,
+      int retries,
+      Function<PubSubTopicPartition, Long> offsetSupplier) {
+    if (retries < 1) {
+      throw new IllegalArgumentException("Invalid retries. Got: " + retries);
+    }
+    int attempt = 0;
+    PubSubOpTimeoutException lastException = new PubSubOpTimeoutException("This exception should not be thrown");
+    while (attempt < retries) {
+      try {
+        return offsetSupplier.apply(pubSubTopicPartition);
+      } catch (PubSubOpTimeoutException e) { // topic and partition is listed in the exception object
+        LOGGER.warn("Failed to get offset. Retries remaining: {}", retries - attempt, e);
+        lastException = e;
+        attempt++;
+      }
+    }
+    throw lastException;
+  }
+
+  /**
+   * @return the beginning offset of a topic-partition.
+   */
+  private long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
+    try {
+      Long offset = pubSubConsumerAdapter.beginningOffset(pubSubTopicPartition, DEFAULT_KAFKA_OFFSET_API_TIMEOUT);
+      if (offset == null) {
+        throw new VeniceException(
+            "offset result returned from beginningOffsets does not contain entry: " + pubSubTopicPartition);
+      }
+      return offset;
+    } finally {
+      releaseConsumer(pubSubConsumerAdapter);
     }
   }
 
   @Override
   public void close() throws IOException {
-    topicMetadataFetcherThreadPool.shutdown();
+    threadPoolExecutor.shutdown();
     try {
-      if (topicMetadataFetcherThreadPool.awaitTermination(5, TimeUnit.MILLISECONDS)) {
-        topicMetadataFetcherThreadPool.shutdownNow();
+      if (threadPoolExecutor.awaitTermination(5, TimeUnit.MILLISECONDS)) {
+        threadPoolExecutor.shutdownNow();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
