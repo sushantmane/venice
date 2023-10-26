@@ -446,7 +446,11 @@ public abstract class AbstractClientEndToEndSetup {
   }
 
   private void setupDaVinciClientForMetaStore() {
-    cleanupDaVinciClientForMetaStore();
+    try {
+      cleanupDaVinciClientForMetaStore();
+    } catch (Exception e) {
+      // Ignore if client was already closed. Ideally, double close should be idempotent.
+    }
     daVinciClientFactory = new CachingDaVinciClientFactory(
         d2Client,
         VeniceRouterWrapper.CLUSTER_DISCOVERY_D2_SERVICE_NAME,
