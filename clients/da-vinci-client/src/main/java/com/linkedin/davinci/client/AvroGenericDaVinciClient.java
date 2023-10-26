@@ -763,8 +763,10 @@ public class AvroGenericDaVinciClient<K, V> implements DaVinciClient<K, V>, Avro
 
   @Override
   public synchronized void close() {
-    // TODO: Evaluate if this should be a no-op if the client is not ready.
-    throwIfNotReady();
+    if (!isReady()) {
+      return;
+    }
+
     try {
       logger.info("Closing client, storeName=" + getStoreName());
       ready.set(false);
