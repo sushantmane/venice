@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -609,7 +610,7 @@ public class TopicManager implements Closeable {
   }
 
   public boolean containsTopicCached(PubSubTopic pubSubTopic) {
-    return topicMetadataCache.containsTopic(pubSubTopic);
+    return topicMetadataCache.containsTopicCached(pubSubTopic);
   }
 
   public long getEarliestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
@@ -617,11 +618,11 @@ public class TopicManager implements Closeable {
   }
 
   public long getEarliestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
-    return topicMetadataCache.getEarliestOffset(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
+    return topicMetadataCache.getEarliestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
   }
 
   public long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
-    return topicMetadataCache.getEarliestOffset(pubSubTopicPartition);
+    return topicMetadataCache.getEarliestOffsetCached(pubSubTopicPartition);
   }
 
   public long getLatestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
@@ -629,16 +630,15 @@ public class TopicManager implements Closeable {
   }
 
   public long getLatestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
-    return topicMetadataCache.getLatestOffset(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
+    return topicMetadataCache.getLatestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
   }
 
-  // following methods are work in progress
   public long getProducerTimestampOfLastDataMessageWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
     return topicMetadataFetcher.getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, retries);
   }
 
   public long getProducerTimestampOfLastDataMessageCached(PubSubTopicPartition pubSubTopicPartition) {
-    return topicMetadataCache.getProducerTimestampOfLastDataMessage(pubSubTopicPartition);
+    return topicMetadataCache.getProducerTimestampOfLastDataMessageCached(pubSubTopicPartition);
   }
 
   /**
@@ -652,8 +652,8 @@ public class TopicManager implements Closeable {
    * Invalidate the cache for the given topic and all its partitions.
    * @param pubSubTopic the topic to invalidate
    */
-  public void invalidateKey(PubSubTopic pubSubTopic) {
-    topicMetadataCache.invalidateKey(pubSubTopic);
+  public CompletableFuture<Void> invalidateKeyAsync(PubSubTopic pubSubTopic) {
+    return topicMetadataCache.invalidateKeyAsync(pubSubTopic);
   }
 
   /**

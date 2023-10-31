@@ -52,7 +52,7 @@ class TopicMetadataCache implements Closeable {
         timeToLiveMs);
   }
 
-  long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  long getLatestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
     long now = System.nanoTime();
     ValueAndExpiryTime<Long> cachedValue;
     try {
@@ -81,7 +81,7 @@ class TopicMetadataCache implements Closeable {
     return cachedValue.getValue();
   }
 
-  long getEarliestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
     long now = System.nanoTime();
     ValueAndExpiryTime<Long> cachedValue;
     try {
@@ -112,7 +112,7 @@ class TopicMetadataCache implements Closeable {
     return cachedValue.getValue();
   }
 
-  boolean containsTopic(PubSubTopic pubSubTopic) {
+  boolean containsTopicCached(PubSubTopic pubSubTopic) {
     long now = System.nanoTime();
     ValueAndExpiryTime<Boolean> cachedValue = topicExistenceCache.computeIfAbsent(
         pubSubTopic,
@@ -130,7 +130,7 @@ class TopicMetadataCache implements Closeable {
     return cachedValue.getValue();
   }
 
-  long getProducerTimestampOfLastDataMessage(PubSubTopicPartition pubSubTopicPartition) {
+  long getProducerTimestampOfLastDataMessageCached(PubSubTopicPartition pubSubTopicPartition) {
     long now = System.nanoTime();
     ValueAndExpiryTime<Long> cachedValue;
     try {
@@ -170,6 +170,10 @@ class TopicMetadataCache implements Closeable {
         "Invalidated cache for topic-partition: {} in {} ms",
         pubSubTopicPartition,
         System.currentTimeMillis() - startTime);
+  }
+
+  CompletableFuture<Void> invalidateKeyAsync(PubSubTopic pubSubTopic) {
+    return CompletableFuture.runAsync(() -> invalidateKey(pubSubTopic));
   }
 
   void invalidateKey(PubSubTopic pubSubTopic) {
