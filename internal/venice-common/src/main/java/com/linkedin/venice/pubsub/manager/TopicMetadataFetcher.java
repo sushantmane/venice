@@ -345,7 +345,36 @@ class TopicMetadataFetcher implements Closeable {
 
   // API: Get the producer timestamp of the last data message
   long getProducerTimestampOfLastDataMessage(PubSubTopicPartition pubSubTopicPartition) {
-    return -1;
+    int fetchSize = 10;
+    int totalAttempts = 2;
+    int fetchedRecordsCount;
+    do {
+      List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> lastConsumedRecords =
+          consumeLatestRecords(pubSubTopicPartition, fetchSize);
+      // if there are no records in this topic partition, return a special timestamp
+      if (lastConsumedRecords.isEmpty()) {
+        return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+      }
+
+      fetchedRecordsCount = lastConsumedRecords.size();
+      // iterate in reverse order to find the first data message (not control message) from the end
+      for (int i = lastConsumedRecords.size() - 1; i >= 0; i--) {
+        PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record = lastConsumedRecords.get(i);
+        if (!record.getKey().isControlMessage()) {
+          // note that the timestamp is the producer timestamp and not the pubsub message (broker) timestamp
+          return record.getValue().producerMetadata.messageTimestamp;
+        }
+      }
+      fetchSize = 50;
+    } while (--totalAttempts > 0);
+
+    LOGGER.warn(
+        "Failed to find latest data message producer timestamp in topic-partition: {}. Consumed {} records from the end.",
+        pubSubTopicPartition,
+        fetchedRecordsCount);
+    throw new VeniceException(
+        "Failed to find latest data message producer timestamp in topic-partition: " + pubSubTopicPartition
+            + ". Consumed " + fetchedRecordsCount + " records from the end.");
   }
 
   long getProducerTimestampOfLastDataMessageWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
