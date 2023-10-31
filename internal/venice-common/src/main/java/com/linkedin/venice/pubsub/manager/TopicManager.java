@@ -581,8 +581,6 @@ public class TopicManager implements Closeable {
     this.topicConfigCache = topicConfigCache;
   }
 
-  // ------------------------- Updated list of Public APIs -------------------------//
-
   /**
    * Get information about all partitions for a given topic.
    * @param pubSubTopic the topic to get partition info for
@@ -615,10 +613,6 @@ public class TopicManager implements Closeable {
 
   public long getEarliestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
     return topicMetadataFetcher.getEarliestOffsetWithRetries(pubSubTopicPartition, retries);
-  }
-
-  public long getEarliestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
-    return topicMetadataCache.getEarliestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
   }
 
   public long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
