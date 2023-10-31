@@ -43,18 +43,13 @@ class TopicMetadataFetcher implements Closeable {
    */
   private final BlockingQueue<PubSubConsumerAdapter> pubSubConsumerPool;
   private final List<Closeable> closeables = new ArrayList<>(2);
-
   private final ThreadPoolExecutor threadPoolExecutor;
-
   private final PubSubAdminAdapter pubSubAdminAdapter;
-
-  private String pubSubClusterAddress;
 
   public TopicMetadataFetcher(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
       PubSubAdminAdapter pubSubAdminAdapter) {
-    this.pubSubClusterAddress = pubSubClusterAddress;
     this.pubSubAdminAdapter = pubSubAdminAdapter;
     this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
 

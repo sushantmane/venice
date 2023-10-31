@@ -3098,6 +3098,17 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       latestLeaderOffset = 0;
     }
     long lag = lastOffsetInRealTimeTopic - latestLeaderOffset;
+<<<<<<< HEAD
+=======
+
+    // Here we handle the case where the topic is actually empty, we check if the end offset is the same as the
+    // beginning
+    long earliestOffset = getTopicManager(sourceRealTimeTopicKafkaURL)
+        .getEarliestOffsetCached(new PubSubTopicPartitionImpl(leaderTopic, partitionToGetLatestOffsetFor));
+    if (earliestOffset == lastOffsetInRealTimeTopic - 1) {
+      lag = 0;
+    }
+>>>>>>> 4ce1adb86 (Clean comments)
     if (shouldLog) {
       LOGGER.info(
           "{} partition {} RT lag offset for {} is: Latest RT offset [{}] - persisted offset [{}] = Lag [{}]",

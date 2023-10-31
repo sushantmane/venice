@@ -38,8 +38,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -51,7 +49,6 @@ import org.testng.annotations.Test;
  * Tests to verify the contract of {@link PubSubConsumerAdapter}
  */
 public class PubSubConsumerAdapterTest {
-  private static final Logger LOGGER = LogManager.getLogger(PubSubConsumerAdapterTest.class);
   public static final Duration PUBSUB_OP_TIMEOUT = Duration.ofSeconds(15);
 
   private PubSubBrokerWrapper pubSubBrokerWrapper;
