@@ -13,6 +13,7 @@ import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.pubsub.manager.TopicManagerContext.PubSubPropertiesSupplier;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.throttle.EventThrottler;
@@ -225,7 +226,11 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
       throw new VeniceException(
           "Kafka consumer service must exist for version topic: " + versionTopic + " in Kafka cluster: " + kafkaURL);
     }
-
+    TopicManager topicManager = storeIngestionTask.getTopicManager(consumerService.kafkaUrl);
+    if (topicManager != null) {
+      // prefetch and cache the latest offset for the topic partition
+      topicManager.prefetchAndCacheLatestOffset(pubSubTopicPartition);
+    }
     ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> dataReceiver =
         new StorePartitionDataReceiver(
             storeIngestionTask,

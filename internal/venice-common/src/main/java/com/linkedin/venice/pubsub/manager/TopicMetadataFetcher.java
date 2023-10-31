@@ -135,8 +135,7 @@ class TopicMetadataFetcher implements Closeable {
     if (pubSubTopicPartition.getPartitionNumber() < 0) {
       throw new IllegalArgumentException("Invalid partition number: " + pubSubTopicPartition.getPartitionNumber());
     }
-    // consider removing this check if it's too expensive
-    if (!pubSubAdminAdapter.containsTopic(pubSubTopicPartition.getPubSubTopic())) {
+    if (!containsTopicCached(pubSubTopicPartition.getPubSubTopic())) {
       throw new PubSubTopicDoesNotExistException(
           "Either topic: " + pubSubTopicPartition.getPubSubTopic() + " does not exist or partition: "
               + pubSubTopicPartition.getPartitionNumber() + " is invalid");
@@ -293,23 +292,29 @@ class TopicMetadataFetcher implements Closeable {
   }
 
   long getLatestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
-    long now = System.nanoTime();
     ValueAndExpiryTime<Long> cachedValue;
     try {
       cachedValue = latestOffsetCache.computeIfAbsent(pubSubTopicPartition, k -> {
         long latestOffset =
             getLatestOffsetWithRetries(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
-        return new ValueAndExpiryTime<>(latestOffset, now + cachedEntryTtlInNs);
+        return new ValueAndExpiryTime<>(latestOffset, System.nanoTime() + cachedEntryTtlInNs);
       });
     } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
       LOGGER.error("Failed to get end offset for topic-partition: {}", pubSubTopicPartition, e);
       return StatsErrorCode.LAG_MEASUREMENT_FAILURE.code;
     }
+    populateCacheWithLatestOffset(pubSubTopicPartition);
+    return cachedValue.getValue();
+  }
 
+  // load the cache with the latest offset
+  void populateCacheWithLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    long now = System.nanoTime();
+    ValueAndExpiryTime<Long> cachedValue = latestOffsetCache.get(pubSubTopicPartition);
     if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
-      CompletableFuture<Long> endOffsetCompletableFuture =
+      CompletableFuture<Long> future =
           getLatestOffsetWithRetriesAsync(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
-      endOffsetCompletableFuture.whenComplete((latestOffset, throwable) -> {
+      future.whenComplete((latestOffset, throwable) -> {
         if (throwable != null) {
           latestOffsetCache.remove(pubSubTopicPartition);
         } else {
@@ -319,7 +324,6 @@ class TopicMetadataFetcher implements Closeable {
         }
       });
     }
-    return cachedValue.getValue();
   }
 
   // API: Get the earliest (beginning) offset for a topic partition

@@ -644,6 +644,10 @@ public class TopicManager implements Closeable {
     return topicMetadataFetcher.invalidateKeyAsync(pubSubTopic);
   }
 
+  public void prefetchAndCacheLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    topicMetadataFetcher.populateCacheWithLatestOffset(pubSubTopicPartition);
+  }
+
   /**
    * Invalidate the cache for the given topic and partition.
    * @param pubSubTopicPartition the topic partition to invalidate
