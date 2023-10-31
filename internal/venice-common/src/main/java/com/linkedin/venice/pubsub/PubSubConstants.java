@@ -45,4 +45,5 @@ public class PubSubConstants {
   public static final int DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS = 2 * Time.MS_PER_SECOND;
   public static final Duration DEFAULT_PUBSUB_OFFSET_API_TIMEOUT = Duration.ofMinutes(1);
   public static final long NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION = -1;
+  public static final int PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT = 3;
 }

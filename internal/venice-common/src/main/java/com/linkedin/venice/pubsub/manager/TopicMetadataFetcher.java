@@ -3,10 +3,14 @@ package com.linkedin.venice.pubsub.manager;
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT;
 
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.message.KafkaKey;
+import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
@@ -371,5 +375,93 @@ class TopicMetadataFetcher implements Closeable {
     return CompletableFuture.supplyAsync(
         () -> getProducerTimestampOfLastDataMessageWithRetries(pubSubTopicPartition, retries),
         threadPoolExecutor);
+  }
+
+  /**
+   * This method retrieves last {@code lastRecordsCount} records from a topic partition and there are 4 steps below.
+   *  1. Find the current end offset N
+   *  2. Seek back {@code lastRecordsCount} records from the end offset N
+   *  3. Keep consuming records until the last consumed offset is greater than or equal to N
+   *  4. Return all consumed records
+   *
+   * There are 2 things to note:
+   *   1. When this method returns, these returned records are not necessarily the "last" records because after step 2,
+   *      there could be more records produced to this topic partition and this method only consume records until the end
+   *      offset retrieved at the above step 2.
+   *
+   *   2. This method might return more than {@code lastRecordsCount} records since the consumer poll method gets a batch
+   *      of consumer records each time and the batch size is arbitrary.
+   */
+  private List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumeLatestRecords(
+      PubSubTopicPartition pubSubTopicPartition,
+      int lastRecordsCount) {
+    if (lastRecordsCount < 1) {
+      throw new IllegalArgumentException(
+          "Last record count must be greater than or equal to 1. Got: " + lastRecordsCount);
+    }
+    validateTopicPartition(pubSubTopicPartition);
+    PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
+    boolean subscribed = false;
+    try {
+      // find the end offset
+      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter
+          .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      long latestOffset = offsetMap.get(pubSubTopicPartition);
+      if (latestOffset <= 0) {
+        return Collections.emptyList(); // no records in this topic partition
+      }
+
+      // find the beginning offset
+      long earliestOffset =
+          pubSubConsumerAdapter.beginningOffset(pubSubTopicPartition, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      if (earliestOffset == latestOffset) {
+        return Collections.emptyList(); // no records in this topic partition
+      }
+
+      // consume latest records
+      long consumerFromOffset = Math.max(latestOffset - lastRecordsCount, earliestOffset);
+      pubSubConsumerAdapter.subscribe(pubSubTopicPartition, consumerFromOffset - 1);
+      subscribed = true;
+      List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> allConsumedRecords = new ArrayList<>(lastRecordsCount);
+
+      // Keep consuming records from that topic-partition until the last consumed record's
+      // offset is greater or equal to the partition end offset retrieved before.
+      do {
+        List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumedRecordsBatch = Collections.emptyList();
+        int attempt = 1;
+        while (consumedRecordsBatch.isEmpty()
+            && attempt <= PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT) {
+          LOGGER.info(
+              "Polling records from topic partition {} with start offset: {}. Attempt: {}/{}",
+              pubSubTopicPartition,
+              consumerFromOffset,
+              attempt,
+              PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT);
+          consumedRecordsBatch =
+              pubSubConsumerAdapter.poll(Math.max(5000, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT.toMillis()))
+                  .get(pubSubTopicPartition);
+          attempt++;
+        }
+
+        // If batch is still empty after retries, give up.
+        if (consumedRecordsBatch.isEmpty()) {
+          LOGGER.error(
+              "Failed to get the last record from topic-partition: {} after {} attempts",
+              pubSubTopicPartition,
+              PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT);
+          throw new VeniceException(
+              "Failed to get the last record from topic-partition: " + pubSubTopicPartition + " after "
+                  + PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT + " attempts");
+        }
+        allConsumedRecords.addAll(consumedRecordsBatch);
+      } while (allConsumedRecords.get(allConsumedRecords.size() - 1).getOffset() + 1 < latestOffset);
+
+      return allConsumedRecords;
+    } finally {
+      if (subscribed) {
+        pubSubConsumerAdapter.unSubscribe(pubSubTopicPartition);
+      }
+      releaseConsumer(pubSubConsumerAdapter);
+    }
   }
 }
