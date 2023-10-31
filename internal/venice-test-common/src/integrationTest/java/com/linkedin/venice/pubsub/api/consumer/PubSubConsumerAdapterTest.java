@@ -175,8 +175,8 @@ public class PubSubConsumerAdapterTest {
     assertTrue(endOffsets.values().stream().allMatch(offset -> offset == 0), "End offsets should be 0 for a new topic");
   }
 
-  // Test: When endOffsets is called on a non-existent topic and an existing topic, it should throw
-  // PubSubOpTimeoutException
+  // Test: When endOffsets is called for a non-existent and existing topic in the same API call,
+  // it should throw a PubSubOpTimeoutException.
   @Test
   public void testEndOffsetsForNonExistentAndExistingTopic() {
     PubSubTopic nonExistentPubSubTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("non-existent-topic-"));

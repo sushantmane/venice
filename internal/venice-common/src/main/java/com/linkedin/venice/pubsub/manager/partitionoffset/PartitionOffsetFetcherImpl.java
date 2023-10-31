@@ -44,7 +44,6 @@ import org.apache.logging.log4j.Logger;
 public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
   private static final List<Class<? extends Throwable>> PUBSUB_RETRIABLE_FAILURES =
       Collections.singletonList(PubSubClientRetriableException.class);
-  private static final int KAFKA_POLLING_RETRY_MAX_ATTEMPT = 3;
 
   private final Logger logger;
   private final Lock adminConsumerLock;
@@ -229,13 +228,14 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
          * replay for hybrid stores.
          */
         int attempts = 0;
-        while (attempts++ < KAFKA_POLLING_RETRY_MAX_ATTEMPT && records.isEmpty()) {
+        while (attempts++ < PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT
+            && records.isEmpty()) {
           logger.info(
               "Trying to get the last record from topic: {} at offset: {}. Attempt#{}/{}",
               pubSubTopicPartition,
               latestOffset - 1,
               attempts,
-              KAFKA_POLLING_RETRY_MAX_ATTEMPT);
+              PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT);
           records = pubSubConsumer.get().poll(kafkaOperationTimeout.toMillis());
         }
         if (records.isEmpty()) {
@@ -243,7 +243,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
            * Failed the job if we cannot get the last offset of the topic.
            */
           String errorMsg = "Failed to get the last record from topic: " + pubSubTopicPartition + " after "
-              + KAFKA_POLLING_RETRY_MAX_ATTEMPT + " attempts";
+              + PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT + " attempts";
           logger.error(errorMsg);
           throw new VeniceException(errorMsg);
         }
@@ -470,14 +470,15 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
                   Collections.emptyList();
               int currAttempt = 0;
 
-              while (currAttempt++ < KAFKA_POLLING_RETRY_MAX_ATTEMPT && oneBatchConsumedRecords.isEmpty()) {
+              while (currAttempt++ < PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT
+                  && oneBatchConsumedRecords.isEmpty()) {
                 logger.info(
                     "Trying to get records from topic partition {} from offset {} to its log end "
                         + "offset. Attempt# {} / {}",
                     pubSubTopicPartition,
                     startConsumeOffset,
                     currAttempt,
-                    KAFKA_POLLING_RETRY_MAX_ATTEMPT);
+                    PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT);
 
                 oneBatchConsumedRecords =
                     pubSubConsumer.get().poll(kafkaOperationTimeout.toMillis()).get(pubSubTopicPartition);
@@ -487,7 +488,7 @@ public class PartitionOffsetFetcherImpl implements PartitionOffsetFetcher {
                  * Failed the job if we cannot get the last offset of the topic.
                  */
                 String errorMsg = "Failed to get the last record from topic-partition: " + pubSubTopicPartition
-                    + " after " + KAFKA_POLLING_RETRY_MAX_ATTEMPT + " attempts";
+                    + " after " + PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT + " attempts";
                 logger.error(errorMsg);
                 throw new VeniceException(errorMsg);
               }
