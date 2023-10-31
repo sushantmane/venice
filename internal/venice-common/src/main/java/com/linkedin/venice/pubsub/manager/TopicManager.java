@@ -55,8 +55,6 @@ public class TopicManager implements Closeable {
 
   // A thread-safe partition offset fetcher.
   private final TopicMetadataFetcher topicMetadataFetcher;
-  // A metadata cache that leverages the topic metadata fetcher to retrieve partition offsets.
-  private final TopicMetadataCache topicMetadataCache;
 
   // It's expensive to grab the topic config over and over again, and it changes infrequently.
   // So we temporarily cache queried configs.
@@ -72,8 +70,6 @@ public class TopicManager implements Closeable {
     this.metricsRepository = tmContext.getMetricsRepository();
     this.pubSubAdminAdapter = createdPubSubAdminAdapter();
     this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, tmContext, pubSubAdminAdapter);
-    this.topicMetadataCache =
-        new TopicMetadataCache(topicMetadataFetcher, pubSubClusterAddress, tmContext.getTopicOffsetCheckIntervalMs());
     this.logger.info(
         "Created topic manager for the pubsub cluster address: {} with context: {}",
         pubSubClusterAddress,
@@ -87,8 +83,7 @@ public class TopicManager implements Closeable {
       PubSubTopicRepository pubSubTopicRepository,
       MetricsRepository metricsRepository,
       PubSubAdminAdapter pubSubAdminAdapter,
-      TopicMetadataFetcher topicMetadataFetcher,
-      TopicMetadataCache topicMetadataCache) {
+      TopicMetadataFetcher topicMetadataFetcher) {
     this.logger = LogManager.getLogger(
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
@@ -97,7 +92,6 @@ public class TopicManager implements Closeable {
     this.metricsRepository = metricsRepository;
     this.pubSubAdminAdapter = pubSubAdminAdapter;
     this.topicMetadataFetcher = topicMetadataFetcher;
-    this.topicMetadataCache = topicMetadataCache;
     this.logger.info(
         "Created topic manager for the pubsub cluster address: {} with context: {}",
         pubSubClusterAddress,
@@ -608,7 +602,7 @@ public class TopicManager implements Closeable {
   }
 
   public boolean containsTopicCached(PubSubTopic pubSubTopic) {
-    return topicMetadataCache.containsTopicCached(pubSubTopic);
+    return topicMetadataFetcher.containsTopicCached(pubSubTopic);
   }
 
   public long getEarliestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
@@ -616,7 +610,7 @@ public class TopicManager implements Closeable {
   }
 
   public long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
-    return topicMetadataCache.getEarliestOffsetCached(pubSubTopicPartition);
+    return topicMetadataFetcher.getEarliestOffsetCached(pubSubTopicPartition);
   }
 
   public long getLatestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
@@ -624,7 +618,7 @@ public class TopicManager implements Closeable {
   }
 
   public long getLatestOffsetCached(PubSubTopic pubSubTopic, int partitionId) {
-    return topicMetadataCache.getLatestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
+    return topicMetadataFetcher.getLatestOffsetCached(new PubSubTopicPartitionImpl(pubSubTopic, partitionId));
   }
 
   public long getProducerTimestampOfLastDataMessageWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
@@ -632,7 +626,7 @@ public class TopicManager implements Closeable {
   }
 
   public long getProducerTimestampOfLastDataMessageCached(PubSubTopicPartition pubSubTopicPartition) {
-    return topicMetadataCache.getProducerTimestampOfLastDataMessageCached(pubSubTopicPartition);
+    return topicMetadataFetcher.getProducerTimestampOfLastDataMessageCached(pubSubTopicPartition);
   }
 
   /**
@@ -647,7 +641,7 @@ public class TopicManager implements Closeable {
    * @param pubSubTopic the topic to invalidate
    */
   public CompletableFuture<Void> invalidateKeyAsync(PubSubTopic pubSubTopic) {
-    return topicMetadataCache.invalidateKeyAsync(pubSubTopic);
+    return topicMetadataFetcher.invalidateKeyAsync(pubSubTopic);
   }
 
   /**
@@ -655,7 +649,7 @@ public class TopicManager implements Closeable {
    * @param pubSubTopicPartition the topic partition to invalidate
    */
   public void invalidateCache(PubSubTopicPartition pubSubTopicPartition) {
-    topicMetadataCache.invalidateKey(pubSubTopicPartition);
+    topicMetadataFetcher.invalidateKey(pubSubTopicPartition);
   }
 
   public String getPubSubClusterAddress() {
@@ -664,7 +658,6 @@ public class TopicManager implements Closeable {
 
   @Override
   public synchronized void close() {
-    Utils.closeQuietlyWithErrorLogged(topicMetadataCache);
     Utils.closeQuietlyWithErrorLogged(topicMetadataFetcher);
     Utils.closeQuietlyWithErrorLogged(pubSubAdminAdapter);
   }

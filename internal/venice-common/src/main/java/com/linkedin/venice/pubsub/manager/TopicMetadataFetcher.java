@@ -1,6 +1,7 @@
 package com.linkedin.venice.pubsub.manager;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
@@ -16,8 +17,10 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.stats.StatsErrorCode;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.Utils;
+import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongMaps;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
@@ -25,19 +28,23 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
 class TopicMetadataFetcher implements Closeable {
   private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcher.class);
+  private static final int DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY = 3;
   public static final PubSubOpTimeoutException DUMMY_PUBSUB_OP_TIMEOUT_EXCEPTION =
       new PubSubOpTimeoutException("This exception should not be thrown");
 
@@ -50,13 +57,29 @@ class TopicMetadataFetcher implements Closeable {
   private final ThreadPoolExecutor threadPoolExecutor;
   private final PubSubAdminAdapter pubSubAdminAdapter;
 
+  /**
+   * The following caches store metadata related to topics, including details such as the latest offset,
+   * earliest offset, and topic existence. Cached values are set to expire after a specified time-to-live
+   * duration. When a value is not present in the cache, it is synchronously. If a cached value has expired,
+   * it is asynchronously retrieved, and the cache. value is updated upon completion of the asynchronous fetch.
+   * To avoid overwhelming metadata fetcher, only one asynchronous request is issued at a time for a given
+   * key within the specific cache.
+   */
+  private final Map<PubSubTopic, ValueAndExpiryTime<Boolean>> topicExistenceCache = new VeniceConcurrentHashMap<>();
+  private final Map<PubSubTopicPartition, ValueAndExpiryTime<Long>> latestOffsetCache = new VeniceConcurrentHashMap<>();
+  private final Map<PubSubTopicPartition, ValueAndExpiryTime<Long>> earliestOffsetCache =
+      new VeniceConcurrentHashMap<>();
+  private final Map<PubSubTopicPartition, ValueAndExpiryTime<Long>> lastProducerTimestampCache =
+      new VeniceConcurrentHashMap<>();
+  private final long cachedEntryTtlInNs;
+
   public TopicMetadataFetcher(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
       PubSubAdminAdapter pubSubAdminAdapter) {
     this.pubSubAdminAdapter = pubSubAdminAdapter;
     this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
-
+    this.cachedEntryTtlInNs = MILLISECONDS.toNanos(topicManagerContext.getTopicOffsetCheckIntervalMs());
     PubSubMessageDeserializer pubSubMessageDeserializer = PubSubMessageDeserializer.getInstance();
     for (int i = 0; i < topicManagerContext.getTopicMetadataFetcherPoolSize(); i++) {
       PubSubConsumerAdapter pubSubConsumerAdapter = topicManagerContext.getPubSubConsumerAdapterFactory()
@@ -122,6 +145,11 @@ class TopicMetadataFetcher implements Closeable {
 
   @Override
   public void close() throws IOException {
+    latestOffsetCache.clear();
+    earliestOffsetCache.clear();
+    lastProducerTimestampCache.clear();
+    topicExistenceCache.clear();
+
     threadPoolExecutor.shutdown();
     try {
       if (threadPoolExecutor.awaitTermination(5, TimeUnit.MILLISECONDS)) {
@@ -143,6 +171,25 @@ class TopicMetadataFetcher implements Closeable {
 
   CompletableFuture<Boolean> containsTopicAsync(PubSubTopic topic) {
     return CompletableFuture.supplyAsync(() -> containsTopic(topic), threadPoolExecutor);
+  }
+
+  boolean containsTopicCached(PubSubTopic pubSubTopic) {
+    long now = System.nanoTime();
+    ValueAndExpiryTime<Boolean> cachedValue = topicExistenceCache.computeIfAbsent(
+        pubSubTopic,
+        k -> new ValueAndExpiryTime<>(containsTopic(pubSubTopic), now + cachedEntryTtlInNs));
+    if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
+      CompletableFuture<Boolean> containsTopicCompletableFuture = containsTopicAsync(pubSubTopic);
+      containsTopicCompletableFuture.whenComplete((containsTopic, throwable) -> {
+        if (throwable != null) {
+          topicExistenceCache.remove(pubSubTopic);
+        } else {
+          topicExistenceCache
+              .put(pubSubTopic, new ValueAndExpiryTime<>(containsTopic, System.nanoTime() + cachedEntryTtlInNs));
+        }
+      });
+    }
+    return cachedValue.getValue();
   }
 
   // API: Get the latest offsets for all partitions of a topic
@@ -245,6 +292,36 @@ class TopicMetadataFetcher implements Closeable {
         .supplyAsync(() -> getLatestOffsetWithRetries(pubSubTopicPartition, retries), threadPoolExecutor);
   }
 
+  long getLatestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
+    long now = System.nanoTime();
+    ValueAndExpiryTime<Long> cachedValue;
+    try {
+      cachedValue = latestOffsetCache.computeIfAbsent(pubSubTopicPartition, k -> {
+        long latestOffset =
+            getLatestOffsetWithRetries(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+        return new ValueAndExpiryTime<>(latestOffset, now + cachedEntryTtlInNs);
+      });
+    } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
+      LOGGER.error("Failed to get end offset for topic-partition: {}", pubSubTopicPartition, e);
+      return StatsErrorCode.LAG_MEASUREMENT_FAILURE.code;
+    }
+
+    if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
+      CompletableFuture<Long> endOffsetCompletableFuture =
+          getLatestOffsetWithRetriesAsync(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+      endOffsetCompletableFuture.whenComplete((latestOffset, throwable) -> {
+        if (throwable != null) {
+          latestOffsetCache.remove(pubSubTopicPartition);
+        } else {
+          latestOffsetCache.put(
+              pubSubTopicPartition,
+              new ValueAndExpiryTime<>(latestOffset, System.nanoTime() + cachedEntryTtlInNs));
+        }
+      });
+    }
+    return cachedValue.getValue();
+  }
+
   // API: Get the earliest (beginning) offset for a topic partition
   /**
    * Retrieves the earliest offset for the specified partition of a PubSub topic.
@@ -297,6 +374,38 @@ class TopicMetadataFetcher implements Closeable {
   CompletableFuture<Long> getEarliestOffsetWithRetriesAsync(PubSubTopicPartition pubSubTopicPartition, int retries) {
     return CompletableFuture
         .supplyAsync(() -> getEarliestOffsetWithRetries(pubSubTopicPartition, retries), threadPoolExecutor);
+  }
+
+  long getEarliestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
+    long now = System.nanoTime();
+    ValueAndExpiryTime<Long> cachedValue;
+    try {
+      cachedValue = earliestOffsetCache.computeIfAbsent(pubSubTopicPartition, k -> {
+        long earliestOffset =
+            getEarliestOffsetWithRetries(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+        return new ValueAndExpiryTime<>(earliestOffset, now + cachedEntryTtlInNs);
+      });
+    } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
+      LOGGER.error("Failed to get beginning offset for topic-partition: {}", pubSubTopicPartition, e);
+      return StatsErrorCode.LAG_MEASUREMENT_FAILURE.code;
+    }
+
+    // For a given key in the given cache, we will only issue one async request at the same time.
+    if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
+      CompletableFuture<Long> beginningOffsetCompletableFuture =
+          getEarliestOffsetWithRetriesAsync(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+      beginningOffsetCompletableFuture.whenComplete((earliestOffset, throwable) -> {
+        if (throwable != null) {
+          earliestOffsetCache.remove(pubSubTopicPartition);
+        } else {
+          earliestOffsetCache.put(
+              pubSubTopicPartition,
+              new ValueAndExpiryTime<>(earliestOffset, System.nanoTime() + cachedEntryTtlInNs));
+        }
+      });
+    }
+
+    return cachedValue.getValue();
   }
 
   // API: Get the offset for a given timestamp
@@ -406,6 +515,40 @@ class TopicMetadataFetcher implements Closeable {
         threadPoolExecutor);
   }
 
+  long getProducerTimestampOfLastDataMessageCached(PubSubTopicPartition pubSubTopicPartition) {
+    long now = System.nanoTime();
+    ValueAndExpiryTime<Long> cachedValue;
+    try {
+      cachedValue = lastProducerTimestampCache.computeIfAbsent(pubSubTopicPartition, k -> {
+        long producerTimestamp = getProducerTimestampOfLastDataMessageWithRetries(
+            pubSubTopicPartition,
+            DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+        return new ValueAndExpiryTime<>(producerTimestamp, now + cachedEntryTtlInNs);
+      });
+    } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
+      LOGGER.error("Failed to get producer timestamp for topic-partition: {}", pubSubTopicPartition, e);
+      return StatsErrorCode.LAG_MEASUREMENT_FAILURE.code;
+    }
+
+    if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
+      CompletableFuture<Long> producerTimestampCompletableFuture =
+          getProducerTimestampOfLastDataMessageWithRetriesAsync(
+              pubSubTopicPartition,
+              DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
+      producerTimestampCompletableFuture.whenComplete((producerTimestamp, throwable) -> {
+        if (throwable != null) {
+          lastProducerTimestampCache.remove(pubSubTopicPartition);
+        } else {
+          lastProducerTimestampCache.put(
+              pubSubTopicPartition,
+              new ValueAndExpiryTime<>(producerTimestamp, System.nanoTime() + cachedEntryTtlInNs));
+        }
+      });
+    }
+
+    return cachedValue.getValue();
+  }
+
   /**
    * This method retrieves last {@code lastRecordsCount} records from a topic partition and there are 4 steps below.
    *  1. Find the current end offset N
@@ -491,6 +634,76 @@ class TopicMetadataFetcher implements Closeable {
         pubSubConsumerAdapter.unSubscribe(pubSubTopicPartition);
       }
       releaseConsumer(pubSubConsumerAdapter);
+    }
+  }
+
+  void invalidateKey(PubSubTopicPartition pubSubTopicPartition) {
+    long startTime = System.currentTimeMillis();
+    LOGGER.info("Invalidating cache for topic-partition: {}", pubSubTopicPartition);
+    latestOffsetCache.remove(pubSubTopicPartition);
+    earliestOffsetCache.remove(pubSubTopicPartition);
+    lastProducerTimestampCache.remove(pubSubTopicPartition);
+    LOGGER.info(
+        "Invalidated cache for topic-partition: {} in {} ms",
+        pubSubTopicPartition,
+        System.currentTimeMillis() - startTime);
+  }
+
+  CompletableFuture<Void> invalidateKeyAsync(PubSubTopic pubSubTopic) {
+    return CompletableFuture.runAsync(() -> invalidateKey(pubSubTopic));
+  }
+
+  void invalidateKey(PubSubTopic pubSubTopic) {
+    long startTime = System.currentTimeMillis();
+    LOGGER.info("Invalidating cache for topic: {}", pubSubTopic);
+    topicExistenceCache.remove(pubSubTopic);
+    Set<PubSubTopicPartition> topicPartitions = new HashSet<>();
+    for (PubSubTopicPartition pubSubTopicPartition: earliestOffsetCache.keySet()) {
+      if (pubSubTopicPartition.getPubSubTopic().equals(pubSubTopic)) {
+        topicPartitions.add(pubSubTopicPartition);
+      }
+    }
+    earliestOffsetCache.keySet().removeAll(topicPartitions);
+    topicPartitions.clear();
+    for (PubSubTopicPartition pubSubTopicPartition: latestOffsetCache.keySet()) {
+      if (pubSubTopicPartition.getPubSubTopic().equals(pubSubTopic)) {
+        topicPartitions.add(pubSubTopicPartition);
+      }
+    }
+    latestOffsetCache.keySet().removeAll(topicPartitions);
+    topicPartitions.clear();
+    for (PubSubTopicPartition pubSubTopicPartition: lastProducerTimestampCache.keySet()) {
+      if (pubSubTopicPartition.getPubSubTopic().equals(pubSubTopic)) {
+        topicPartitions.add(pubSubTopicPartition);
+      }
+    }
+    lastProducerTimestampCache.keySet().removeAll(topicPartitions);
+    LOGGER.info("Invalidated cache for topic: {} in {} ms", pubSubTopic, System.currentTimeMillis() - startTime);
+  }
+
+  /**
+   * This class is used to store the value and expiry time of a cached value.
+   */
+  static class ValueAndExpiryTime<T> {
+    private final T value;
+    private final long expiryTimeNs;
+    private final AtomicBoolean valueUpdateInProgress = new AtomicBoolean(false);
+
+    ValueAndExpiryTime(T value, long expiryTimeNs) {
+      this.value = value;
+      this.expiryTimeNs = expiryTimeNs;
+    }
+
+    T getValue() {
+      return value;
+    }
+
+    long getExpiryTimeNs() {
+      return expiryTimeNs;
+    }
+
+    boolean tryAcquireUpdateLock() {
+      return valueUpdateInProgress.compareAndSet(false, true);
     }
   }
 }
