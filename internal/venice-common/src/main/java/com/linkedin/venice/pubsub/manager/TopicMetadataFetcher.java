@@ -292,12 +292,13 @@ class TopicMetadataFetcher implements Closeable {
   }
 
   long getLatestOffsetCached(PubSubTopicPartition pubSubTopicPartition) {
+    long now = System.nanoTime();
     ValueAndExpiryTime<Long> cachedValue;
     try {
       cachedValue = latestOffsetCache.computeIfAbsent(pubSubTopicPartition, k -> {
         long latestOffset =
             getLatestOffsetWithRetries(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
-        return new ValueAndExpiryTime<>(latestOffset, System.nanoTime() + cachedEntryTtlInNs);
+        return new ValueAndExpiryTime<>(latestOffset, now + cachedEntryTtlInNs);
       });
     } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
       LOGGER.error("Failed to get end offset for topic-partition: {}", pubSubTopicPartition, e);
@@ -310,18 +311,19 @@ class TopicMetadataFetcher implements Closeable {
   // load the cache with the latest offset
   void populateCacheWithLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
     long now = System.nanoTime();
-    ValueAndExpiryTime<Long> cachedValue = latestOffsetCache.get(pubSubTopicPartition);
-    if (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock()) {
+    // if there is no entry in the cache or the entry has expired, we will try to populate the cache
+    ValueAndExpiryTime<Long> cachedValue = latestOffsetCache.putIfAbsent(
+        pubSubTopicPartition,
+        new ValueAndExpiryTime<>((long) StatsErrorCode.LAG_MEASUREMENT_FAILURE.code, now + cachedEntryTtlInNs));
+    if (cachedValue == null || (cachedValue.getExpiryTimeNs() <= now && cachedValue.tryAcquireUpdateLock())) {
       CompletableFuture<Long> future =
           getLatestOffsetWithRetriesAsync(pubSubTopicPartition, DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY);
       future.whenComplete((latestOffset, throwable) -> {
         if (throwable != null) {
           latestOffsetCache.remove(pubSubTopicPartition);
-        } else {
-          latestOffsetCache.put(
-              pubSubTopicPartition,
-              new ValueAndExpiryTime<>(latestOffset, System.nanoTime() + cachedEntryTtlInNs));
+          return;
         }
+        latestOffsetCache.get(pubSubTopicPartition).updateValue(latestOffset);
       });
     }
   }
@@ -689,8 +691,8 @@ class TopicMetadataFetcher implements Closeable {
    * This class is used to store the value and expiry time of a cached value.
    */
   static class ValueAndExpiryTime<T> {
-    private final T value;
-    private final long expiryTimeNs;
+    private T value;
+    private long expiryTimeNs;
     private final AtomicBoolean valueUpdateInProgress = new AtomicBoolean(false);
 
     ValueAndExpiryTime(T value, long expiryTimeNs) {
@@ -708,6 +710,12 @@ class TopicMetadataFetcher implements Closeable {
 
     boolean tryAcquireUpdateLock() {
       return valueUpdateInProgress.compareAndSet(false, true);
+    }
+
+    void updateValue(T value) {
+      this.value = value;
+      this.expiryTimeNs = System.nanoTime();
+      this.valueUpdateInProgress.set(false);
     }
   }
 }
