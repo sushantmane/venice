@@ -1884,9 +1884,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     return getTopicManager(kafkaUrl).getLatestOffsetCached(versionTopic, partition);
   }
 
-  protected long getPartitionOffsetLag(String kafkaSourceAddress, PubSubTopic topic, int partition) {
+  protected long getPartitionOffsetLagBasedOnMetrics(String kafkaSourceAddress, PubSubTopic topic, int partition) {
     return aggKafkaConsumerService
-        .getOffsetLagFor(kafkaSourceAddress, versionTopic, new PubSubTopicPartitionImpl(topic, partition));
+        .getConsumerLagBasedOnMetrics(kafkaSourceAddress, versionTopic, new PubSubTopicPartitionImpl(topic, partition));
   }
 
   protected long getPartitionLatestOffset(String kafkaSourceAddress, PubSubTopic topic, int partition) {

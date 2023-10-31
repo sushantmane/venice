@@ -39,19 +39,37 @@ public interface PubSubConsumerAdapter extends AutoCloseable, Closeable {
   Set<PubSubTopicPartition> getAssignment();
 
   /**
-   * Get consuming offset lag for a pub sub topic partition
+   * Get consumer offset lag for a pub sub topic partition based on metrics. This may not be
+   * 100% accurate, but it is a good approximation.
    * @return an offset lag of zero or above if a valid lag was collected by the consumer, or -1 otherwise
    */
-  default long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
+  default long getConsumerLagBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     return -1;
   }
 
+  @Deprecated
   /**
-   * Get the latest offset for a topic partition
+   * @deprecated use {@link #getConsumerLagBasedOnMetrics(PubSubTopicPartition)} instead
+   */
+  default long getOffsetLag(PubSubTopicPartition pubSubTopicPartition) {
+    return getConsumerLagBasedOnMetrics(pubSubTopicPartition);
+  }
+
+  /**
+   * Get the latest/end offset for a topic partition based on metrics. This may not be
+   * 100% accurate, but it is a good approximation.
    * @return the latest offset (zero or above) if an offset was collected by the consumer, or -1 otherwise
    */
-  default long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  default long getEndOffsetBasedOnMetrics(PubSubTopicPartition pubSubTopicPartition) {
     return -1;
+  }
+
+  @Deprecated
+  /**
+   * @deprecated use {@link #getEndOffsetBasedOnMetrics(PubSubTopicPartition)} instead
+   */
+  default long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+    return getEndOffsetBasedOnMetrics(pubSubTopicPartition);
   }
 
   Long offsetForTime(PubSubTopicPartition pubSubTopicPartition, long timestamp, Duration timeout);
