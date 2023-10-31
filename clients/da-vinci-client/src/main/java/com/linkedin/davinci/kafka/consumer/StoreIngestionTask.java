@@ -1455,7 +1455,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     if (topicManagerRepository != null) {
       List<TopicManager> topicManagers = topicManagerRepository.getAllTopicManagers();
       for (TopicManager topicManager: topicManagers) {
-        topicManager.invalidateKey(versionTopic);
+        topicManager.invalidateKeyAsync(versionTopic);
       }
     }
 
