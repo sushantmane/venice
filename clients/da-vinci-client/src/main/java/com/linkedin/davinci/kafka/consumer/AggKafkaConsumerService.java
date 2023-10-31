@@ -238,12 +238,14 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     return dataReceiver;
   }
 
-  public long getOffsetLagFor(
+  public long getConsumerLagBasedOnMetrics(
       final String kafkaURL,
       PubSubTopic versionTopic,
       PubSubTopicPartition pubSubTopicPartition) {
     KafkaConsumerService consumerService = getKafkaConsumerService(kafkaURL);
-    return consumerService == null ? -1 : consumerService.getOffsetLagFor(versionTopic, pubSubTopicPartition);
+    return consumerService == null
+        ? -1
+        : consumerService.getConsumerLagBasedOnMetrics(versionTopic, pubSubTopicPartition);
   }
 
   public long getLatestOffsetFor(
@@ -251,7 +253,9 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
       PubSubTopic versionTopic,
       PubSubTopicPartition pubSubTopicPartition) {
     KafkaConsumerService consumerService = getKafkaConsumerService(kafkaURL);
-    return consumerService == null ? -1 : consumerService.getLatestOffsetFor(versionTopic, pubSubTopicPartition);
+    return consumerService == null
+        ? -1
+        : consumerService.getEndOffsetBasedOnMetrics(versionTopic, pubSubTopicPartition);
   }
 
   /**

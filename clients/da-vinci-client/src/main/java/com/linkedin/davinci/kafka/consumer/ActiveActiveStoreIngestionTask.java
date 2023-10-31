@@ -1291,7 +1291,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           // Consumer might not existed after the consumption state is created, but before attaching the corresponding
           // consumer.
           long offsetLagOptional =
-              getPartitionOffsetLag(kafkaSourceAddress, currentLeaderTopic, pcs.getUserPartition());
+              getPartitionOffsetLagBasedOnMetrics(kafkaSourceAddress, currentLeaderTopic, pcs.getUserPartition());
           if (offsetLagOptional >= 0) {
             return offsetLagOptional;
           }

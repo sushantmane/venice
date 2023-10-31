@@ -416,20 +416,20 @@ public abstract class KafkaConsumerService extends AbstractVeniceService {
     stats.recordMinPartitionsPerConsumer(minPartitionsPerConsumer);
   }
 
-  public long getOffsetLagFor(PubSubTopic versionTopic, PubSubTopicPartition pubSubTopicPartition) {
+  public long getConsumerLagBasedOnMetrics(PubSubTopic versionTopic, PubSubTopicPartition pubSubTopicPartition) {
     return getSomeOffsetFor(
         versionTopic,
         pubSubTopicPartition,
-        PubSubConsumerAdapter::getOffsetLag,
+        PubSubConsumerAdapter::getConsumerLagBasedOnMetrics,
         stats::recordOffsetLagIsAbsent,
         stats::recordOffsetLagIsPresent);
   }
 
-  public long getLatestOffsetFor(PubSubTopic versionTopic, PubSubTopicPartition pubSubTopicPartition) {
+  public long getEndOffsetBasedOnMetrics(PubSubTopic versionTopic, PubSubTopicPartition pubSubTopicPartition) {
     return getSomeOffsetFor(
         versionTopic,
         pubSubTopicPartition,
-        PubSubConsumerAdapter::getLatestOffset,
+        PubSubConsumerAdapter::getEndOffsetBasedOnMetrics,
         stats::recordLatestOffsetIsAbsent,
         stats::recordLatestOffsetIsPresent);
   }
