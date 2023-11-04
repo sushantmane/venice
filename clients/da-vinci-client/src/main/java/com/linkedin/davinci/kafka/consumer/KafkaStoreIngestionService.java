@@ -510,6 +510,8 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
    */
   @Override
   public boolean startInner() {
+    aggLagStats.startLagCollector();
+
     ingestionExecutorService = Executors.newCachedThreadPool();
     topicNameToIngestionTaskMap.values().forEach(ingestionExecutorService::submit);
 
@@ -593,6 +595,8 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
   public void stopInner() {
     Utils.closeQuietlyWithErrorLogged(participantStoreConsumptionTask);
     shutdownExecutorService(participantStoreConsumerExecutorService, "participantStoreConsumerExecutorService", true);
+
+    Utils.closeQuietlyWithErrorLogged(aggLagStats);
 
     /*
      * We would like to gracefully shutdown {@link #ingestionExecutorService},
@@ -1272,9 +1276,15 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     return response;
   }
 
+  @Deprecated
   @Override
   public void traverseAllIngestionTasksAndApply(Consumer<StoreIngestionTask> consumer) {
     topicNameToIngestionTaskMap.values().forEach(consumer);
+  }
+
+  @Override
+  public Map<String, StoreIngestionTask> getStoreIngestionTasks() {
+    return topicNameToIngestionTaskMap;
   }
 
   public AggLagStats getAggLagStats() {
