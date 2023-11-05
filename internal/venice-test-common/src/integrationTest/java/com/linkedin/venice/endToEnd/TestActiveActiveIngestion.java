@@ -77,6 +77,7 @@ import com.linkedin.venice.writer.VeniceWriter;
 import com.linkedin.venice.writer.VeniceWriterFactory;
 import com.linkedin.venice.writer.VeniceWriterOptions;
 import io.tehuti.metrics.MetricsRepository;
+import java.io.Closeable;
 import java.io.File;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -98,7 +99,9 @@ import org.apache.avro.util.Utf8;
 import org.apache.samza.config.MapConfig;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 
@@ -115,6 +118,7 @@ public class TestActiveActiveIngestion {
   private VeniceServerWrapper serverWrapper;
   private AvroSerializer serializer;
   private ControllerClient parentControllerClient;
+  private List<Closeable> closeables;
 
   @BeforeClass(alwaysRun = true)
   public void setUp() {
@@ -159,6 +163,18 @@ public class TestActiveActiveIngestion {
   public void cleanUp() {
     multiRegionMultiClusterWrapper.close();
     TestView.resetCounters();
+  }
+
+  @BeforeMethod(alwaysRun = true)
+  public void setUpMethod() {
+    closeables = new LinkedList<>();
+  }
+
+  @AfterMethod(alwaysRun = true)
+  public void tearDownMethod() throws Exception {
+    for (Closeable closeable: closeables) {
+      Utils.closeQuietlyWithErrorLogged(closeable);
+    }
   }
 
   private void pollChangeEventsFromChangeCaptureConsumer(

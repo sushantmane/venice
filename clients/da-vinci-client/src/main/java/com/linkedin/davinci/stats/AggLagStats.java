@@ -1,36 +1,45 @@
 package com.linkedin.davinci.stats;
 
 import com.linkedin.davinci.kafka.consumer.StoreIngestionService;
+import com.linkedin.davinci.kafka.consumer.StoreIngestionTask;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.Gauge;
-import com.linkedin.venice.utils.LatencyUtils;
+import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.RegionUtils;
-import com.linkedin.venice.utils.Time;
 import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongMaps;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
-public class AggLagStats extends AbstractVeniceStats {
+public class AggLagStats extends AbstractVeniceStats implements Closeable {
+  public static final Logger LOGGER = LogManager.getLogger(AggLagStats.class);
+  private final ScheduledExecutorService scheduler;
   private final StoreIngestionService storeIngestionService;
   private final Int2ObjectMap<String> kafkaClusterIdToAliasMap;
   private final Int2LongMap aggRegionHybridOffsetLagTotalMap;
-
-  private long aggBatchReplicationLagFuture;
-  private long aggBatchLeaderOffsetLagFuture;
-  private long aggBatchFollowerOffsetLagFuture;
-  private long aggHybridLeaderOffsetLagTotal;
-  private long aggHybridFollowerOffsetLagTotal;
-  private long lastLagUpdateTsMs = 0;
+  private volatile long aggBatchReplicationLagFuture;
+  private volatile long aggBatchLeaderOffsetLagFuture;
+  private volatile long aggBatchFollowerOffsetLagFuture;
+  private volatile long aggHybridLeaderOffsetLagTotal;
+  private volatile long aggHybridFollowerOffsetLagTotal;
 
   public AggLagStats(StoreIngestionService storeIngestionService, MetricsRepository metricsRepository) {
     super(metricsRepository, "AggLagStats");
     this.storeIngestionService = storeIngestionService;
     this.kafkaClusterIdToAliasMap =
         storeIngestionService.getVeniceConfigLoader().getVeniceServerConfig().getKafkaClusterIdToAliasMap();
-    this.aggRegionHybridOffsetLagTotalMap = new Int2LongOpenHashMap(kafkaClusterIdToAliasMap.size());
+    this.aggRegionHybridOffsetLagTotalMap =
+        Int2LongMaps.synchronize(new Int2LongOpenHashMap(kafkaClusterIdToAliasMap.size()));
     for (Int2ObjectMap.Entry<String> entry: kafkaClusterIdToAliasMap.int2ObjectEntrySet()) {
       String regionNamePrefix = RegionUtils.getRegionSpecificMetricPrefix(
           storeIngestionService.getVeniceConfigLoader().getVeniceServerConfig().getRegionName(),
@@ -44,71 +53,88 @@ public class AggLagStats extends AbstractVeniceStats {
     registerSensor("agg_batch_follower_offset_lag_future", new Gauge(this::getAggBatchFollowerOffsetLagFuture));
     registerSensor("agg_hybrid_leader_offset_lag_total", new Gauge(this::getAggHybridLeaderOffsetLagTotal));
     registerSensor("agg_hybrid_follower_offset_lag_total", new Gauge(this::getAggHybridFollowerOffsetLagTotal));
+    this.scheduler = Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory("AggLagStats"));
   }
 
-  private synchronized void mayCollectAllLags() {
-    /**
-     * Will cache the result for 60 seconds to avoid looping through all ingestion task every time.
-     */
-    if (LatencyUtils.getElapsedTimeInMs(lastLagUpdateTsMs) < 60 * Time.MS_PER_SECOND) {
-      return;
-    }
-    aggBatchReplicationLagFuture = 0;
-    aggBatchLeaderOffsetLagFuture = 0;
-    aggBatchFollowerOffsetLagFuture = 0;
-    aggHybridLeaderOffsetLagTotal = 0;
-    aggHybridFollowerOffsetLagTotal = 0;
-    aggRegionHybridOffsetLagTotalMap.clear();
+  public void startLagCollector() {
+    Runnable lagCollector = () -> {
+      try {
+        collectLagForAllStoreIngestionTasks();
+      } catch (Exception e) {
+        LOGGER.warn("Failed to collect all lags", e);
+      }
+    };
+    scheduler.scheduleWithFixedDelay(lagCollector, 0, 1, TimeUnit.MINUTES);
+    LOGGER.info("Started lag collector");
+  }
 
-    storeIngestionService.traverseAllIngestionTasksAndApply((ingestionTask) -> {
-      if (ingestionTask.isFutureVersion()) {
-        aggBatchReplicationLagFuture += ingestionTask.getBatchReplicationLag();
-        aggBatchLeaderOffsetLagFuture += ingestionTask.getBatchLeaderOffsetLag();
-        aggBatchFollowerOffsetLagFuture += ingestionTask.getBatchFollowerOffsetLag();
+  // This method is called every minute to collect lag for all store ingestion tasks.
+  private void collectLagForAllStoreIngestionTasks() {
+    long aggBatchReplicationLagFuture = 0;
+    long aggBatchLeaderOffsetLagFuture = 0;
+    long aggBatchFollowerOffsetLagFuture = 0;
+    long aggHybridLeaderOffsetLagTotal = 0;
+    long aggHybridFollowerOffsetLagTotal = 0;
+    Map<String, StoreIngestionTask> storeIngestionTaskMap = storeIngestionService.getStoreIngestionTasks();
+    for (Map.Entry<String, StoreIngestionTask> entry: storeIngestionTaskMap.entrySet()) {
+      StoreIngestionTask storeIngestionTask = entry.getValue();
+      if (storeIngestionTask.isFutureVersion()) {
+        aggBatchReplicationLagFuture += storeIngestionTask.getBatchReplicationLag();
+        aggBatchLeaderOffsetLagFuture += storeIngestionTask.getBatchLeaderOffsetLag();
+        aggBatchFollowerOffsetLagFuture += storeIngestionTask.getBatchFollowerOffsetLag();
       }
 
-      aggHybridLeaderOffsetLagTotal += ingestionTask.getHybridLeaderOffsetLag();
-      aggHybridFollowerOffsetLagTotal += ingestionTask.getHybridFollowerOffsetLag();
-    });
+      aggHybridLeaderOffsetLagTotal += storeIngestionTask.getHybridLeaderOffsetLag();
+      aggHybridFollowerOffsetLagTotal += storeIngestionTask.getHybridFollowerOffsetLag();
+    }
+    this.aggBatchReplicationLagFuture = aggBatchReplicationLagFuture;
+    this.aggBatchLeaderOffsetLagFuture = aggBatchLeaderOffsetLagFuture;
+    this.aggBatchFollowerOffsetLagFuture = aggBatchFollowerOffsetLagFuture;
+    this.aggHybridLeaderOffsetLagTotal = aggHybridLeaderOffsetLagTotal;
+    this.aggHybridFollowerOffsetLagTotal = aggHybridFollowerOffsetLagTotal;
 
     for (int regionId: kafkaClusterIdToAliasMap.keySet()) {
-      AtomicLong totalValue = new AtomicLong();
-      storeIngestionService.traverseAllIngestionTasksAndApply((ingestionTask) -> {
-        totalValue.addAndGet(ingestionTask.getRegionHybridOffsetLag(regionId));
-      });
-      aggRegionHybridOffsetLagTotalMap.put(regionId, totalValue.longValue());
+      long aggRegionHybridOffsetLagTotal = 0;
+      for (Map.Entry<String, StoreIngestionTask> entry: storeIngestionTaskMap.entrySet()) {
+        StoreIngestionTask storeIngestionTask = entry.getValue();
+        aggRegionHybridOffsetLagTotal += storeIngestionTask.getRegionHybridOffsetLag(regionId);
+      }
+      aggRegionHybridOffsetLagTotalMap.put(regionId, aggRegionHybridOffsetLagTotal);
     }
-
-    lastLagUpdateTsMs = System.currentTimeMillis();
   }
 
   public final long getAggBatchReplicationLagFuture() {
-    mayCollectAllLags();
     return aggBatchReplicationLagFuture;
   }
 
   public final long getAggBatchLeaderOffsetLagFuture() {
-    mayCollectAllLags();
     return aggBatchLeaderOffsetLagFuture;
   }
 
   public final long getAggBatchFollowerOffsetLagFuture() {
-    mayCollectAllLags();
     return aggBatchFollowerOffsetLagFuture;
   }
 
   public final long getAggHybridLeaderOffsetLagTotal() {
-    mayCollectAllLags();
     return aggHybridLeaderOffsetLagTotal;
   }
 
   public final long getAggHybridFollowerOffsetLagTotal() {
-    mayCollectAllLags();
     return aggHybridFollowerOffsetLagTotal;
   }
 
   public final long getAggRegionHybridOffsetLagTotal(int regionId) {
-    mayCollectAllLags();
     return aggRegionHybridOffsetLagTotalMap.getOrDefault(regionId, 0L);
+  }
+
+  @Override
+  public void close() throws IOException {
+    scheduler.shutdown();
+    try {
+      scheduler.awaitTermination(30, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      LOGGER.error("Failed to shutdown lag collector", e);
+    }
+    LOGGER.info("Stopped lag collector");
   }
 }
