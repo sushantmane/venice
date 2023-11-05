@@ -118,8 +118,7 @@ public class TopicManagerContext {
     private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
     private int topicMetadataFetcherPoolSize = 2; // 2 fetchers per broker
-    private int topicMetadataFetcherThreadPoolSize =
-        Math.min(Runtime.getRuntime().availableProcessors() / 2, topicMetadataFetcherPoolSize);
+    private int topicMetadataFetcherThreadPoolSize = Math.max(4, topicMetadataFetcherPoolSize);
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
       this.pubSubOperationTimeoutMs = pubSubOperationTimeoutMs;
