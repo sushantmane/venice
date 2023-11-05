@@ -6,7 +6,6 @@ import com.linkedin.davinci.helix.LeaderFollowerPartitionStateModel;
 import com.linkedin.davinci.notifier.VeniceNotifier;
 import com.linkedin.davinci.stats.AggVersionedIngestionStats;
 import com.linkedin.davinci.storage.MetadataRetriever;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -112,10 +111,7 @@ public interface StoreIngestionService extends MetadataRetriever {
 
   StoreIngestionTask getStoreIngestionTask(String topic);
 
-  @Deprecated
   void traverseAllIngestionTasksAndApply(Consumer<StoreIngestionTask> consumer);
-
-  Map<String, StoreIngestionTask> getStoreIngestionTasks();
 
   VeniceConfigLoader getVeniceConfigLoader();
 }
