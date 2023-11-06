@@ -1,10 +1,12 @@
-package com.linkedin.venice.pubsub.manager;
+package com.linkedin.venice.kafka;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.MAX_TOPIC_DELETE_RETRIES;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -34,6 +36,7 @@ import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.adapter.kafka.admin.ApacheKafkaAdminAdapterFactory;
+import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
@@ -41,6 +44,9 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.pubsub.manager.TopicManagerContext;
+import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
 import com.linkedin.venice.systemstore.schemas.StoreProperties;
 import com.linkedin.venice.unit.kafka.InMemoryKafkaBroker;
 import com.linkedin.venice.unit.kafka.MockInMemoryAdminAdapter;
@@ -51,14 +57,18 @@ import com.linkedin.venice.utils.AvroRecordUtils;
 import com.linkedin.venice.utils.StoreUtils;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
+import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
@@ -505,6 +515,95 @@ public class TopicManagerTest {
     Assert.assertThrows(
         PubSubTopicDoesNotExistException.class,
         () -> topicManager.updateTopicCompactionPolicy(nonExistingTopic, true));
+  }
+
+  @Test
+  public void testTimeoutOnGettingMaxOffset() throws IOException {
+    PubSubTopic topic = pubSubTopicRepository.getTopic(TestUtils.getUniqueTopicString("topic"));
+    PubSubTopicPartition pubSubTopicPartition = new PubSubTopicPartitionImpl(topic, 0);
+    // Mock an admin client to pass topic existence check
+    PubSubAdminAdapter mockPubSubAdminAdapter = mock(PubSubAdminAdapter.class);
+    doReturn(true).when(mockPubSubAdminAdapter)
+        .containsTopicWithPartitionCheckExpectationAndRetry(eq(pubSubTopicPartition), anyInt(), eq(true));
+    PubSubConsumerAdapter mockPubSubConsumer = mock(PubSubConsumerAdapter.class);
+    doThrow(new PubSubOpTimeoutException("Timed out while fetching end offsets")).when(mockPubSubConsumer)
+        .endOffsets(any(), any());
+    // Throw Kafka TimeoutException when trying to get max offset
+    String localPubSubBrokerAddress = "localhost:1234";
+
+    PubSubAdminAdapterFactory adminAdapterFactory = mock(PubSubAdminAdapterFactory.class);
+    PubSubConsumerAdapterFactory consumerAdapterFactory = mock(PubSubConsumerAdapterFactory.class);
+    doReturn(mockPubSubConsumer).when(consumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
+    doReturn(mockPubSubAdminAdapter).when(adminAdapterFactory).create(any(), eq(pubSubTopicRepository));
+
+    TopicManagerContext topicManagerContext =
+        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setPubSubAdminAdapterFactory(adminAdapterFactory)
+            .setPubSubConsumerAdapterFactory(consumerAdapterFactory)
+            .setTopicDeletionStatusPollIntervalMs(100)
+            .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
+            .build();
+
+    try (
+        TopicManagerRepository topicManagerRepository =
+            new TopicManagerRepository(topicManagerContext, localPubSubBrokerAddress);
+        TopicManager topicManagerForThisTest = topicManagerRepository.getTopicManager()) {
+      Assert.assertThrows(
+          PubSubOpTimeoutException.class,
+          () -> topicManagerForThisTest.getLatestOffsetWithRetries(pubSubTopicPartition, 10));
+    }
+  }
+
+  @Test
+  public void testContainsTopicWithExpectationAndRetry() throws InterruptedException {
+    // Case 1: topic does not exist
+    PubSubTopic nonExistingTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistingTopic"));
+    Assert.assertFalse(topicManager.containsTopicWithExpectationAndRetry(nonExistingTopic, 3, true));
+
+    // Case 2: topic exists
+    topicManager.createTopic(nonExistingTopic, 1, 1, false);
+    PubSubTopic existingTopic = nonExistingTopic;
+    Assert.assertTrue(topicManager.containsTopicWithExpectationAndRetry(existingTopic, 3, true));
+
+    // Case 3: topic does not exist initially but topic is created later.
+    // This test case is to simulate the situation where the contains topic check fails on initial attempt(s) but
+    // succeeds eventually.
+    PubSubTopic initiallyNotExistTopic =
+        pubSubTopicRepository.getTopic(Utils.getUniqueString("initiallyNotExistTopic"));
+
+    final long delayedTopicCreationInSeconds = 1;
+    CountDownLatch delayedTopicCreationStartedSignal = new CountDownLatch(1);
+
+    CompletableFuture delayedTopicCreationFuture = CompletableFuture.runAsync(() -> {
+      delayedTopicCreationStartedSignal.countDown();
+      LOGGER.info(
+          "Thread started and it will create topic {} in {} second(s)",
+          initiallyNotExistTopic,
+          delayedTopicCreationInSeconds);
+      try {
+        Thread.sleep(TimeUnit.SECONDS.toMillis(delayedTopicCreationInSeconds));
+      } catch (InterruptedException e) {
+        Assert.fail("Got unexpected exception...", e);
+      }
+      topicManager.createTopic(initiallyNotExistTopic, 1, 1, false);
+      LOGGER.info("Created this initially-not-exist topic: {}", initiallyNotExistTopic);
+    });
+    Assert.assertTrue(delayedTopicCreationStartedSignal.await(5, TimeUnit.SECONDS));
+
+    Duration initialBackoff = Duration.ofSeconds(delayedTopicCreationInSeconds + 2);
+    Duration maxBackoff = Duration.ofSeconds(initialBackoff.getSeconds() + 1);
+    Duration maxDuration = Duration.ofSeconds(3 * maxBackoff.getSeconds());
+    Assert.assertFalse(delayedTopicCreationFuture.isDone());
+    Assert.assertTrue(
+        topicManager.containsTopicWithExpectationAndRetry(
+            initiallyNotExistTopic,
+            3,
+            true,
+            initialBackoff,
+            maxBackoff,
+            maxDuration));
+    Assert.assertTrue(delayedTopicCreationFuture.isDone());
   }
 
   @Test

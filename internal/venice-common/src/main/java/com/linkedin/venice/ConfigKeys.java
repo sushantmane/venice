@@ -53,8 +53,8 @@ public class ConfigKeys {
   public static final String KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG =
       ApacheKafkaConsumerConfig.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
 
-  public static final String PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS =
-      PubSubConstants.PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS;
+  public static final String KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC =
+      "kafka.admin.get.topic.config.max.retry.sec";
 
   /**
    * The time window used by the consumption throttler. Throttler will sum the requests during the time window and

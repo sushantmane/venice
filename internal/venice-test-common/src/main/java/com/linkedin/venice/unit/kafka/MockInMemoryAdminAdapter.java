@@ -1,15 +1,24 @@
 package com.linkedin.venice.unit.kafka;
 
+import static com.linkedin.venice.utils.Time.MS_PER_SECOND;
+
+import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.exceptions.VeniceRetriableException;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubClientRetriableException;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.utils.Utils;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +100,26 @@ public class MockInMemoryAdminAdapter implements PubSubAdminAdapter {
   }
 
   @Override
+  public PubSubTopicConfiguration getTopicConfigWithRetry(PubSubTopic pubSubTopic) {
+    long accumWaitTime = 0;
+    long sleepIntervalInMs = 100;
+    VeniceException veniceException = null;
+    while (accumWaitTime < 1000) {
+      try {
+        return getTopicConfig(pubSubTopic);
+      } catch (VeniceException e) {
+        veniceException = e;
+        Utils.sleep(sleepIntervalInMs);
+        accumWaitTime += sleepIntervalInMs;
+        sleepIntervalInMs = Math.min(5 * MS_PER_SECOND, sleepIntervalInMs * 2);
+      }
+    }
+    throw new VeniceException(
+        "After retrying for " + accumWaitTime + "ms, failed to get topic configs for: " + pubSubTopic,
+        veniceException);
+  }
+
+  @Override
   public boolean containsTopic(PubSubTopic topic) {
     return topicPubSubTopicConfigurationMap.containsKey(topic);
   }
@@ -102,6 +131,15 @@ public class MockInMemoryAdminAdapter implements PubSubAdminAdapter {
           .getPartitionNumber();
     }
     return false;
+  }
+
+  @Override
+  public List<Class<? extends Throwable>> getRetriableExceptions() {
+    return Collections.unmodifiableList(
+        Arrays.asList(
+            VeniceRetriableException.class,
+            PubSubOpTimeoutException.class,
+            PubSubClientRetriableException.class));
   }
 
   @Override
