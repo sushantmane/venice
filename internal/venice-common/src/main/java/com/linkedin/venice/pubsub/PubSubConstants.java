@@ -30,7 +30,9 @@ public class PubSubConstants {
   public static final String PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS = "pubsub.consumer.poll.retry.backoff.ms";
   public static final int PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS_DEFAULT_VALUE = 0;
 
-  public static final long PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE = 600;
+  public static final String PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS =
+      "pubsub.admin.get.topic.config.max.retry.ms";
+  public static final long PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE = 300_000; // 5 minutes
   public static final long UNKNOWN_TOPIC_RETENTION = Long.MIN_VALUE;
 
   public static final String PUBSUB_CONSUMER_TOPIC_QUERY_RETRY_TIMES = "pubsub.consumer.topic.query.retry.times";

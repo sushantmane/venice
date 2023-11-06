@@ -1,9 +1,9 @@
 package com.linkedin.venice.endToEnd;
 
 import static com.linkedin.davinci.store.rocksdb.RocksDBServerConfig.ROCKSDB_PLAIN_TABLE_FORMAT_ENABLED;
-import static com.linkedin.venice.ConfigKeys.KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC;
 import static com.linkedin.venice.ConfigKeys.NATIVE_REPLICATION_SOURCE_FABRIC;
 import static com.linkedin.venice.ConfigKeys.PARENT_KAFKA_CLUSTER_FABRIC_LIST;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS;
 import static com.linkedin.venice.ConfigKeys.SERVER_DATABASE_CHECKSUM_VERIFICATION_ENABLED;
 import static com.linkedin.venice.ConfigKeys.SERVER_DATABASE_SYNC_BYTES_INTERNAL_FOR_DEFERRED_WRITE_MODE;
 import static com.linkedin.venice.ConfigKeys.SERVER_KAFKA_PRODUCER_POOL_SIZE_PER_KAFKA_CLUSTER;
@@ -76,7 +76,7 @@ public class TestActiveActiveReplicationWithDownRegion {
      */
     Properties serverProperties = new Properties();
     // We're going to trigger timeouts. Set this lower to improve developer happiness
-    serverProperties.put(KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC, 10L);
+    serverProperties.put(PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS, 10000L);
     serverProperties.put(SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS, 1L);
     serverProperties.setProperty(ROCKSDB_PLAIN_TABLE_FORMAT_ENABLED, "false");
     serverProperties.setProperty(SERVER_DATABASE_CHECKSUM_VERIFICATION_ENABLED, "true");
@@ -87,7 +87,7 @@ public class TestActiveActiveReplicationWithDownRegion {
     getExtraServerProperties().forEach(serverProperties::put);
 
     Properties controllerProps = new Properties();
-    controllerProps.put(KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC, 10L);
+    controllerProps.put(PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS, 10000L);
     controllerProps.put(NATIVE_REPLICATION_SOURCE_FABRIC, "dc-0");
     controllerProps.put(PARENT_KAFKA_CLUSTER_FABRIC_LIST, DEFAULT_PARENT_DATA_CENTER_REGION_NAME);
 

@@ -16,12 +16,9 @@ import java.util.EnumMap;
  */
 public class TopicManagerStats extends AbstractVeniceStats {
   public enum OCCURRENCE_LATENCY_SENSOR_TYPE {
-    CREATE_TOPIC, DELETE_TOPIC, LIST_ALL_TOPICS, SET_TOPIC_CONFIG, GET_ALL_TOPIC_RETENTIONS, GET_TOPIC_CONFIG,
-    GET_TOPIC_CONFIG_WITH_RETRY, CONTAINS_TOPIC, GET_SOME_TOPIC_CONFIGS, CONTAINS_TOPIC_WITH_RETRY,
-    GET_TOPIC_LATEST_OFFSETS, GET_TOPIC_CONFIG_IF_EXISTS, GET_PARTITION_LATEST_OFFSET_WITH_RETRY,
-    GET_PARTITIONS_OFFSETS_BY_TIME, GET_PARTITION_OFFSET_BY_TIME,
-    GET_LATEST_PRODUCER_TIMESTAMP_ON_DATA_RECORD_WITH_RETRY, PARTITIONS_FOR,
-    GET_PARTITION_OFFSET_BY_TIME_IF_OUT_OF_RANGE
+    CREATE_TOPIC, DELETE_TOPIC, GET_TOPIC_CONFIG, SET_TOPIC_CONFIG, LIST_ALL_TOPICS, GET_ALL_TOPIC_RETENTIONS,
+    CONTAINS_TOPIC, GET_SOME_TOPIC_CONFIGS, GET_TOPIC_LATEST_OFFSETS, GET_LATEST_OFFSET, GET_OFFSET_FOR_TIME,
+    GET_PRODUCER_TIMESTAMP_OF_LAST_DATA_MESSAGE, PARTITIONS_FOR
   }
 
   private final EnumMap<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> sensorsByTypes;
@@ -41,10 +38,6 @@ public class TopicManagerStats extends AbstractVeniceStats {
               new Avg(),
               TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + sensorName)));
     }
-  }
-
-  private void recordLatency(OCCURRENCE_LATENCY_SENSOR_TYPE sensor_type, long requestLatencyMs) {
-    sensorsByTypes.get(sensor_type).record(requestLatencyMs);
   }
 
   // Record latency for a specific sensor type if the topic manager stats is not null.

@@ -1,18 +1,18 @@
 package com.linkedin.venice.pubsub.manager;
 
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CONTAINS_TOPIC;
-import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CONTAINS_TOPIC_WITH_RETRY;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CREATE_TOPIC;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.DELETE_TOPIC;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_ALL_TOPIC_RETENTIONS;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_SOME_TOPIC_CONFIGS;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_CONFIG;
-import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_CONFIG_WITH_RETRY;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.LIST_ALL_TOPICS;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.SET_TOPIC_CONFIG;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubConstants;
@@ -31,6 +31,7 @@ import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicExistsException;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.Utils;
+import com.linkedin.venice.utils.VeniceProperties;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
 import java.time.Duration;
@@ -49,6 +50,9 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * Topic manger is responsible for creating, deleting, and updating topics. It also provides APIs to query topic metadata.
+ *
+ * TopicManager aims to provide a unified interface for topic management, and it is cluster agnostic.
+ * Using retries and exponential backoff, it can handle transient failures.
  */
 public class TopicManager implements Closeable {
   private final Logger logger;
@@ -57,6 +61,8 @@ public class TopicManager implements Closeable {
   private final PubSubAdminAdapter pubSubAdminAdapter;
   private final PubSubTopicRepository pubSubTopicRepository;
   private final TopicManagerStats topicManagerStats;
+
+  private final long topicConfigMaxRetryInMs;
 
   // A thread-safe partition offset fetcher.
   private final TopicMetadataFetcher topicMetadataFetcher;
@@ -88,6 +94,10 @@ public class TopicManager implements Closeable {
 
     this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, pubSubAdminAdapter);
 
+    VeniceProperties veniceProperties = topicManagerContext.getPubSubProperties(pubSubClusterAddress);
+    this.topicConfigMaxRetryInMs = veniceProperties.getLong(
+        ConfigKeys.PUBSUB_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_IN_MS,
+        PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE);
     this.logger.info(
         "Created a topic manager for the PubSub cluster address: {} with the following context: {}",
         pubSubClusterAddress,
@@ -411,43 +421,6 @@ public class TopicManager implements Closeable {
     return retention != PubSubConstants.UNKNOWN_TOPIC_RETENTION && retention <= truncatedTopicMaxRetentionMs;
   }
 
-  private void createTopic(
-      PubSubTopic pubSubTopic,
-      int numPartitions,
-      int replicationFactor,
-      PubSubTopicConfiguration topicConfiguration) {
-    long startTime = System.currentTimeMillis();
-    pubSubAdminAdapter.createTopic(pubSubTopic, numPartitions, replicationFactor, topicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, CREATE_TOPIC, System.currentTimeMillis() - startTime);
-  }
-
-  private void setTopicConfig(PubSubTopic pubSubTopic, PubSubTopicConfiguration pubSubTopicConfiguration) {
-    long startTime = System.currentTimeMillis();
-    pubSubAdminAdapter.setTopicConfig(pubSubTopic, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, SET_TOPIC_CONFIG, System.currentTimeMillis() - startTime);
-  }
-
-  /**
-   * This operation is a little heavy, since it will pull the configs for all the topics.
-   */
-  public PubSubTopicConfiguration getTopicConfig(PubSubTopic pubSubTopic) {
-    long startTime = System.currentTimeMillis();
-    PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(pubSubTopic);
-    long elapsedTime = System.currentTimeMillis() - startTime;
-    topicConfigCache.put(pubSubTopic, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG, elapsedTime);
-    return pubSubTopicConfiguration;
-  }
-
-  public PubSubTopicConfiguration getTopicConfigWithRetry(PubSubTopic topicName) {
-    long startTime = System.currentTimeMillis();
-    PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfigWithRetry(topicName);
-    long elapsedTime = System.currentTimeMillis() - startTime;
-    topicConfigCache.put(topicName, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG_WITH_RETRY, elapsedTime);
-    return pubSubTopicConfiguration;
-  }
-
   /**
    * Still heavy, but can be called repeatedly to amortize that cost.
    */
@@ -534,49 +507,6 @@ public class TopicManager implements Closeable {
         }
       }
     }
-  }
-
-  // TODO: Evaluate if we need synchronized here
-  public synchronized Set<PubSubTopic> listTopics() {
-    long startTime = System.currentTimeMillis();
-    Set<PubSubTopic> topics = pubSubAdminAdapter.listAllTopics();
-    TopicManagerStats.recordLatency(topicManagerStats, LIST_ALL_TOPICS, System.currentTimeMillis() - startTime);
-    return topics;
-  }
-
-  /**
-   * See Java doc of {@link PubSubAdminAdapter#containsTopicWithExpectationAndRetry} which provides exactly the same
-   * semantics.
-   */
-  public boolean containsTopicWithExpectationAndRetry(
-      PubSubTopic topic,
-      int maxAttempts,
-      final boolean expectedResult) {
-    long startTime = System.currentTimeMillis();
-    boolean containsTopic = pubSubAdminAdapter.containsTopicWithExpectationAndRetry(topic, maxAttempts, expectedResult);
-    TopicManagerStats
-        .recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, System.currentTimeMillis() - startTime);
-    return containsTopic;
-  }
-
-  public boolean containsTopicWithExpectationAndRetry(
-      PubSubTopic topic,
-      int maxAttempts,
-      final boolean expectedResult,
-      Duration initialBackoff,
-      Duration maxBackoff,
-      Duration maxDuration) {
-    long startTime = System.currentTimeMillis();
-    boolean containsTopic = pubSubAdminAdapter.containsTopicWithExpectationAndRetry(
-        topic,
-        maxAttempts,
-        expectedResult,
-        initialBackoff,
-        maxBackoff,
-        maxDuration);
-    TopicManagerStats
-        .recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, System.currentTimeMillis() - startTime);
-    return containsTopic;
   }
 
   /**
@@ -708,5 +638,65 @@ public class TopicManager implements Closeable {
   public synchronized void close() {
     Utils.closeQuietlyWithErrorLogged(topicMetadataFetcher);
     Utils.closeQuietlyWithErrorLogged(pubSubAdminAdapter);
+  }
+
+  // public APIS
+  public synchronized Set<PubSubTopic> listTopics() {
+    long startTime = System.currentTimeMillis();
+    Set<PubSubTopic> topics = pubSubAdminAdapter.listAllTopics();
+    TopicManagerStats.recordLatency(topicManagerStats, LIST_ALL_TOPICS, System.currentTimeMillis() - startTime);
+    return topics;
+  }
+
+  public PubSubTopicConfiguration getTopicConfigWithRetry(PubSubTopic pubSubTopic) {
+    long accumulatedWaitTime = 0;
+    long sleepIntervalInMs = 100;
+    Exception exception = null;
+    while (accumulatedWaitTime < topicConfigMaxRetryInMs) {
+      try {
+        long startTime = System.currentTimeMillis();
+        PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(pubSubTopic);
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        topicConfigCache.put(pubSubTopic, pubSubTopicConfiguration);
+        TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG, elapsedTime);
+      } catch (PubSubClientRetriableException | PubSubClientException e) {
+        exception = e;
+        Utils.sleep(sleepIntervalInMs);
+        accumulatedWaitTime += sleepIntervalInMs;
+        sleepIntervalInMs = Math.min(5_000, sleepIntervalInMs * 2);
+      }
+    }
+    throw new PubSubClientException(
+        "After retrying for " + accumulatedWaitTime + "ms, failed to get topic configs for: " + pubSubTopic,
+        exception);
+  }
+
+  // Private methods
+  private void createTopic(
+      PubSubTopic pubSubTopic,
+      int numPartitions,
+      int replicationFactor,
+      PubSubTopicConfiguration topicConfiguration) {
+    long startTime = System.currentTimeMillis();
+    pubSubAdminAdapter.createTopic(pubSubTopic, numPartitions, replicationFactor, topicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, CREATE_TOPIC, System.currentTimeMillis() - startTime);
+  }
+
+  private void setTopicConfig(PubSubTopic pubSubTopic, PubSubTopicConfiguration pubSubTopicConfiguration) {
+    long startTime = System.currentTimeMillis();
+    pubSubAdminAdapter.setTopicConfig(pubSubTopic, pubSubTopicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, SET_TOPIC_CONFIG, System.currentTimeMillis() - startTime);
+  }
+
+  /**
+   * This operation is a little heavy, since it will pull the configs for all the topics.
+   */
+  PubSubTopicConfiguration getTopicConfig(PubSubTopic pubSubTopic) {
+    long startTime = System.currentTimeMillis();
+    PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(pubSubTopic);
+    long elapsedTime = System.currentTimeMillis() - startTime;
+    topicConfigCache.put(pubSubTopic, pubSubTopicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG, elapsedTime);
+    return pubSubTopicConfiguration;
   }
 }

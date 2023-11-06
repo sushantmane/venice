@@ -404,8 +404,7 @@ public class ApacheKafkaAdminAdapterTest {
         .thenThrow(new InterruptedException("Interrupted exception"));
 
     ApacheKafkaAdminAdapter apacheKafkaAdminAdapterSpy = spy(kafkaAdminAdapter);
-    doReturn(false, true, true).when(apacheKafkaAdminAdapterSpy)
-        .containsTopicWithExpectationAndRetry(testPubSubTopic, 3, true);
+    doReturn(false, true, true).when(apacheKafkaAdminAdapterSpy).containsTopic(testPubSubTopic);
 
     assertThrows(
         PubSubTopicDoesNotExistException.class,

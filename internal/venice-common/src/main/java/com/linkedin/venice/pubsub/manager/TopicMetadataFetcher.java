@@ -131,6 +131,7 @@ class TopicMetadataFetcher implements Closeable {
     }
   }
 
+  // todo: add retry logic for checking topic existence
   private void validateTopicPartition(PubSubTopicPartition pubSubTopicPartition) {
     if (pubSubTopicPartition.getPartitionNumber() < 0) {
       throw new IllegalArgumentException("Invalid partition number: " + pubSubTopicPartition.getPartitionNumber());
@@ -248,7 +249,7 @@ class TopicMetadataFetcher implements Closeable {
    * @throws PubSubOpTimeoutException If the consumer times out. This could indicate that the topic does not exist
    *                         or the partition does not exist.
    */
-  long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
+  private long getLatestOffset(PubSubTopicPartition pubSubTopicPartition) {
     validateTopicPartition(pubSubTopicPartition);
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {

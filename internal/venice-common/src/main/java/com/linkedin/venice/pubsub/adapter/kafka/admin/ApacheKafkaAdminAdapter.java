@@ -290,7 +290,7 @@ public class ApacheKafkaAdminAdapter implements PubSubAdminAdapter {
     try {
       internalKafkaAdminClient.alterConfigs(configs).all().get();
     } catch (ExecutionException e) {
-      if (!containsTopicWithExpectationAndRetry(pubSubTopic, 3, true)) {
+      if (!containsTopic(pubSubTopic)) {
         // We assume the exception was caused by a non-existent topic.
         throw new PubSubTopicDoesNotExistException("Topic " + pubSubTopic + " does not exist", e);
       }
@@ -548,10 +548,5 @@ public class ApacheKafkaAdminAdapter implements PubSubAdminAdapter {
         LOGGER.warn("Exception (suppressed) during kafkaAdminClient.close()", e);
       }
     }
-  }
-
-  @Override
-  public long getTopicConfigMaxRetryInMs() {
-    return apacheKafkaAdminConfig.getTopicConfigMaxRetryInMs();
   }
 }
