@@ -86,8 +86,7 @@ public class TopicManager implements Closeable {
         ? null
         : new TopicManagerStats(topicManagerContext.getMetricsRepository(), pubSubClusterAddress);
 
-    this.topicMetadataFetcher =
-        new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, pubSubAdminAdapter, topicManagerStats);
+    this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, pubSubAdminAdapter);
 
     this.logger.info(
         "Created a topic manager for the PubSub cluster address: {} with the following context: {}",
