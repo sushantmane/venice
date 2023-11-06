@@ -1,16 +1,26 @@
 package com.linkedin.venice.pubsub.manager;
 
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CONTAINS_TOPIC;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CONTAINS_TOPIC_WITH_RETRY;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CREATE_TOPIC;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.DELETE_TOPIC;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_ALL_TOPIC_RETENTIONS;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_SOME_TOPIC_CONFIGS;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_CONFIG;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_CONFIG_WITH_RETRY;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.LIST_ALL_TOPICS;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.SET_TOPIC_CONFIG;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
-import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
-import com.linkedin.venice.pubsub.api.PubSubInstrumentedAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
@@ -21,7 +31,6 @@ import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicExistsException;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.RetryUtils;
 import com.linkedin.venice.utils.Utils;
-import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import java.io.Closeable;
 import java.time.Duration;
@@ -39,13 +48,7 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * TopicManager is a wrapper around {@link PubSubAdminAdapter} and {@link PubSubConsumerAdapter}. It provides
- * a set of APIs to manage topics, including creating topics, updating topic retention, fetching topic metadata, etc.
- * <p>
- * This class contains one global {@link PubSubConsumerAdapter}, which is not thread-safe, so when you add new functions,
- * which is using this global consumer, please add 'synchronized' keyword, otherwise this {@link TopicManager}
- * won't be thread-safe, and Kafka consumer will report the following error when multiple threads are trying to
- * use the same consumer: PubSubConsumerAdapter is not safe for multithreaded access.
+ * Topic manger is responsible for creating, deleting, and updating topics. It also provides APIs to query topic metadata.
  */
 public class TopicManager implements Closeable {
   private final Logger logger;
@@ -53,7 +56,7 @@ public class TopicManager implements Closeable {
   private final TopicManagerContext topicManagerContext;
   private final PubSubAdminAdapter pubSubAdminAdapter;
   private final PubSubTopicRepository pubSubTopicRepository;
-  private final MetricsRepository metricsRepository;
+  private final TopicManagerStats topicManagerStats;
 
   // A thread-safe partition offset fetcher.
   private final TopicMetadataFetcher topicMetadataFetcher;
@@ -64,56 +67,32 @@ public class TopicManager implements Closeable {
   Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache =
       Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-  public TopicManager(String pubSubClusterAddress, TopicManagerContext tmContext) {
+  public TopicManager(String pubSubClusterAddress, TopicManagerContext topicManagerContext) {
     this.logger = LogManager.getLogger(
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
-    this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
-    this.topicManagerContext = tmContext;
-    this.pubSubTopicRepository = tmContext.getPubSubTopicRepository();
-    this.metricsRepository = tmContext.getMetricsRepository();
-    this.pubSubAdminAdapter = createdPubSubAdminAdapter();
-    this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, tmContext, pubSubAdminAdapter);
-    this.logger.info(
-        "Created topic manager for the pubsub cluster address: {} with context: {}",
-        pubSubClusterAddress,
-        tmContext);
-  }
 
-  // For testing only
-  TopicManager(
-      String pubSubClusterAddress,
-      TopicManagerContext topicManagerContext,
-      PubSubTopicRepository pubSubTopicRepository,
-      MetricsRepository metricsRepository,
-      PubSubAdminAdapter pubSubAdminAdapter,
-      TopicMetadataFetcher topicMetadataFetcher) {
-    this.logger = LogManager.getLogger(
-        TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
     this.topicManagerContext = topicManagerContext;
-    this.pubSubTopicRepository = pubSubTopicRepository;
-    this.metricsRepository = metricsRepository;
-    this.pubSubAdminAdapter = pubSubAdminAdapter;
-    this.topicMetadataFetcher = topicMetadataFetcher;
+
+    this.pubSubTopicRepository = topicManagerContext.getPubSubTopicRepository();
+
+    PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory = Objects
+        .requireNonNull(topicManagerContext.getPubSubAdminAdapterFactory(), "pubSubAdminAdapterFactory cannot be null");
+
+    this.pubSubAdminAdapter = pubSubAdminAdapterFactory
+        .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
+
+    this.topicManagerStats = topicManagerContext.getMetricsRepository() == null
+        ? null
+        : new TopicManagerStats(topicManagerContext.getMetricsRepository(), pubSubClusterAddress);
+
+    this.topicMetadataFetcher =
+        new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, pubSubAdminAdapter, topicManagerStats);
+
     this.logger.info(
-        "Created topic manager for the pubsub cluster address: {} with context: {}",
+        "Created a topic manager for the PubSub cluster address: {} with the following context: {}",
         pubSubClusterAddress,
         topicManagerContext);
-  }
-
-  private PubSubAdminAdapter createdPubSubAdminAdapter() {
-    logger.info("Creating pubsub admin client for bootstrap servers: {}", pubSubClusterAddress);
-    PubSubAdminAdapter pubSubAdminAdapter = topicManagerContext.getPubSubAdminAdapterFactory()
-        .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
-    if (metricsRepository != null) {
-      String statsName = "TopicManagerPubSubAdminClient" + "_" + pubSubClusterAddress;
-      pubSubAdminAdapter = new PubSubInstrumentedAdminAdapter(pubSubAdminAdapter, metricsRepository, statsName);
-    }
-    logger.info(
-        "Created pubsub admin client of type: {} for bootstrap servers: {}",
-        pubSubAdminAdapter.getClassName(),
-        pubSubClusterAddress);
-    return pubSubAdminAdapter;
   }
 
   /**
@@ -217,7 +196,7 @@ public class TopicManager implements Closeable {
 
     try {
       RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
-          () -> pubSubAdminAdapter.createTopic(topicName, numPartitions, replication, pubSubTopicConfiguration),
+          () -> createTopic(topicName, numPartitions, replication, pubSubTopicConfiguration),
           10,
           Duration.ofMillis(200),
           Duration.ofSeconds(1),
@@ -284,7 +263,7 @@ public class TopicManager implements Closeable {
     Optional<Long> retentionTimeMs = pubSubTopicConfiguration.retentionInMs();
     if (!retentionTimeMs.isPresent() || expectedRetentionInMs != retentionTimeMs.get()) {
       pubSubTopicConfiguration.setRetentionInMs(Optional.of(expectedRetentionInMs));
-      pubSubAdminAdapter.setTopicConfig(topicName, pubSubTopicConfiguration);
+      setTopicConfig(topicName, pubSubTopicConfiguration);
       logger.info(
           "Updated topic: {} with retention.ms: {} in cluster [{}]",
           topicName,
@@ -343,7 +322,7 @@ public class TopicManager implements Closeable {
       pubSubTopicConfiguration.setLogCompacted(expectedLogCompacted);
       pubSubTopicConfiguration.setMinLogCompactionLagMs(expectedMinLogCompactionLagMs);
       pubSubTopicConfiguration.setMaxLogCompactionLagMs(expectedMaxLogCompactionLagMs);
-      pubSubAdminAdapter.setTopicConfig(topic, pubSubTopicConfiguration);
+      setTopicConfig(topic, pubSubTopicConfiguration);
       logger.info(
           "Kafka compaction policy for topic: {} has been updated from {} to {}, min compaction lag updated from"
               + " {} to {}, max compaction lag updated from {} to {}",
@@ -379,7 +358,7 @@ public class TopicManager implements Closeable {
     // config doesn't exist config is different
     if (!currentMinISR.isPresent() || !currentMinISR.get().equals(minISR)) {
       pubSubTopicConfiguration.setMinInSyncReplicas(Optional.of(minISR));
-      pubSubAdminAdapter.setTopicConfig(topicName, pubSubTopicConfiguration);
+      setTopicConfig(topicName, pubSubTopicConfiguration);
       logger.info("Updated topic: {} with min.insync.replicas: {}", topicName, minISR);
       return true;
     }
@@ -387,8 +366,16 @@ public class TopicManager implements Closeable {
     return false;
   }
 
+  /**
+   * Get retention time for all topics in the pubsub cluster.
+   * @return a map of topic name to retention time in MS.
+   */
   public Map<PubSubTopic, Long> getAllTopicRetentions() {
-    return pubSubAdminAdapter.getAllTopicRetentions();
+    long startTime = System.currentTimeMillis();
+    Map<PubSubTopic, Long> topicRetentions = pubSubAdminAdapter.getAllTopicRetentions();
+    TopicManagerStats
+        .recordLatency(topicManagerStats, GET_ALL_TOPIC_RETENTIONS, System.currentTimeMillis() - startTime);
+    return topicRetentions;
   }
 
   /**
@@ -399,7 +386,7 @@ public class TopicManager implements Closeable {
     return getTopicRetention(pubSubTopicConfiguration);
   }
 
-  public long getTopicRetention(PubSubTopicConfiguration pubSubTopicConfiguration) {
+  public static long getTopicRetention(PubSubTopicConfiguration pubSubTopicConfiguration) {
     if (pubSubTopicConfiguration.retentionInMs().isPresent()) {
       return pubSubTopicConfiguration.retentionInMs().get();
     }
@@ -425,18 +412,40 @@ public class TopicManager implements Closeable {
     return retention != PubSubConstants.UNKNOWN_TOPIC_RETENTION && retention <= truncatedTopicMaxRetentionMs;
   }
 
+  private void createTopic(
+      PubSubTopic pubSubTopic,
+      int numPartitions,
+      int replicationFactor,
+      PubSubTopicConfiguration topicConfiguration) {
+    long startTime = System.currentTimeMillis();
+    pubSubAdminAdapter.createTopic(pubSubTopic, numPartitions, replicationFactor, topicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, CREATE_TOPIC, System.currentTimeMillis() - startTime);
+  }
+
+  private void setTopicConfig(PubSubTopic pubSubTopic, PubSubTopicConfiguration pubSubTopicConfiguration) {
+    long startTime = System.currentTimeMillis();
+    pubSubAdminAdapter.setTopicConfig(pubSubTopic, pubSubTopicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, SET_TOPIC_CONFIG, System.currentTimeMillis() - startTime);
+  }
+
   /**
    * This operation is a little heavy, since it will pull the configs for all the topics.
    */
-  public PubSubTopicConfiguration getTopicConfig(PubSubTopic topicName) throws PubSubTopicDoesNotExistException {
-    PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(topicName);
-    topicConfigCache.put(topicName, pubSubTopicConfiguration);
+  public PubSubTopicConfiguration getTopicConfig(PubSubTopic pubSubTopic) {
+    long startTime = System.currentTimeMillis();
+    PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(pubSubTopic);
+    long elapsedTime = System.currentTimeMillis() - startTime;
+    topicConfigCache.put(pubSubTopic, pubSubTopicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG, elapsedTime);
     return pubSubTopicConfiguration;
   }
 
   public PubSubTopicConfiguration getTopicConfigWithRetry(PubSubTopic topicName) {
+    long startTime = System.currentTimeMillis();
     PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfigWithRetry(topicName);
+    long elapsedTime = System.currentTimeMillis() - startTime;
     topicConfigCache.put(topicName, pubSubTopicConfiguration);
+    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG_WITH_RETRY, elapsedTime);
     return pubSubTopicConfiguration;
   }
 
@@ -453,10 +462,13 @@ public class TopicManager implements Closeable {
   }
 
   public Map<PubSubTopic, PubSubTopicConfiguration> getSomeTopicConfigs(Set<PubSubTopic> topicNames) {
+    long startTime = System.currentTimeMillis();
     Map<PubSubTopic, PubSubTopicConfiguration> topicConfigs = pubSubAdminAdapter.getSomeTopicConfigs(topicNames);
+    long elapsedTime = System.currentTimeMillis() - startTime;
     for (Map.Entry<PubSubTopic, PubSubTopicConfiguration> topicConfig: topicConfigs.entrySet()) {
       topicConfigCache.put(topicConfig.getKey(), topicConfig.getValue());
     }
+    TopicManagerStats.recordLatency(topicManagerStats, GET_SOME_TOPIC_CONFIGS, elapsedTime);
     return topicConfigs;
   }
 
@@ -472,7 +484,9 @@ public class TopicManager implements Closeable {
 
     logger.info("Deleting topic: {}", pubSubTopic);
     try {
+      long startTime = System.currentTimeMillis();
       pubSubAdminAdapter.deleteTopic(pubSubTopic, Duration.ofMillis(topicManagerContext.getPubSubOperationTimeoutMs()));
+      TopicManagerStats.recordLatency(topicManagerStats, DELETE_TOPIC, System.currentTimeMillis() - startTime);
       logger.info("Topic: {} has been deleted", pubSubTopic);
     } catch (PubSubOpTimeoutException e) {
       logger.warn(
@@ -487,11 +501,15 @@ public class TopicManager implements Closeable {
     }
 
     // let's make sure the topic is deleted
-    if (pubSubAdminAdapter.containsTopic(pubSubTopic)) {
+    if (containsTopic(pubSubTopic)) {
       throw new PubSubTopicExistsException("Topic: " + pubSubTopic.getName() + " still exists after deletion");
     }
   }
 
+  /**
+   * Delete a topic with retry and block until it is deleted or operation times out.
+   * @param pubSubTopic
+   */
   public void ensureTopicIsDeletedAndBlockWithRetry(PubSubTopic pubSubTopic) {
     int attempts = 0;
     while (attempts++ < PubSubConstants.MAX_TOPIC_DELETE_RETRIES) {
@@ -503,7 +521,7 @@ public class TopicManager implements Closeable {
             PubSubConstants.MAX_TOPIC_DELETE_RETRIES);
         ensureTopicIsDeletedAndBlock(pubSubTopic);
         return;
-      } catch (PubSubClientRetriableException e) {
+      } catch (PubSubTopicExistsException | PubSubClientRetriableException e) {
         String errorMessage = e instanceof PubSubOpTimeoutException ? "timed out" : "errored out";
         logger.warn(
             "Topic deletion for topic: {} {}! Retry attempt {} / {}",
@@ -521,7 +539,10 @@ public class TopicManager implements Closeable {
 
   // TODO: Evaluate if we need synchronized here
   public synchronized Set<PubSubTopic> listTopics() {
-    return pubSubAdminAdapter.listAllTopics();
+    long startTime = System.currentTimeMillis();
+    Set<PubSubTopic> topics = pubSubAdminAdapter.listAllTopics();
+    TopicManagerStats.recordLatency(topicManagerStats, LIST_ALL_TOPICS, System.currentTimeMillis() - startTime);
+    return topics;
   }
 
   /**
@@ -532,7 +553,11 @@ public class TopicManager implements Closeable {
       PubSubTopic topic,
       int maxAttempts,
       final boolean expectedResult) {
-    return pubSubAdminAdapter.containsTopicWithExpectationAndRetry(topic, maxAttempts, expectedResult);
+    long startTime = System.currentTimeMillis();
+    boolean containsTopic = pubSubAdminAdapter.containsTopicWithExpectationAndRetry(topic, maxAttempts, expectedResult);
+    TopicManagerStats
+        .recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, System.currentTimeMillis() - startTime);
+    return containsTopic;
   }
 
   public boolean containsTopicWithExpectationAndRetry(
@@ -542,13 +567,17 @@ public class TopicManager implements Closeable {
       Duration initialBackoff,
       Duration maxBackoff,
       Duration maxDuration) {
-    return pubSubAdminAdapter.containsTopicWithExpectationAndRetry(
+    long startTime = System.currentTimeMillis();
+    boolean containsTopic = pubSubAdminAdapter.containsTopicWithExpectationAndRetry(
         topic,
         maxAttempts,
         expectedResult,
         initialBackoff,
         maxBackoff,
         maxDuration);
+    TopicManagerStats
+        .recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, System.currentTimeMillis() - startTime);
+    return containsTopic;
   }
 
   /**
@@ -627,7 +656,10 @@ public class TopicManager implements Closeable {
   }
 
   public boolean containsTopic(PubSubTopic pubSubTopic) {
-    return topicMetadataFetcher.containsTopic(pubSubTopic);
+    long startTime = System.currentTimeMillis();
+    boolean containsTopic = topicMetadataFetcher.containsTopic(pubSubTopic);
+    TopicManagerStats.recordLatency(topicManagerStats, CONTAINS_TOPIC, System.currentTimeMillis() - startTime);
+    return containsTopic;
   }
 
   public boolean containsTopicCached(PubSubTopic pubSubTopic) {

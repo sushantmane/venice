@@ -2523,7 +2523,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                   // If real-time topic already exists, check whether its retention time is correct.
                   PubSubTopicConfiguration pubSubTopicConfiguration =
                       getTopicManager().getCachedTopicConfig(realTimeTopic);
-                  long topicRetentionTimeInMs = getTopicManager().getTopicRetention(pubSubTopicConfiguration);
+                  long topicRetentionTimeInMs = TopicManager.getTopicRetention(pubSubTopicConfiguration);
                   long expectedRetentionTimeMs =
                       StoreUtils.getExpectedRetentionTimeInMs(store, store.getHybridStoreConfig());
                   if (topicRetentionTimeInMs != expectedRetentionTimeMs) {

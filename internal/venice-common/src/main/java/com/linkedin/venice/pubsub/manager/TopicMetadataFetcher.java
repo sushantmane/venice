@@ -1,6 +1,7 @@
 package com.linkedin.venice.pubsub.manager;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.PARTITIONS_FOR;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
@@ -56,6 +57,7 @@ class TopicMetadataFetcher implements Closeable {
   private final List<Closeable> closeables = new ArrayList<>(2);
   private final ThreadPoolExecutor threadPoolExecutor;
   private final PubSubAdminAdapter pubSubAdminAdapter;
+  private final TopicManagerStats topicManagerStats;
 
   /**
    * The following caches store metadata related to topics, including details such as the latest offset,
@@ -76,8 +78,10 @@ class TopicMetadataFetcher implements Closeable {
   public TopicMetadataFetcher(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
-      PubSubAdminAdapter pubSubAdminAdapter) {
+      PubSubAdminAdapter pubSubAdminAdapter,
+      TopicManagerStats topicManagerStats) {
     this.pubSubAdminAdapter = pubSubAdminAdapter;
+    this.topicManagerStats = topicManagerStats;
     this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
     this.cachedEntryTtlInNs = MILLISECONDS.toNanos(topicManagerContext.getTopicOffsetCheckIntervalMs());
     PubSubMessageDeserializer pubSubMessageDeserializer = PubSubMessageDeserializer.getInstance();
@@ -200,7 +204,9 @@ class TopicMetadataFetcher implements Closeable {
   Int2LongMap getTopicLatestOffsets(PubSubTopic topic) {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
+      long startTime = System.currentTimeMillis();
       List<PubSubTopicPartitionInfo> partitionInfoList = pubSubConsumerAdapter.partitionsFor(topic);
+      TopicManagerStats.recordLatency(topicManagerStats, PARTITIONS_FOR, System.currentTimeMillis() - startTime);
       if (partitionInfoList == null || partitionInfoList.isEmpty()) {
         LOGGER.warn("Topic: {} may not exist or has no partitions. Returning empty map.", topic);
         return Int2LongMaps.EMPTY_MAP;
