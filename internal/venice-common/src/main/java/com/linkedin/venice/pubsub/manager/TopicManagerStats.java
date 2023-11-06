@@ -43,10 +43,6 @@ public class TopicManagerStats extends AbstractVeniceStats {
     }
   }
 
-  private void recordLatency(OCCURRENCE_LATENCY_SENSOR_TYPE sensor_type, long requestLatencyMs) {
-    sensorsByTypes.get(sensor_type).record(requestLatencyMs);
-  }
-
   // Record latency for a specific sensor type if the topic manager stats is not null.
   public static void recordLatency(
       TopicManagerStats topicManagerStats,
