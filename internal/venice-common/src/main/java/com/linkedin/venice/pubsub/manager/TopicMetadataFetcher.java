@@ -56,6 +56,7 @@ class TopicMetadataFetcher implements Closeable {
   private final List<Closeable> closeables = new ArrayList<>(2);
   private final ThreadPoolExecutor threadPoolExecutor;
   private final PubSubAdminAdapter pubSubAdminAdapter;
+  private final TopicManagerStats topicManagerStats;
 
   /**
    * The following caches store metadata related to topics, including details such as the latest offset,
@@ -76,7 +77,9 @@ class TopicMetadataFetcher implements Closeable {
   public TopicMetadataFetcher(
       String pubSubClusterAddress,
       TopicManagerContext topicManagerContext,
+      TopicManagerStats topicManagerStats,
       PubSubAdminAdapter pubSubAdminAdapter) {
+    this.topicManagerStats = topicManagerStats;
     this.pubSubAdminAdapter = pubSubAdminAdapter;
     this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
     this.cachedEntryTtlInNs = MILLISECONDS.toNanos(topicManagerContext.getTopicOffsetCheckIntervalMs());
@@ -165,7 +168,13 @@ class TopicMetadataFetcher implements Closeable {
 
   // API: Check if a topic exists in the pubsub cluster
   boolean containsTopic(PubSubTopic topic) {
-    return pubSubAdminAdapter.containsTopic(topic);
+    long startTime = System.currentTimeMillis();
+    boolean containsTopic = pubSubAdminAdapter.containsTopic(topic);
+    TopicManagerStats.recordLatency(
+        topicManagerStats,
+        TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.CONTAINS_TOPIC,
+        System.currentTimeMillis() - startTime);
+    return containsTopic;
   }
 
   CompletableFuture<Boolean> containsTopicAsync(PubSubTopic topic) {
@@ -200,7 +209,13 @@ class TopicMetadataFetcher implements Closeable {
   Int2LongMap getTopicLatestOffsets(PubSubTopic topic) {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
+      long startTime = System.currentTimeMillis();
       List<PubSubTopicPartitionInfo> partitionInfoList = pubSubConsumerAdapter.partitionsFor(topic);
+      TopicManagerStats.recordLatency(
+          topicManagerStats,
+          TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.PARTITIONS_FOR,
+          System.currentTimeMillis() - startTime);
+
       if (partitionInfoList == null || partitionInfoList.isEmpty()) {
         LOGGER.warn("Topic: {} may not exist or has no partitions. Returning empty map.", topic);
         return Int2LongMaps.EMPTY_MAP;
@@ -212,8 +227,13 @@ class TopicMetadataFetcher implements Closeable {
         topicPartitions.add(new PubSubTopicPartitionImpl(topic, partitionInfo.partition()));
       }
 
+      startTime = System.currentTimeMillis();
       Map<PubSubTopicPartition, Long> offsetsByTopicPartitions =
           pubSubConsumerAdapter.endOffsets(topicPartitions, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      TopicManagerStats.recordLatency(
+          topicManagerStats,
+          TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_LATEST_OFFSETS,
+          System.currentTimeMillis() - startTime);
       Int2LongMap offsetsByTopicPartitionIds = new Int2LongOpenHashMap(offsetsByTopicPartitions.size());
       for (Map.Entry<PubSubTopicPartition, Long> offsetByTopicPartition: offsetsByTopicPartitions.entrySet()) {
         offsetsByTopicPartitionIds
@@ -229,7 +249,13 @@ class TopicMetadataFetcher implements Closeable {
   List<PubSubTopicPartitionInfo> getTopicPartitionInfo(PubSubTopic topic) {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
-      return pubSubConsumerAdapter.partitionsFor(topic);
+      long startTime = System.currentTimeMillis();
+      List<PubSubTopicPartitionInfo> res = pubSubConsumerAdapter.partitionsFor(topic);
+      TopicManagerStats.recordLatency(
+          topicManagerStats,
+          TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.PARTITIONS_FOR,
+          System.currentTimeMillis() - startTime);
+      return res;
     } finally {
       releaseConsumer(pubSubConsumerAdapter);
     }
@@ -252,8 +278,13 @@ class TopicMetadataFetcher implements Closeable {
     validateTopicPartition(pubSubTopicPartition);
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
+      long startTime = System.currentTimeMillis();
       Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter
           .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      TopicManagerStats.recordLatency(
+          topicManagerStats,
+          TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_PARTITION_LATEST_OFFSETS,
+          System.currentTimeMillis() - startTime);
       Long offset = offsetMap.get(pubSubTopicPartition);
       if (offset == null) {
         // This should never happen; if it does, it's a bug in the PubSubConsumerAdapter implementation
@@ -337,8 +368,13 @@ class TopicMetadataFetcher implements Closeable {
 
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
+      long startTime = System.currentTimeMillis();
       Long result =
           pubSubConsumerAdapter.offsetForTime(pubSubTopicPartition, timestamp, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      TopicManagerStats.recordLatency(
+          topicManagerStats,
+          TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_OFFSET_FOR_TIME,
+          System.currentTimeMillis() - startTime);
       if (result == null) {
         // when offset is null, it means the given timestamp is either
         // out of range or the topic does not have any message
@@ -412,7 +448,13 @@ class TopicMetadataFetcher implements Closeable {
     int attempt = 0;
     while (attempt < retries) {
       try {
-        return getProducerTimestampOfLastDataMessage(pubSubTopicPartition);
+        long startTime = System.currentTimeMillis();
+        long timestamp = getProducerTimestampOfLastDataMessage(pubSubTopicPartition);
+        TopicManagerStats.recordLatency(
+            topicManagerStats,
+            TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_PRODUCER_TIMESTAMP_OF_LAST_DATA_MESSAGE,
+            System.currentTimeMillis() - startTime);
+        return timestamp;
       } catch (PubSubTopicDoesNotExistException | PubSubOpTimeoutException e) {
         lastException = e;
         attempt++;

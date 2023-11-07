@@ -21,6 +21,7 @@ import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
+import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
@@ -49,6 +50,11 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * Topic manger is responsible for creating, deleting, and updating topics. It also provides APIs to query topic metadata.
+ *
+ * It is essentially a wrapper over {@link PubSubAdminAdapter} and {@link PubSubConsumerAdapter} with additional
+ * features such as caching, metrics, and retry.
+ *
+ * We still have retries in the {@link PubSubAdminAdapter} we will eventually move them here.
  */
 public class TopicManager implements Closeable {
   private final Logger logger;
@@ -86,7 +92,8 @@ public class TopicManager implements Closeable {
         ? null
         : new TopicManagerStats(topicManagerContext.getMetricsRepository(), pubSubClusterAddress);
 
-    this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, pubSubAdminAdapter);
+    this.topicMetadataFetcher =
+        new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, topicManagerStats, pubSubAdminAdapter);
 
     this.logger.info(
         "Created a topic manager for the PubSub cluster address: {} with the following context: {}",
