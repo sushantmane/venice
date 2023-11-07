@@ -77,6 +77,8 @@ import static com.linkedin.venice.ConfigKeys.PARENT_CONTROLLER_MAX_ERRORED_TOPIC
 import static com.linkedin.venice.ConfigKeys.PARENT_CONTROLLER_WAITING_TIME_FOR_CONSUMPTION_MS;
 import static com.linkedin.venice.ConfigKeys.PARENT_KAFKA_CLUSTER_FABRIC_LIST;
 import static com.linkedin.venice.ConfigKeys.PARTICIPANT_MESSAGE_STORE_ENABLED;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_THREAD_POOL_SIZE;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_ADMIN_ADAPTER_FACTORY_CLASS;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_CONSUMER_ADAPTER_FACTORY_CLASS;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_PRODUCER_ADAPTER_FACTORY_CLASS;
@@ -96,6 +98,7 @@ import static com.linkedin.venice.ConfigKeys.UNREGISTER_METRIC_FOR_DELETED_STORE
 import static com.linkedin.venice.ConfigKeys.USE_PUSH_STATUS_STORE_FOR_INCREMENTAL_PUSH;
 import static com.linkedin.venice.ConfigKeys.VENICE_STORAGE_CLUSTER_LEADER_HAAS;
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE_DEFAULT_VALUE;
 
 import com.linkedin.venice.authorization.DefaultIdentityParser;
 import com.linkedin.venice.client.store.ClientConfig;
@@ -170,6 +173,8 @@ public class VeniceControllerConfig extends VeniceControllerClusterConfig {
   private final long topicCleanupSleepIntervalBetweenTopicListFetchMs;
   private final int topicCleanupDelayFactor;
   private final int topicManagerKafkaOperationTimeOutMs;
+  private final int topicManagerMetadataFetcherConsumerPoolSize;
+  private final int topicManagerMetadataFetcherThreadPoolSize;
   private final int minNumberOfUnusedKafkaTopicsToPreserve;
   private final int minNumberOfStoreVersionsToPreserve;
   private final int parentControllerMaxErroredTopicNumToKeep;
@@ -408,6 +413,11 @@ public class VeniceControllerConfig extends VeniceControllerClusterConfig {
 
     this.topicManagerKafkaOperationTimeOutMs =
         props.getInt(TOPIC_MANAGER_KAFKA_OPERATION_TIMEOUT_MS, 30 * Time.MS_PER_SECOND);
+    this.topicManagerMetadataFetcherConsumerPoolSize = props.getInt(
+        PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE,
+        PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE_DEFAULT_VALUE);
+    this.topicManagerMetadataFetcherThreadPoolSize = props
+        .getInt(PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_THREAD_POOL_SIZE, topicManagerMetadataFetcherConsumerPoolSize);
 
     this.minNumberOfUnusedKafkaTopicsToPreserve = props.getInt(MIN_NUMBER_OF_UNUSED_KAFKA_TOPICS_TO_PRESERVE, 2);
     this.minNumberOfStoreVersionsToPreserve = props.getInt(MIN_NUMBER_OF_STORE_VERSIONS_TO_PRESERVE, 2);
@@ -712,6 +722,14 @@ public class VeniceControllerConfig extends VeniceControllerClusterConfig {
 
   public int getTopicManagerKafkaOperationTimeOutMs() {
     return topicManagerKafkaOperationTimeOutMs;
+  }
+
+  public int getTopicManagerMetadataFetcherConsumerPoolSize() {
+    return topicManagerMetadataFetcherConsumerPoolSize;
+  }
+
+  public int getTopicManagerMetadataFetcherThreadPoolSize() {
+    return topicManagerMetadataFetcherThreadPoolSize;
   }
 
   public int getMinNumberOfUnusedKafkaTopicsToPreserve() {

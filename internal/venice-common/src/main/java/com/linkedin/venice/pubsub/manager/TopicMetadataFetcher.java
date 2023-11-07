@@ -81,10 +81,10 @@ class TopicMetadataFetcher implements Closeable {
       PubSubAdminAdapter pubSubAdminAdapter) {
     this.topicManagerStats = topicManagerStats;
     this.pubSubAdminAdapter = pubSubAdminAdapter;
-    this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherPoolSize());
+    this.pubSubConsumerPool = new LinkedBlockingQueue<>(topicManagerContext.getTopicMetadataFetcherConsumerPoolSize());
     this.cachedEntryTtlInNs = MILLISECONDS.toNanos(topicManagerContext.getTopicOffsetCheckIntervalMs());
     PubSubMessageDeserializer pubSubMessageDeserializer = PubSubMessageDeserializer.getInstance();
-    for (int i = 0; i < topicManagerContext.getTopicMetadataFetcherPoolSize(); i++) {
+    for (int i = 0; i < topicManagerContext.getTopicMetadataFetcherConsumerPoolSize(); i++) {
       PubSubConsumerAdapter pubSubConsumerAdapter = topicManagerContext.getPubSubConsumerAdapterFactory()
           .create(
               topicManagerContext.getPubSubProperties(pubSubClusterAddress),
@@ -110,7 +110,7 @@ class TopicMetadataFetcher implements Closeable {
     LOGGER.info(
         "Initialized TopicMetadataFetcher for pubSubClusterAddress: {} with consumer pool size: {} and thread pool size: {}",
         pubSubClusterAddress,
-        topicManagerContext.getTopicMetadataFetcherPoolSize(),
+        topicManagerContext.getTopicMetadataFetcherConsumerPoolSize(),
         topicManagerContext.getTopicMetadataFetcherThreadPoolSize());
   }
 

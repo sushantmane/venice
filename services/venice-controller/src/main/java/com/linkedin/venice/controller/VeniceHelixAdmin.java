@@ -498,6 +498,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             .setPubSubProperties(this::getPubSubSSLPropertiesFromControllerConfig)
             .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
             .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
+            .setTopicMetadataFetcherConsumerPoolSize(commonConfig.getTopicManagerMetadataFetcherConsumerPoolSize())
+            .setTopicMetadataFetcherThreadPoolSize(commonConfig.getTopicManagerMetadataFetcherThreadPoolSize())
             .build();
     this.topicManagerRepository =
         new TopicManagerRepository(topicManagerContext, getKafkaBootstrapServers(isSslToKafka()));

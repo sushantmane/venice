@@ -86,6 +86,11 @@ public class ConfigKeys {
   // Kafka security protocol
   public static final String KAFKA_SECURITY_PROTOCOL = "security.protocol";
 
+  public static final String PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE =
+      PubSubConstants.PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE;
+  public static final String PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_THREAD_POOL_SIZE =
+      PubSubConstants.PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_THREAD_POOL_SIZE;
+
   // Cluster specific configs for controller
   public static final String CONTROLLER_NAME = "controller.name";
 

@@ -27,7 +27,7 @@ public class TopicManagerContext {
   private final long topicDeletionStatusPollIntervalMs;
   private final long topicMinLogCompactionLagMs;
   private final long topicOffsetCheckIntervalMs;
-  private final int topicMetadataFetcherPoolSize;
+  private final int topicMetadataFetcherConsumerPoolSize;
   private final int topicMetadataFetcherThreadPoolSize;
 
   private TopicManagerContext(Builder builder) {
@@ -40,7 +40,7 @@ public class TopicManagerContext {
     this.metricsRepository = builder.metricsRepository;
     this.pubSubPropertiesSupplier = builder.pubSubPropertiesSupplier;
     this.topicOffsetCheckIntervalMs = builder.topicOffsetCheckIntervalMs;
-    this.topicMetadataFetcherPoolSize = builder.topicMetadataFetcherPoolSize;
+    this.topicMetadataFetcherConsumerPoolSize = builder.topicMetadataFetcherConsumerPoolSize;
     this.topicMetadataFetcherThreadPoolSize = builder.topicMetadataFetcherThreadPoolSize;
   }
 
@@ -84,8 +84,8 @@ public class TopicManagerContext {
     return topicOffsetCheckIntervalMs;
   }
 
-  public int getTopicMetadataFetcherPoolSize() {
-    return topicMetadataFetcherPoolSize;
+  public int getTopicMetadataFetcherConsumerPoolSize() {
+    return topicMetadataFetcherConsumerPoolSize;
   }
 
   public int getTopicMetadataFetcherThreadPoolSize() {
@@ -101,8 +101,8 @@ public class TopicManagerContext {
     return "TopicManagerContext{" + ", pubSubOperationTimeoutMs=" + pubSubOperationTimeoutMs
         + ", topicDeletionStatusPollIntervalMs=" + topicDeletionStatusPollIntervalMs + ", topicMinLogCompactionLagMs="
         + topicMinLogCompactionLagMs + ", topicOffsetCheckIntervalMs=" + topicOffsetCheckIntervalMs
-        + ", topicMetadataFetcherPoolSize=" + topicMetadataFetcherPoolSize + ", topicMetadataFetcherThreadPoolSize="
-        + topicMetadataFetcherThreadPoolSize + ", pubSubAdminAdapterFactory="
+        + ", topicMetadataFetcherConsumerPoolSize=" + topicMetadataFetcherConsumerPoolSize
+        + ", topicMetadataFetcherThreadPoolSize=" + topicMetadataFetcherThreadPoolSize + ", pubSubAdminAdapterFactory="
         + pubSubAdminAdapterFactory.getClass().getSimpleName() + ", pubSubConsumerAdapterFactory="
         + pubSubConsumerAdapterFactory.getClass().getSimpleName() + '}';
   }
@@ -117,8 +117,8 @@ public class TopicManagerContext {
     private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
     private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
-    private int topicMetadataFetcherPoolSize = 2; // 2 fetchers per broker
-    private int topicMetadataFetcherThreadPoolSize = Math.max(4, topicMetadataFetcherPoolSize);
+    private int topicMetadataFetcherConsumerPoolSize = 2; // 2 fetchers per broker
+    private int topicMetadataFetcherThreadPoolSize = Math.max(4, topicMetadataFetcherConsumerPoolSize);
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
       this.pubSubOperationTimeoutMs = pubSubOperationTimeoutMs;
@@ -171,11 +171,11 @@ public class TopicManagerContext {
       return this;
     }
 
-    public Builder setTopicMetadataFetcherPoolSize(int topicMetadataFetcherPoolSize) {
-      if (topicMetadataFetcherPoolSize < 1) {
+    public Builder setTopicMetadataFetcherConsumerPoolSize(int topicMetadataFetcherConsumerPoolSize) {
+      if (topicMetadataFetcherConsumerPoolSize < 1) {
         throw new IllegalArgumentException("topicMetadataFetcherPoolSize must be at least 1");
       }
-      this.topicMetadataFetcherPoolSize = topicMetadataFetcherPoolSize;
+      this.topicMetadataFetcherConsumerPoolSize = topicMetadataFetcherConsumerPoolSize;
       return this;
     }
 

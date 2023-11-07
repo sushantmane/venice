@@ -64,4 +64,10 @@ public class PubSubConstants {
   public static final Duration DEFAULT_PUBSUB_OFFSET_API_TIMEOUT = Duration.ofMinutes(1);
   public static final long NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION = -1;
   public static final int PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT = 3;
+
+  public static final String PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE =
+      "pubsub.topic.manager.metadata.fetcher.consumer.pool.size";
+  public static final int PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_CONSUMER_POOL_SIZE_DEFAULT_VALUE = 2;
+  public static final String PUBSUB_TOPIC_MANAGER_METADATA_FETCHER_THREAD_POOL_SIZE =
+      "pubsub.topic.manager.metadata.fetcher.thread.pool.size";
 }
