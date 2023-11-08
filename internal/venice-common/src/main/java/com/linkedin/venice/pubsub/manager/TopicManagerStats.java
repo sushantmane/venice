@@ -14,7 +14,9 @@ import java.util.EnumMap;
 /**
  * Stats for topic manager.
  */
-public class TopicManagerStats extends AbstractVeniceStats {
+class TopicManagerStats extends AbstractVeniceStats {
+  public static final String TOPIC_MANAGER_STATS_PREFIX = "TopicManagerStats_";
+
   public enum OCCURRENCE_LATENCY_SENSOR_TYPE {
     CREATE_TOPIC, DELETE_TOPIC, LIST_ALL_TOPICS, SET_TOPIC_CONFIG, GET_ALL_TOPIC_RETENTIONS, GET_TOPIC_CONFIG,
     GET_TOPIC_CONFIG_WITH_RETRY, CONTAINS_TOPIC, GET_SOME_TOPIC_CONFIGS, CONTAINS_TOPIC_WITH_RETRY,
@@ -24,8 +26,8 @@ public class TopicManagerStats extends AbstractVeniceStats {
 
   private final EnumMap<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> sensorsByTypes;
 
-  public TopicManagerStats(MetricsRepository metricsRepository, String pubSubClusterAddress) {
-    super(metricsRepository, "TopicManagerStats_" + TehutiUtils.fixMalformedMetricName(pubSubClusterAddress));
+  TopicManagerStats(MetricsRepository metricsRepository, String pubSubAddress) {
+    super(metricsRepository, TOPIC_MANAGER_STATS_PREFIX + TehutiUtils.fixMalformedMetricName(pubSubAddress));
     sensorsByTypes = new EnumMap<>(OCCURRENCE_LATENCY_SENSOR_TYPE.class);
     for (OCCURRENCE_LATENCY_SENSOR_TYPE sensorType: OCCURRENCE_LATENCY_SENSOR_TYPE.values()) {
       final String sensorName = sensorType.name().toLowerCase();
@@ -41,15 +43,19 @@ public class TopicManagerStats extends AbstractVeniceStats {
     }
   }
 
+  EnumMap<OCCURRENCE_LATENCY_SENSOR_TYPE, Sensor> getSensorsByTypes() {
+    return sensorsByTypes;
+  }
+
   // Record latency for a specific sensor type if the topic manager stats is not null.
-  public static void recordLatency(
+  static void recordLatency(
       TopicManagerStats topicManagerStats,
       OCCURRENCE_LATENCY_SENSOR_TYPE sensorType,
       long requestLatencyMs) {
     if (topicManagerStats == null || sensorType == null) {
       return;
     }
-    Sensor sensor = topicManagerStats.sensorsByTypes.get(sensorType);
+    Sensor sensor = topicManagerStats.getSensorsByTypes().getOrDefault(sensorType, null);
     if (sensor == null) {
       return;
     }
