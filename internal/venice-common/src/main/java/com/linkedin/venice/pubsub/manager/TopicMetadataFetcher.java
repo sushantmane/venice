@@ -1,6 +1,6 @@
 package com.linkedin.venice.pubsub.manager;
 
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OFFSET_API_TIMEOUT;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
@@ -229,7 +229,7 @@ class TopicMetadataFetcher implements Closeable {
 
       startTime = System.currentTimeMillis();
       Map<PubSubTopicPartition, Long> offsetsByTopicPartitions =
-          pubSubConsumerAdapter.endOffsets(topicPartitions, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+          pubSubConsumerAdapter.endOffsets(topicPartitions, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       TopicManagerStats.recordLatency(
           topicManagerStats,
           TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_TOPIC_LATEST_OFFSETS,
@@ -279,8 +279,9 @@ class TopicMetadataFetcher implements Closeable {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
       long startTime = System.currentTimeMillis();
-      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter
-          .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter.endOffsets(
+          Collections.singletonList(pubSubTopicPartition),
+          PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       TopicManagerStats.recordLatency(
           topicManagerStats,
           TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_PARTITION_LATEST_OFFSETS,
@@ -369,8 +370,8 @@ class TopicMetadataFetcher implements Closeable {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
       long startTime = System.currentTimeMillis();
-      Long result =
-          pubSubConsumerAdapter.offsetForTime(pubSubTopicPartition, timestamp, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      Long result = pubSubConsumerAdapter
+          .offsetForTime(pubSubTopicPartition, timestamp, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       TopicManagerStats.recordLatency(
           topicManagerStats,
           TopicManagerStats.OCCURRENCE_LATENCY_SENSOR_TYPE.GET_OFFSET_FOR_TIME,
@@ -418,7 +419,7 @@ class TopicMetadataFetcher implements Closeable {
           consumeLatestRecords(pubSubTopicPartition, fetchSize);
       // if there are no records in this topic partition, return a special timestamp
       if (lastConsumedRecords.isEmpty()) {
-        return PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+        return PubSubConstants.PUBSUB_NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
       }
 
       fetchedRecordsCount = lastConsumedRecords.size();
@@ -538,8 +539,9 @@ class TopicMetadataFetcher implements Closeable {
     boolean subscribed = false;
     try {
       // find the end offset
-      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter
-          .endOffsets(Collections.singletonList(pubSubTopicPartition), DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter.endOffsets(
+          Collections.singletonList(pubSubTopicPartition),
+          PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       long latestOffset = offsetMap.get(pubSubTopicPartition);
       if (latestOffset <= 0) {
         return Collections.emptyList(); // no records in this topic partition
@@ -547,7 +549,7 @@ class TopicMetadataFetcher implements Closeable {
 
       // find the beginning offset
       long earliestOffset =
-          pubSubConsumerAdapter.beginningOffset(pubSubTopicPartition, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT);
+          pubSubConsumerAdapter.beginningOffset(pubSubTopicPartition, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       if (earliestOffset == latestOffset) {
         return Collections.emptyList(); // no records in this topic partition
       }
@@ -572,7 +574,7 @@ class TopicMetadataFetcher implements Closeable {
               attempt,
               PubSubConstants.PUBSUB_CONSUMER_POLLING_FOR_METADATA_RETRY_MAX_ATTEMPT);
           consumedRecordsBatch =
-              pubSubConsumerAdapter.poll(Math.max(5000, DEFAULT_PUBSUB_OFFSET_API_TIMEOUT.toMillis()))
+              pubSubConsumerAdapter.poll(Math.max(5000, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE.toMillis()))
                   .get(pubSubTopicPartition);
           attempt++;
         }

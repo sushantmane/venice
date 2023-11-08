@@ -1,6 +1,6 @@
 package com.linkedin.venice.writer;
 
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
@@ -58,9 +58,15 @@ public class VeniceWriterTest {
     pubSubBrokerWrapper = ServiceFactory.getPubSubBroker();
     pubSubConsumerAdapterFactory = pubSubBrokerWrapper.getPubSubClientsFactory().getConsumerAdapterFactory();
     pubSubProducerAdapterFactory = pubSubBrokerWrapper.getPubSubClientsFactory().getProducerAdapterFactory();
-    topicManager = IntegrationTestPushUtils
-        .getTopicManagerRepo(DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS, 100L, 0L, pubSubBrokerWrapper, pubSubTopicRepository)
-        .getTopicManager();
+    topicManager =
+        IntegrationTestPushUtils
+            .getTopicManagerRepo(
+                PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
+                100L,
+                0L,
+                pubSubBrokerWrapper,
+                pubSubTopicRepository)
+            .getTopicManager();
   }
 
   @AfterClass

@@ -2,7 +2,7 @@ package com.linkedin.venice.hadoop.input.kafka;
 
 import static com.linkedin.venice.hadoop.VenicePushJob.KAFKA_INPUT_BROKER_URL;
 import static com.linkedin.venice.hadoop.VenicePushJob.KAFKA_INPUT_TOPIC;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 
 import com.linkedin.venice.hadoop.VenicePushJob;
 import com.linkedin.venice.hadoop.input.kafka.avro.KafkaInputMapperKey;
@@ -43,7 +43,7 @@ public class TestKafkaInputRecordReader {
     manager =
         IntegrationTestPushUtils
             .getTopicManagerRepo(
-                DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                 100L,
                 24 * Time.MS_PER_HOUR,
                 pubSubBrokerWrapper,

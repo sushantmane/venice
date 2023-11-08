@@ -6,7 +6,7 @@ import static com.linkedin.venice.ConfigKeys.PERSISTENCE_TYPE;
 import static com.linkedin.venice.ConfigKeys.SERVER_CONSUMER_POOL_SIZE_PER_KAFKA_CLUSTER;
 import static com.linkedin.venice.ConfigKeys.SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS;
 import static com.linkedin.venice.ConfigKeys.SSL_TO_KAFKA_LEGACY;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.createStoreForJob;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.defaultVPJProps;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.getSamzaProducer;
@@ -134,7 +134,7 @@ public class TestHybridQuota {
         TopicManager topicManager =
             IntegrationTestPushUtils
                 .getTopicManagerRepo(
-                    DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                    PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                     100L,
                     0L,
                     sharedVenice.getPubSubBrokerWrapper(),

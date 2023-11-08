@@ -1,7 +1,7 @@
 package com.linkedin.venice.kafka;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 import static com.linkedin.venice.utils.TestUtils.waitForNonDeterministicCompletion;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -105,7 +105,7 @@ public class KafkaConsumptionTest {
     topicManager =
         IntegrationTestPushUtils
             .getTopicManagerRepo(
-                DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                 100L,
                 MIN_COMPACTION_LAG,
                 localPubSubBroker,
@@ -121,7 +121,7 @@ public class KafkaConsumptionTest {
     remoteTopicManager =
         IntegrationTestPushUtils
             .getTopicManagerRepo(
-                DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                 100L,
                 MIN_COMPACTION_LAG,
                 remotePubSubBroker,

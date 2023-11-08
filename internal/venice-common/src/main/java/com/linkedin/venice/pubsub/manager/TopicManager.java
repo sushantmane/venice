@@ -103,7 +103,7 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE}, after which this function will throw a VeniceException.
    *
    * @see {@link #createTopic(PubSubTopic, int, int, boolean, boolean, Optional)}
    */
@@ -123,7 +123,7 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE}, after which this function will throw a VeniceException.
    *
    * @param topicName Name for the new topic
    * @param numPartitions number of partitions
@@ -162,7 +162,7 @@ public class TopicManager implements Closeable {
 
   /**
    * Create a topic, and block until the topic is created, with a default timeout of
-   * {@value PubSubConstants#DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS}, after which this function will throw a VeniceException.
+   * {@value PubSubConstants#PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE}, after which this function will throw a VeniceException.
    *
    * @param topicName Name for the new topic
    * @param numPartitions number of partitions
@@ -185,7 +185,7 @@ public class TopicManager implements Closeable {
 
     long startTime = System.currentTimeMillis();
     long deadlineMs = startTime + (useFastKafkaOperationTimeout
-        ? PubSubConstants.FAST_KAFKA_OPERATION_TIMEOUT_MS
+        ? PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS
         : topicManagerContext.getPubSubOperationTimeoutMs());
     PubSubTopicConfiguration pubSubTopicConfiguration = new PubSubTopicConfiguration(
         Optional.of(retentionTimeMs),
@@ -208,7 +208,7 @@ public class TopicManager implements Closeable {
           Duration.ofSeconds(1),
           Duration.ofMillis(
               useFastKafkaOperationTimeout
-                  ? PubSubConstants.FAST_KAFKA_OPERATION_TIMEOUT_MS
+                  ? PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS
                   : topicManagerContext.getPubSubOperationTimeoutMs()),
           PubSubConstants.CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
     } catch (Exception e) {
@@ -396,7 +396,7 @@ public class TopicManager implements Closeable {
     if (pubSubTopicConfiguration.retentionInMs().isPresent()) {
       return pubSubTopicConfiguration.retentionInMs().get();
     }
-    return PubSubConstants.UNKNOWN_TOPIC_RETENTION;
+    return PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION;
   }
 
   /**
@@ -415,7 +415,7 @@ public class TopicManager implements Closeable {
   }
 
   public boolean isRetentionBelowTruncatedThreshold(long retention, long truncatedTopicMaxRetentionMs) {
-    return retention != PubSubConstants.UNKNOWN_TOPIC_RETENTION && retention <= truncatedTopicMaxRetentionMs;
+    return retention != PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION && retention <= truncatedTopicMaxRetentionMs;
   }
 
   private void createTopic(
@@ -518,13 +518,13 @@ public class TopicManager implements Closeable {
    */
   public void ensureTopicIsDeletedAndBlockWithRetry(PubSubTopic pubSubTopic) {
     int attempts = 0;
-    while (attempts++ < PubSubConstants.MAX_TOPIC_DELETE_RETRIES) {
+    while (attempts++ < PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
       try {
         logger.debug(
             "Deleting topic: {} with retry attempt {} / {}",
             pubSubTopic,
             attempts,
-            PubSubConstants.MAX_TOPIC_DELETE_RETRIES);
+            PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES);
         ensureTopicIsDeletedAndBlock(pubSubTopic);
         return;
       } catch (PubSubTopicExistsException | PubSubClientRetriableException e) {
@@ -534,8 +534,8 @@ public class TopicManager implements Closeable {
             pubSubTopic,
             errorMessage,
             attempts,
-            PubSubConstants.MAX_TOPIC_DELETE_RETRIES);
-        if (attempts == PubSubConstants.MAX_TOPIC_DELETE_RETRIES) {
+            PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES);
+        if (attempts == PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
           logger.error("Topic deletion for topic {} {}! Giving up!!", pubSubTopic, errorMessage, e);
           throw e;
         }

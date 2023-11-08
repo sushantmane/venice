@@ -16,7 +16,7 @@ import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT_VALUE_SCHEMA;
 import static com.linkedin.venice.meta.BufferReplayPolicy.REWIND_FROM_EOP;
 import static com.linkedin.venice.meta.BufferReplayPolicy.REWIND_FROM_SOP;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 import static com.linkedin.venice.router.api.VenicePathParser.TYPE_STORAGE;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.createStoreForJob;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.defaultVPJProps;
@@ -200,7 +200,7 @@ public class TestHybrid {
         TopicManager topicManager =
             IntegrationTestPushUtils
                 .getTopicManagerRepo(
-                    DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                    PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                     100,
                     0l,
                     venice.getPubSubBrokerWrapper(),
@@ -333,7 +333,7 @@ public class TestHybrid {
           TopicManager topicManager =
               IntegrationTestPushUtils
                   .getTopicManagerRepo(
-                      DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                      PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                       100,
                       0l,
                       venice.getPubSubBrokerWrapper(),
@@ -1170,7 +1170,7 @@ public class TestHybrid {
           TopicManager topicManager =
               IntegrationTestPushUtils
                   .getTopicManagerRepo(
-                      DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                      PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                       100L,
                       MIN_COMPACTION_LAG,
                       venice.getPubSubBrokerWrapper(),

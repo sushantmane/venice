@@ -1,8 +1,8 @@
 package com.linkedin.venice.pubsub.manager;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS_DEFAULT_VALUE;
 
 import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
@@ -112,8 +112,8 @@ public class TopicManagerContext {
     private PubSubTopicRepository pubSubTopicRepository;
     private MetricsRepository metricsRepository;
     private PubSubPropertiesSupplier pubSubPropertiesSupplier;
-    private long pubSubOperationTimeoutMs = DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
-    private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
+    private long pubSubOperationTimeoutMs = PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
+    private long topicDeletionStatusPollIntervalMs = PUBSUB_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS_DEFAULT_VALUE;
     private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
     private int topicMetadataFetcherConsumerPoolSize = 2; // 2 fetchers per pubsub cluster

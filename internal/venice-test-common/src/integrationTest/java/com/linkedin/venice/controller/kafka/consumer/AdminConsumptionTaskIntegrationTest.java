@@ -1,7 +1,7 @@
 package com.linkedin.venice.controller.kafka.consumer;
 
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapperConstants.STANDALONE_REGION_NAME;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 
 import com.linkedin.venice.controller.kafka.AdminTopicUtils;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
@@ -61,7 +61,7 @@ public class AdminConsumptionTaskIntegrationTest {
         TopicManager topicManager =
             IntegrationTestPushUtils
                 .getTopicManagerRepo(
-                    DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+                    PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
                     100,
                     0l,
                     pubSubBrokerWrapper,

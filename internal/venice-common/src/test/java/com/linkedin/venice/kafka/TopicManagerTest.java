@@ -1,6 +1,6 @@
 package com.linkedin.venice.kafka;
 
-import static com.linkedin.venice.pubsub.PubSubConstants.MAX_TOPIC_DELETE_RETRIES;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
@@ -228,7 +228,7 @@ public class TopicManagerTest {
   public void testGetProducerTimestampOfLastDataRecordOnEmptyTopic() {
     final PubSubTopicPartition emptyTopicPartition = new PubSubTopicPartitionImpl(getTopic(), 0);
     long retrievedTimestamp = topicManager.getProducerTimestampOfLastDataMessageWithRetries(emptyTopicPartition, 1);
-    Assert.assertEquals(retrievedTimestamp, PubSubConstants.NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
+    Assert.assertEquals(retrievedTimestamp, PubSubConstants.PUBSUB_NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION);
   }
 
   @Test
@@ -323,7 +323,7 @@ public class TopicManagerTest {
     Assert.assertThrows(
         PubSubOpTimeoutException.class,
         () -> partiallyMockedTopicManager.ensureTopicIsDeletedAndBlockWithRetry(topicName));
-    Mockito.verify(partiallyMockedTopicManager, times(MAX_TOPIC_DELETE_RETRIES))
+    Mockito.verify(partiallyMockedTopicManager, times(PUBSUB_TOPIC_DELETE_RETRY_TIMES))
         .ensureTopicIsDeletedAndBlock(topicName);
   }
 
@@ -437,7 +437,7 @@ public class TopicManagerTest {
             .isRetentionBelowTruncatedThreshold(deprecatedTopicRetentionMaxMs + 1, deprecatedTopicRetentionMaxMs));
     Assert.assertFalse(
         topicManager.isRetentionBelowTruncatedThreshold(
-            PubSubConstants.UNKNOWN_TOPIC_RETENTION,
+            PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION,
             deprecatedTopicRetentionMaxMs));
     Assert.assertTrue(
         topicManager

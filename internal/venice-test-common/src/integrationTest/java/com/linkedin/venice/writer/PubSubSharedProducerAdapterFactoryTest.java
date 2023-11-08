@@ -1,7 +1,7 @@
 package com.linkedin.venice.writer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BUFFER_MEMORY;
 import static org.mockito.Mockito.mock;
 
@@ -55,9 +55,15 @@ public class PubSubSharedProducerAdapterFactoryTest {
   public void setUp() {
     pubSubBrokerWrapper = ServiceFactory.getPubSubBroker();
     pubSubConsumerAdapterFactory = pubSubBrokerWrapper.getPubSubClientsFactory().getConsumerAdapterFactory();
-    topicManager = IntegrationTestPushUtils
-        .getTopicManagerRepo(DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS, 100, 0L, pubSubBrokerWrapper, pubSubTopicRepository)
-        .getTopicManager();
+    topicManager =
+        IntegrationTestPushUtils
+            .getTopicManagerRepo(
+                PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
+                100,
+                0L,
+                pubSubBrokerWrapper,
+                pubSubTopicRepository)
+            .getTopicManager();
   }
 
   @AfterClass

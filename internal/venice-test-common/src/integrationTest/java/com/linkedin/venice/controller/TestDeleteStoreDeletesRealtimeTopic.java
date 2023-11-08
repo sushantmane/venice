@@ -1,6 +1,6 @@
 package com.linkedin.venice.controller;
 
-import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.getSamzaProducer;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.makeStoreHybrid;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.sendStreamingRecord;
@@ -53,7 +53,7 @@ public class TestDeleteStoreDeletesRealtimeTopic {
     controllerClient =
         ControllerClient.constructClusterControllerClient(venice.getClusterName(), venice.getRandomRouterURL());
     topicManagerRepository = IntegrationTestPushUtils.getTopicManagerRepo(
-        DEFAULT_PUBSUB_OPERATION_TIMEOUT_MS,
+        PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
         100,
         0l,
         venice.getPubSubBrokerWrapper(),
