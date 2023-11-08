@@ -48,7 +48,7 @@ public class TestKafkaInputRecordReader {
                 24 * Time.MS_PER_HOUR,
                 pubSubBrokerWrapper,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
   }
 
   @AfterClass

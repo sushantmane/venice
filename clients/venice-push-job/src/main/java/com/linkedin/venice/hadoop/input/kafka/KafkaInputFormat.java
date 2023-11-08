@@ -54,7 +54,7 @@ public class KafkaInputFormat implements InputFormat<KafkaInputMapperKey, KafkaI
 
     try (TopicManagerRepository topicManagerRepository =
         new TopicManagerRepository(topicManagerContext, config.get(KAFKA_INPUT_BROKER_URL))) {
-      try (TopicManager topicManager = topicManagerRepository.getTopicManager()) {
+      try (TopicManager topicManager = topicManagerRepository.getLocalTopicManager()) {
         String topic = config.get(KAFKA_INPUT_TOPIC);
         Map<Integer, Long> latestOffsets = topicManager.getTopicLatestOffsets(pubSubTopicRepository.getTopic(topic));
         Map<TopicPartition, Long> partitionOffsetMap = new HashMap<>(latestOffsets.size());

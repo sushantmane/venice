@@ -192,7 +192,7 @@ public class TestTopicRequestOnHybridDelete {
         venice.getPubSubBrokerWrapper(),
         pubSubTopicRepository)) {
 
-      TopicManager topicManager = topicManagerRepository.getTopicManager();
+      TopicManager topicManager = topicManagerRepository.getLocalTopicManager();
 
       String storeName = Utils.getUniqueString("hybrid-store");
       venice.getNewStore(storeName);

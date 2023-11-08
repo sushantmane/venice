@@ -561,7 +561,7 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     doThrow(new PubSubOpTimeoutException("mock timeout")).when(mockedTopicManager)
         .createTopic(any(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), any(), eq(true));
     TopicManagerRepository mockedTopicManageRepository = mock(TopicManagerRepository.class);
-    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager();
+    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getLocalTopicManager();
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(any(String.class));
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(anyString());
     veniceAdmin.setTopicManagerRepository(mockedTopicManageRepository);
@@ -1590,7 +1590,7 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
 
     TopicManager mockedTopicManager = mock(TopicManager.class);
     TopicManagerRepository mockedTopicManageRepository = mock(TopicManagerRepository.class);
-    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager();
+    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getLocalTopicManager();
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(any(String.class));
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(anyString());
     veniceAdmin.setTopicManagerRepository(mockedTopicManageRepository);
@@ -1744,7 +1744,7 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
 
     TopicManager mockedTopicManager = mock(TopicManager.class);
     TopicManagerRepository mockedTopicManageRepository = mock(TopicManagerRepository.class);
-    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager();
+    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getLocalTopicManager();
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(any(String.class));
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(anyString());
     veniceAdmin.setTopicManagerRepository(mockedTopicManageRepository);

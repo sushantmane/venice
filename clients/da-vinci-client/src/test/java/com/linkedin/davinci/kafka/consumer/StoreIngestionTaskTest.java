@@ -454,7 +454,7 @@ public abstract class StoreIngestionTaskTest {
 
     mockTopicManager = mock(TopicManager.class);
     mockTopicManagerRepository = mock(TopicManagerRepository.class);
-    doReturn(mockTopicManager).when(mockTopicManagerRepository).getTopicManager();
+    doReturn(mockTopicManager).when(mockTopicManagerRepository).getLocalTopicManager();
 
     mockAggStoreIngestionStats = mock(AggHostLevelIngestionStats.class);
     mockStoreIngestionStats = mock(HostLevelIngestionStats.class);

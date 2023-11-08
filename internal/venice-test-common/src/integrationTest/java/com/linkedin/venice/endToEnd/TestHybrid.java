@@ -205,7 +205,7 @@ public class TestHybrid {
                     0l,
                     venice.getPubSubBrokerWrapper(),
                     venice.getPubSubTopicRepository())
-                .getTopicManager()) {
+                .getLocalTopicManager()) {
       long streamingRewindSeconds = 25L;
       long streamingMessageLag = 2L;
       final String storeName = Utils.getUniqueString("multi-colo-hybrid-store");
@@ -338,7 +338,7 @@ public class TestHybrid {
                       0l,
                       venice.getPubSubBrokerWrapper(),
                       sharedVenice.getPubSubTopicRepository())
-                  .getTopicManager()) {
+                  .getLocalTopicManager()) {
 
         Cache cacheNothingCache = Mockito.mock(Cache.class);
         Mockito.when(cacheNothingCache.getIfPresent(Mockito.any())).thenReturn(null);
@@ -1175,7 +1175,7 @@ public class TestHybrid {
                       MIN_COMPACTION_LAG,
                       venice.getPubSubBrokerWrapper(),
                       sharedVenice.getPubSubTopicRepository())
-                  .getTopicManager()) {
+                  .getLocalTopicManager()) {
 
         ControllerResponse response = controllerClient.updateStore(
             storeName,

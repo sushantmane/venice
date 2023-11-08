@@ -39,7 +39,7 @@ public class TopicManagerIntegrationTest extends TopicManagerTest {
         new PubSubBrokerConfigs.Builder().setMockTime(mockTime).setRegionName(STANDALONE_REGION_NAME).build());
     topicManager = IntegrationTestPushUtils
         .getTopicManagerRepo(500L, 100L, MIN_COMPACTION_LAG, pubSubBrokerWrapper, new PubSubTopicRepository())
-        .getTopicManager();
+        .getLocalTopicManager();
   }
 
   protected PubSubProducerAdapter createPubSubProducerAdapter() {

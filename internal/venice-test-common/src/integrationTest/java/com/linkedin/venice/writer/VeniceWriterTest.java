@@ -66,7 +66,7 @@ public class VeniceWriterTest {
                 0L,
                 pubSubBrokerWrapper,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
   }
 
   @AfterClass

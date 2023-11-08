@@ -332,7 +332,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
      */
     if (zkSharedSchemaRepository.isPresent()) {
       this.metaStoreWriter = new MetaStoreWriter(
-          topicManagerRepository.getTopicManager(),
+          topicManagerRepository.getLocalTopicManager(),
           veniceWriterFactoryForMetaStoreWriter,
           zkSharedSchemaRepository.get(),
           pubSubTopicRepository,

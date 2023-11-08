@@ -518,7 +518,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         pubSubClientsFactory.getProducerAdapterFactory(),
         null);
     this.realTimeTopicSwitcher = new RealTimeTopicSwitcher(
-        topicManagerRepository.getTopicManager(),
+        topicManagerRepository.getLocalTopicManager(),
         veniceWriterFactory,
         commonConfig.getProps(),
         pubSubTopicRepository);
@@ -559,7 +559,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         commonConfig.getRefreshAttemptsForZkReconnect(),
         commonConfig.getRefreshIntervalForZkReconnectInMs());
     metaStoreWriter = new MetaStoreWriter(
-        topicManagerRepository.getTopicManager(),
+        topicManagerRepository.getLocalTopicManager(),
         veniceWriterFactory,
         zkSharedSchemaRepository,
         pubSubTopicRepository,
@@ -5928,7 +5928,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    */
   @Override
   public TopicManager getTopicManager() {
-    return this.topicManagerRepository.getTopicManager();
+    return this.topicManagerRepository.getLocalTopicManager();
   }
 
   /**

@@ -120,7 +120,7 @@ public class TopicManagerTest {
             .setTopicDeletionStatusPollIntervalMs(100L)
             .setTopicMinLogCompactionLagMs(MIN_COMPACTION_LAG)
             .build();
-    topicManager = new TopicManagerRepository(topicManagerContext, "localhost:1234").getTopicManager();
+    topicManager = new TopicManagerRepository(topicManagerContext, "localhost:1234").getLocalTopicManager();
   }
 
   protected PubSubProducerAdapter createPubSubProducerAdapter() {
@@ -548,7 +548,7 @@ public class TopicManagerTest {
     try (
         TopicManagerRepository topicManagerRepository =
             new TopicManagerRepository(topicManagerContext, localPubSubBrokerAddress);
-        TopicManager topicManagerForThisTest = topicManagerRepository.getTopicManager()) {
+        TopicManager topicManagerForThisTest = topicManagerRepository.getLocalTopicManager()) {
       Assert.assertThrows(
           PubSubOpTimeoutException.class,
           () -> topicManagerForThisTest.getLatestOffsetWithRetries(pubSubTopicPartition, 10));

@@ -139,7 +139,7 @@ public class TestHybridQuota {
                     0L,
                     sharedVenice.getPubSubBrokerWrapper(),
                     sharedVenice.getPubSubTopicRepository())
-                .getTopicManager()) {
+                .getLocalTopicManager()) {
 
       // Setting the hybrid store quota here will cause the VPJ push failed.
       ControllerResponse response = controllerClient.updateStore(

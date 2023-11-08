@@ -66,7 +66,7 @@ public class AdminConsumptionTaskIntegrationTest {
                     0l,
                     pubSubBrokerWrapper,
                     pubSubTopicRepository)
-                .getTopicManager()) {
+                .getLocalTopicManager()) {
       PubSubTopic adminTopic = pubSubTopicRepository.getTopic(AdminTopicUtils.getTopicNameFromClusterName(clusterName));
       topicManager.createTopic(adminTopic, 1, 1, true);
       String storeName = "test-store";

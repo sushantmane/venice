@@ -105,7 +105,7 @@ public class TestDeleteStoreDeletesRealtimeTopic {
 
     // verify realtime topic exists
     PubSubTopic rtTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
-    assertTrue(topicManagerRepository.getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic));
+    assertTrue(topicManagerRepository.getLocalTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic));
 
     // disable store
     TestUtils.assertCommand(
@@ -126,11 +126,11 @@ public class TestDeleteStoreDeletesRealtimeTopic {
     // verify realtime topic does not exist
     PubSubTopic realTimeTopicName = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
     try {
-      boolean isTruncated = topicManagerRepository.getTopicManager().isTopicTruncated(realTimeTopicName, 60000);
+      boolean isTruncated = topicManagerRepository.getLocalTopicManager().isTopicTruncated(realTimeTopicName, 60000);
       assertTrue(
           isTruncated,
           "Real-time buffer topic should be truncated: " + realTimeTopicName + " but retention is set to: "
-              + topicManagerRepository.getTopicManager().getTopicRetention(realTimeTopicName) + ".");
+              + topicManagerRepository.getLocalTopicManager().getTopicRetention(realTimeTopicName) + ".");
       LOGGER.info("Confirmed truncation of real-time topic: {}", realTimeTopicName);
     } catch (PubSubTopicDoesNotExistException e) {
       LOGGER

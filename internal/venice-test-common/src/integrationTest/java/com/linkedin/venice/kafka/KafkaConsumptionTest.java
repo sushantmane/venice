@@ -110,7 +110,7 @@ public class KafkaConsumptionTest {
                 MIN_COMPACTION_LAG,
                 localPubSubBroker,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
     Cache cacheNothingCache = mock(Cache.class);
     Mockito.when(cacheNothingCache.getIfPresent(Mockito.any())).thenReturn(null);
     topicManager.setTopicConfigCache(cacheNothingCache);
@@ -126,7 +126,7 @@ public class KafkaConsumptionTest {
                 MIN_COMPACTION_LAG,
                 remotePubSubBroker,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
     Cache remoteCacheNothingCache = mock(Cache.class);
     Mockito.when(remoteCacheNothingCache.getIfPresent(Mockito.any())).thenReturn(null);
     remoteTopicManager.setTopicConfigCache(remoteCacheNothingCache);

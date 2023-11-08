@@ -1435,7 +1435,7 @@ public class AdminTool {
 
     try (TopicManagerRepository topicManagerRepository =
         new TopicManagerRepository(topicManagerContext, kafkaBootstrapServer)) {
-      TopicManager topicManager = topicManagerRepository.getTopicManager();
+      TopicManager topicManager = topicManagerRepository.getLocalTopicManager();
       String topicName = getRequiredArgument(cmd, Arg.KAFKA_TOPIC_NAME);
       try {
         topicManager.ensureTopicIsDeletedAndBlock(PUB_SUB_TOPIC_REPOSITORY.getTopic(topicName));

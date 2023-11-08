@@ -2828,7 +2828,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       return;
     }
     Lazy<Boolean> tolerateMissingMsgs = Lazy.of(() -> {
-      TopicManager topicManager = topicManagerRepository.getTopicManager();
+      TopicManager topicManager = topicManagerRepository.getLocalTopicManager();
       // Tolerate missing message if store version is data recovery + hybrid and TS not received yet (due to source
       // topic
       // data may have been log compacted) or log compaction is enabled and record is old enough for log compaction.
@@ -3602,7 +3602,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected TopicManager getTopicManager(String sourceKafkaServer) {
     if (sourceKafkaServer.equals(localKafkaServer)) {
       // Use default kafka admin client (could be scala or java based) to get local topic manager
-      return topicManagerRepository.getTopicManager();
+      return topicManagerRepository.getLocalTopicManager();
     }
     // Use java-based kafka admin client to get remote topic manager
     return topicManagerRepository.getTopicManager(sourceKafkaServer);

@@ -63,7 +63,7 @@ public class PubSubSharedProducerAdapterFactoryTest {
                 0L,
                 pubSubBrokerWrapper,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
   }
 
   @AfterClass

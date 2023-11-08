@@ -49,7 +49,7 @@ public class TestKafkaInputFormat {
                 24 * Time.MS_PER_HOUR,
                 pubSubBrokerWrapper,
                 pubSubTopicRepository)
-            .getTopicManager();
+            .getLocalTopicManager();
   }
 
   @AfterClass

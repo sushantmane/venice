@@ -50,7 +50,7 @@ public class TestClusterLevelConfigForNativeReplication extends AbstractTestVeni
 
     TopicManager mockedTopicManager = mock(TopicManager.class);
     TopicManagerRepository mockedTopicManageRepository = mock(TopicManagerRepository.class);
-    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager();
+    doReturn(mockedTopicManager).when(mockedTopicManageRepository).getLocalTopicManager();
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(any(String.class));
     doReturn(mockedTopicManager).when(mockedTopicManageRepository).getTopicManager(anyString());
     veniceAdmin.setTopicManagerRepository(mockedTopicManageRepository);
