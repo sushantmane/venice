@@ -377,7 +377,7 @@ public class IntegrationTestPushUtils {
     properties.put(KAFKA_BOOTSTRAP_SERVERS, pubSubBootstrapServers);
 
     TopicManagerContext topicManagerContext =
-        new TopicManagerContext.Builder().setPubSubProperties(k -> new VeniceProperties(properties))
+        new TopicManagerContext.Builder().setPubSubPropertiesSupplier(k -> new VeniceProperties(properties))
             .setPubSubTopicRepository(pubSubTopicRepository)
             .setPubSubConsumerAdapterFactory(pubSubBrokerWrapper.getPubSubClientsFactory().getConsumerAdapterFactory())
             .setPubSubAdminAdapterFactory(pubSubBrokerWrapper.getPubSubClientsFactory().getAdminAdapterFactory())

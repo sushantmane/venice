@@ -112,7 +112,7 @@ public class TopicManagerTest {
     doReturn(mockInMemoryConsumer).when(pubSubConsumerAdapterFactory).create(any(), anyBoolean(), any(), anyString());
 
     TopicManagerContext topicManagerContext =
-        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+        new TopicManagerContext.Builder().setPubSubPropertiesSupplier(k -> VeniceProperties.empty())
             .setPubSubTopicRepository(pubSubTopicRepository)
             .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
             .setPubSubAdminAdapterFactory(pubSubAdminAdapterFactory)
@@ -537,7 +537,7 @@ public class TopicManagerTest {
     doReturn(mockPubSubAdminAdapter).when(adminAdapterFactory).create(any(), eq(pubSubTopicRepository));
 
     TopicManagerContext topicManagerContext =
-        new TopicManagerContext.Builder().setPubSubProperties(k -> VeniceProperties.empty())
+        new TopicManagerContext.Builder().setPubSubPropertiesSupplier(k -> VeniceProperties.empty())
             .setPubSubTopicRepository(pubSubTopicRepository)
             .setPubSubAdminAdapterFactory(adminAdapterFactory)
             .setPubSubConsumerAdapterFactory(consumerAdapterFactory)

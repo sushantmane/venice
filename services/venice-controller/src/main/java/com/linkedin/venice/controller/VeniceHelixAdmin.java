@@ -495,7 +495,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     TopicManagerContext topicManagerContext =
         new TopicManagerContext.Builder().setPubSubTopicRepository(pubSubTopicRepository)
             .setMetricsRepository(metricsRepository)
-            .setPubSubProperties(this::getPubSubSSLPropertiesFromControllerConfig)
+            .setPubSubPropertiesSupplier(this::getPubSubSSLPropertiesFromControllerConfig)
             .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
             .setPubSubConsumerAdapterFactory(pubSubConsumerAdapterFactory)
             .setTopicMetadataFetcherConsumerPoolSize(commonConfig.getTopicManagerMetadataFetcherConsumerPoolSize())

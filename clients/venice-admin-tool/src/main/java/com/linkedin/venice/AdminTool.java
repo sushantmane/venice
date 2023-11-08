@@ -1424,7 +1424,7 @@ public class AdminTool {
     }
 
     TopicManagerContext topicManagerContext =
-        new TopicManagerContext.Builder().setPubSubProperties(k -> veniceProperties)
+        new TopicManagerContext.Builder().setPubSubPropertiesSupplier(k -> veniceProperties)
             .setPubSubOperationTimeoutMs(kafkaTimeOut)
             .setTopicDeletionStatusPollIntervalMs(topicDeletionStatusPollingInterval)
             .setTopicMinLogCompactionLagMs(0L)

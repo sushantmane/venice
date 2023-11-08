@@ -11,7 +11,6 @@ import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
-import java.util.Objects;
 
 
 /**
@@ -117,8 +116,8 @@ public class TopicManagerContext {
     private long topicDeletionStatusPollIntervalMs = DEFAULT_TOPIC_DELETION_STATUS_POLL_INTERVAL_MS;
     private long topicMinLogCompactionLagMs = DEFAULT_KAFKA_MIN_LOG_COMPACTION_LAG_MS;
     private long topicOffsetCheckIntervalMs = 60_000L; // 1 minute
-    private int topicMetadataFetcherConsumerPoolSize = 2; // 2 fetchers per broker
-    private int topicMetadataFetcherThreadPoolSize = Math.max(4, topicMetadataFetcherConsumerPoolSize);
+    private int topicMetadataFetcherConsumerPoolSize = 2; // 2 fetchers per pubsub cluster
+    private int topicMetadataFetcherThreadPoolSize = Math.max(3, topicMetadataFetcherConsumerPoolSize);
 
     public Builder setPubSubOperationTimeoutMs(long pubSubOperationTimeoutMs) {
       this.pubSubOperationTimeoutMs = pubSubOperationTimeoutMs;
@@ -137,21 +136,18 @@ public class TopicManagerContext {
 
     public Builder setPubSubAdminAdapterFactory(
         PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory) {
-      this.pubSubAdminAdapterFactory =
-          Objects.requireNonNull(pubSubAdminAdapterFactory, "pubSubAdminAdapterFactory cannot be null");
+      this.pubSubAdminAdapterFactory = pubSubAdminAdapterFactory;
       return this;
     }
 
     public Builder setPubSubConsumerAdapterFactory(
         PubSubConsumerAdapterFactory<PubSubConsumerAdapter> pubSubConsumerAdapterFactory) {
-      this.pubSubConsumerAdapterFactory =
-          Objects.requireNonNull(pubSubConsumerAdapterFactory, "pubSubConsumerAdapterFactory cannot be null");
+      this.pubSubConsumerAdapterFactory = pubSubConsumerAdapterFactory;
       return this;
     }
 
     public Builder setPubSubTopicRepository(PubSubTopicRepository pubSubTopicRepository) {
-      this.pubSubTopicRepository =
-          Objects.requireNonNull(pubSubTopicRepository, "pubSubTopicRepository cannot be null");
+      this.pubSubTopicRepository = pubSubTopicRepository;
       return this;
     }
 
@@ -160,9 +156,8 @@ public class TopicManagerContext {
       return this;
     }
 
-    public Builder setPubSubProperties(PubSubPropertiesSupplier pubSubPropertiesSupplier) {
-      this.pubSubPropertiesSupplier =
-          Objects.requireNonNull(pubSubPropertiesSupplier, "pubSubPropertiesSupplier cannot be null");
+    public Builder setPubSubPropertiesSupplier(PubSubPropertiesSupplier pubSubPropertiesSupplier) {
+      this.pubSubPropertiesSupplier = pubSubPropertiesSupplier;
       return this;
     }
 
@@ -172,22 +167,60 @@ public class TopicManagerContext {
     }
 
     public Builder setTopicMetadataFetcherConsumerPoolSize(int topicMetadataFetcherConsumerPoolSize) {
-      if (topicMetadataFetcherConsumerPoolSize < 1) {
-        throw new IllegalArgumentException("topicMetadataFetcherPoolSize must be at least 1");
-      }
       this.topicMetadataFetcherConsumerPoolSize = topicMetadataFetcherConsumerPoolSize;
       return this;
     }
 
     public Builder setTopicMetadataFetcherThreadPoolSize(int topicMetadataFetcherThreadPoolSize) {
-      if (topicMetadataFetcherThreadPoolSize < 1) {
-        throw new IllegalArgumentException("topicMetadataFetcherThreadPoolSize must be at least 1");
-      }
       this.topicMetadataFetcherThreadPoolSize = topicMetadataFetcherThreadPoolSize;
       return this;
     }
 
+    public void verify() {
+      if (pubSubAdminAdapterFactory == null) {
+        throw new IllegalArgumentException("pubSubAdminAdapterFactory cannot be null");
+      }
+
+      if (pubSubConsumerAdapterFactory == null) {
+        throw new IllegalArgumentException("pubSubConsumerAdapterFactory cannot be null");
+      }
+
+      if (pubSubTopicRepository == null) {
+        throw new IllegalArgumentException("pubSubTopicRepository cannot be null");
+      }
+
+      if (pubSubPropertiesSupplier == null) {
+        throw new IllegalArgumentException("pubSubPropertiesSupplier cannot be null");
+      }
+
+      if (pubSubOperationTimeoutMs <= 0) {
+        throw new IllegalArgumentException("pubSubOperationTimeoutMs must be positive");
+      }
+
+      if (topicDeletionStatusPollIntervalMs < 0) {
+        throw new IllegalArgumentException("topicDeletionStatusPollIntervalMs must be positive");
+      }
+
+      if (topicOffsetCheckIntervalMs < 0) {
+        throw new IllegalArgumentException("topicOffsetCheckIntervalMs must be positive");
+      }
+
+      if (topicMetadataFetcherConsumerPoolSize <= 0) {
+        throw new IllegalArgumentException("topicMetadataFetcherConsumerPoolSize must be positive");
+      }
+
+      if (topicMetadataFetcherThreadPoolSize <= 0) {
+        throw new IllegalArgumentException("topicMetadataFetcherThreadPoolSize must be positive");
+      }
+
+      if (topicMetadataFetcherThreadPoolSize < topicMetadataFetcherConsumerPoolSize) {
+        throw new IllegalArgumentException(
+            "topicMetadataFetcherThreadPoolSize must be greater than or equal to topicMetadataFetcherConsumerPoolSize");
+      }
+    }
+
     public TopicManagerContext build() {
+      verify();
       return new TopicManagerContext(this);
     }
   }

@@ -314,7 +314,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
         new TopicManagerContext.Builder().setPubSubTopicRepository(pubSubTopicRepository)
             .setMetricsRepository(metricsRepository)
             .setTopicOffsetCheckIntervalMs(serverConfig.getTopicOffsetCheckIntervalMs())
-            .setPubSubProperties(this::getPubSubSSLPropertiesFromServerConfig)
+            .setPubSubPropertiesSupplier(this::getPubSubSSLPropertiesFromServerConfig)
             .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
             .setPubSubConsumerAdapterFactory(pubSubClientsFactory.getConsumerAdapterFactory())
             .setTopicMetadataFetcherThreadPoolSize(serverConfig.getTopicManagerMetadataFetcherThreadPoolSize())
