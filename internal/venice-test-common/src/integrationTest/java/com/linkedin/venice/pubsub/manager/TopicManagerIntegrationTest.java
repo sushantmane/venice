@@ -5,7 +5,6 @@ import static com.linkedin.venice.integration.utils.VeniceClusterWrapperConstant
 import com.linkedin.venice.integration.utils.PubSubBrokerConfigs;
 import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
-import com.linkedin.venice.kafka.TopicManagerTest;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
@@ -23,9 +22,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 
-/**
- * TODO: Add more tests for {@link TopicManager}
- */
 public class TopicManagerIntegrationTest extends TopicManagerTest {
   private PubSubBrokerWrapper pubSubBrokerWrapper;
 
