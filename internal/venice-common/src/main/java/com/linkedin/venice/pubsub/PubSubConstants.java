@@ -34,7 +34,7 @@ public class PubSubConstants {
   public static final long PUBSUB_TOPIC_UNKNOWN_RETENTION = Long.MIN_VALUE;
 
   public static final String PUBSUB_CONSUMER_TOPIC_QUERY_RETRY_TIMES = "pubsub.consumer.topic.query.retry.times";
-  public static final int PUBSUB_CONSUMER_TOPIC_QUERY_RETRY_TIMES_DEFAULT_VALUE = 5;
+  public static final int PUBSUB_CONSUMER_TOPIC_QUERY_RETRY_TIMES_DEFAULT_VALUE = 10;
 
   public static final String PUBSUB_CONSUMER_TOPIC_QUERY_RETRY_INTERVAL_MS =
       "pubsub.consumer.topic.query.retry.interval.ms";
