@@ -479,10 +479,10 @@ subprojects {
     jacocoTestReport {
       dependsOn test // tests are required to run before generating the report
 
-      reports {
-        xml.enabled = true
-        html.enabled = true
-      }
+//      reports {
+//        xml = true
+//        html = true
+//      }
 
       doLast {
         parseJacocoXml("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
