@@ -10,6 +10,7 @@ import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.G
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.GET_TOPIC_CONFIG_WITH_RETRY;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.LIST_ALL_TOPICS;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.SET_TOPIC_CONFIG;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.recordLatency;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -378,7 +379,7 @@ public class TopicManager implements Closeable {
   public Map<PubSubTopic, Long> getAllTopicRetentions() {
     long startTime = System.currentTimeMillis();
     Map<PubSubTopic, Long> topicRetentions = pubSubAdminAdapter.getAllTopicRetentions();
-    TopicManagerStats.recordLatency(topicManagerStats, GET_ALL_TOPIC_RETENTIONS, startTime);
+    recordLatency(topicManagerStats, GET_ALL_TOPIC_RETENTIONS, startTime);
     return topicRetentions;
   }
 
@@ -424,13 +425,13 @@ public class TopicManager implements Closeable {
       PubSubTopicConfiguration topicConfiguration) {
     long startTime = System.currentTimeMillis();
     pubSubAdminAdapter.createTopic(pubSubTopic, numPartitions, replicationFactor, topicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, CREATE_TOPIC, startTime);
+    recordLatency(topicManagerStats, CREATE_TOPIC, startTime);
   }
 
   private void setTopicConfig(PubSubTopic pubSubTopic, PubSubTopicConfiguration pubSubTopicConfiguration) {
     long startTime = System.currentTimeMillis();
     pubSubAdminAdapter.setTopicConfig(pubSubTopic, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, SET_TOPIC_CONFIG, startTime);
+    recordLatency(topicManagerStats, SET_TOPIC_CONFIG, startTime);
   }
 
   /**
@@ -440,7 +441,7 @@ public class TopicManager implements Closeable {
     long startTime = System.currentTimeMillis();
     PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfig(pubSubTopic);
     topicConfigCache.put(pubSubTopic, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG, startTime);
+    recordLatency(topicManagerStats, GET_TOPIC_CONFIG, startTime);
     return pubSubTopicConfiguration;
   }
 
@@ -448,7 +449,7 @@ public class TopicManager implements Closeable {
     long startTime = System.currentTimeMillis();
     PubSubTopicConfiguration pubSubTopicConfiguration = pubSubAdminAdapter.getTopicConfigWithRetry(topicName);
     topicConfigCache.put(topicName, pubSubTopicConfiguration);
-    TopicManagerStats.recordLatency(topicManagerStats, GET_TOPIC_CONFIG_WITH_RETRY, startTime);
+    recordLatency(topicManagerStats, GET_TOPIC_CONFIG_WITH_RETRY, startTime);
     return pubSubTopicConfiguration;
   }
 
@@ -470,7 +471,7 @@ public class TopicManager implements Closeable {
     for (Map.Entry<PubSubTopic, PubSubTopicConfiguration> topicConfig: topicConfigs.entrySet()) {
       topicConfigCache.put(topicConfig.getKey(), topicConfig.getValue());
     }
-    TopicManagerStats.recordLatency(topicManagerStats, GET_SOME_TOPIC_CONFIGS, startTime);
+    recordLatency(topicManagerStats, GET_SOME_TOPIC_CONFIGS, startTime);
     return topicConfigs;
   }
 
@@ -488,7 +489,7 @@ public class TopicManager implements Closeable {
     try {
       long startTime = System.currentTimeMillis();
       pubSubAdminAdapter.deleteTopic(pubSubTopic, Duration.ofMillis(topicManagerContext.getPubSubOperationTimeoutMs()));
-      TopicManagerStats.recordLatency(topicManagerStats, DELETE_TOPIC, startTime);
+      recordLatency(topicManagerStats, DELETE_TOPIC, startTime);
       logger.info("Topic: {} has been deleted", pubSubTopic);
     } catch (PubSubOpTimeoutException e) {
       logger.warn(
@@ -541,7 +542,7 @@ public class TopicManager implements Closeable {
   public synchronized Set<PubSubTopic> listTopics() {
     long startTime = System.currentTimeMillis();
     Set<PubSubTopic> topics = pubSubAdminAdapter.listAllTopics();
-    TopicManagerStats.recordLatency(topicManagerStats, LIST_ALL_TOPICS, startTime);
+    recordLatency(topicManagerStats, LIST_ALL_TOPICS, startTime);
     return topics;
   }
 
@@ -555,7 +556,7 @@ public class TopicManager implements Closeable {
       final boolean expectedResult) {
     long startTime = System.currentTimeMillis();
     boolean containsTopic = pubSubAdminAdapter.containsTopicWithExpectationAndRetry(topic, maxAttempts, expectedResult);
-    TopicManagerStats.recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, startTime);
+    recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, startTime);
     return containsTopic;
   }
 
@@ -574,7 +575,7 @@ public class TopicManager implements Closeable {
         initialBackoff,
         maxBackoff,
         maxDuration);
-    TopicManagerStats.recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, startTime);
+    recordLatency(topicManagerStats, CONTAINS_TOPIC_WITH_RETRY, startTime);
     return containsTopic;
   }
 
@@ -656,7 +657,7 @@ public class TopicManager implements Closeable {
   public boolean containsTopic(PubSubTopic pubSubTopic) {
     long startTime = System.currentTimeMillis();
     boolean containsTopic = topicMetadataFetcher.containsTopic(pubSubTopic);
-    TopicManagerStats.recordLatency(topicManagerStats, CONTAINS_TOPIC, startTime);
+    recordLatency(topicManagerStats, CONTAINS_TOPIC, startTime);
     return containsTopic;
   }
 

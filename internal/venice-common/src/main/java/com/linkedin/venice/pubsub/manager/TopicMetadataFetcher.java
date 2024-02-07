@@ -510,7 +510,7 @@ class TopicMetadataFetcher implements Closeable {
    *   2. This method might return more than {@code lastRecordsCount} records since the consumer poll method gets a batch
    *      of consumer records each time and the batch size is arbitrary.
    */
-  private List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumeLatestRecords(
+  List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumeLatestRecords(
       PubSubTopicPartition pubSubTopicPartition,
       int lastRecordsCount) {
     if (lastRecordsCount < 1) {
@@ -525,6 +525,9 @@ class TopicMetadataFetcher implements Closeable {
       Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter.endOffsets(
           Collections.singletonList(pubSubTopicPartition),
           PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
+      if (offsetMap == null || offsetMap.isEmpty()) {
+        throw new VeniceException("Failed to get the end offset for topic-partition: " + pubSubTopicPartition);
+      }
       long latestOffset = offsetMap.get(pubSubTopicPartition);
       if (latestOffset <= 0) {
         return Collections.emptyList(); // no records in this topic partition
@@ -664,8 +667,8 @@ class TopicMetadataFetcher implements Closeable {
    * Visible for unit testing.
    */
   class ValueAndExpiryTime<T> {
-    private T value;
-    private long expiryTimeNs;
+    private volatile T value;
+    private volatile long expiryTimeNs;
     private final AtomicBoolean isUpdateInProgress = new AtomicBoolean(false);
 
     ValueAndExpiryTime(T value) {
@@ -699,14 +702,5 @@ class TopicMetadataFetcher implements Closeable {
     void setUpdateInProgressStatus(boolean status) {
       this.isUpdateInProgress.set(status);
     }
-  }
-
-  // supporting methods for unit testing
-  void addConsumerToPool(PubSubConsumerAdapter pubSubConsumerAdapter) {
-    closeables.add(pubSubConsumerAdapter);
-    if (!pubSubConsumerPool.offer(pubSubConsumerAdapter)) {
-      throw new VeniceException("Failed to add consumer to the pool");
-    }
-    numOfConsumers += 1;
   }
 }

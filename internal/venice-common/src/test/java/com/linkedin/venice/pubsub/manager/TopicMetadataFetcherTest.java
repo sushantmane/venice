@@ -18,11 +18,15 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 import static org.testng.Assert.fail;
 
+import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
+import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
@@ -35,6 +39,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -56,28 +61,28 @@ public class TopicMetadataFetcherTest {
   private TopicManagerContext topicManagerContext;
   private String pubSubClusterAddress = "venicedb.pubsub.standalone:9092";
   private TopicManagerStats topicManagerStats;
-  private PubSubAdminAdapter pubSubAdminAdapter;
+  private PubSubAdminAdapter adminMock;
   private BlockingQueue<PubSubConsumerAdapter> pubSubConsumerPool;
   private ThreadPoolExecutor threadPoolExecutor;
   private long cachedEntryTtlInNs = TimeUnit.MINUTES.toNanos(5);
   private PubSubTopicRepository pubSubTopicRepository = new PubSubTopicRepository();
   private String topicName = "testTopicName";
   private PubSubTopic pubSubTopic;
-  private PubSubConsumerAdapter consumerMock1;
+  private PubSubConsumerAdapter consumerMock;
 
   @BeforeMethod
   public void setUp() throws InterruptedException {
-    consumerMock1 = mock(PubSubConsumerAdapter.class);
+    consumerMock = mock(PubSubConsumerAdapter.class);
     pubSubConsumerPool = new LinkedBlockingQueue<>(2);
-    pubSubConsumerPool.put(consumerMock1);
+    pubSubConsumerPool.put(consumerMock);
     threadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-    pubSubAdminAdapter = mock(PubSubAdminAdapter.class);
+    adminMock = mock(PubSubAdminAdapter.class);
     pubSubTopic = pubSubTopicRepository.getTopic(topicName);
     topicMetadataFetcher = new TopicMetadataFetcher(
         pubSubClusterAddress,
         topicManagerContext,
         topicManagerStats,
-        pubSubAdminAdapter,
+        adminMock,
         pubSubConsumerPool,
         threadPoolExecutor,
         cachedEntryTtlInNs);
@@ -99,7 +104,7 @@ public class TopicMetadataFetcherTest {
       } finally {
         holdConsumer.await();
       }
-    }).when(consumerMock1).partitionsFor(pubSubTopic);
+    }).when(consumerMock).partitionsFor(pubSubTopic);
 
     CompletableFuture<List<PubSubTopicPartitionInfo>> future = CompletableFuture
         .supplyAsync(() -> topicMetadataFetcher.getTopicPartitionInfo(pubSubTopic), threadPoolExecutor);
@@ -116,8 +121,8 @@ public class TopicMetadataFetcherTest {
     }
     Throwable t = expectThrows(ExecutionException.class, future::get);
     assertTrue(ExceptionUtils.recursiveClassEquals(t, InterruptedException.class));
-    verify(consumerMock1, times(1)).partitionsFor(pubSubTopic);
-    verify(consumerMock1, times(1)).close();
+    verify(consumerMock, times(1)).partitionsFor(pubSubTopic);
+    verify(consumerMock, times(1)).close();
   }
 
   @Test
@@ -142,29 +147,29 @@ public class TopicMetadataFetcherTest {
 
   @Test
   public void testContainsTopic() {
-    when(pubSubAdminAdapter.containsTopic(pubSubTopic)).thenReturn(false);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(false);
     assertFalse(topicMetadataFetcher.containsTopic(pubSubTopic));
 
-    when(pubSubAdminAdapter.containsTopic(pubSubTopic)).thenReturn(true);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(true);
     assertTrue(topicMetadataFetcher.containsTopic(pubSubTopic));
 
-    verify(pubSubAdminAdapter, times(2)).containsTopic(pubSubTopic);
+    verify(adminMock, times(2)).containsTopic(pubSubTopic);
   }
 
   @Test
   public void testContainsTopicAsync() {
-    when(pubSubAdminAdapter.containsTopic(pubSubTopic)).thenReturn(false);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(false);
     assertFalse(topicMetadataFetcher.containsTopicAsync(pubSubTopic).join());
 
-    when(pubSubAdminAdapter.containsTopic(pubSubTopic)).thenReturn(true);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(true);
     assertTrue(topicMetadataFetcher.containsTopicAsync(pubSubTopic).join());
 
-    doThrow(new PubSubClientException("Test")).when(pubSubAdminAdapter).containsTopic(pubSubTopic);
+    doThrow(new PubSubClientException("Test")).when(adminMock).containsTopic(pubSubTopic);
     CompletableFuture<Boolean> future = topicMetadataFetcher.containsTopicAsync(pubSubTopic);
     ExecutionException e = expectThrows(ExecutionException.class, future::get);
     assertTrue(ExceptionUtils.recursiveClassEquals(e, PubSubClientException.class));
 
-    verify(pubSubAdminAdapter, times(3)).containsTopic(pubSubTopic);
+    verify(adminMock, times(3)).containsTopic(pubSubTopic);
   }
 
   @Test
@@ -223,13 +228,13 @@ public class TopicMetadataFetcherTest {
   public void testGetTopicLatestOffsets() {
     assertEquals(pubSubConsumerPool.size(), 1);
     // test consumer::partitionFor --> (null, empty list)
-    when(consumerMock1.partitionsFor(pubSubTopic)).thenReturn(null).thenReturn(Collections.emptyList());
+    when(consumerMock.partitionsFor(pubSubTopic)).thenReturn(null).thenReturn(Collections.emptyList());
     for (int i = 0; i < 2; i++) {
-      verify(consumerMock1, times(i)).partitionsFor(pubSubTopic);
+      verify(consumerMock, times(i)).partitionsFor(pubSubTopic);
       Int2LongMap res = topicMetadataFetcher.getTopicLatestOffsets(pubSubTopic);
       assertEquals(res, Int2LongMaps.EMPTY_MAP);
       assertEquals(res.size(), 0);
-      verify(consumerMock1, times(i + 1)).partitionsFor(pubSubTopic);
+      verify(consumerMock, times(i + 1)).partitionsFor(pubSubTopic);
     }
 
     // test consumer::partitionFor returns non-empty list
@@ -240,16 +245,16 @@ public class TopicMetadataFetcherTest {
     offsetsMap.put(tp0Info.getTopicPartition(), 111L);
     offsetsMap.put(tp1Info.getTopicPartition(), 222L);
 
-    when(consumerMock1.partitionsFor(pubSubTopic)).thenReturn(partitionInfo);
-    when(consumerMock1.endOffsets(eq(offsetsMap.keySet()), any(Duration.class))).thenReturn(offsetsMap);
+    when(consumerMock.partitionsFor(pubSubTopic)).thenReturn(partitionInfo);
+    when(consumerMock.endOffsets(eq(offsetsMap.keySet()), any(Duration.class))).thenReturn(offsetsMap);
 
     Int2LongMap res = topicMetadataFetcher.getTopicLatestOffsets(pubSubTopic);
     assertEquals(res.size(), offsetsMap.size());
     assertEquals(res.get(0), 111L);
     assertEquals(res.get(1), 222L);
 
-    verify(consumerMock1, times(3)).partitionsFor(pubSubTopic);
-    verify(consumerMock1, times(1)).endOffsets(eq(offsetsMap.keySet()), any(Duration.class));
+    verify(consumerMock, times(3)).partitionsFor(pubSubTopic);
+    verify(consumerMock, times(1)).endOffsets(eq(offsetsMap.keySet()), any(Duration.class));
 
     // check if consumer was released back to the pool
     assertEquals(pubSubConsumerPool.size(), 1);
@@ -261,11 +266,60 @@ public class TopicMetadataFetcherTest {
     PubSubTopicPartitionInfo tp0Info = new PubSubTopicPartitionInfo(pubSubTopic, 0, true);
     PubSubTopicPartitionInfo tp1Info = new PubSubTopicPartitionInfo(pubSubTopic, 1, true);
     List<PubSubTopicPartitionInfo> partitionInfo = Arrays.asList(tp0Info, tp1Info);
-    when(consumerMock1.partitionsFor(pubSubTopic)).thenReturn(partitionInfo);
+    when(consumerMock.partitionsFor(pubSubTopic)).thenReturn(partitionInfo);
     List<PubSubTopicPartitionInfo> res = topicMetadataFetcher.getTopicPartitionInfo(pubSubTopic);
     assertEquals(res.size(), partitionInfo.size());
     assertEquals(res.get(0), tp0Info);
     assertEquals(res.get(1), tp1Info);
     assertEquals(pubSubConsumerPool.size(), 1);
   }
+
+  @Test
+  public void testConsumeLatestRecords() {
+    PubSubTopicPartition invalidTp = new PubSubTopicPartitionImpl(pubSubTopic, -1);
+    Throwable t =
+        expectThrows(IllegalArgumentException.class, () -> topicMetadataFetcher.consumeLatestRecords(invalidTp, 1));
+    assertTrue(t.getMessage().contains("Invalid partition number"));
+
+    PubSubTopicPartition topicPartition = new PubSubTopicPartitionImpl(pubSubTopic, 0);
+    t = expectThrows(
+        IllegalArgumentException.class,
+        () -> topicMetadataFetcher.consumeLatestRecords(topicPartition, 0));
+    assertTrue(t.getMessage().contains("Last record count must be greater than or equal to 1."));
+
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(true);
+
+    when(consumerMock.endOffsets(eq(Collections.singleton(topicPartition)), any(Duration.class))).thenReturn(null);
+    t = expectThrows(VeniceException.class, () -> topicMetadataFetcher.consumeLatestRecords(topicPartition, 1));
+    assertTrue(t.getMessage().contains("Failed to get the end offset for topic-partition:"));
+
+    when(consumerMock.endOffsets(eq(Collections.singleton(topicPartition)), any(Duration.class)))
+        .thenReturn(Collections.emptyMap());
+    t = expectThrows(VeniceException.class, () -> topicMetadataFetcher.consumeLatestRecords(topicPartition, 1));
+    assertTrue(t.getMessage().contains("Failed to get the end offset for topic-partition:"));
+
+    // no records to consume as endOffset is 0
+    Map<PubSubTopicPartition, Long> offsetMap = new HashMap<>();
+    offsetMap.put(topicPartition, 0L);
+    when(consumerMock.endOffsets(eq(Collections.singletonList(topicPartition)), any(Duration.class)))
+        .thenReturn(offsetMap);
+    List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> consumedRecords =
+        topicMetadataFetcher.consumeLatestRecords(topicPartition, 1);
+    assertEquals(consumedRecords.size(), 0);
+
+    // beginningOffset (non-zero) is same as endOffset
+    offsetMap.put(topicPartition, 1L);
+    when(consumerMock.endOffsets(eq(Collections.singletonList(topicPartition)), any(Duration.class)))
+        .thenReturn(offsetMap);
+    when(consumerMock.beginningOffset(eq(topicPartition), any(Duration.class))).thenReturn(1L);
+    consumedRecords = topicMetadataFetcher.consumeLatestRecords(topicPartition, 1);
+    assertEquals(consumedRecords.size(), 0);
+
+  }
+
+  @Test
+  public void testGetProducerTimestampOfLastDataMessage() {
+
+  }
+
 }
