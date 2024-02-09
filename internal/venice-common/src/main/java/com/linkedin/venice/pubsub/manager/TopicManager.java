@@ -14,7 +14,6 @@ import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.S
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
@@ -75,31 +74,20 @@ public class TopicManager implements Closeable {
   Cache<PubSubTopic, PubSubTopicConfiguration> topicConfigCache =
       Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-  public TopicManager(String pubSubClusterAddress, TopicManagerContext topicManagerContext) {
+  public TopicManager(String pubSubClusterAddress, TopicManagerContext context) {
     this.logger = LogManager.getLogger(
         TopicManager.class.getSimpleName() + " [" + Utils.getSanitizedStringForLogger(pubSubClusterAddress) + "]");
-
     this.pubSubClusterAddress = Objects.requireNonNull(pubSubClusterAddress, "pubSubClusterAddress cannot be null");
-    this.topicManagerContext = topicManagerContext;
-
-    this.pubSubTopicRepository = topicManagerContext.getPubSubTopicRepository();
-
-    PubSubAdminAdapterFactory<PubSubAdminAdapter> pubSubAdminAdapterFactory = Objects
-        .requireNonNull(topicManagerContext.getPubSubAdminAdapterFactory(), "pubSubAdminAdapterFactory cannot be null");
-
-    this.pubSubAdminAdapter = pubSubAdminAdapterFactory
-        .create(topicManagerContext.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
-
-    this.stats = new TopicManagerStats(topicManagerContext.getMetricsRepository(), pubSubClusterAddress);
-
-    this.topicMetadataFetcher =
-        new TopicMetadataFetcher(pubSubClusterAddress, topicManagerContext, stats, pubSubAdminAdapter);
-
+    this.topicManagerContext = context;
+    this.stats = new TopicManagerStats(context.getMetricsRepository(), pubSubClusterAddress);
+    this.pubSubTopicRepository = context.getPubSubTopicRepository();
+    this.pubSubAdminAdapter = context.getPubSubAdminAdapterFactory()
+        .create(context.getPubSubProperties(pubSubClusterAddress), pubSubTopicRepository);
+    this.topicMetadataFetcher = new TopicMetadataFetcher(pubSubClusterAddress, context, stats, pubSubAdminAdapter);
     this.logger.info(
-        "Created a topic manager for the PubSub cluster address: {} with the following context: {} \n",
+        "Created a topic manager for the pubsub cluster address: {} with context: {}",
         pubSubClusterAddress,
-        topicManagerContext,
-        Thread.currentThread().getStackTrace());
+        context);
   }
 
   /**
