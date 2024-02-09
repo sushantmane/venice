@@ -1,5 +1,11 @@
 package com.linkedin.venice.pubsub.manager;
 
+import static com.linkedin.venice.pubsub.PubSubConstants.CREATE_TOPIC_RETRIABLE_EXCEPTIONS;
+import static com.linkedin.venice.pubsub.PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CONTAINS_TOPIC;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CONTAINS_TOPIC_WITH_RETRY;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CREATE_TOPIC;
@@ -121,8 +127,8 @@ public class TopicManager implements Closeable {
    *                if false, its retention will be set to {@link PubSubConstants#DEFAULT_TOPIC_RETENTION_POLICY_MS} by default
    * @param logCompaction whether to enable log compaction on the topic
    * @param minIsr if present, will apply the specified min.isr to this topic,
-   *               if absent, Kafka cluster defaults will be used
-   * @param useFastKafkaOperationTimeout if false, normal kafka operation timeout will be used,
+   *               if absent, PubSub cluster defaults will be used
+   * @param useFastPubSubOperationTimeout if false, normal PubSub operation timeout will be used,
    *                            if true, a much shorter timeout will be used to make topic creation non-blocking.
    */
   public void createTopic(
@@ -132,12 +138,12 @@ public class TopicManager implements Closeable {
       boolean eternal,
       boolean logCompaction,
       Optional<Integer> minIsr,
-      boolean useFastKafkaOperationTimeout) {
+      boolean useFastPubSubOperationTimeout) {
     long retentionTimeMs;
     if (eternal) {
-      retentionTimeMs = PubSubConstants.ETERNAL_TOPIC_RETENTION_POLICY_MS;
+      retentionTimeMs = ETERNAL_TOPIC_RETENTION_POLICY_MS;
     } else {
-      retentionTimeMs = PubSubConstants.DEFAULT_TOPIC_RETENTION_POLICY_MS;
+      retentionTimeMs = DEFAULT_TOPIC_RETENTION_POLICY_MS;
     }
     createTopic(
         topicName,
@@ -146,7 +152,7 @@ public class TopicManager implements Closeable {
         retentionTimeMs,
         logCompaction,
         minIsr,
-        useFastKafkaOperationTimeout);
+        useFastPubSubOperationTimeout);
   }
 
   /**
@@ -159,8 +165,8 @@ public class TopicManager implements Closeable {
    * @param retentionTimeMs Retention time, in ms, for the topic
    * @param logCompaction whether to enable log compaction on the topic
    * @param minIsr if present, will apply the specified min.isr to this topic,
-   *               if absent, Kafka cluster defaults will be used
-   * @param useFastKafkaOperationTimeout if false, normal kafka operation timeout will be used,
+   *               if absent, PubSub cluster defaults will be used
+   * @param useFastPubSubOperationTimeout if false, normal PubSub operation timeout will be used,
    *                            if true, a much shorter timeout will be used to make topic creation non-blocking.
    */
   public void createTopic(
@@ -170,11 +176,11 @@ public class TopicManager implements Closeable {
       long retentionTimeMs,
       boolean logCompaction,
       Optional<Integer> minIsr,
-      boolean useFastKafkaOperationTimeout) {
+      boolean useFastPubSubOperationTimeout) {
 
     long startTime = System.currentTimeMillis();
-    long deadlineMs = startTime + (useFastKafkaOperationTimeout
-        ? PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS
+    long deadlineMs = startTime + (useFastPubSubOperationTimeout
+        ? PUBSUB_FAST_OPERATION_TIMEOUT_MS
         : topicManagerContext.getPubSubOperationTimeoutMs());
     PubSubTopicConfiguration pubSubTopicConfiguration = new PubSubTopicConfiguration(
         Optional.of(retentionTimeMs),
@@ -196,10 +202,10 @@ public class TopicManager implements Closeable {
           Duration.ofMillis(200),
           Duration.ofSeconds(1),
           Duration.ofMillis(
-              useFastKafkaOperationTimeout
-                  ? PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS
+              useFastPubSubOperationTimeout
+                  ? PUBSUB_FAST_OPERATION_TIMEOUT_MS
                   : topicManagerContext.getPubSubOperationTimeoutMs()),
-          PubSubConstants.CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
+          CREATE_TOPIC_RETRIABLE_EXCEPTIONS);
     } catch (Exception e) {
       if (ExceptionUtils.recursiveClassEquals(e, PubSubTopicExistsException.class)) {
         logger.info("Topic: {} already exists, will update retention policy.", topicName);
@@ -384,7 +390,7 @@ public class TopicManager implements Closeable {
     if (pubSubTopicConfiguration.retentionInMs().isPresent()) {
       return pubSubTopicConfiguration.retentionInMs().get();
     }
-    return PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION_VALUE;
+    return PUBSUB_TOPIC_UNKNOWN_RETENTION;
   }
 
   /**
@@ -403,8 +409,7 @@ public class TopicManager implements Closeable {
   }
 
   public boolean isRetentionBelowTruncatedThreshold(long retention, long truncatedTopicMaxRetentionMs) {
-    return retention != PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION_VALUE
-        && retention <= truncatedTopicMaxRetentionMs;
+    return retention != PUBSUB_TOPIC_UNKNOWN_RETENTION && retention <= truncatedTopicMaxRetentionMs;
   }
 
   private void createTopic(
@@ -446,7 +451,7 @@ public class TopicManager implements Closeable {
    * Still heavy, but can be called repeatedly to amortize that cost.
    */
   public PubSubTopicConfiguration getCachedTopicConfig(PubSubTopic topicName) {
-    // query the cache first, if it doesn't have it, query it from kafka and store it.
+    // query the cache first, if it doesn't have it, query it from PubSub and store it.
     PubSubTopicConfiguration pubSubTopicConfiguration = topicConfigCache.getIfPresent(topicName);
     if (pubSubTopicConfiguration == null) {
       pubSubTopicConfiguration = getTopicConfigWithRetry(topicName);
@@ -504,17 +509,17 @@ public class TopicManager implements Closeable {
    */
   public void ensureTopicIsDeletedAndBlockWithRetry(PubSubTopic pubSubTopic) {
     int attempts = 0;
-    while (attempts++ < PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
+    while (attempts++ < PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
       try {
         logger.debug(
             "Deleting topic: {} with retry attempt {} / {}",
             pubSubTopic,
             attempts,
-            PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES);
+            PUBSUB_TOPIC_DELETE_RETRY_TIMES);
         ensureTopicIsDeletedAndBlock(pubSubTopic);
         return;
       } catch (PubSubTopicExistsException | PubSubClientRetriableException e) {
-        if (attempts == PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
+        if (attempts == PUBSUB_TOPIC_DELETE_RETRY_TIMES) {
           logger.error(
               "Topic deletion for topic {} {}! Giving up after {} retries",
               pubSubTopic,

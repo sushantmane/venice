@@ -563,7 +563,7 @@ public class ApacheKafkaAdminAdapterTest {
     assertEquals(result.get(pubSubTopicRepository.getTopic("t3_v2")), Long.valueOf(3));
     assertEquals(
         result.get(pubSubTopicRepository.getTopic("t4_rt")),
-        Long.valueOf(PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION_VALUE));
+        Long.valueOf(PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION));
   }
 
   @Test

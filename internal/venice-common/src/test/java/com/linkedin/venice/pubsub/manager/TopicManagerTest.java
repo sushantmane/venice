@@ -433,7 +433,7 @@ public class TopicManagerTest {
             .isRetentionBelowTruncatedThreshold(deprecatedTopicRetentionMaxMs + 1, deprecatedTopicRetentionMaxMs));
     Assert.assertFalse(
         topicManager.isRetentionBelowTruncatedThreshold(
-            PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION_VALUE,
+            PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION,
             deprecatedTopicRetentionMaxMs));
     Assert.assertTrue(
         topicManager
