@@ -1,20 +1,16 @@
 package com.linkedin.venice.utils;
 
-import static org.testng.Assert.assertNotNull;
-
 import com.linkedin.venice.kafka.protocol.GUID;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.kafka.protocol.ProducerMetadata;
 import com.linkedin.venice.kafka.protocol.Put;
 import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
-import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -54,36 +50,34 @@ public class PubSubHelper {
     return new MutablePubSubMessage().setKey(getDummyKey(isControlMessage)).setValue(getDummyValue());
   }
 
-  public static Map<Integer, MutablePubSubMessage> produceMessages(
+  public static List<MutablePubSubMessage> produceMessages(
       PubSubProducerAdapter pubSubProducerAdapter,
-      String topicName,
-      int partition,
+      PubSubTopicPartition topicPartition,
       int messageCount,
       long delayBetweenMessagesInMs) throws InterruptedException, ExecutionException, TimeoutException {
-    Map<Integer, MutablePubSubMessage> messages = new ConcurrentHashMap<>(messageCount);
-
-    CompletableFuture<PubSubProduceResult> lastMessageFuture = null;
-
+    List<MutablePubSubMessage> messages = new ArrayList<>(messageCount);
     for (int i = 0; i < messageCount; i++) {
       MutablePubSubMessage message = PubSubHelper.getDummyPubSubMessage(false);
       message.getValue().getProducerMetadata().setMessageTimestamp(i); // logical ts
       message.setTimestampBeforeProduce(System.currentTimeMillis());
-      int finalI = i;
-      lastMessageFuture =
-          pubSubProducerAdapter.sendMessage(topicName, partition, message.getKey(), message.getValue(), null, null);
-      lastMessageFuture.whenComplete((result, throwable) -> {
-        if (throwable == null) {
-          messages.put(finalI, message);
-          message.setOffset(result.getOffset());
-          message.setTimestampAfterProduce(System.currentTimeMillis());
-        }
-      });
+      messages.add(message);
+      pubSubProducerAdapter
+          .sendMessage(
+              topicPartition.getTopicName(),
+              topicPartition.getPartitionNumber(),
+              message.getKey(),
+              message.getValue(),
+              null,
+              null)
+          .whenComplete((result, throwable) -> {
+            if (throwable == null) {
+              message.setOffset(result.getOffset());
+              message.setTimestampAfterProduce(System.currentTimeMillis());
+            }
+          })
+          .get(10, TimeUnit.SECONDS);
       TimeUnit.MILLISECONDS.sleep(delayBetweenMessagesInMs);
     }
-
-    assertNotNull(lastMessageFuture, "Last message future should not be null");
-    lastMessageFuture.get(1, TimeUnit.MINUTES);
-
     return messages;
   }
 

@@ -253,6 +253,7 @@ class TopicMetadataFetcher implements Closeable {
     long startTime = System.currentTimeMillis();
     boolean containsTopic = pubSubAdminAdapter.containsTopic(topic);
     stats.recordLatency(CONTAINS_TOPIC, startTime);
+    putLatestValueInCache(topic, containsTopic, topicExistenceCache);
     return containsTopic;
   }
 

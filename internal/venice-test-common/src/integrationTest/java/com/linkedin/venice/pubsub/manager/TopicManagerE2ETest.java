@@ -22,6 +22,7 @@ import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
+import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.utils.PubSubHelper;
 import com.linkedin.venice.utils.PubSubHelper.MutablePubSubMessage;
@@ -125,7 +126,7 @@ public class TopicManagerE2ETest {
         .setMetricsRepository(metricsRepository)
         .setTopicMetadataFetcherConsumerPoolSize(2)
         .setTopicMetadataFetcherThreadPoolSize(6)
-        .setTopicOffsetCheckIntervalMs(60_0000)
+        .setTopicOffsetCheckIntervalMs(100)
         .setPubSubPropertiesSupplier(k -> veniceProperties)
         .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
         .setPubSubConsumerAdapterFactory(pubSubClientsFactory.getConsumerAdapterFactory());
@@ -270,8 +271,8 @@ public class TopicManagerE2ETest {
   public void testMetadataApisForNonExistentTopics() {
     // non-existent topic
     PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
-    assertFalse(topicManager.containsTopic(nonExistentTopic));
     assertFalse(topicManager.containsTopicCached(nonExistentTopic));
+    assertFalse(topicManager.containsTopic(nonExistentTopic));
     Map<Integer, Long> nonExistentTopicLatestOffsets = topicManager.getTopicLatestOffsets(nonExistentTopic);
     assertNotNull(nonExistentTopicLatestOffsets);
     assertEquals(nonExistentTopicLatestOffsets.size(), 0);
@@ -288,13 +289,21 @@ public class TopicManagerE2ETest {
     int replicationFactor = 1;
     boolean isEternalTopic = true;
     PubSubTopic existingTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("existingTopic"));
+
+    // topic should not exist
     assertFalse(topicManager.containsTopic(existingTopic));
     assertFalse(topicManager.containsTopicCached(existingTopic));
+
+    // create the topic
     topicManager.createTopic(existingTopic, numPartitions, replicationFactor, isEternalTopic);
+
+    // topic should exist
     waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> {
-      assertTrue(topicManager.containsTopic(existingTopic));
       assertTrue(topicManager.containsTopicCached(existingTopic));
+      assertTrue(topicManager.containsTopic(existingTopic));
     });
+
+    // when there are no messages, the latest offset should be 0
     Map<Integer, Long> latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
     assertNotNull(latestOffsets);
     assertEquals(latestOffsets.size(), numPartitions);
@@ -303,26 +312,41 @@ public class TopicManagerE2ETest {
     }
     assertEquals(topicManager.getPartitionCount(existingTopic), numPartitions);
 
+    PubSubTopicPartition p0 = new PubSubTopicPartitionImpl(existingTopic, 0);
+    PubSubTopicPartition p1 = new PubSubTopicPartitionImpl(existingTopic, 1);
+    PubSubTopicPartition p2 = new PubSubTopicPartitionImpl(existingTopic, 2);
+
+    // produce messages to the topic-partitions: p0, p1, p2
     PubSubProducerAdapter pubSubProducerAdapter = pubSubProducerAdapterLazy.get();
-    Map<Integer, MutablePubSubMessage> messagesP0 =
-        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 0, 10, 1);
-    Map<Integer, MutablePubSubMessage> messagesP1 =
-        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 2, 14, 1);
-    Map<Integer, MutablePubSubMessage> messagesP2 =
-        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 3, 19, 1);
+    List<MutablePubSubMessage> p0Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p0, 10, 1);
+    List<MutablePubSubMessage> p1Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p1, 14, 1);
+    List<MutablePubSubMessage> p2Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p2, 19, 1);
+
+    // get the latest offsets
     latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
     assertNotNull(latestOffsets);
     assertEquals(latestOffsets.size(), numPartitions);
-    assertEquals((long) latestOffsets.get(0), messagesP0.size());
-    assertEquals((long) latestOffsets.get(2), messagesP1.size());
-    assertEquals((long) latestOffsets.get(3), messagesP2.size());
-    assertEquals((long) latestOffsets.get(4), 0L);
+    assertEquals((long) latestOffsets.get(0), p0Messages.size());
+    assertEquals((long) latestOffsets.get(1), p1Messages.size());
+    assertEquals((long) latestOffsets.get(2), p2Messages.size());
+    // except for the first 3 partitions, the latest offset should be 0
+    for (int i = 3; i < numPartitions; i++) {
+      assertEquals((long) latestOffsets.get(i), 0L);
+    }
 
-    // if timestamp is greater than the latest message timestamp, the offset should be the offset of the last message
+    // if timestamp is greater than the latest message timestamp, the offset returned should be the latest offset
     long timestamp = System.currentTimeMillis();
-    assertEquals(
-        topicManager.getOffsetByTime(new PubSubTopicPartitionImpl(existingTopic, 0), timestamp),
-        messagesP0.size() - 1);
+    assertEquals(topicManager.getOffsetByTime(p0, timestamp), p0Messages.size());
+    long p0M9Ts = p0Messages.get(9).getTimestampAfterProduce();
+    assertEquals(topicManager.getOffsetByTime(p0, p0M9Ts), 10);
+
+    // If the provided timestamp is less than or equal to the timestamp of a message,
+    // the offset returned should correspond to that message.
+    long p0M4Ts = p0Messages.get(4).getTimestampAfterProduce();
+    assertEquals(topicManager.getOffsetByTime(p0, p0M4Ts), 5);
+
+    long p0TsBeforeM0 = p0Messages.get(0).getTimestampBeforeProduce();
+    assertEquals(topicManager.getOffsetByTime(p0, p0TsBeforeM0), 0);
   }
 
   /*
