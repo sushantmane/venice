@@ -121,7 +121,7 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
       if (lastReadOffset < OffsetRecord.LOWEST_OFFSET) {
         LOGGER.warn(
             "Last read offset: {} for topic-partition: {} is less than the lowest offset: {}, seeking to beginning."
-                + " This might be the result of by one error.",
+                + " This may indicate an off-by-one error.",
             lastReadOffset,
             pubSubTopicPartition,
             OffsetRecord.LOWEST_OFFSET);

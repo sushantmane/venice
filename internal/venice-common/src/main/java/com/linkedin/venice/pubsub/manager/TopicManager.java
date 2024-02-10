@@ -6,7 +6,6 @@ import static com.linkedin.venice.pubsub.PubSubConstants.ETERNAL_TOPIC_RETENTION
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_FAST_OPERATION_TIMEOUT_MS;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_DELETE_RETRY_TIMES;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION;
-import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CONTAINS_TOPIC;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CONTAINS_TOPIC_WITH_RETRY;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CREATE_TOPIC;
 import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.DELETE_TOPIC;
@@ -659,10 +658,7 @@ public class TopicManager implements Closeable {
   }
 
   public boolean containsTopic(PubSubTopic pubSubTopic) {
-    long startTime = System.currentTimeMillis();
-    boolean containsTopic = topicMetadataFetcher.containsTopic(pubSubTopic);
-    stats.recordLatency(CONTAINS_TOPIC, startTime);
-    return containsTopic;
+    return topicMetadataFetcher.containsTopic(pubSubTopic);
   }
 
   public boolean containsTopicCached(PubSubTopic pubSubTopic) {

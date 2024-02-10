@@ -271,6 +271,7 @@ public class TopicManagerE2ETest {
     // non-existent topic
     PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
     assertFalse(topicManager.containsTopic(nonExistentTopic));
+    assertFalse(topicManager.containsTopicCached(nonExistentTopic));
     Map<Integer, Long> nonExistentTopicLatestOffsets = topicManager.getTopicLatestOffsets(nonExistentTopic);
     assertNotNull(nonExistentTopicLatestOffsets);
     assertEquals(nonExistentTopicLatestOffsets.size(), 0);
@@ -288,8 +289,12 @@ public class TopicManagerE2ETest {
     boolean isEternalTopic = true;
     PubSubTopic existingTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("existingTopic"));
     assertFalse(topicManager.containsTopic(existingTopic));
+    assertFalse(topicManager.containsTopicCached(existingTopic));
     topicManager.createTopic(existingTopic, numPartitions, replicationFactor, isEternalTopic);
-    waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> topicManager.containsTopic(existingTopic));
+    waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> {
+      assertTrue(topicManager.containsTopic(existingTopic));
+      assertTrue(topicManager.containsTopicCached(existingTopic));
+    });
     Map<Integer, Long> latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
     assertNotNull(latestOffsets);
     assertEquals(latestOffsets.size(), numPartitions);

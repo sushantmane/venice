@@ -1,6 +1,12 @@
 package com.linkedin.venice.pubsub.manager;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.CONTAINS_TOPIC;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.GET_OFFSET_FOR_TIME;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.GET_PARTITION_LATEST_OFFSETS;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.GET_PRODUCER_TIMESTAMP_OF_LAST_DATA_MESSAGE;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.GET_TOPIC_LATEST_OFFSETS;
+import static com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE.PARTITIONS_FOR;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.linkedin.venice.annotation.Threadsafe;
@@ -17,7 +23,6 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
-import com.linkedin.venice.pubsub.manager.TopicManagerStats.SENSOR_TYPE;
 import com.linkedin.venice.stats.StatsErrorCode;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.RetryUtils;
@@ -181,14 +186,12 @@ class TopicMetadataFetcher implements Closeable {
     if (containsTopicCached(pubSubTopicPartition.getPubSubTopic())) {
       return;
     }
-
     boolean topicExists = RetryUtils.executeWithMaxAttempt(
         () -> containsTopic(pubSubTopicPartition.getPubSubTopic()),
         3,
         INITIAL_RETRY_DELAY,
         PUBSUB_RETRIABLE_FAILURES);
     putLatestValueInCache(pubSubTopicPartition.getPubSubTopic(), topicExists, topicExistenceCache);
-
     if (!topicExists) {
       throw new PubSubTopicDoesNotExistException("Topic does not exist: " + pubSubTopicPartition.getPubSubTopic());
     }
@@ -249,7 +252,7 @@ class TopicMetadataFetcher implements Closeable {
   boolean containsTopic(PubSubTopic topic) {
     long startTime = System.currentTimeMillis();
     boolean containsTopic = pubSubAdminAdapter.containsTopic(topic);
-    stats.recordLatency(SENSOR_TYPE.CONTAINS_TOPIC, startTime);
+    stats.recordLatency(CONTAINS_TOPIC, startTime);
     return containsTopic;
   }
 
@@ -274,7 +277,7 @@ class TopicMetadataFetcher implements Closeable {
     try {
       long startTime = System.currentTimeMillis();
       List<PubSubTopicPartitionInfo> partitionInfoList = pubSubConsumerAdapter.partitionsFor(topic);
-      stats.recordLatency(SENSOR_TYPE.PARTITIONS_FOR, startTime);
+      stats.recordLatency(PARTITIONS_FOR, startTime);
 
       if (partitionInfoList == null || partitionInfoList.isEmpty()) {
         LOGGER.warn("Topic: {} may not exist or has no partitions. Returning empty map.", topic);
@@ -289,7 +292,7 @@ class TopicMetadataFetcher implements Closeable {
       startTime = System.currentTimeMillis();
       Map<PubSubTopicPartition, Long> offsetsMap =
           pubSubConsumerAdapter.endOffsets(topicPartitions, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
-      stats.recordLatency(SENSOR_TYPE.GET_TOPIC_LATEST_OFFSETS, startTime);
+      stats.recordLatency(GET_TOPIC_LATEST_OFFSETS, startTime);
       Int2LongMap result = new Int2LongOpenHashMap(offsetsMap.size());
       for (Map.Entry<PubSubTopicPartition, Long> entry: offsetsMap.entrySet()) {
         result.put(entry.getKey().getPartitionNumber(), entry.getValue().longValue());
@@ -310,7 +313,7 @@ class TopicMetadataFetcher implements Closeable {
     try {
       long startTime = System.currentTimeMillis();
       List<PubSubTopicPartitionInfo> res = pubSubConsumerAdapter.partitionsFor(topic);
-      stats.recordLatency(SENSOR_TYPE.PARTITIONS_FOR, startTime);
+      stats.recordLatency(PARTITIONS_FOR, startTime);
       return res;
     } finally {
       releaseConsumer(pubSubConsumerAdapter);
@@ -336,7 +339,7 @@ class TopicMetadataFetcher implements Closeable {
       Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter.endOffsets(
           Collections.singletonList(pubSubTopicPartition),
           PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
-      stats.recordLatency(SENSOR_TYPE.GET_PARTITION_LATEST_OFFSETS, startTime);
+      stats.recordLatency(GET_PARTITION_LATEST_OFFSETS, startTime);
       Long offset = offsetMap.get(pubSubTopicPartition);
       if (offset == null) {
         // This should never happen; if it does, it's a bug in the PubSubConsumerAdapter implementation
@@ -404,27 +407,27 @@ class TopicMetadataFetcher implements Closeable {
     // We start by retrieving the latest offset. If the provided timestamp is out of range,
     // we return the latest offset. This ensures that we don't miss any records produced
     // after the 'offsetForTime' call when the latest offset is obtained after timestamp checking.
-    long offsetOfLastMessage = getLatestOffset(pubSubTopicPartition) - 1;
+    long latestOffset = getLatestOffset(pubSubTopicPartition);
 
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
       long startTime = System.currentTimeMillis();
       Long result = pubSubConsumerAdapter
           .offsetForTime(pubSubTopicPartition, timestamp, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
-      stats.recordLatency(SENSOR_TYPE.GET_OFFSET_FOR_TIME, startTime);
-      if (result == null) {
-        // when offset is null, it means the given timestamp is either
-        // out of range or the topic does not have any message
-        LOGGER.warn(
-            "Got null as offset for time: {} for topic-partition: {}. This is likely due to the timestamp "
-                + "being greater than the latest message timestamp or the topic having no messages. Returning "
-                + "offset of last message: {}",
-            timestamp,
-            pubSubTopicPartition,
-            offsetOfLastMessage);
-        return offsetOfLastMessage;
+      stats.recordLatency(GET_OFFSET_FOR_TIME, startTime);
+      if (result != null) {
+        return result;
       }
-      return result;
+      // When the offset is null, it indicates that the provided timestamp is either out of range
+      // or the topic does not contain any messages. In such cases, we log a warning and return
+      // the offset of the last message available for the topic-partition.
+      LOGGER.warn(
+          "Received null offset for timestamp: {} on topic-partition: {}. This may occur if the timestamp is beyond "
+              + "the latest message timestamp or if the topic has no messages. Returning the latest offset: {}",
+          timestamp,
+          pubSubTopicPartition,
+          latestOffset);
+      return latestOffset;
     } finally {
       releaseConsumer(pubSubConsumerAdapter);
     }
@@ -470,7 +473,7 @@ class TopicMetadataFetcher implements Closeable {
       for (int i = lastConsumedRecords.size() - 1; i >= 0; i--) {
         PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record = lastConsumedRecords.get(i);
         if (!record.getKey().isControlMessage()) {
-          stats.recordLatency(SENSOR_TYPE.GET_PRODUCER_TIMESTAMP_OF_LAST_DATA_MESSAGE, startTime);
+          stats.recordLatency(GET_PRODUCER_TIMESTAMP_OF_LAST_DATA_MESSAGE, startTime);
           // note that the timestamp is the producer timestamp and not the pubsub message (broker) timestamp
           return record.getValue().getProducerMetadata().getMessageTimestamp();
         }
