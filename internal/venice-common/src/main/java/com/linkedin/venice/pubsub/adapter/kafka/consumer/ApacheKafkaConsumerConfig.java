@@ -58,6 +58,10 @@ public class ApacheKafkaConsumerConfig {
       consumerProperties.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_SIZE);
     }
 
+    if (!consumerProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
+      consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    }
+
     // Do not change the default value of the following two configs unless you know what you are doing.
     consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
     consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);

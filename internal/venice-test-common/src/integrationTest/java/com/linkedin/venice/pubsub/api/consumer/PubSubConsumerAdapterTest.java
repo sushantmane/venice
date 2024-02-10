@@ -37,6 +37,7 @@ import com.linkedin.venice.utils.lazy.Lazy;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -875,7 +876,7 @@ public class PubSubConsumerAdapterTest {
   }
 
   // Test: poll works as expected when called on an existing topic with a valid partition and subscription.
-  // poll should not block for longer than the specified timeout even consumer is subscribed to multiple
+  // poll should not block for longer than the specified timeout even when consumer is subscribed to multiple
   // topic-partitions and some topic-partitions do not exist.
   @Test(timeOut = 3 * Time.MS_PER_MINUTE)
   public void testPollPauseResume() throws ExecutionException, InterruptedException, TimeoutException {
@@ -1203,6 +1204,24 @@ public class PubSubConsumerAdapterTest {
     assertTrue(
         elapsedTime <= PUBSUB_OP_TIMEOUT_WITH_VARIANCE,
         "Batch unsubscribe should not block for longer than the timeout");
+
+    // We seem to use the "earliest" offset reset policy. This means that if we subscribe with an offset greater than
+    // the offset of the last message, the consumer will seek to the beginning of the partition. Subsequent polls
+    // will return the first message in the partition.
+    assertFalse(pubSubConsumerAdapter.hasAnySubscription(), "Should be subscribed to the topic and partition");
+    // subscribe to A0 at end offset
+    pubSubConsumerAdapter.subscribe(partitionA0, endOffsets.get(partitionA0));
+    messages = Collections.emptyMap();
+    while (messages.isEmpty()) {
+      messages = pubSubConsumerAdapter.poll(pollTimeout);
+      if (messages.isEmpty() || messages.get(partitionA0) == null || messages.get(partitionA0).isEmpty()) {
+        messages = Collections.emptyMap();
+      }
+    }
+    assertTrue(messages.containsKey(partitionA0), "Should have messages for A0");
+    assertTrue(messages.get(partitionA0).size() > 0, "Should have messages for A0");
+    // offset should be at the first message
+    assertEquals((long) messages.get(partitionA0).get(0).getOffset(), 0, "Poll should start from the beginning");
   }
 
   // Note: The following test may not work for non-Kafka PubSub implementations.
