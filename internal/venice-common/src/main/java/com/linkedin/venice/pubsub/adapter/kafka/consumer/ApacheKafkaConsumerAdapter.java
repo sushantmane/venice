@@ -118,6 +118,14 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
     // Use the last read offset to seek to the next offset to read.
     long consumptionStartOffset = lastReadOffset <= OffsetRecord.LOWEST_OFFSET ? 0 : lastReadOffset + 1;
     if (lastReadOffset <= OffsetRecord.LOWEST_OFFSET) {
+      if (lastReadOffset < OffsetRecord.LOWEST_OFFSET) {
+        LOGGER.warn(
+            "Last read offset: {} for topic-partition: {} is less than the lowest offset: {}, seeking to beginning."
+                + " This might be the result of by one error.",
+            lastReadOffset,
+            pubSubTopicPartition,
+            OffsetRecord.LOWEST_OFFSET);
+      }
       kafkaConsumer.seekToBeginning(Collections.singletonList(topicPartition));
     } else {
       kafkaConsumer.seek(topicPartition, consumptionStartOffset);

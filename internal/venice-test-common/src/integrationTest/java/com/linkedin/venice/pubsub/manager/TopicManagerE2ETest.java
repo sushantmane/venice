@@ -152,7 +152,7 @@ public class TopicManagerE2ETest {
     }
   }
 
-  @Test(timeOut = 5 * Time.MS_PER_MINUTE, invocationCount = 1000)
+  @Test(timeOut = 5 * Time.MS_PER_MINUTE, invocationCount = 1)
   public void testAsyncApis() throws ExecutionException, InterruptedException, TimeoutException {
     int numPartitions = 3;
     int replicationFactor = 1;

@@ -415,6 +415,13 @@ class TopicMetadataFetcher implements Closeable {
       if (result == null) {
         // when offset is null, it means the given timestamp is either
         // out of range or the topic does not have any message
+        LOGGER.warn(
+            "Got null as offset for time: {} for topic-partition: {}. This is likely due to the timestamp "
+                + "being greater than the latest message timestamp or the topic having no messages. Returning "
+                + "offset of last message: {}",
+            timestamp,
+            pubSubTopicPartition,
+            offsetOfLastMessage);
         return offsetOfLastMessage;
       }
       return result;
