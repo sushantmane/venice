@@ -191,7 +191,7 @@ class TopicMetadataFetcher implements Closeable {
         3,
         INITIAL_RETRY_DELAY,
         PUBSUB_RETRIABLE_FAILURES);
-    putLatestValueInCache(pubSubTopicPartition.getPubSubTopic(), topicExists, topicExistenceCache);
+    // putLatestValueInCache(pubSubTopicPartition.getPubSubTopic(), topicExists, topicExistenceCache);
     if (!topicExists) {
       throw new PubSubTopicDoesNotExistException("Topic does not exist: " + pubSubTopicPartition.getPubSubTopic());
     }
@@ -253,7 +253,6 @@ class TopicMetadataFetcher implements Closeable {
     long startTime = System.currentTimeMillis();
     boolean containsTopic = pubSubAdminAdapter.containsTopic(topic);
     stats.recordLatency(CONTAINS_TOPIC, startTime);
-    putLatestValueInCache(topic, containsTopic, topicExistenceCache);
     return containsTopic;
   }
 
@@ -261,10 +260,10 @@ class TopicMetadataFetcher implements Closeable {
     return CompletableFuture.supplyAsync(() -> containsTopic(topic), threadPoolExecutor);
   }
 
-  boolean containsTopicCached(PubSubTopic pubSubTopic) {
+  boolean containsTopicCached(PubSubTopic topic) {
     ValueAndExpiryTime<Boolean> cachedValue =
-        topicExistenceCache.computeIfAbsent(pubSubTopic, k -> new ValueAndExpiryTime<>(containsTopic(pubSubTopic)));
-    updateCacheAsync(pubSubTopic, cachedValue, topicExistenceCache, () -> containsTopicAsync(pubSubTopic));
+        topicExistenceCache.computeIfAbsent(topic, k -> new ValueAndExpiryTime<>(containsTopic(topic)));
+    updateCacheAsync(topic, cachedValue, topicExistenceCache, () -> containsTopicAsync(topic));
     return cachedValue.getValue();
   }
 
