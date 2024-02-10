@@ -1,5 +1,8 @@
 package com.linkedin.venice.pubsub.api.consumer;
 
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -111,7 +114,9 @@ public class PubSubConsumerAdapterTest {
     properties.setProperty(
         PubSubConstants.PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS,
         String.valueOf(PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS));
-    properties.setProperty(PubSubConstants.PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE, "true");
+    properties.setProperty(PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE, "true");
+    properties
+        .setProperty(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY, PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE);
     properties.putAll(pubSubBrokerWrapper.getAdditionalConfig());
     properties.putAll(pubSubBrokerWrapper.getMergeableConfigs());
     VeniceProperties veniceProperties = new VeniceProperties(properties);
@@ -1205,12 +1210,11 @@ public class PubSubConsumerAdapterTest {
         elapsedTime <= PUBSUB_OP_TIMEOUT_WITH_VARIANCE,
         "Batch unsubscribe should not block for longer than the timeout");
 
-    // We seem to use the "earliest" offset reset policy. This means that if we subscribe with an offset greater than
-    // the offset of the last message, the consumer will seek to the beginning of the partition. Subsequent polls
+    // We use the "earliest" offset reset policy in prod. This means that if we subscribe with an offset
+    // greater than the end offset, the consumer will seek to the beginning of the partition. Subsequent polls
     // will return the first message in the partition.
     assertFalse(pubSubConsumerAdapter.hasAnySubscription(), "Should be subscribed to the topic and partition");
-    // subscribe to A0 at end offset
-    pubSubConsumerAdapter.subscribe(partitionA0, endOffsets.get(partitionA0));
+    pubSubConsumerAdapter.subscribe(partitionA0, endOffsets.get(partitionA0)); // sub will add +1 to the offset
     messages = Collections.emptyMap();
     while (messages.isEmpty()) {
       messages = pubSubConsumerAdapter.poll(pollTimeout);

@@ -30,6 +30,9 @@ public class PubSubConstants {
   public static final String PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS = "pubsub.consumer.poll.retry.backoff.ms";
   public static final int PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS_DEFAULT_VALUE = 0;
 
+  public static final String PUBSUB_CONSUMER_POSITION_RESET_STRATEGY = "pubsub.consumer.position.reset.strategy";
+  public static final String PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE = "earliest";
+
   public static final long PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE = 300;
   public static final long PUBSUB_TOPIC_UNKNOWN_RETENTION = Long.MIN_VALUE;
 

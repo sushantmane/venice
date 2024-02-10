@@ -1,5 +1,6 @@
 package com.linkedin.venice.pubsub.adapter.kafka.consumer;
 
+import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
 
 import com.linkedin.venice.pubsub.PubSubConstants;
@@ -58,8 +59,11 @@ public class ApacheKafkaConsumerConfig {
       consumerProperties.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_SIZE);
     }
 
-    if (!consumerProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) {
-      consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    if (!consumerProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
+        && veniceProperties.containsKey(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY)) {
+      consumerProperties.put(
+          ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+          veniceProperties.getString(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY));
     }
 
     // Do not change the default value of the following two configs unless you know what you are doing.

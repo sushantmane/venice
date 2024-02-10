@@ -132,8 +132,9 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
     }
     assignments.put(topicPartition, pubSubTopicPartition);
     LOGGER.info(
-        "Subscribed to topic-partition: {} with consumptionStartOffset: {}",
+        "Subscribed to topic-partition: {} at offset: {} and last read offset was: {}",
         pubSubTopicPartition,
+        consumptionStartOffset,
         lastReadOffset);
   }
 
