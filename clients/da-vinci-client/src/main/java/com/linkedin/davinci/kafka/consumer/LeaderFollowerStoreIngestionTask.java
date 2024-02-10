@@ -938,9 +938,9 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       PubSubTopicPartition pubSubTopicPartition,
       long rewindStartTimestamp) {
     long topicPartitionOffset =
-        getTopicManager(kafkaURL.toString()).getPartitionOffsetByTime(pubSubTopicPartition, rewindStartTimestamp);
+        getTopicManager(kafkaURL.toString()).getOffsetByTime(pubSubTopicPartition, rewindStartTimestamp);
     /**
-     * {@link com.linkedin.venice.pubsub.manager.TopicManager#getPartitionOffsetByTime} will always
+     * {@link com.linkedin.venice.pubsub.manager.TopicManager#getOffsetByTime} will always
      * return the next offset to consume, but {@link ApacheKafkaConsumer#subscribe} is always
      * seeking the next offset, so we will deduct 1 from the returned offset here.
      */
@@ -1175,8 +1175,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       int newSourceTopicPartitionId = partitionConsumptionState.getSourceTopicPartitionNumber(newSourceTopic);
       PubSubTopicPartition newSourceTopicPartition =
           new PubSubTopicPartitionImpl(newSourceTopic, newSourceTopicPartitionId);
-      upstreamStartOffset = getTopicManager(sourceKafkaURL)
-          .getPartitionOffsetByTime(newSourceTopicPartition, topicSwitch.rewindStartTimestamp);
+      upstreamStartOffset =
+          getTopicManager(sourceKafkaURL).getOffsetByTime(newSourceTopicPartition, topicSwitch.rewindStartTimestamp);
       if (upstreamStartOffset != OffsetRecord.LOWEST_OFFSET) {
         upstreamStartOffset -= 1;
       }

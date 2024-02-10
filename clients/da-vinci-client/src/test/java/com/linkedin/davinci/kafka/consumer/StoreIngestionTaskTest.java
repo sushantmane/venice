@@ -3513,8 +3513,7 @@ public abstract class StoreIngestionTaskTest {
     storeIngestionTaskUnderTest.getStatusReportAdapter().initializePartitionReportStatus(PARTITION_FOO);
     storeIngestionTaskUnderTest.processTopicSwitch(controlMessage, PARTITION_FOO, 10, mockPcs);
 
-    verify(mockTopicManagerRemoteKafka, nodeType == DA_VINCI ? never() : times(1))
-        .getPartitionOffsetByTime(any(), anyLong());
+    verify(mockTopicManagerRemoteKafka, nodeType == DA_VINCI ? never() : times(1)).getOffsetByTime(any(), anyLong());
   }
 
   @Test(dataProvider = "aaConfigProvider")

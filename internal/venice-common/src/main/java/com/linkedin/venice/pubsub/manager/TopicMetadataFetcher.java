@@ -290,12 +290,11 @@ class TopicMetadataFetcher implements Closeable {
       Map<PubSubTopicPartition, Long> offsetsMap =
           pubSubConsumerAdapter.endOffsets(topicPartitions, PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       stats.recordLatency(SENSOR_TYPE.GET_TOPIC_LATEST_OFFSETS, startTime);
-      Int2LongMap offsetsByTopicPartitionIds = new Int2LongOpenHashMap(offsetsMap.size());
-      for (Map.Entry<PubSubTopicPartition, Long> offsetByTopicPartition: offsetsMap.entrySet()) {
-        offsetsByTopicPartitionIds
-            .put(offsetByTopicPartition.getKey().getPartitionNumber(), offsetByTopicPartition.getValue().longValue());
+      Int2LongMap result = new Int2LongOpenHashMap(offsetsMap.size());
+      for (Map.Entry<PubSubTopicPartition, Long> entry: offsetsMap.entrySet()) {
+        result.put(entry.getKey().getPartitionNumber(), entry.getValue().longValue());
       }
-      return offsetsByTopicPartitionIds;
+      return result;
     } finally {
       releaseConsumer(pubSubConsumerAdapter);
     }
@@ -350,10 +349,12 @@ class TopicMetadataFetcher implements Closeable {
   }
 
   long getLatestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
-    return RetryUtils.executeWithMaxAttempt(
+    return RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
         () -> getLatestOffset(pubSubTopicPartition),
         retries,
         INITIAL_RETRY_DELAY,
+        Duration.ofSeconds(5),
+        Duration.ofMinutes(5),
         PUBSUB_RETRIABLE_FAILURES);
   }
 
@@ -399,10 +400,11 @@ class TopicMetadataFetcher implements Closeable {
    * @return the offset for the given timestamp
    */
   long getOffsetForTime(PubSubTopicPartition pubSubTopicPartition, long timestamp) {
+    validateTopicPartition(pubSubTopicPartition);
     // We start by retrieving the latest offset. If the provided timestamp is out of range,
     // we return the latest offset. This ensures that we don't miss any records produced
     // after the 'offsetForTime' call when the latest offset is obtained after timestamp checking.
-    long latestOffset = getLatestOffset(pubSubTopicPartition);
+    long offsetOfLastMessage = getLatestOffset(pubSubTopicPartition) - 1;
 
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
@@ -413,7 +415,7 @@ class TopicMetadataFetcher implements Closeable {
       if (result == null) {
         // when offset is null, it means the given timestamp is either
         // out of range or the topic does not have any message
-        return latestOffset;
+        return offsetOfLastMessage;
       }
       return result;
     } finally {
@@ -429,7 +431,6 @@ class TopicMetadataFetcher implements Closeable {
    * @return the offset for the given timestamp
    */
   long getOffsetForTimeWithRetries(PubSubTopicPartition pubSubTopicPartition, long timestamp, int retries) {
-    validateTopicPartition(pubSubTopicPartition);
     return RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
         () -> getOffsetForTime(pubSubTopicPartition, timestamp),
         retries,

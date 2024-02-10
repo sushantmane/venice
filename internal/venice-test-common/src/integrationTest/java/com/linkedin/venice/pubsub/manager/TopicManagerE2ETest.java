@@ -5,6 +5,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.ConfigKeys;
@@ -21,6 +22,7 @@ import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.utils.PubSubHelper;
 import com.linkedin.venice.utils.PubSubHelper.MutablePubSubMessage;
 import com.linkedin.venice.utils.Time;
@@ -181,6 +183,7 @@ public class TopicManagerE2ETest {
     }
     assertNotNull(lastMessageFuture, "Last message future should not be null");
     lastMessageFuture.get(1, TimeUnit.MINUTES);
+    assertEquals(messages.size(), numMessages);
 
     final AtomicInteger successfulRequests = new AtomicInteger(0);
     List<Runnable> tasks = new ArrayList<>();
@@ -262,5 +265,70 @@ public class TopicManagerE2ETest {
     // total should be equal to the number of tasks
     assertEquals(successfulRequests.get() + failedRequests, totalTasks);
   }
+
+  @Test(timeOut = 3 * Time.MS_PER_MINUTE, invocationCount = 1)
+  public void testMetadataApisForNonExistentTopics() {
+    // non-existent topic
+    PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
+    assertFalse(topicManager.containsTopic(nonExistentTopic));
+    Map<Integer, Long> nonExistentTopicLatestOffsets = topicManager.getTopicLatestOffsets(nonExistentTopic);
+    assertNotNull(nonExistentTopicLatestOffsets);
+    assertEquals(nonExistentTopicLatestOffsets.size(), 0);
+    assertThrows(PubSubTopicDoesNotExistException.class, () -> topicManager.getPartitionCount(nonExistentTopic));
+    assertThrows(
+        PubSubTopicDoesNotExistException.class,
+        () -> topicManager
+            .getOffsetByTime(new PubSubTopicPartitionImpl(nonExistentTopic, 1), System.currentTimeMillis()));
+  }
+
+  @Test(timeOut = 3 * Time.MS_PER_MINUTE, invocationCount = 1)
+  public void testMetadataApisForExistingTopics() throws ExecutionException, InterruptedException, TimeoutException {
+    int numPartitions = 35;
+    int replicationFactor = 1;
+    boolean isEternalTopic = true;
+    PubSubTopic existingTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("existingTopic"));
+    assertFalse(topicManager.containsTopic(existingTopic));
+    topicManager.createTopic(existingTopic, numPartitions, replicationFactor, isEternalTopic);
+    waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> topicManager.containsTopic(existingTopic));
+    Map<Integer, Long> latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
+    assertNotNull(latestOffsets);
+    assertEquals(latestOffsets.size(), numPartitions);
+    for (int i = 0; i < numPartitions; i++) {
+      assertEquals((long) latestOffsets.get(i), 0L);
+    }
+    assertEquals(topicManager.getPartitionCount(existingTopic), numPartitions);
+
+    PubSubProducerAdapter pubSubProducerAdapter = pubSubProducerAdapterLazy.get();
+    Map<Integer, MutablePubSubMessage> messagesP0 =
+        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 0, 10, 1);
+    Map<Integer, MutablePubSubMessage> messagesP1 =
+        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 2, 14, 1);
+    Map<Integer, MutablePubSubMessage> messagesP2 =
+        PubSubHelper.produceMessages(pubSubProducerAdapter, existingTopic.getName(), 3, 19, 1);
+    latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
+    assertNotNull(latestOffsets);
+    assertEquals(latestOffsets.size(), numPartitions);
+    assertEquals((long) latestOffsets.get(0), messagesP0.size());
+    assertEquals((long) latestOffsets.get(2), messagesP1.size());
+    assertEquals((long) latestOffsets.get(3), messagesP2.size());
+    assertEquals((long) latestOffsets.get(4), 0L);
+
+    // if timestamp is greater than the latest message timestamp, the offset should be the offset of the last message
+    long timestamp = System.currentTimeMillis();
+    assertEquals(
+        topicManager.getOffsetByTime(new PubSubTopicPartitionImpl(existingTopic, 0), timestamp),
+        messagesP0.size() - 1);
+  }
+
+  /*
+   * Test
+   * 1) Create a topic with 3 partitions and 1 replication factor
+   * 2) Produce 256 messages to the topic
+   * 3) Verify that the topic has 3 partitions
+   * 4) Verify that the latest offset for each partition is 256
+   * 5) Verify that the producer timestamp of the last data message is 255
+   * 6) Verify that the producer timestamp of the last data message with retries is 255
+   * 7) Verify that the partition offset by time is 255
+   */
 
 }

@@ -116,8 +116,8 @@ public class ApacheKafkaConsumerAdapter implements PubSubConsumerAdapter {
     topicPartitionList.add(topicPartition);
     kafkaConsumer.assign(topicPartitionList); // add the topic-partition to the subscription
     // Use the last read offset to seek to the next offset to read.
-    long consumptionStartOffset = lastReadOffset == OffsetRecord.LOWEST_OFFSET ? 0 : lastReadOffset + 1;
-    if (lastReadOffset == OffsetRecord.LOWEST_OFFSET) {
+    long consumptionStartOffset = lastReadOffset <= OffsetRecord.LOWEST_OFFSET ? 0 : lastReadOffset + 1;
+    if (lastReadOffset <= OffsetRecord.LOWEST_OFFSET) {
       kafkaConsumer.seekToBeginning(Collections.singletonList(topicPartition));
     } else {
       kafkaConsumer.seek(topicPartition, consumptionStartOffset);

@@ -1107,7 +1107,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           try {
             PubSubTopicPartition newSourceTP = new PubSubTopicPartitionImpl(newSourceTopic, newSourceTopicPartition);
             upstreamStartOffset =
-                getTopicManager(sourceKafkaURL.toString()).getPartitionOffsetByTime(newSourceTP, rewindStartTimestamp);
+                getTopicManager(sourceKafkaURL.toString()).getOffsetByTime(newSourceTP, rewindStartTimestamp);
             numberOfContactedBrokers.getAndIncrement();
           } catch (Exception e) {
             // TODO: Catch more specific Exception?

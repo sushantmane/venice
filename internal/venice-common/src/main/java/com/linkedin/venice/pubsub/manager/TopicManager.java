@@ -644,8 +644,18 @@ public class TopicManager implements Closeable {
     return topicMetadataFetcher.getTopicLatestOffsets(pubSubTopic);
   }
 
+  /**
+   * Get partition count for a given topic.
+   * @param pubSubTopic  the topic to get partition count for
+   * @return the number of partitions for the given topic
+   * @throws PubSubTopicDoesNotExistException if the topic does not exist
+   */
   public int getPartitionCount(PubSubTopic pubSubTopic) {
-    return getTopicPartitionInfo(pubSubTopic).size();
+    List<PubSubTopicPartitionInfo> partitionInfoList = getTopicPartitionInfo(pubSubTopic);
+    if (partitionInfoList == null) {
+      throw new PubSubTopicDoesNotExistException("Topic: " + pubSubTopic + " does not exist");
+    }
+    return partitionInfoList.size();
   }
 
   public boolean containsTopic(PubSubTopic pubSubTopic) {
@@ -678,7 +688,7 @@ public class TopicManager implements Closeable {
   /**
    * Get offsets for only one partition with a specific timestamp.
    */
-  public long getPartitionOffsetByTime(PubSubTopicPartition pubSubTopicPartition, long timestamp) {
+  public long getOffsetByTime(PubSubTopicPartition pubSubTopicPartition, long timestamp) {
     return topicMetadataFetcher.getOffsetForTimeWithRetries(pubSubTopicPartition, timestamp, 25);
   }
 
