@@ -151,17 +151,11 @@ class TopicMetadataFetcher implements Closeable {
 
   // acquire the consumer from the pool
   private PubSubConsumerAdapter acquireConsumer() {
-    PubSubConsumerAdapter pubSubConsumerAdapter = null;
     try {
-      pubSubConsumerAdapter = pubSubConsumerPool.take();
-      return pubSubConsumerAdapter;
+      return pubSubConsumerPool.take();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new VeniceException("Interrupted while acquiring pubSubConsumerAdapter", e);
-    } finally {
-      if (pubSubConsumerAdapter != null) {
-        LOGGER.info("Acquired consumer: {} thread: {}", pubSubConsumerAdapter, Thread.currentThread().getName());
-      }
     }
   }
 
@@ -172,8 +166,6 @@ class TopicMetadataFetcher implements Closeable {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new VeniceException("Interrupted while releasing pubSubConsumerAdapter", e);
-    } finally {
-      LOGGER.info("Released consumer: {} thread: {}", pubSubConsumerAdapter, Thread.currentThread().getName());
     }
   }
 
@@ -191,7 +183,6 @@ class TopicMetadataFetcher implements Closeable {
         3,
         INITIAL_RETRY_DELAY,
         PUBSUB_RETRIABLE_FAILURES);
-    // putLatestValueInCache(pubSubTopicPartition.getPubSubTopic(), topicExists, topicExistenceCache);
     if (!topicExists) {
       throw new PubSubTopicDoesNotExistException("Topic does not exist: " + pubSubTopicPartition.getPubSubTopic());
     }
@@ -335,12 +326,12 @@ class TopicMetadataFetcher implements Closeable {
     PubSubConsumerAdapter pubSubConsumerAdapter = acquireConsumer();
     try {
       long startTime = System.currentTimeMillis();
-      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter.endOffsets(
-          Collections.singletonList(pubSubTopicPartition),
-          PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
+      Map<PubSubTopicPartition, Long> offsetMap = pubSubConsumerAdapter
+          .endOffsets(Collections.singleton(pubSubTopicPartition), PUBSUB_OFFSET_API_TIMEOUT_DURATION_DEFAULT_VALUE);
       stats.recordLatency(GET_PARTITION_LATEST_OFFSETS, startTime);
       Long offset = offsetMap.get(pubSubTopicPartition);
       if (offset == null) {
+        LOGGER.error("Received null offset for topic-partition: {}", pubSubTopicPartition);
         // This should never happen; if it does, it's a bug in the PubSubConsumerAdapter implementation
         throw new VeniceException("Got null as latest offset for: " + pubSubTopicPartition);
       }

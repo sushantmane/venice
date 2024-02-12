@@ -37,9 +37,11 @@ import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.pubsub.manager.TopicMetadataFetcher.ValueAndExpiryTime;
 import com.linkedin.venice.utils.ExceptionUtils;
+import com.linkedin.venice.utils.Time;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongMaps;
 import java.time.Duration;
@@ -76,7 +78,7 @@ public class TopicMetadataFetcherTest {
   private PubSubConsumerAdapter consumerMock;
   private TopicManagerStats stats;
 
-  @BeforeMethod
+  @BeforeMethod(alwaysRun = true)
   public void setUp() throws InterruptedException {
     consumerMock = mock(PubSubConsumerAdapter.class);
     pubSubConsumerPool = new LinkedBlockingQueue<>(2);
@@ -92,12 +94,11 @@ public class TopicMetadataFetcherTest {
         pubSubConsumerPool,
         threadPoolExecutor,
         cachedEntryTtlInNs);
+    assertEquals(pubSubConsumerPool.size(), 1);
   }
 
   @Test
   public void testClose() throws InterruptedException {
-    assertEquals(pubSubConsumerPool.size(), 1);
-
     CountDownLatch signalReceiver = new CountDownLatch(1);
     List<PubSubTopicPartitionInfo> partitions = new ArrayList<>();
     CountDownLatch holdConsumer = new CountDownLatch(1);
@@ -231,7 +232,6 @@ public class TopicMetadataFetcherTest {
 
   @Test
   public void testGetTopicLatestOffsets() {
-    assertEquals(pubSubConsumerPool.size(), 1);
     // test consumer::partitionFor --> (null, empty list)
     when(consumerMock.partitionsFor(pubSubTopic)).thenReturn(null).thenReturn(Collections.emptyList());
     for (int i = 0; i < 2; i++) {
@@ -267,7 +267,6 @@ public class TopicMetadataFetcherTest {
 
   @Test
   public void testGetTopicPartitionInfo() {
-    assertEquals(pubSubConsumerPool.size(), 1);
     PubSubTopicPartitionInfo tp0Info = new PubSubTopicPartitionInfo(pubSubTopic, 0, true);
     PubSubTopicPartitionInfo tp1Info = new PubSubTopicPartitionInfo(pubSubTopic, 1, true);
     List<PubSubTopicPartitionInfo> partitionInfo = Arrays.asList(tp0Info, tp1Info);
@@ -424,5 +423,72 @@ public class TopicMetadataFetcherTest {
     doReturn(Arrays.asList(dm1, dm0)).when(metadataFetcherSpy).consumeLatestRecords(eq(topicPartition), anyInt());
     timestamp = metadataFetcherSpy.getProducerTimestampOfLastDataMessage(topicPartition);
     assertEquals(timestamp, dm0.getValue().getProducerMetadata().getMessageTimestamp());
+  }
+
+  @Test
+  public void testGetLatestOffset() {
+    PubSubTopicPartition tp0 = new PubSubTopicPartitionImpl(pubSubTopic, 0);
+    Map<PubSubTopicPartition, Long> offsetMap = new HashMap<>();
+    offsetMap.put(tp0, 1001L);
+    when(consumerMock.endOffsets(eq(offsetMap.keySet()), any(Duration.class))).thenReturn(offsetMap);
+    long latestOffset = topicMetadataFetcher.getLatestOffset(tp0);
+    assertEquals(latestOffset, 1001L);
+
+    // test when endOffsets returns null
+    when(consumerMock.endOffsets(eq(offsetMap.keySet()), any(Duration.class))).thenReturn(Collections.emptyMap());
+    Throwable t = expectThrows(VeniceException.class, () -> topicMetadataFetcher.getLatestOffset(tp0));
+    assertTrue(t.getMessage().contains("Got null as latest offset for"));
+    assertEquals(pubSubConsumerPool.size(), 1);
+  }
+
+  @Test(timeOut = 60 * Time.MS_PER_SECOND)
+  public void testGetLatestOffsetWithRetries() throws ExecutionException, InterruptedException {
+    PubSubTopicPartition tp0 = new PubSubTopicPartitionImpl(pubSubTopic, 0);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(true);
+
+    TopicMetadataFetcher topicMetadataFetcherSpy = spy(topicMetadataFetcher);
+    doThrow(new PubSubTopicDoesNotExistException("Test1")).doThrow(new PubSubOpTimeoutException("Test2"))
+        .doThrow(new PubSubOpTimeoutException("Test3"))
+        .doReturn(99L)
+        .when(topicMetadataFetcherSpy)
+        .getLatestOffset(tp0);
+    assertEquals((long) topicMetadataFetcherSpy.getLatestOffsetWithRetriesAsync(tp0, 5).get(), 99L);
+    verify(topicMetadataFetcherSpy, times(4)).getLatestOffset(tp0);
+
+    doThrow(new PubSubTopicDoesNotExistException("Test1")).when(topicMetadataFetcherSpy).getLatestOffset(tp0);
+    expectThrows(
+        PubSubTopicDoesNotExistException.class,
+        () -> topicMetadataFetcherSpy.getLatestOffsetWithRetries(tp0, 1));
+
+    Map<PubSubTopicPartition, Long> offsetMap = new HashMap<>();
+    offsetMap.put(tp0, 1001L);
+    when(consumerMock.endOffsets(eq(offsetMap.keySet()), any(Duration.class))).thenReturn(offsetMap);
+    long latestOffset = topicMetadataFetcher.getLatestOffsetWithRetries(tp0, 1);
+    assertEquals(latestOffset, 1001L);
+
+    // test when endOffsets returns null
+    when(consumerMock.endOffsets(eq(offsetMap.keySet()), any(Duration.class))).thenReturn(Collections.emptyMap());
+    Throwable t = expectThrows(VeniceException.class, () -> topicMetadataFetcher.getLatestOffsetWithRetries(tp0, 1));
+    assertTrue(t.getMessage().contains("Got null as latest offset for"));
+    assertEquals(pubSubConsumerPool.size(), 1);
+  }
+
+  @Test
+  public void testGetOffsetForTime() {
+    PubSubTopicPartition tp0 = new PubSubTopicPartitionImpl(pubSubTopic, 0);
+    when(adminMock.containsTopic(pubSubTopic)).thenReturn(true);
+    long latestOffset = 12321L;
+    TopicMetadataFetcher topicMetadataFetcherSpy = spy(topicMetadataFetcher);
+    doReturn(latestOffset).when(topicMetadataFetcherSpy).getLatestOffset(tp0);
+
+    long ts = System.currentTimeMillis();
+    when(consumerMock.offsetForTime(eq(tp0), eq(ts), any(Duration.class))).thenReturn(9988L);
+    assertEquals(topicMetadataFetcherSpy.getOffsetForTime(tp0, ts), 9988L);
+    assertEquals(pubSubConsumerPool.size(), 1);
+
+    // test when offsetForTime returns null
+    when(consumerMock.offsetForTime(eq(tp0), eq(ts), any(Duration.class))).thenReturn(null);
+    assertEquals(topicMetadataFetcherSpy.getOffsetForTime(tp0, ts), latestOffset);
+    assertEquals(pubSubConsumerPool.size(), 1);
   }
 }
