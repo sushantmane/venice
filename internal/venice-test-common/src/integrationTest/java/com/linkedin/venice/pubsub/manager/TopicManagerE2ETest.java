@@ -7,8 +7,10 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.ConfigKeys;
+import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.integration.utils.PubSubBrokerWrapper;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
@@ -23,6 +25,7 @@ import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.utils.PubSubHelper;
 import com.linkedin.venice.utils.PubSubHelper.MutablePubSubMessage;
@@ -39,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -267,9 +271,8 @@ public class TopicManagerE2ETest {
     assertEquals(successfulRequests.get() + failedRequests, totalTasks);
   }
 
-  @Test(timeOut = 3 * Time.MS_PER_MINUTE, invocationCount = 1)
-  public void testMetadataApisForNonExistentTopics() {
-    // non-existent topic
+  @Test(timeOut = 3 * Time.MS_PER_MINUTE)
+  public void testMetadataApisForNonExistentTopics() throws ExecutionException, InterruptedException, TimeoutException {
     PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
     assertFalse(topicManager.containsTopicCached(nonExistentTopic));
     assertFalse(topicManager.containsTopic(nonExistentTopic));
@@ -277,13 +280,26 @@ public class TopicManagerE2ETest {
     assertNotNull(nonExistentTopicLatestOffsets);
     assertEquals(nonExistentTopicLatestOffsets.size(), 0);
     assertThrows(PubSubTopicDoesNotExistException.class, () -> topicManager.getPartitionCount(nonExistentTopic));
+    PubSubTopicPartitionImpl nonExistentTopicPartition = new PubSubTopicPartitionImpl(nonExistentTopic, 0);
     assertThrows(
         PubSubTopicDoesNotExistException.class,
-        () -> topicManager
-            .getOffsetByTime(new PubSubTopicPartitionImpl(nonExistentTopic, 1), System.currentTimeMillis()));
+        () -> topicManager.getOffsetByTime(nonExistentTopicPartition, System.currentTimeMillis()));
+    assertThrows(
+        PubSubTopicDoesNotExistException.class,
+        () -> topicManager.getProducerTimestampOfLastDataMessageWithRetries(nonExistentTopicPartition, 1));
+    topicManager.invalidateCache(nonExistentTopic).get(1, TimeUnit.MINUTES); // should not throw an exception
   }
 
-  @Test(timeOut = 3 * Time.MS_PER_MINUTE, invocationCount = 1)
+  @Test(timeOut = 90 * Time.MS_PER_SECOND)
+  public void testGetLatestOffsetApisForNonExistentTopics() {
+    PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
+    assertFalse(topicManager.containsTopic(nonExistentTopic));
+    assertThrows(
+        PubSubOpTimeoutException.class,
+        () -> topicManager.getLatestOffsetWithRetries(new PubSubTopicPartitionImpl(nonExistentTopic, 0), 1));
+  }
+
+  @Test(timeOut = 3 * Time.MS_PER_MINUTE)
   public void testMetadataApisForExistingTopics() throws ExecutionException, InterruptedException, TimeoutException {
     int numPartitions = 35;
     int replicationFactor = 1;
@@ -315,30 +331,40 @@ public class TopicManagerE2ETest {
     PubSubTopicPartition p0 = new PubSubTopicPartitionImpl(existingTopic, 0);
     PubSubTopicPartition p1 = new PubSubTopicPartitionImpl(existingTopic, 1);
     PubSubTopicPartition p2 = new PubSubTopicPartitionImpl(existingTopic, 2);
+    PubSubTopicPartition p3 = new PubSubTopicPartitionImpl(existingTopic, 3);
 
     // produce messages to the topic-partitions: p0, p1, p2
     PubSubProducerAdapter pubSubProducerAdapter = pubSubProducerAdapterLazy.get();
-    List<MutablePubSubMessage> p0Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p0, 10, 1);
-    List<MutablePubSubMessage> p1Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p1, 14, 1);
-    List<MutablePubSubMessage> p2Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p2, 19, 1);
+    List<MutablePubSubMessage> p0Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p0, 10, 2, false);
+    List<MutablePubSubMessage> p1Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p1, 14, 2, false);
+    List<MutablePubSubMessage> p2Messages = PubSubHelper.produceMessages(pubSubProducerAdapter, p2, 19, 2, false);
 
     // get the latest offsets
     latestOffsets = topicManager.getTopicLatestOffsets(existingTopic);
     assertNotNull(latestOffsets);
     assertEquals(latestOffsets.size(), numPartitions);
     assertEquals((long) latestOffsets.get(0), p0Messages.size());
+    assertEquals(topicManager.getLatestOffsetWithRetries(p0, 5), p0Messages.size());
+    assertEquals(topicManager.getLatestOffsetCached(p0.getPubSubTopic(), 0), p0Messages.size());
+
     assertEquals((long) latestOffsets.get(1), p1Messages.size());
+    assertEquals(topicManager.getLatestOffsetWithRetries(p1, 5), p1Messages.size());
+    assertEquals(topicManager.getLatestOffsetCached(p1.getPubSubTopic(), 1), p1Messages.size());
+
     assertEquals((long) latestOffsets.get(2), p2Messages.size());
+    assertEquals(topicManager.getLatestOffsetWithRetries(p2, 5), p2Messages.size());
+    assertEquals(topicManager.getLatestOffsetCached(p2.getPubSubTopic(), 2), p2Messages.size());
+
     // except for the first 3 partitions, the latest offset should be 0
     for (int i = 3; i < numPartitions; i++) {
       assertEquals((long) latestOffsets.get(i), 0L);
+      assertEquals(topicManager.getLatestOffsetWithRetries(new PubSubTopicPartitionImpl(existingTopic, i), 5), 0L);
+      assertEquals(topicManager.getLatestOffsetCached(existingTopic, i), 0L);
     }
 
     // if timestamp is greater than the latest message timestamp, the offset returned should be the latest offset
     long timestamp = System.currentTimeMillis();
     assertEquals(topicManager.getOffsetByTime(p0, timestamp), p0Messages.size());
-    long p0M9Ts = p0Messages.get(9).getTimestampAfterProduce();
-    assertEquals(topicManager.getOffsetByTime(p0, p0M9Ts), 10);
 
     // If the provided timestamp is less than or equal to the timestamp of a message,
     // the offset returned should correspond to that message.
@@ -347,17 +373,59 @@ public class TopicManagerE2ETest {
 
     long p0TsBeforeM0 = p0Messages.get(0).getTimestampBeforeProduce();
     assertEquals(topicManager.getOffsetByTime(p0, p0TsBeforeM0), 0);
+
+    // test getProducerTimestampOfLastDataMessage
+    long p0LastDataMessageTs =
+        p0Messages.get(p0Messages.size() - 1).getValue().getProducerMetadata().getMessageTimestamp();
+    long p1LastDataMessageTs =
+        p1Messages.get(p1Messages.size() - 1).getValue().getProducerMetadata().getMessageTimestamp();
+    long p2LastDataMessageTs =
+        p2Messages.get(p2Messages.size() - 1).getValue().getProducerMetadata().getMessageTimestamp();
+    long p3LastDataMessageTs = PubSubConstants.PUBSUB_NO_PRODUCER_TIME_IN_EMPTY_TOPIC_PARTITION;
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p0, 5), p0LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p1, 5), p1LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p2, 5), p2LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p3, 5), p3LastDataMessageTs);
+    PubSubHelper.produceMessages(pubSubProducerAdapter, p0, 5, 1, true);
+    PubSubHelper.produceMessages(pubSubProducerAdapter, p1, 13, 1, true);
+    PubSubHelper.produceMessages(pubSubProducerAdapter, p2, 21, 1, true);
+    PubSubHelper.produceMessages(pubSubProducerAdapter, p3, 25, 1, true);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p0, 5), p0LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageCached(p0), p0LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p1, 5), p1LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageCached(p1), p1LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageWithRetries(p2, 5), p2LastDataMessageTs);
+    assertEquals(topicManager.getProducerTimestampOfLastDataMessageCached(p2), p2LastDataMessageTs);
+    Throwable exception =
+        expectThrows(VeniceException.class, () -> topicManager.getProducerTimestampOfLastDataMessageWithRetries(p3, 5));
+    assertTrue(exception.getMessage().contains("No data message found in topic-partition: "));
+    Throwable exception2 =
+        expectThrows(VeniceException.class, () -> topicManager.getProducerTimestampOfLastDataMessageCached(p3));
+    assertTrue(exception2.getMessage().contains("No data message found in topic-partition: "));
   }
 
-  /*
-   * Test
-   * 1) Create a topic with 3 partitions and 1 replication factor
-   * 2) Produce 256 messages to the topic
-   * 3) Verify that the topic has 3 partitions
-   * 4) Verify that the latest offset for each partition is 256
-   * 5) Verify that the producer timestamp of the last data message is 255
-   * 6) Verify that the producer timestamp of the last data message with retries is 255
-   * 7) Verify that the partition offset by time is 255
-   */
+  @Test(timeOut = 3 * Time.MS_PER_MINUTE)
+  public void testClose() throws InterruptedException {
+    PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
+    assertFalse(topicManager.containsTopic(nonExistentTopic));
+    CountDownLatch latch = new CountDownLatch(1);
+    Runnable[] tasks = { () -> {
+      latch.countDown();
+      topicManager.getLatestOffsetCached(nonExistentTopic, 1);
+    }, () -> {
+      latch.countDown();
+      topicManager.getLatestOffsetWithRetries(new PubSubTopicPartitionImpl(nonExistentTopic, 0), 1);
+    } };
+
+    ExecutorService executorService = Executors.newFixedThreadPool(5);
+    for (int i = 0; i < 20; i++) {
+      executorService.submit(tasks[i % tasks.length]);
+    }
+    latch.await();
+    Thread.sleep(100);
+    topicManager.close();
+    // call close again and it should not throw an exception
+    topicManager.close();
+  }
 
 }

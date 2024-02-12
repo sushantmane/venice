@@ -203,33 +203,32 @@ class TopicMetadataFetcher implements Closeable {
         "Closing TopicMetadataFetcher for pubSubClusterAddress: {} with num of consumers: {}",
         pubSubClusterAddress,
         closeables.size());
-    latestOffsetCache.clear();
-    lastProducerTimestampCache.clear();
-    topicExistenceCache.clear();
     threadPoolExecutor.shutdown();
     try {
-      if (!threadPoolExecutor.awaitTermination(100, MILLISECONDS)) {
+      if (!threadPoolExecutor.awaitTermination(50, MILLISECONDS)) {
         threadPoolExecutor.shutdownNow();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-
     long waitUntil = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30);
     while (System.currentTimeMillis() <= waitUntil && !closeables.isEmpty()) {
-      PubSubConsumerAdapter pubSubConsumerAdapter = pubSubConsumerPool.poll();
+      LOGGER.info(
+          "Waiting for {} consumers to be closed for pubSubClusterAddress: {} remainingTime: {} ms",
+          closeables.size(),
+          pubSubClusterAddress,
+          waitUntil - System.currentTimeMillis());
+      PubSubConsumerAdapter pubSubConsumerAdapter = null;
+      try {
+        pubSubConsumerAdapter = pubSubConsumerPool.poll(5, MILLISECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
       if (pubSubConsumerAdapter != null) {
         closeables.remove(pubSubConsumerAdapter);
         Utils.closeQuietlyWithErrorLogged(pubSubConsumerAdapter);
       }
-      try {
-        Thread.sleep(5);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        break;
-      }
     }
-
     if (closeables.isEmpty()) {
       LOGGER.info("Closed all metadata fetcher consumers for pubSubClusterAddress: {}", pubSubClusterAddress);
       return;

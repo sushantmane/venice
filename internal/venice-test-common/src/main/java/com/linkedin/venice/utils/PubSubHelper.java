@@ -54,10 +54,11 @@ public class PubSubHelper {
       PubSubProducerAdapter pubSubProducerAdapter,
       PubSubTopicPartition topicPartition,
       int messageCount,
-      long delayBetweenMessagesInMs) throws InterruptedException, ExecutionException, TimeoutException {
+      long delayBetweenMessagesInMs,
+      boolean controlMessages) throws InterruptedException, ExecutionException, TimeoutException {
     List<MutablePubSubMessage> messages = new ArrayList<>(messageCount);
     for (int i = 0; i < messageCount; i++) {
-      MutablePubSubMessage message = PubSubHelper.getDummyPubSubMessage(false);
+      MutablePubSubMessage message = PubSubHelper.getDummyPubSubMessage(controlMessages);
       message.getValue().getProducerMetadata().setMessageTimestamp(i); // logical ts
       message.setTimestampBeforeProduce(System.currentTimeMillis());
       messages.add(message);
@@ -73,6 +74,12 @@ public class PubSubHelper {
             if (throwable == null) {
               message.setOffset(result.getOffset());
               message.setTimestampAfterProduce(System.currentTimeMillis());
+              try {
+                TimeUnit.MILLISECONDS.sleep(delayBetweenMessagesInMs);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+              }
             }
           })
           .get(10, TimeUnit.SECONDS);
