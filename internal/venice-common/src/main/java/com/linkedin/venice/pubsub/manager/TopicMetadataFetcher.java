@@ -351,13 +351,10 @@ class TopicMetadataFetcher implements Closeable {
   }
 
   long getLatestOffsetWithRetries(PubSubTopicPartition pubSubTopicPartition, int retries) {
-    return RetryUtils.executeWithMaxAttemptAndExponentialBackoff(
-        () -> getLatestOffset(pubSubTopicPartition),
-        retries,
-        INITIAL_RETRY_DELAY,
-        Duration.ofSeconds(5),
-        Duration.ofMinutes(5),
-        PUBSUB_RETRIABLE_FAILURES);
+    return RetryUtils.executeWithMaxAttemptAndExponentialBackoff(() -> {
+      validateTopicPartition(pubSubTopicPartition);
+      return getLatestOffset(pubSubTopicPartition);
+    }, retries, INITIAL_RETRY_DELAY, Duration.ofSeconds(5), Duration.ofMinutes(5), PUBSUB_RETRIABLE_FAILURES);
   }
 
   CompletableFuture<Long> getLatestOffsetWithRetriesAsync(PubSubTopicPartition pubSubTopicPartition, int retries) {

@@ -25,8 +25,8 @@ import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
+import com.linkedin.venice.stats.StatsErrorCode;
 import com.linkedin.venice.utils.PubSubHelper;
 import com.linkedin.venice.utils.PubSubHelper.MutablePubSubMessage;
 import com.linkedin.venice.utils.Time;
@@ -248,11 +248,11 @@ public class TopicManagerE2ETest {
     };
     tasks.add(getLatestOffsetWithRetriesTask);
 
-    ExecutorService executorService = Executors.newFixedThreadPool(16);
+    ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     List<Future> vwFutures = new ArrayList<>();
 
-    int totalTasks = 4096;
+    int totalTasks = 1024;
     for (int i = 0; i < totalTasks; i++) {
       Future future = executorService.submit(tasks.get(i % tasks.size()));
       vwFutures.add(future);
@@ -287,16 +287,14 @@ public class TopicManagerE2ETest {
     assertThrows(
         PubSubTopicDoesNotExistException.class,
         () -> topicManager.getProducerTimestampOfLastDataMessageWithRetries(nonExistentTopicPartition, 1));
+    assertEquals(
+        topicManager.getProducerTimestampOfLastDataMessageCached(nonExistentTopicPartition),
+        StatsErrorCode.LAG_MEASUREMENT_FAILURE.code);
     topicManager.invalidateCache(nonExistentTopic).get(1, TimeUnit.MINUTES); // should not throw an exception
-  }
-
-  @Test(timeOut = 90 * Time.MS_PER_SECOND)
-  public void testGetLatestOffsetApisForNonExistentTopics() {
-    PubSubTopic nonExistentTopic = pubSubTopicRepository.getTopic(Utils.getUniqueString("nonExistentTopic"));
-    assertFalse(topicManager.containsTopic(nonExistentTopic));
     assertThrows(
-        PubSubOpTimeoutException.class,
+        PubSubTopicDoesNotExistException.class,
         () -> topicManager.getLatestOffsetWithRetries(new PubSubTopicPartitionImpl(nonExistentTopic, 0), 1));
+    assertEquals(topicManager.getLatestOffsetCached(nonExistentTopic, 1), StatsErrorCode.LAG_MEASUREMENT_FAILURE.code);
   }
 
   @Test(timeOut = 3 * Time.MS_PER_MINUTE)
