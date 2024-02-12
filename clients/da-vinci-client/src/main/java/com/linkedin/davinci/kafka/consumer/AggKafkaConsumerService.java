@@ -258,7 +258,7 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
    * @return the {@link KafkaConsumerService} for a specific Kafka bootstrap url,
    *         or null if there isn't any.
    */
-  private AbstractKafkaConsumerService getKafkaConsumerService(final String kafkaURL) {
+  AbstractKafkaConsumerService getKafkaConsumerService(final String kafkaURL) {
     AbstractKafkaConsumerService consumerService = kafkaServerToConsumerServiceMap.get(kafkaURL);
     if (consumerService == null && kafkaClusterUrlResolver != null) {
       consumerService = kafkaServerToConsumerServiceMap.get(kafkaClusterUrlResolver.apply(kafkaURL));
