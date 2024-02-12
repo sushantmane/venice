@@ -3694,10 +3694,10 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    * @return topic manager
    */
   protected TopicManager getTopicManager(String sourceKafkaServer) {
-    // if (sourceKafkaServer.equals(localKafkaServer)) {
-    // // Use default kafka admin client (could be scala or java based) to get local topic manager
-    // return topicManagerRepository.getLocalTopicManager();
-    // }
+    if (sourceKafkaServer.equals(localKafkaServer)) {
+      // Use default kafka admin client (could be scala or java based) to get local topic manager
+      return topicManagerRepository.getLocalTopicManager();
+    }
     // Use java-based kafka admin client to get remote topic manager
     return topicManagerRepository.getTopicManager(sourceKafkaServer);
   }
