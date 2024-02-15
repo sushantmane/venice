@@ -15,7 +15,6 @@ import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
-import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.pubsub.manager.TopicManagerContext.PubSubPropertiesSupplier;
 import com.linkedin.venice.service.AbstractVeniceService;
 import com.linkedin.venice.throttle.EventThrottler;
@@ -392,16 +391,16 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
 
     versionTopicStoreIngestionTaskMapping.put(storeIngestionTask.getVersionTopic().getName(), storeIngestionTask);
     consumerService.startConsumptionIntoDataReceiver(pubSubTopicPartition, lastOffset, dataReceiver);
-    TopicManager topicManager = storeIngestionTask.getTopicManager(kafkaURL);
-
-    /*
-     * Prefetches and caches the latest offset for the specified partition. This optimization aims to prevent
-     * the consumption/metric thread from blocking on the first cache miss while waiting for the latest offset
-     * to be fetched from PubSub.
-     */
-    if (topicManager != null) {
-      topicManager.prefetchAndCacheLatestOffset(pubSubTopicPartition);
-    }
+    // TopicManager topicManager = storeIngestionTask.getTopicManager(kafkaURL);
+    //
+    // /*
+    // * Prefetches and caches the latest offset for the specified partition. This optimization aims to prevent
+    // * the consumption/metric thread from blocking on the first cache miss while waiting for the latest offset
+    // * to be fetched from PubSub.
+    // */
+    // if (topicManager != null) {
+    // topicManager.prefetchAndCacheLatestOffset(pubSubTopicPartition);
+    // }
     return dataReceiver;
   }
 
