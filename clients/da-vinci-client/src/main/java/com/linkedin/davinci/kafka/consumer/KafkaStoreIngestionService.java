@@ -30,7 +30,6 @@ import com.linkedin.davinci.stats.AggVersionedDIVStats;
 import com.linkedin.davinci.stats.AggVersionedIngestionStats;
 import com.linkedin.davinci.stats.ParticipantStoreConsumptionStats;
 import com.linkedin.davinci.stats.StoreBufferServiceStats;
-import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.davinci.storage.StorageEngineRepository;
 import com.linkedin.davinci.storage.StorageMetadataService;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheBackend;
@@ -230,8 +229,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
       boolean isDaVinciClient,
       RemoteIngestionRepairService remoteIngestionRepairService,
       PubSubClientsFactory pubSubClientsFactory,
-      Optional<SSLFactory> sslFactory,
-      HeartbeatMonitoringService heartbeatMonitoringService) {
+      Optional<SSLFactory> sslFactory) {
     this.cacheBackend = cacheBackend;
     this.recordTransformer = recordTransformer;
     this.storageMetadataService = storageMetadataService;
@@ -516,7 +514,6 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
         .setPubSubTopicRepository(pubSubTopicRepository)
         .setRunnableForKillIngestionTasksForNonCurrentVersions(
             serverConfig.getIngestionMemoryLimit() > 0 ? () -> killConsumptionTaskForNonCurrentVersions() : null)
-        .setHeartbeatMonitoringService(heartbeatMonitoringService)
         .build();
   }
 

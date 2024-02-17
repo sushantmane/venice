@@ -12,7 +12,6 @@ import com.linkedin.davinci.notifier.PartitionPushStatusNotifier;
 import com.linkedin.davinci.notifier.PushMonitorNotifier;
 import com.linkedin.davinci.notifier.VeniceNotifier;
 import com.linkedin.davinci.stats.ParticipantStateTransitionStats;
-import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.davinci.storage.StorageMetadataService;
 import com.linkedin.davinci.storage.StorageService;
 import com.linkedin.venice.common.VeniceSystemStoreType;
@@ -94,7 +93,6 @@ public class HelixParticipationService extends AbstractVeniceService
   private HelixPartitionStatusAccessor partitionPushStatusAccessor;
   private ThreadPoolExecutor leaderFollowerHelixStateTransitionThreadPool;
   private VeniceOfflinePushMonitorAccessor veniceOfflinePushMonitorAccessor;
-  private final HeartbeatMonitoringService heartbeatMonitoringService;
 
   // This is ONLY for testing purpose.
   public ThreadPoolExecutor getLeaderFollowerHelixStateTransitionThreadPool() {
@@ -113,12 +111,10 @@ public class HelixParticipationService extends AbstractVeniceService
       String clusterName,
       int port,
       String hostname,
-      CompletableFuture<SafeHelixManager> managerFuture,
-      HeartbeatMonitoringService heartbeatMonitoringService) {
+      CompletableFuture<SafeHelixManager> managerFuture) {
     this.ingestionService = storeIngestionService;
     this.storageService = storageService;
     this.clusterName = clusterName;
-    this.heartbeatMonitoringService = heartbeatMonitoringService;
     // The format of instance name must be "$host_$port", otherwise Helix can not get these information correctly.
     this.participantName = Utils.getHelixNodeIdentifier(hostname, port);
     this.zkAddress = zkAddress;
@@ -198,8 +194,7 @@ public class HelixParticipationService extends AbstractVeniceService
           futureVersionStateTransitionStats,
           helixReadOnlyStoreRepository,
           partitionPushStatusAccessorFuture,
-          instance.getNodeId(),
-          heartbeatMonitoringService);
+          instance.getNodeId());
     } else {
       leaderFollowerParticipantModelFactory = new LeaderFollowerPartitionStateModelFactory(
           ingestionBackend,
@@ -208,8 +203,7 @@ public class HelixParticipationService extends AbstractVeniceService
           stateTransitionStats,
           helixReadOnlyStoreRepository,
           partitionPushStatusAccessorFuture,
-          instance.getNodeId(),
-          heartbeatMonitoringService);
+          instance.getNodeId());
     }
     LOGGER.info(
         "LeaderFollower threadPool info: strategy = {}, max future state transition thread = {}",

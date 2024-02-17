@@ -3,7 +3,6 @@ package com.linkedin.davinci.helix;
 import com.linkedin.davinci.config.VeniceConfigLoader;
 import com.linkedin.davinci.ingestion.VeniceIngestionBackend;
 import com.linkedin.davinci.stats.ParticipantStateTransitionStats;
-import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.venice.helix.HelixPartitionStatusAccessor;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
 import com.linkedin.venice.utils.Utils;
@@ -25,8 +24,7 @@ public class LeaderFollowerPartitionStateModelDualPoolFactory extends LeaderFoll
       ParticipantStateTransitionStats futureVersionStateTransitionStats,
       ReadOnlyStoreRepository metadataRepo,
       CompletableFuture<HelixPartitionStatusAccessor> partitionPushStatusAccessorFuture,
-      String instanceName,
-      HeartbeatMonitoringService heartbeatMonitoringService) {
+      String instanceName) {
     super(
         ingestionBackend,
         configService,
@@ -34,8 +32,7 @@ public class LeaderFollowerPartitionStateModelDualPoolFactory extends LeaderFoll
         stateTransitionStats,
         metadataRepo,
         partitionPushStatusAccessorFuture,
-        instanceName,
-        heartbeatMonitoringService);
+        instanceName);
     this.futureVersionExecutorService = futureVersionExecutorService;
     this.futureVersionStateTransitionStats = futureVersionStateTransitionStats;
   }

@@ -8,7 +8,6 @@ import com.linkedin.davinci.notifier.VeniceNotifier;
 import com.linkedin.davinci.stats.AggHostLevelIngestionStats;
 import com.linkedin.davinci.stats.AggVersionedDIVStats;
 import com.linkedin.davinci.stats.AggVersionedIngestionStats;
-import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.davinci.storage.StorageEngineRepository;
 import com.linkedin.davinci.storage.StorageMetadataService;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheBackend;
@@ -93,7 +92,6 @@ public class StoreIngestionTaskFactory {
 
     private VeniceWriterFactory veniceWriterFactory;
 
-    private HeartbeatMonitoringService heartbeatMonitoringService;
     private VeniceViewWriterFactory veniceViewWriterFactory;
     private StorageEngineRepository storageEngineRepository;
     private StorageMetadataService storageMetadataService;
@@ -137,20 +135,12 @@ public class StoreIngestionTaskFactory {
       return veniceWriterFactory;
     }
 
-    public HeartbeatMonitoringService getHeartbeatMonitoringService() {
-      return heartbeatMonitoringService;
-    }
-
     public VeniceViewWriterFactory getVeniceViewWriterFactory() {
       return veniceViewWriterFactory;
     }
 
     public Builder setVeniceWriterFactory(VeniceWriterFactory writerFactory) {
       return set(() -> this.veniceWriterFactory = writerFactory);
-    }
-
-    public Builder setHeartbeatMonitoringService(HeartbeatMonitoringService heartbeatMonitoringService) {
-      return set(() -> this.heartbeatMonitoringService = heartbeatMonitoringService);
     }
 
     public Builder setVeniceViewWriterFactory(VeniceViewWriterFactory viewWriterFactory) {

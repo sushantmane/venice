@@ -172,8 +172,7 @@ public abstract class KafkaStoreIngestionServiceTest {
         false,
         null,
         mockPubSubClientsFactory,
-        Optional.empty(),
-        null);
+        Optional.empty());
 
     String mockStoreName = "test";
     String mockSimilarStoreName = "testTest";
@@ -258,8 +257,7 @@ public abstract class KafkaStoreIngestionServiceTest {
         false,
         null,
         mockPubSubClientsFactory,
-        Optional.empty(),
-        null);
+        Optional.empty());
     String topic1 = "test-store_v1";
     String topic2 = "test-store_v2";
     String invalidTopic = "invalid-store_v1";
@@ -348,8 +346,7 @@ public abstract class KafkaStoreIngestionServiceTest {
         false,
         null,
         mockPubSubClientsFactory,
-        Optional.empty(),
-        null);
+        Optional.empty());
     String topicName = "test-store_v1";
     String storeName = Version.parseStoreFromKafkaTopicName(topicName);
     Store mockStore = new ZKStore(
@@ -415,8 +412,7 @@ public abstract class KafkaStoreIngestionServiceTest {
         false,
         null,
         mockPubSubClientsFactory,
-        Optional.empty(),
-        null);
+        Optional.empty());
     String topicName = "test-store_v1";
     String storeName = Version.parseStoreFromKafkaTopicName(topicName);
     Store mockStore = new ZKStore(
@@ -480,8 +476,7 @@ public abstract class KafkaStoreIngestionServiceTest {
         false,
         null,
         mockPubSubClientsFactory,
-        Optional.empty(),
-        null);
+        Optional.empty());
     String storeName = "test-store";
     String otherStoreName = "test-store2";
     Store mockStore = new ZKStore(

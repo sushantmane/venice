@@ -27,7 +27,7 @@ public abstract class AbstractVeniceAggVersionedStats<STATS, STATS_REPORTER exte
   private final Supplier<STATS> statsInitiator;
   private final StatsSupplier<STATS_REPORTER> reporterSupplier;
 
-  protected final ReadOnlyStoreRepository metadataRepository;
+  private final ReadOnlyStoreRepository metadataRepository;
   private final MetricsRepository metricsRepository;
 
   private final Map<String, VeniceVersionedStats<STATS, STATS_REPORTER>> aggStats;

@@ -2930,7 +2930,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     checkControllerLeadershipFor(clusterName);
     TopicManager topicManager = getTopicManager();
     PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
-    if (!topicManager.containsTopic(realTimeTopic)) {
+    if (topicManager.containsTopic(realTimeTopic)) {
+      return realTimeTopic.getName();
+    } else {
       HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
       try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreWriteLock(storeName)) {
         // The topic might be created by another thread already. Check before creating.
@@ -2942,7 +2944,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         if (store == null) {
           throwStoreDoesNotExist(clusterName, storeName);
         }
-        if (!store.isHybrid() && !store.isWriteComputationEnabled() && !store.isSystemStore()) {
+        if (!store.isHybrid() && !store.isWriteComputationEnabled()) {
           logAndThrow("Store " + storeName + " is not hybrid, refusing to return a realtime topic");
         }
         Optional<Version> version = store.getVersion(store.getLargestUsedVersionNumber());
@@ -2967,8 +2969,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
             partitionCount,
             clusterConfig.getKafkaReplicationFactorRTTopics(),
             store.getRetentionTime(),
-            false,
-            // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
+            false, // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
             clusterConfig.getMinInSyncReplicasRealTimeTopics(),
             false);
         // TODO: if there is an online version from a batch push before this store was hybrid then we won't start
@@ -2978,8 +2979,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                 + "Buffer replay won't start for any existing versions",
             storeName);
       }
+      return realTimeTopic.getName();
     }
-    return realTimeTopic.getName();
   }
 
   /**

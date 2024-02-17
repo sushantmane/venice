@@ -14,7 +14,6 @@ import com.linkedin.davinci.repository.VeniceMetadataRepositoryBuilder;
 import com.linkedin.davinci.stats.AggVersionedStorageEngineStats;
 import com.linkedin.davinci.stats.MetadataUpdateStats;
 import com.linkedin.davinci.stats.RocksDBMemoryStats;
-import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.davinci.storage.DiskHealthCheckService;
 import com.linkedin.davinci.storage.MetadataRetriever;
 import com.linkedin.davinci.storage.StorageEngineMetadataService;
@@ -114,7 +113,6 @@ public class VeniceServer {
   private VeniceJVMStats jvmStats;
   private ICProvider icProvider;
   StorageEngineBackedCompressorFactory compressorFactory;
-  private HeartbeatMonitoringService heartbeatMonitoringService;
 
   /**
    * @deprecated Use {@link VeniceServer#VeniceServer(VeniceServerContext)} instead.
@@ -378,13 +376,6 @@ public class VeniceServer {
       return helixData;
     });
 
-    heartbeatMonitoringService = new HeartbeatMonitoringService(
-        metricsRepository,
-        metadataRepo,
-        serverConfig.getRegionNames(),
-        serverConfig.getRegionName());
-    services.add(heartbeatMonitoringService);
-
     // create and add KafkaSimpleConsumerService
     this.kafkaStoreIngestionService = new KafkaStoreIngestionService(
         storageService.getStorageEngineRepository(),
@@ -409,8 +400,7 @@ public class VeniceServer {
         false,
         remoteIngestionRepairService,
         pubSubClientsFactory,
-        sslFactory,
-        heartbeatMonitoringService);
+        sslFactory);
 
     this.diskHealthCheckService = new DiskHealthCheckService(
         serverConfig.isDiskHealthCheckServiceEnabled(),
@@ -475,8 +465,7 @@ public class VeniceServer {
         clusterConfig.getClusterName(),
         veniceConfigLoader.getVeniceServerConfig().getListenerPort(),
         veniceConfigLoader.getVeniceServerConfig().getListenerHostname(),
-        managerFuture,
-        heartbeatMonitoringService);
+        managerFuture);
     services.add(helixParticipationService);
 
     // Add kafka consumer service last so when shutdown the server, it will be stopped first to avoid the case
