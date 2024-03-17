@@ -31,6 +31,7 @@ import com.linkedin.davinci.store.AbstractStorageEngine;
 import com.linkedin.davinci.store.StoragePartitionConfig;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheBackend;
 import com.linkedin.davinci.store.record.ValueRecord;
+import com.linkedin.davinci.utils.ByteArrayKey;
 import com.linkedin.davinci.utils.ChunkAssembler;
 import com.linkedin.davinci.validation.KafkaDataIntegrityValidator;
 import com.linkedin.venice.common.VeniceSystemStoreType;
@@ -172,6 +173,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected final StorageEngineRepository storageEngineRepository;
   protected final AbstractStorageEngine storageEngine;
 
+  protected final Version storeVersion;
   /** Topics used for this topic consumption
    * TODO: Using a PubSubVersionTopic and PubSubRealTimeTopic extending PubSubTopic for type safety.
    * */
@@ -336,6 +338,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       Optional<ObjectCacheBackend> cacheBackend,
       Function<Integer, DaVinciRecordTransformer> getRecordTransformer,
       Queue<VeniceNotifier> notifiers) {
+    this.storeVersion = version;
     this.readCycleDelayMs = storeConfig.getKafkaReadCycleDelayMs();
     this.emptyPollSleepMs = storeConfig.getKafkaEmptyPollSleepMs();
     this.databaseSyncBytesIntervalForTransactionalMode = storeConfig.getDatabaseSyncBytesIntervalForTransactionalMode();
@@ -1042,7 +1045,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    * @param topicPartition
    * @throws InterruptedException
    */
-  protected void produceToStoreBufferServiceOrKafka(
+  protected void ingestBatch(
       Iterable<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> records,
       PubSubTopicPartition topicPartition,
       String kafkaUrl,
@@ -1285,7 +1288,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     /**
      * While using the shared consumer, we still need to check hybrid quota here since the actual disk usage could change
      * because of compaction or the disk quota could be adjusted even there is no record write.
-     * Since {@link #produceToStoreBufferServiceOrKafka} is only being invoked by {@link KafkaConsumerService} when there
+     * Since {@link #ingestBatch} is only being invoked by {@link KafkaConsumerService} when there
      * are available records, this function needs to check whether we need to resume the consumption when there are
      * paused consumption because of hybrid quota violation.
      */
@@ -1788,6 +1791,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         PartitionConsumptionState newPartitionConsumptionState =
             new PartitionConsumptionState(partition, amplificationFactor, offsetRecord, hybridStoreConfig.isPresent());
         newPartitionConsumptionState.setLeaderFollowerState(leaderState);
+        setupReplicaInMemState(partition);
 
         partitionConsumptionStateMap.put(partition, newPartitionConsumptionState);
         kafkaDataIntegrityValidator.setPartitionState(partition, offsetRecord);
@@ -1873,7 +1877,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
          * {@link #kafkaDataValidationService}, we would like to drain all the buffered messages before cleaning up those
          * two variables to avoid the race condition.
          */
-        partitionConsumptionStateMap.remove(partition);
+        cleanUpPcs(partition);
         storageUtilizationManager.removePartition(partition);
         kafkaDataIntegrityValidator.clearPartition(partition);
         // Reset the error partition tracking
@@ -1905,6 +1909,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       default:
         throw new UnsupportedOperationException(operation.name() + " is not supported in " + getClass().getName());
     }
+  }
+
+  private void cleanUpPcs(int partition) {
+    partitionConsumptionStateMap.remove(partition);
+    cleanReplicaInMemState(partition);
+  }
+
+  void cleanReplicaInMemState(int partition) {
   }
 
   private void resetOffset(int partition, PubSubTopicPartition topicPartition, boolean restartIngestion) {
@@ -1941,6 +1953,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
               amplificationFactor,
               new OffsetRecord(partitionStateSerializer),
               hybridStoreConfig.isPresent()));
+      setupReplicaInMemState(partition);
       storageUtilizationManager.initPartition(partition);
       // Reset the error partition tracking
       partitionIngestionExceptionList.set(partition, null);
@@ -1953,6 +1966,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     }
     kafkaDataIntegrityValidator.clearPartition(partition);
     storageMetadataService.clearOffset(topicPartition.getPubSubTopic().getName(), partition);
+  }
+
+  void setupReplicaInMemState(int partition) {
   }
 
   /**
@@ -3794,6 +3810,19 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       long beforeProcessingPerRecordTimestampNs,
       long beforeProcessingBatchRecordsTimestampMs);
 
+  public boolean isLeader(int partitionId) {
+    PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
+    return pcs != null && Objects.equals(pcs.getLeaderFollowerState(), LeaderFollowerStateType.LEADER);
+  }
+
+  public boolean isAaEnabled() {
+    return storeVersion.isActiveActiveReplicationEnabled();
+  }
+
+  public boolean isWcEnabled() {
+    return isWriteComputationEnabled;
+  }
+
   /**
    * This enum represents all potential results after calling {@link #delegateConsumerRecord(PubSubMessage, int, String, int, long, long)}.
    */
@@ -3964,5 +3993,20 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       return false;
     }
     return true;
+  }
+
+  public boolean isPrefetchEnabled() {
+    return isActiveActiveReplicationEnabled;
+  }
+
+  /**
+   * Fetch values for given keys from the storage engine.
+   */
+  void prefetchRecords(int partitionId, List<PrefetchKeyContext> keys) {
+    LOGGER.info("No-OP: Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+  }
+
+  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
+    throw new UnsupportedOperationException("No-OP: Loading key from DB is not supported.");
   }
 }

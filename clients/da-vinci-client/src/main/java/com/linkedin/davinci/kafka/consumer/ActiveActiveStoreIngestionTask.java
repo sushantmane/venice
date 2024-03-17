@@ -6,10 +6,13 @@ import static com.linkedin.venice.VeniceConstants.REWIND_TIME_DECIDED_BY_SERVER;
 import static com.linkedin.venice.writer.LeaderCompleteState.LEADER_COMPLETE_STATE_UNKNOWN;
 import static com.linkedin.venice.writer.VeniceWriter.APP_DEFAULT_LOGICAL_TS;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.client.DaVinciRecordTransformer;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
 import com.linkedin.davinci.ingestion.LagType;
+import com.linkedin.davinci.kafka.consumer.PartitionConsumptionState.TransientRecord;
 import com.linkedin.davinci.replication.RmdWithValueSchemaId;
 import com.linkedin.davinci.replication.merge.MergeConflictResolver;
 import com.linkedin.davinci.replication.merge.MergeConflictResolverFactory;
@@ -61,6 +64,7 @@ import com.linkedin.venice.writer.PutMetadata;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,6 +75,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
@@ -91,9 +96,10 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   private final int rmdProtocolVersionId;
   private final MergeConflictResolver mergeConflictResolver;
   private final RmdSerDe rmdSerDe;
-  private final Lazy<KeyLevelLocksManager> keyLevelLocksManager;
+  private final Map<Integer, KeyLevelLocksManager> keyLevelLocks;
   private final AggVersionedIngestionStats aggVersionedIngestionStats;
   private final RemoteIngestionRepairService remoteIngestionRepairService;
+  private final Map<Integer, LoadingCache<ByteArrayKey, TransientRecord>> prefechCacheMap = new ConcurrentHashMap<>();
 
   private static class ReusableObjects {
     // reuse buffer for rocksDB value object
@@ -128,18 +134,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
         getRecordTransformer);
 
     this.rmdProtocolVersionId = version.getRmdVersionId();
-
     this.aggVersionedIngestionStats = versionedIngestionStats;
-    int knownKafkaClusterNumber = serverConfig.getKafkaClusterIdToUrlMap().size();
-    int consumerPoolSizePerKafkaCluster = serverConfig.getConsumerPoolSizePerKafkaCluster();
-    int initialPoolSize = knownKafkaClusterNumber + 1;
-    /**
-     * In theory, the maximum # of keys each ingestion task can process is the # of consumers allocated for it.
-     */
-    int maxKeyLevelLocksPoolSize =
-        Math.min(storeVersionPartitionCount, consumerPoolSizePerKafkaCluster) * knownKafkaClusterNumber + 1;
-    this.keyLevelLocksManager =
-        Lazy.of(() -> new KeyLevelLocksManager(getVersionTopic().getName(), initialPoolSize, maxKeyLevelLocksPoolSize));
+    this.keyLevelLocks = new HashMap<>(storeVersionPartitionCount);
     StringAnnotatedStoreSchemaCache annotatedReadOnlySchemaRepository =
         new StringAnnotatedStoreSchemaCache(storeName, schemaRepository);
 
@@ -155,6 +151,44 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
             isWriteComputationEnabled,
             getServerConfig().isComputeFastAvroEnabled());
     this.remoteIngestionRepairService = builder.getRemoteIngestionRepairService();
+    LOGGER.info(
+        "### PREFETCH-ENGINE ### Active/Active store ingestion task created for store: {} version: {}",
+        storeName,
+        versionNumber);
+  }
+
+  @Override
+  void setupReplicaInMemState(int partition) {
+    LOGGER.info("Setting up in-memory state for partition: {}", partition);
+    prefechCacheMap.computeIfAbsent(partition, k -> {
+      LoadingCache<ByteArrayKey, TransientRecord> prefetchCache =
+          Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(5)).maximumSize(1024).build(key -> {
+            TransientRecord transientRecord;
+            return null;
+          });
+      return prefetchCache;
+    });
+  }
+
+  @Override
+  void cleanReplicaInMemState(int partition) {
+    LOGGER.info("Cleaning up in-memory state for partition: {}", partition);
+    prefechCacheMap.remove(partition);
+    LOGGER.info("Delete prefetch cache for partition: {}", partition);
+  }
+
+  private KeyLevelLocksManager getKeyLevelLockManager(int partition) {
+    return keyLevelLocks
+        .computeIfAbsent(partition, k -> new KeyLevelLocksManager(getVersionTopic().getName(), 4, 1024));
+  }
+
+  @Override
+  protected void ingestBatch(
+      Iterable<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> records,
+      PubSubTopicPartition topicPartition,
+      String kafkaUrl,
+      int kafkaClusterId) throws InterruptedException {
+    super.ingestBatch(records, topicPartition, kafkaUrl, kafkaClusterId);
   }
 
   @Override
@@ -176,34 +210,34 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           kafkaClusterId,
           beforeProcessingPerRecordTimestampNs,
           beforeProcessingBatchRecordsTimestampMs);
-    } else {
-      /**
-       * The below flow must be executed in a critical session for the same key:
-       * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
-       * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
-       *
-       * Otherwise, there could be race conditions:
-       * [fabric A thread]Read from transient record cache -> [fabric A thread]perform DCR and decide incoming value wins
-       * -> [fabric B thread]read from transient record cache -> [fabric B thread]perform DCR and decide incoming value wins
-       * -> [fabric B thread]update transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]update transient record cache
-       * -> [fabric A thread]produce to VT
-       */
-      final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(consumerRecord.getKey().getKey());
-      ReentrantLock keyLevelLock = this.keyLevelLocksManager.get().acquireLockByKey(byteArrayKey);
-      keyLevelLock.lock();
-      try {
-        return super.delegateConsumerRecord(
-            consumerRecord,
-            subPartition,
-            kafkaUrl,
-            kafkaClusterId,
-            beforeProcessingPerRecordTimestampNs,
-            beforeProcessingBatchRecordsTimestampMs);
-      } finally {
-        keyLevelLock.unlock();
-        this.keyLevelLocksManager.get().releaseLock(byteArrayKey);
-      }
     }
+    /**
+     * The below flow must be executed in a critical session for the same key:
+     * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
+     * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
+     *
+     * Otherwise, there could be race conditions:
+     * [fabric A thread]Read from transient record cache -> [fabric A thread]perform DCR and decide incoming value wins
+     * -> [fabric B thread]read from transient record cache -> [fabric B thread]perform DCR and decide incoming value wins
+     * -> [fabric B thread]update transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]update transient record cache
+     * -> [fabric A thread]produce to VT
+     */
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(consumerRecord.getKey().getKey());
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
+      return super.delegateConsumerRecord(
+          consumerRecord,
+          subPartition,
+          kafkaUrl,
+          kafkaClusterId,
+          beforeProcessingPerRecordTimestampNs,
+          beforeProcessingBatchRecordsTimestampMs);
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+    }
+
   }
 
   @Override
@@ -315,7 +349,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       byte[] key,
       int subPartition,
       long currentTimeForMetricsMs) {
-    PartitionConsumptionState.TransientRecord cachedRecord = partitionConsumptionState.getTransientRecord(key);
+    TransientRecord cachedRecord = partitionConsumptionState.getTransientRecord(key);
     if (cachedRecord != null) {
       getHostLevelIngestionStats().recordIngestionReplicationMetadataCacheHitCount(currentTimeForMetricsMs);
       return new RmdWithValueSchemaId(
@@ -325,17 +359,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           cachedRecord.getRmdManifest());
     }
     ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
-    byte[] replicationMetadataWithValueSchemaBytes =
-        getRmdWithValueSchemaByteBufferFromStorage(subPartition, key, rmdManifestContainer, currentTimeForMetricsMs);
-    if (replicationMetadataWithValueSchemaBytes == null) {
-      return null; // No RMD for this key
-    }
-    RmdWithValueSchemaId rmdWithValueSchemaId = new RmdWithValueSchemaId();
-    // Get old RMD manifest value from RMD Manifest container object.
-    rmdWithValueSchemaId.setRmdManifest(rmdManifestContainer.getManifest());
-    getRmdSerDe()
-        .deserializeValueSchemaIdPrependedRmdBytes(replicationMetadataWithValueSchemaBytes, rmdWithValueSchemaId);
-    return rmdWithValueSchemaId;
+    return loadRmdFromDB(key, subPartition, rmdManifestContainer);
   }
 
   public RmdSerDe getRmdSerDe() {
@@ -630,8 +654,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   }
 
   /**
-   * Get the value bytes for a key from {@link PartitionConsumptionState.TransientRecord} or from disk. The assumption
-   * is that the {@link PartitionConsumptionState.TransientRecord} only contains the full value.
+   * Get the value bytes for a key from {@link TransientRecord} or from disk. The assumption
+   * is that the {@link TransientRecord} only contains the full value.
    * @param partitionConsumptionState The {@link PartitionConsumptionState} of the current partition
    * @param key The key bytes of the incoming record.
    * @param topicPartition The {@link PubSubTopicPartition} from which the incoming record was consumed
@@ -643,18 +667,40 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       PubSubTopicPartition topicPartition,
       ChunkedValueManifestContainer valueManifestContainer,
       long currentTimeForMetricsMs) {
-    ByteBufferValueRecord<ByteBuffer> originalValue = null;
     // Find the existing value. If a value for this key is found from the transient map then use that value, otherwise
     // get it from DB.
-    PartitionConsumptionState.TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
+    TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
     if (transientRecord == null) {
+      return loadValueFromDB(key, getSubPartitionId(key, topicPartition), valueManifestContainer);
+    }
+    hostLevelIngestionStats.recordIngestionValueBytesCacheHitCount(currentTimeForMetricsMs);
+    if (transientRecord.getValue() == null) {
+      return null;
+    }
+    // construct originalValue from this transient record only if it's not null.
+    if (valueManifestContainer != null) {
+      valueManifestContainer.setManifest(transientRecord.getValueManifest());
+    }
+    return new ByteBufferValueRecord<>(
+        getCurrentValueFromTransientRecord(transientRecord),
+        transientRecord.getValueSchemaId());
+  }
+
+  ByteBufferValueRecord<ByteBuffer> loadValueFromDB(
+      byte[] key,
+      int subPartition,
+      ChunkedValueManifestContainer valueManifestContainer) {
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
       long lookupStartTimeInNS = System.nanoTime();
       ReusableObjects reusableObjects = threadLocalReusableObjects.get();
       ByteBuffer reusedRawValue = reusableObjects.reusedByteBuffer;
       BinaryDecoder binaryDecoder = reusableObjects.binaryDecoder;
-      originalValue = RawBytesChunkingAdapter.INSTANCE.getWithSchemaId(
+      ByteBufferValueRecord<ByteBuffer> originalValue = RawBytesChunkingAdapter.INSTANCE.getWithSchemaId(
           storageEngine,
-          getSubPartitionId(key, topicPartition),
+          subPartition,
           ByteBuffer.wrap(key),
           isChunked,
           reusedRawValue,
@@ -664,23 +710,111 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           valueManifestContainer);
       hostLevelIngestionStats.recordIngestionValueBytesLookUpLatency(
           LatencyUtils.getLatencyInMS(lookupStartTimeInNS),
-          currentTimeForMetricsMs);
-    } else {
-      hostLevelIngestionStats.recordIngestionValueBytesCacheHitCount(currentTimeForMetricsMs);
-      // construct originalValue from this transient record only if it's not null.
-      if (transientRecord.getValue() != null) {
-        if (valueManifestContainer != null) {
-          valueManifestContainer.setManifest(transientRecord.getValueManifest());
-        }
-        originalValue = new ByteBufferValueRecord<>(
-            getCurrentValueFromTransientRecord(transientRecord),
-            transientRecord.getValueSchemaId());
-      }
+          System.currentTimeMillis());
+      return originalValue;
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
     }
-    return originalValue;
   }
 
-  ByteBuffer getCurrentValueFromTransientRecord(PartitionConsumptionState.TransientRecord transientRecord) {
+  protected RmdWithValueSchemaId loadRmdFromDB(
+      byte[] key,
+      int subPartition,
+      ChunkedValueManifestContainer rmdManifestContainer) {
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
+      byte[] replicationMetadataWithValueSchemaBytes = getRmdWithValueSchemaByteBufferFromStorage(
+          subPartition,
+          key,
+          rmdManifestContainer,
+          System.currentTimeMillis());
+      if (replicationMetadataWithValueSchemaBytes == null) {
+        return null; // No RMD for this key
+      }
+      RmdWithValueSchemaId rmdWithValueSchemaId = new RmdWithValueSchemaId();
+      // Get old RMD manifest value from RMD Manifest container object.
+      rmdWithValueSchemaId.setRmdManifest(rmdManifestContainer.getManifest());
+      getRmdSerDe()
+          .deserializeValueSchemaIdPrependedRmdBytes(replicationMetadataWithValueSchemaBytes, rmdWithValueSchemaId);
+      return rmdWithValueSchemaId;
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+    }
+  }
+
+  @Override
+  void prefetchRecords(int partitionId, List<PrefetchKeyContext> keys) {
+    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+    for (PrefetchKeyContext pkc: keys) {
+      try {
+        PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
+        TransientRecord cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+        if (cachedRecord != null) {
+          LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
+          continue;
+        }
+        ByteArrayKey byteArrayKey = pkc.getByteArrayKey();
+        int subPartition = getSubPartitionId(byteArrayKey.getBytes(), pkc.getTopicPartition());
+        ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+        keyLevelLock.lock();
+        try {
+          cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+          if (cachedRecord != null) {
+            LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
+            continue;
+          }
+          cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition, pkc.getMsgType());
+          pcs.setCachedRecord(byteArrayKey, cachedRecord);
+          // LOGGER.info("Prefetch cache miss for key: {} loaded and update from DB", pkc.getByteArrayKey());
+        } finally {
+          keyLevelLock.unlock();
+          getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+        }
+      } catch (Exception e) {
+        LOGGER.error("Error while prefetching records for partition: {}", partitionId, e);
+      }
+    }
+  }
+
+  boolean loadValues = true;
+
+  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(
+      ByteArrayKey key,
+      int subPartition,
+      MessageType msgType) {
+    if (msgType == MessageType.CONTROL_MESSAGE) {
+      return null;
+    }
+    ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
+    RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition, rmdManifestContainer);
+    if (rmdWithValueSchemaId == null) {
+      return TransientRecord.NON_EXISTENT_KEY;
+    }
+
+    TransientRecord transientRecord;
+    if (msgType == MessageType.UPDATE && loadValues) {
+      ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
+      ByteBufferValueRecord<ByteBuffer> valueRecord =
+          loadValueFromDB(key.getBytes(), subPartition, valueManifestContainer);
+      byte[] valueBytes = valueRecord != null ? ByteUtils.extractByteArray(valueRecord.value()) : null;
+      int len = valueBytes != null ? valueBytes.length : 0;
+      int schemaId = valueRecord != null ? valueRecord.writerSchemaId() : -1;
+      transientRecord = new TransientRecord(valueBytes, -1, len, schemaId, -1, -1);
+      transientRecord.setValueManifest(valueManifestContainer.getManifest());
+    } else {
+      transientRecord = new TransientRecord(null, -1, 0, -1, -1, -1);
+    }
+
+    transientRecord.setReplicationMetadataRecord(rmdWithValueSchemaId.getRmdRecord());
+    transientRecord.setRmdManifest(rmdManifestContainer.getManifest());
+    return transientRecord;
+  }
+
+  ByteBuffer getCurrentValueFromTransientRecord(TransientRecord transientRecord) {
     ByteBuffer compressedValue =
         ByteBuffer.wrap(transientRecord.getValue(), transientRecord.getValueOffset(), transientRecord.getValueLen());
     try {

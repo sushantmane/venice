@@ -39,4 +39,8 @@ public class ByteArrayKey {
   public static ByteArrayKey wrap(byte[] content) {
     return new ByteArrayKey(content);
   }
+
+  public byte[] getBytes() {
+    return content;
+  }
 }

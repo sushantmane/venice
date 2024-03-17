@@ -25,6 +25,7 @@ public class StorePartitionDataReceiver
   private final Logger LOGGER;
 
   private long receivedRecordsCount;
+  private int processingPriority;
 
   public StorePartitionDataReceiver(
       StoreIngestionTask storeIngestionTask,
@@ -38,6 +39,21 @@ public class StorePartitionDataReceiver
     this.kafkaClusterId = kafkaClusterId;
     this.LOGGER = LogManager.getLogger(this.getClass().getSimpleName() + " [" + kafkaUrlForLogger + "]");
     this.receivedRecordsCount = 0L;
+
+    boolean isLeader = storeIngestionTask.isLeader(topicPartition.getPartitionNumber());
+    boolean isWcEnabled = storeIngestionTask.isWcEnabled();
+    boolean isAaEnabled = storeIngestionTask.isAaEnabled();
+
+    this.processingPriority = ProcessingPriority.computeProcessingPriority(isLeader, isWcEnabled, isAaEnabled);
+    LOGGER.info(
+        "Created {} for topic: {}, partition: {}, processing priority: {} (isLeader: {}, isWcEnabled: {}, isAaEnabled: {})",
+        this.getClass().getSimpleName(),
+        topicPartition.getTopicName(),
+        topicPartition.getPartitionNumber(),
+        ProcessingPriority.fromPriorityValue(processingPriority),
+        isLeader,
+        isWcEnabled,
+        isAaEnabled);
   }
 
   @Override
@@ -75,7 +91,7 @@ public class StorePartitionDataReceiver
        * all the buffered messages for the paused partitions, but just slightly more complicate.
        *
        */
-      storeIngestionTask.produceToStoreBufferServiceOrKafka(consumedData, topicPartition, kafkaUrl, kafkaClusterId);
+      storeIngestionTask.ingestBatch(consumedData, topicPartition, kafkaUrl, kafkaClusterId);
     } catch (Exception e) {
       handleDataReceiverException(e);
     }
@@ -94,6 +110,11 @@ public class StorePartitionDataReceiver
   @Override
   public PubSubTopicPartition getPubSubTopicPartition() {
     return topicPartition;
+  }
+
+  @Override
+  public int getProcessingPriority() {
+    return processingPriority;
   }
 
   private void handleDataReceiverException(Exception e) throws Exception {
@@ -133,6 +154,11 @@ public class StorePartitionDataReceiver
    */
   public long receivedRecordsCount() {
     return receivedRecordsCount;
+  }
+
+  @Override
+  public StoreIngestionTask getStoreIngestionTask() {
+    return storeIngestionTask;
   }
 
   @Override

@@ -1,5 +1,7 @@
 package com.linkedin.davinci.kafka.consumer;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.linkedin.davinci.helix.LeaderFollowerPartitionStateModel;
 import com.linkedin.davinci.utils.ByteArrayKey;
 import com.linkedin.venice.kafka.protocol.GUID;
@@ -18,6 +20,7 @@ import com.linkedin.venice.utils.PartitionUtils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.writer.LeaderCompleteState;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,12 +28,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
  * This class is used to maintain internal state for consumption of each partition.
  */
 public class PartitionConsumptionState {
+  private static final Logger LOGGER = LogManager.getLogger(PartitionConsumptionState.class);
+
   private final int partition;
   private final int amplificationFactor;
   private final int userPartition;
@@ -131,6 +138,15 @@ public class PartitionConsumptionState {
    * this map or from the DB.
    */
   private final ConcurrentMap<ByteArrayKey, TransientRecord> transientRecordMap = new VeniceConcurrentHashMap<>();
+  private Cache<ByteArrayKey, TransientRecord> inMemWriteThroughCache = Caffeine.newBuilder()
+      .expireAfterAccess(Duration.ofMinutes(1))
+      .expireAfterWrite(Duration.ofMinutes(1))
+      // .removalListener((key, value, cause) -> LOGGER.info("Removing key {} from in-memory cache cause {}", key,
+      // cause))
+      .maximumSize(300)
+      .build();
+
+  private StoreIngestionTask storeIngestionTask;
 
   /**
    * In-memory hash set which keeps track of all previous status this sub-partition has reported. It is the in-memory
@@ -222,6 +238,7 @@ public class PartitionConsumptionState {
    * more details.
    */
   private boolean firstHeartBeatSOSReceived;
+  PubSubTopicPartition rt;
 
   public PartitionConsumptionState(int partition, int amplificationFactor, OffsetRecord offsetRecord, boolean hybrid) {
     this.partition = partition;
@@ -273,6 +290,10 @@ public class PartitionConsumptionState {
     this.leaderCompleteState = LeaderCompleteState.LEADER_COMPLETE_STATE_UNKNOWN;
     this.lastLeaderCompleteStateUpdateInMs = 0;
     this.firstHeartBeatSOSReceived = false;
+  }
+
+  public void setStoreIngestionTask(StoreIngestionTask storeIngestionTask) {
+    this.storeIngestionTask = storeIngestionTask;
   }
 
   public int getPartition() {
@@ -578,6 +599,14 @@ public class PartitionConsumptionState {
     return transientRecordMap.get(ByteArrayKey.wrap(key));
   }
 
+  public TransientRecord getCachedRecord(ByteArrayKey byteArrayKey) {
+    return inMemWriteThroughCache.getIfPresent(byteArrayKey);
+  }
+
+  public void setCachedRecord(ByteArrayKey byteArrayKey, TransientRecord transientRecord) {
+    inMemWriteThroughCache.put(byteArrayKey, transientRecord);
+  }
+
   /**
    * This operation is performed atomically to delete the record only when the provided sourceOffset matches.
    *
@@ -637,6 +666,7 @@ public class PartitionConsumptionState {
    * The value could be either as received in kafka ConsumerRecord or it could be a write computed value.
    */
   public static class TransientRecord {
+    protected static final TransientRecord NON_EXISTENT_KEY = new TransientRecord(null, -1, -1, -1, -1, -1);
     private final byte[] value;
     private final int valueOffset;
     private final int valueLen;
