@@ -55,7 +55,7 @@ class ConsumptionTask implements Runnable {
   /**
    * Maintain rate counter with default window size to calculate the message and bytes rate at topic partition level.
    * Those topic partition level information will not be emitted out as a metric, to avoid emitting too many metrics per
-   * server host, they are for admin tool debugging purpose. 
+   * server host, they are for admin tool debugging purpose.
    */
   private final Map<PubSubTopicPartition, Rate> messageRatePerTopicPartition = new VeniceConcurrentHashMap<>();
   private final Map<PubSubTopicPartition, Rate> bytesRatePerTopicPartition = new VeniceConcurrentHashMap<>();
@@ -123,8 +123,10 @@ class ConsumptionTask implements Runnable {
             }
             addSomeDelay = false;
           }
+
           beforePollingTimeStamp = System.currentTimeMillis();
           topicPartitionsToUnsub = cleaner.getTopicPartitionsToUnsubscribe(topicPartitionsToUnsub); // N.B. cheap call
+
           for (PubSubTopicPartition topicPartitionToUnSub: topicPartitionsToUnsub) {
             ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> dataReceiver =
                 dataReceiverMap.remove(topicPartitionToUnSub);
@@ -142,61 +144,61 @@ class ConsumptionTask implements Runnable {
           polledPubSubMessages = pollFunction.get();
           lastSuccessfulPollTimestamp = System.currentTimeMillis();
           aggStats.recordTotalPollRequestLatency(lastSuccessfulPollTimestamp - beforePollingTimeStamp);
-          if (!polledPubSubMessages.isEmpty()) {
-            payloadBytesConsumedInOnePoll = 0;
-            polledPubSubMessagesCount = 0;
-            beforeProducingToWriteBufferTimestamp = System.currentTimeMillis();
-            for (Map.Entry<PubSubTopicPartition, List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> entry: polledPubSubMessages
-                .entrySet()) {
-              PubSubTopicPartition pubSubTopicPartition = entry.getKey();
-              String storeName = Version.parseStoreFromKafkaTopicName(pubSubTopicPartition.getTopicName());
-              StorePollCounter counter =
-                  storePollCounterMap.computeIfAbsent(storeName, k -> new StorePollCounter(0, 0));
-              List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionMessages = entry.getValue();
-              consumedDataReceiver = dataReceiverMap.get(pubSubTopicPartition);
-              if (consumedDataReceiver == null) {
-                // defensive code
-                LOGGER.error(
-                    "Couldn't find consumed data receiver for topic partition : {} after receiving records from `poll` request",
-                    pubSubTopicPartition);
-                topicPartitionsToUnsub.add(pubSubTopicPartition);
-                continue;
-              }
-              polledPubSubMessagesCount += topicPartitionMessages.size();
-              counter.msgCount += topicPartitionMessages.size();
-              int payloadSizePerTopicPartition = 0;
-              for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> pubSubMessage: topicPartitionMessages) {
-                payloadSizePerTopicPartition += pubSubMessage.getPayloadSize();
-              }
-              counter.byteSize += payloadSizePerTopicPartition;
-              payloadBytesConsumedInOnePoll += payloadSizePerTopicPartition;
 
-              lastSuccessfulPollTimestampPerTopicPartition.put(pubSubTopicPartition, lastSuccessfulPollTimestamp);
-              messageRatePerTopicPartition
-                  .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
-                  .record(topicPartitionMessages.size(), lastSuccessfulPollTimestamp);
-              bytesRatePerTopicPartition
-                  .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
-                  .record(payloadSizePerTopicPartition, lastSuccessfulPollTimestamp);
-
-              consumedDataReceiver.write(topicPartitionMessages);
-            }
-            aggStats.recordTotalConsumerRecordsProducingToWriterBufferLatency(
-                LatencyUtils.getElapsedTimeInMs(beforeProducingToWriteBufferTimestamp));
-            aggStats.recordTotalNonZeroPollResultNum(polledPubSubMessagesCount);
-            storePollCounterMap.forEach((storeName, counter) -> {
-              aggStats.getStoreStats(storeName).recordPollResultNum(counter.msgCount);
-              aggStats.getStoreStats(storeName).recordByteSizePerPoll(counter.byteSize);
-            });
-            bandwidthThrottler.accept(payloadBytesConsumedInOnePoll);
-            recordsThrottler.accept(polledPubSubMessagesCount);
-            cleaner.unsubscribe(topicPartitionsToUnsub);
-            aggStats.recordTotalDetectedNoRunningIngestionTopicPartitionNum(topicPartitionsToUnsub.size());
-            storePollCounterMap.clear();
-          } else {
-            // No result came back, here will add some delay
+          if (polledPubSubMessages.isEmpty()) {
             addSomeDelay = true;
+            continue;
           }
+
+          payloadBytesConsumedInOnePoll = 0;
+          polledPubSubMessagesCount = 0;
+          beforeProducingToWriteBufferTimestamp = System.currentTimeMillis();
+          for (Map.Entry<PubSubTopicPartition, List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> entry: polledPubSubMessages
+              .entrySet()) {
+            PubSubTopicPartition pubSubTopicPartition = entry.getKey();
+            String storeName = Version.parseStoreFromKafkaTopicName(pubSubTopicPartition.getTopicName());
+            StorePollCounter counter = storePollCounterMap.computeIfAbsent(storeName, k -> new StorePollCounter(0, 0));
+            List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionMessages = entry.getValue();
+            consumedDataReceiver = dataReceiverMap.get(pubSubTopicPartition);
+            if (consumedDataReceiver == null) {
+              // defensive code
+              LOGGER.error(
+                  "Couldn't find consumed data receiver for topic partition : {} after receiving records from `poll` request",
+                  pubSubTopicPartition);
+              topicPartitionsToUnsub.add(pubSubTopicPartition);
+              continue;
+            }
+            polledPubSubMessagesCount += topicPartitionMessages.size();
+            counter.msgCount += topicPartitionMessages.size();
+            int payloadSizePerTopicPartition = 0;
+            for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> pubSubMessage: topicPartitionMessages) {
+              payloadSizePerTopicPartition += pubSubMessage.getPayloadSize();
+            }
+            counter.byteSize += payloadSizePerTopicPartition;
+            payloadBytesConsumedInOnePoll += payloadSizePerTopicPartition;
+
+            lastSuccessfulPollTimestampPerTopicPartition.put(pubSubTopicPartition, lastSuccessfulPollTimestamp);
+            messageRatePerTopicPartition
+                .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
+                .record(topicPartitionMessages.size(), lastSuccessfulPollTimestamp);
+            bytesRatePerTopicPartition
+                .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
+                .record(payloadSizePerTopicPartition, lastSuccessfulPollTimestamp);
+
+            consumedDataReceiver.write(topicPartitionMessages);
+          }
+          aggStats.recordTotalConsumerRecordsProducingToWriterBufferLatency(
+              LatencyUtils.getElapsedTimeInMs(beforeProducingToWriteBufferTimestamp));
+          aggStats.recordTotalNonZeroPollResultNum(polledPubSubMessagesCount);
+          storePollCounterMap.forEach((storeName, counter) -> {
+            aggStats.getStoreStats(storeName).recordPollResultNum(counter.msgCount);
+            aggStats.getStoreStats(storeName).recordByteSizePerPoll(counter.byteSize);
+          });
+          bandwidthThrottler.accept(payloadBytesConsumedInOnePoll);
+          recordsThrottler.accept(polledPubSubMessagesCount);
+          cleaner.unsubscribe(topicPartitionsToUnsub);
+          aggStats.recordTotalDetectedNoRunningIngestionTopicPartitionNum(topicPartitionsToUnsub.size());
+          storePollCounterMap.clear();
         } catch (Exception e) {
           if (ExceptionUtils.recursiveClassEquals(e, InterruptedException.class)) {
             // We sometimes wrap InterruptedExceptions, so not taking any chances...

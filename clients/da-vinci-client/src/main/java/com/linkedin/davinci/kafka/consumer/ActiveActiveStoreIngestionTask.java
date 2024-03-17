@@ -156,7 +156,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   }
 
   @Override
-  protected void produceToStoreBufferServiceOrKafka(
+  protected void ingestBatch(
       Iterable<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> records,
       PubSubTopicPartition topicPartition,
       String kafkaUrl,
@@ -177,7 +177,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       }
     }
 
-    super.produceToStoreBufferServiceOrKafka(records, topicPartition, kafkaUrl, kafkaClusterId);
+    super.ingestBatch(records, topicPartition, kafkaUrl, kafkaClusterId);
   }
 
   private void firePrefetchEngine(RecordPrefetchContext recordPrefetchContext) {

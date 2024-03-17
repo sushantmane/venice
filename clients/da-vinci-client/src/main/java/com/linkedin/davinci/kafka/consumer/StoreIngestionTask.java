@@ -1030,7 +1030,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    * @param topicPartition
    * @throws InterruptedException
    */
-  protected void produceToStoreBufferServiceOrKafka(
+  protected void ingestBatch(
       Iterable<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> records,
       PubSubTopicPartition topicPartition,
       String kafkaUrl,
@@ -1273,7 +1273,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     /**
      * While using the shared consumer, we still need to check hybrid quota here since the actual disk usage could change
      * because of compaction or the disk quota could be adjusted even there is no record write.
-     * Since {@link #produceToStoreBufferServiceOrKafka} is only being invoked by {@link KafkaConsumerService} when there
+     * Since {@link #ingestBatch} is only being invoked by {@link KafkaConsumerService} when there
      * are available records, this function needs to check whether we need to resume the consumption when there are
      * paused consumption because of hybrid quota violation.
      */
