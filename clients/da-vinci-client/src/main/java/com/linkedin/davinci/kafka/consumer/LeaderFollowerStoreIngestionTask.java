@@ -2143,7 +2143,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
    * {@link DelegateConsumerRecordResult#QUEUED_TO_DRAINER}.
    *
    * This function assumes {@link #shouldProcessRecord(PubSubMessage, int)} has been called which happens in
-   * {@link StoreIngestionTask#produceToStoreBufferServiceOrKafka(Iterable, PubSubTopicPartition, String, int)}
+   * {@link StoreIngestionTask#ingestBatch(Iterable, PubSubTopicPartition, String, int)}
    * before calling this and the it was decided that this record needs to be processed. It does not perform any
    * validation check on the PartitionConsumptionState object to keep the goal of the function simple and not overload.
    *

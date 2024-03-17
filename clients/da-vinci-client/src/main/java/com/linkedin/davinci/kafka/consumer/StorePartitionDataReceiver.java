@@ -75,7 +75,7 @@ public class StorePartitionDataReceiver
        * all the buffered messages for the paused partitions, but just slightly more complicate.
        *
        */
-      storeIngestionTask.produceToStoreBufferServiceOrKafka(consumedData, topicPartition, kafkaUrl, kafkaClusterId);
+      storeIngestionTask.ingestBatch(consumedData, topicPartition, kafkaUrl, kafkaClusterId);
     } catch (Exception e) {
       handleDataReceiverException(e);
     }
