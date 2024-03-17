@@ -171,6 +171,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected final StorageEngineRepository storageEngineRepository;
   protected final AbstractStorageEngine storageEngine;
 
+  protected final Version storeVersion;
   /** Topics used for this topic consumption
    * TODO: Using a PubSubVersionTopic and PubSubRealTimeTopic extending PubSubTopic for type safety.
    * */
@@ -335,6 +336,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       Optional<ObjectCacheBackend> cacheBackend,
       DaVinciRecordTransformer recordTransformer,
       Queue<VeniceNotifier> notifiers) {
+    this.storeVersion = version;
     this.readCycleDelayMs = storeConfig.getKafkaReadCycleDelayMs();
     this.emptyPollSleepMs = storeConfig.getKafkaEmptyPollSleepMs();
     this.databaseSyncBytesIntervalForTransactionalMode = storeConfig.getDatabaseSyncBytesIntervalForTransactionalMode();
@@ -3750,6 +3752,19 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       int kafkaClusterId,
       long beforeProcessingPerRecordTimestampNs,
       long beforeProcessingBatchRecordsTimestampMs);
+
+  public boolean isLeader(int partitionId) {
+    PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
+    return pcs != null && Objects.equals(pcs.getLeaderFollowerState(), LeaderFollowerStateType.LEADER);
+  }
+
+  public boolean isAaEnabled() {
+    return storeVersion.isActiveActiveReplicationEnabled();
+  }
+
+  public boolean isWcEnabled() {
+    return isWriteComputationEnabled;
+  }
 
   /**
    * This enum represents all potential results after calling {@link #delegateConsumerRecord(PubSubMessage, int, String, int, long, long)}.
