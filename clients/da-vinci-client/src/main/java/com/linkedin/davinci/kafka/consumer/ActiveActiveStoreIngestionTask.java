@@ -10,6 +10,7 @@ import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.client.DaVinciRecordTransformer;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
 import com.linkedin.davinci.ingestion.LagType;
+import com.linkedin.davinci.kafka.consumer.ReplicaPrefetchEngine.RecordPrefetchContext;
 import com.linkedin.davinci.replication.RmdWithValueSchemaId;
 import com.linkedin.davinci.replication.merge.MergeConflictResolver;
 import com.linkedin.davinci.replication.merge.MergeConflictResolverFactory;
@@ -91,9 +92,10 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   private final int rmdProtocolVersionId;
   private final MergeConflictResolver mergeConflictResolver;
   private final RmdSerDe rmdSerDe;
-  private final Lazy<KeyLevelLocksManager> keyLevelLocksManager;
+  private final Map<Integer, KeyLevelLocksManager> keyLevelLocks;
   private final AggVersionedIngestionStats aggVersionedIngestionStats;
   private final RemoteIngestionRepairService remoteIngestionRepairService;
+  private final Version storeVersion;
 
   private static class ReusableObjects {
     // reuse buffer for rocksDB value object
@@ -128,18 +130,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
         recordTransformer);
 
     this.rmdProtocolVersionId = version.getRmdVersionId();
-
     this.aggVersionedIngestionStats = versionedIngestionStats;
-    int knownKafkaClusterNumber = serverConfig.getKafkaClusterIdToUrlMap().size();
-    int consumerPoolSizePerKafkaCluster = serverConfig.getConsumerPoolSizePerKafkaCluster();
-    int initialPoolSize = knownKafkaClusterNumber + 1;
-    /**
-     * In theory, the maximum # of keys each ingestion task can process is the # of consumers allocated for it.
-     */
-    int maxKeyLevelLocksPoolSize =
-        Math.min(storeVersionPartitionCount, consumerPoolSizePerKafkaCluster) * knownKafkaClusterNumber + 1;
-    this.keyLevelLocksManager =
-        Lazy.of(() -> new KeyLevelLocksManager(getVersionTopic().getName(), initialPoolSize, maxKeyLevelLocksPoolSize));
+    this.keyLevelLocks = new HashMap<>(storeVersionPartitionCount);
     StringAnnotatedStoreSchemaCache annotatedReadOnlySchemaRepository =
         new StringAnnotatedStoreSchemaCache(storeName, schemaRepository);
 
@@ -155,6 +147,42 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
             isWriteComputationEnabled,
             getServerConfig().isComputeFastAvroEnabled());
     this.remoteIngestionRepairService = builder.getRemoteIngestionRepairService();
+    this.storeVersion = version;
+  }
+
+  private KeyLevelLocksManager getKeyLevelLockManager(int partition) {
+    return keyLevelLocks
+        .computeIfAbsent(partition, k -> new KeyLevelLocksManager(getVersionTopic().getName(), 4, 1024));
+  }
+
+  @Override
+  protected void produceToStoreBufferServiceOrKafka(
+      Iterable<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> records,
+      PubSubTopicPartition topicPartition,
+      String kafkaUrl,
+      int kafkaClusterId) throws InterruptedException {
+    /**
+     * If the store is a hybrid store and the topic is a real-time topic, we will prefetch data.
+     */
+    if (storeVersion.getHybridStoreConfig() != null && topicPartition.isRealTime() && !isUserSystemStore()) {
+      List<KafkaKey> keys = new ArrayList<>();
+      for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record: records) {
+        if (!record.getKey().isControlMessage()) {
+          keys.add(record.getKey());
+        }
+      }
+      if (!keys.isEmpty()) {
+        firePrefetchEngine(
+            new RecordPrefetchContext(versionTopic.getName(), topicPartition.getPartitionNumber(), keys));
+      }
+    }
+
+    super.produceToStoreBufferServiceOrKafka(records, topicPartition, kafkaUrl, kafkaClusterId);
+  }
+
+  private void firePrefetchEngine(RecordPrefetchContext recordPrefetchContext) {
+    LOGGER.info("Firing prefetch engine - {}", recordPrefetchContext);
+
   }
 
   @Override
@@ -176,34 +204,34 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           kafkaClusterId,
           beforeProcessingPerRecordTimestampNs,
           beforeProcessingBatchRecordsTimestampMs);
-    } else {
-      /**
-       * The below flow must be executed in a critical session for the same key:
-       * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
-       * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
-       *
-       * Otherwise, there could be race conditions:
-       * [fabric A thread]Read from transient record cache -> [fabric A thread]perform DCR and decide incoming value wins
-       * -> [fabric B thread]read from transient record cache -> [fabric B thread]perform DCR and decide incoming value wins
-       * -> [fabric B thread]update transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]update transient record cache
-       * -> [fabric A thread]produce to VT
-       */
-      final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(consumerRecord.getKey().getKey());
-      ReentrantLock keyLevelLock = this.keyLevelLocksManager.get().acquireLockByKey(byteArrayKey);
-      keyLevelLock.lock();
-      try {
-        return super.delegateConsumerRecord(
-            consumerRecord,
-            subPartition,
-            kafkaUrl,
-            kafkaClusterId,
-            beforeProcessingPerRecordTimestampNs,
-            beforeProcessingBatchRecordsTimestampMs);
-      } finally {
-        keyLevelLock.unlock();
-        this.keyLevelLocksManager.get().releaseLock(byteArrayKey);
-      }
     }
+    /**
+     * The below flow must be executed in a critical session for the same key:
+     * Read existing value/RMD from transient record cache/disk -> perform DCR and decide incoming value wins
+     * -> update transient record cache -> produce to VT (just call send, no need to wait for the produce future in the critical session)
+     *
+     * Otherwise, there could be race conditions:
+     * [fabric A thread]Read from transient record cache -> [fabric A thread]perform DCR and decide incoming value wins
+     * -> [fabric B thread]read from transient record cache -> [fabric B thread]perform DCR and decide incoming value wins
+     * -> [fabric B thread]update transient record cache -> [fabric B thread]produce to VT -> [fabric A thread]update transient record cache
+     * -> [fabric A thread]produce to VT
+     */
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(consumerRecord.getKey().getKey());
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
+      return super.delegateConsumerRecord(
+          consumerRecord,
+          subPartition,
+          kafkaUrl,
+          kafkaClusterId,
+          beforeProcessingPerRecordTimestampNs,
+          beforeProcessingBatchRecordsTimestampMs);
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+    }
+
   }
 
   @Override
