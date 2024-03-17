@@ -39,10 +39,21 @@ public class StorePartitionDataReceiver
     this.kafkaClusterId = kafkaClusterId;
     this.LOGGER = LogManager.getLogger(this.getClass().getSimpleName() + " [" + kafkaUrlForLogger + "]");
     this.receivedRecordsCount = 0L;
-    this.processingPriority = ProcessingPriority.computeProcessingPriority(
-        storeIngestionTask.isLeader(topicPartition.getPartitionNumber()),
-        storeIngestionTask.isWcEnabled(),
-        storeIngestionTask.isAaEnabled());
+
+    boolean isLeader = storeIngestionTask.isLeader(topicPartition.getPartitionNumber());
+    boolean isWcEnabled = storeIngestionTask.isWcEnabled();
+    boolean isAaEnabled = storeIngestionTask.isAaEnabled();
+
+    this.processingPriority = ProcessingPriority.computeProcessingPriority(isLeader, isWcEnabled, isAaEnabled);
+    LOGGER.info(
+        "Created {} for topic: {}, partition: {}, processing priority: {} (isLeader: {}, isWcEnabled: {}, isAaEnabled: {})",
+        this.getClass().getSimpleName(),
+        topicPartition.getTopicName(),
+        topicPartition.getPartitionNumber(),
+        ProcessingPriority.fromPriorityValue(processingPriority),
+        isLeader,
+        isWcEnabled,
+        isAaEnabled);
   }
 
   @Override

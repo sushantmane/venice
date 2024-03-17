@@ -101,7 +101,7 @@ class ConsumptionTask implements Runnable {
     this.aggStats = aggStats;
     this.cleaner = cleaner;
     String kafkaUrlForLogger = Utils.getSanitizedStringForLogger(kafkaUrl);
-    this.LOGGER = LogManager.getLogger(getClass().getSimpleName() + "[ " + kafkaUrlForLogger + " - " + taskId + " ]");
+    this.LOGGER = LogManager.getLogger(getClass().getSimpleName() + "--" + kafkaUrlForLogger + "--t" + taskId);
   }
 
   @Override
@@ -158,30 +158,42 @@ class ConsumptionTask implements Runnable {
           }
 
           priorityQueue.clear();
-
           int numTopicPartitions = polledPubSubMessages.size();
-          List<PubSubTopicPartition> priorityOrderedTopicPartitions = new ArrayList<>(numTopicPartitions);
+          List<PubSubTopicPartition> priorityOrderedTps = new ArrayList<>(numTopicPartitions);
+          Map<PubSubTopicPartition, RecordPrefetchContext> rpcMap = new HashMap<>(16);
+
           for (PubSubTopicPartition tp: polledPubSubMessages.keySet()) {
             // check if we need prefetch
             RecordPrefetchContext prefetchContext = getPrefetchContext(tp, polledPubSubMessages.get(tp));
             // if we don't need to prefetch, add to priorityOrderedTopicPartitions
             if (prefetchContext == EMPTY_RPC) {
-              priorityOrderedTopicPartitions.add(tp);
+              priorityOrderedTps.add(tp);
               continue;
             }
             priorityQueue.add(tp);
+            rpcMap.put(tp, prefetchContext);
           }
+          List<RecordPrefetchContext> priorityOrderedRpc = new ArrayList<>(priorityQueue.size());
           // add the rest of the topic partitions
           while (!priorityQueue.isEmpty()) {
             PubSubTopicPartition tp = priorityQueue.poll();
-            priorityOrderedTopicPartitions.add(tp);
+            priorityOrderedTps.add(tp);
+            RecordPrefetchContext rpc = rpcMap.get(tp);
+            if (rpc != null) {
+              priorityOrderedRpc.add(rpc);
+            }
+          }
+
+          // log who's determined to be prefetched
+          if (!priorityOrderedRpc.isEmpty()) {
+            LOGGER.info("Topic partitions determined to be prefetched: {}", priorityOrderedRpc);
           }
 
           payloadBytesConsumedInOnePoll = 0;
           polledPubSubMessagesCount = 0;
           beforeProducingToWriteBufferTimestamp = System.currentTimeMillis();
 
-          for (PubSubTopicPartition curTp: priorityOrderedTopicPartitions) {
+          for (PubSubTopicPartition curTp: priorityOrderedTps) {
             List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionMessages =
                 polledPubSubMessages.get(curTp);
 
@@ -256,8 +268,9 @@ class ConsumptionTask implements Runnable {
       LOGGER.error("Received records from `poll` request for topic partition : {} but no data receiver found", tp);
       return EMPTY_RPC;
     }
-
-    if (receiver.getProcessingPriority() == 0) {
+    int po = receiver.getProcessingPriority();
+    if (po != ProcessingPriority.LEADER_WC_AA.getPriorityValue()
+        && po != ProcessingPriority.LEADER_NO_WC_AA.getPriorityValue()) {
       return EMPTY_RPC;
     }
 
