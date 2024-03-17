@@ -95,7 +95,6 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   private final Map<Integer, KeyLevelLocksManager> keyLevelLocks;
   private final AggVersionedIngestionStats aggVersionedIngestionStats;
   private final RemoteIngestionRepairService remoteIngestionRepairService;
-  private final Version storeVersion;
 
   private static class ReusableObjects {
     // reuse buffer for rocksDB value object
@@ -147,7 +146,6 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
             isWriteComputationEnabled,
             getServerConfig().isComputeFastAvroEnabled());
     this.remoteIngestionRepairService = builder.getRemoteIngestionRepairService();
-    this.storeVersion = version;
   }
 
   private KeyLevelLocksManager getKeyLevelLockManager(int partition) {

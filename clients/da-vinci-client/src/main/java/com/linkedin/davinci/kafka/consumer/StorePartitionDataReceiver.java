@@ -25,6 +25,7 @@ public class StorePartitionDataReceiver
   private final Logger LOGGER;
 
   private long receivedRecordsCount;
+  private int processingPriority;
 
   public StorePartitionDataReceiver(
       StoreIngestionTask storeIngestionTask,
@@ -38,6 +39,10 @@ public class StorePartitionDataReceiver
     this.kafkaClusterId = kafkaClusterId;
     this.LOGGER = LogManager.getLogger(this.getClass().getSimpleName() + " [" + kafkaUrlForLogger + "]");
     this.receivedRecordsCount = 0L;
+    this.processingPriority = ProcessingPriority.computeProcessingPriority(
+        storeIngestionTask.isLeader(topicPartition.getPartitionNumber()),
+        storeIngestionTask.isWcEnabled(),
+        storeIngestionTask.isAaEnabled());
   }
 
   @Override
@@ -94,6 +99,11 @@ public class StorePartitionDataReceiver
   @Override
   public PubSubTopicPartition getPubSubTopicPartition() {
     return topicPartition;
+  }
+
+  @Override
+  public int getProcessingPriority() {
+    return processingPriority;
   }
 
   private void handleDataReceiverException(Exception e) throws Exception {

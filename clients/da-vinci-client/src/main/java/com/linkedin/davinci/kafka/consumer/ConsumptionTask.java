@@ -1,5 +1,7 @@
 package com.linkedin.davinci.kafka.consumer;
 
+import static com.linkedin.davinci.kafka.consumer.ReplicaPrefetchEngine.*;
+
 import com.linkedin.davinci.ingestion.consumption.ConsumedDataReceiver;
 import com.linkedin.davinci.stats.AggKafkaConsumerServiceStats;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
@@ -13,10 +15,13 @@ import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricConfig;
 import io.tehuti.metrics.stats.Rate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.function.IntConsumer;
 import java.util.function.Supplier;
@@ -76,6 +81,8 @@ class ConsumptionTask implements Runnable {
    * If a topic partition has not got any record polled back, we use -1 for the last poll timestamp.
    */
   public final static long DEFAULT_TOPIC_PARTITION_NO_POLL_TIMESTAMP = -1L;
+
+  private final PriorityQueue<PubSubTopicPartition> priorityQueue = new PriorityQueue<>(getPqComparator());
 
   public ConsumptionTask(
       final String kafkaUrl,
@@ -150,22 +157,44 @@ class ConsumptionTask implements Runnable {
             continue;
           }
 
+          priorityQueue.clear();
+
+          int numTopicPartitions = polledPubSubMessages.size();
+          List<PubSubTopicPartition> priorityOrderedTopicPartitions = new ArrayList<>(numTopicPartitions);
+          for (PubSubTopicPartition tp: polledPubSubMessages.keySet()) {
+            // check if we need prefetch
+            RecordPrefetchContext prefetchContext = getPrefetchContext(tp, polledPubSubMessages.get(tp));
+            // if we don't need to prefetch, add to priorityOrderedTopicPartitions
+            if (prefetchContext == EMPTY_RPC) {
+              priorityOrderedTopicPartitions.add(tp);
+              continue;
+            }
+            priorityQueue.add(tp);
+          }
+          // add the rest of the topic partitions
+          while (!priorityQueue.isEmpty()) {
+            PubSubTopicPartition tp = priorityQueue.poll();
+            priorityOrderedTopicPartitions.add(tp);
+          }
+
           payloadBytesConsumedInOnePoll = 0;
           polledPubSubMessagesCount = 0;
           beforeProducingToWriteBufferTimestamp = System.currentTimeMillis();
-          for (Map.Entry<PubSubTopicPartition, List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> entry: polledPubSubMessages
-              .entrySet()) {
-            PubSubTopicPartition pubSubTopicPartition = entry.getKey();
-            String storeName = Version.parseStoreFromKafkaTopicName(pubSubTopicPartition.getTopicName());
+
+          for (PubSubTopicPartition curTp: priorityOrderedTopicPartitions) {
+            List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionMessages =
+                polledPubSubMessages.get(curTp);
+
+            String storeName = Version.parseStoreFromKafkaTopicName(curTp.getTopicName());
             StorePollCounter counter = storePollCounterMap.computeIfAbsent(storeName, k -> new StorePollCounter(0, 0));
-            List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> topicPartitionMessages = entry.getValue();
-            consumedDataReceiver = dataReceiverMap.get(pubSubTopicPartition);
+
+            consumedDataReceiver = dataReceiverMap.get(curTp);
             if (consumedDataReceiver == null) {
               // defensive code
               LOGGER.error(
                   "Couldn't find consumed data receiver for topic partition : {} after receiving records from `poll` request",
-                  pubSubTopicPartition);
-              topicPartitionsToUnsub.add(pubSubTopicPartition);
+                  curTp);
+              topicPartitionsToUnsub.add(curTp);
               continue;
             }
             polledPubSubMessagesCount += topicPartitionMessages.size();
@@ -177,12 +206,10 @@ class ConsumptionTask implements Runnable {
             counter.byteSize += payloadSizePerTopicPartition;
             payloadBytesConsumedInOnePoll += payloadSizePerTopicPartition;
 
-            lastSuccessfulPollTimestampPerTopicPartition.put(pubSubTopicPartition, lastSuccessfulPollTimestamp);
-            messageRatePerTopicPartition
-                .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
+            lastSuccessfulPollTimestampPerTopicPartition.put(curTp, lastSuccessfulPollTimestamp);
+            messageRatePerTopicPartition.computeIfAbsent(curTp, tp -> createRate(lastSuccessfulPollTimestamp))
                 .record(topicPartitionMessages.size(), lastSuccessfulPollTimestamp);
-            bytesRatePerTopicPartition
-                .computeIfAbsent(pubSubTopicPartition, tp -> createRate(lastSuccessfulPollTimestamp))
+            bytesRatePerTopicPartition.computeIfAbsent(curTp, tp -> createRate(lastSuccessfulPollTimestamp))
                 .record(payloadSizePerTopicPartition, lastSuccessfulPollTimestamp);
 
             consumedDataReceiver.write(topicPartitionMessages);
@@ -219,6 +246,32 @@ class ConsumptionTask implements Runnable {
     } finally {
       LOGGER.info("Shared consumer thread: {} exited", Thread.currentThread().getName());
     }
+  }
+
+  private RecordPrefetchContext getPrefetchContext(
+      PubSubTopicPartition tp,
+      List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> messages) {
+    ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> receiver = dataReceiverMap.get(tp);
+    if (receiver == null) {
+      LOGGER.error("Received records from `poll` request for topic partition : {} but no data receiver found", tp);
+      return EMPTY_RPC;
+    }
+
+    if (receiver.getProcessingPriority() == 0) {
+      return EMPTY_RPC;
+    }
+
+    List<KafkaKey> keysToFetch = new ArrayList<>();
+    for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> message: messages) {
+      if (message.getKey().isControlMessage()) {
+        continue;
+      }
+      keysToFetch.add(message.getKey());
+    }
+    if (keysToFetch.isEmpty()) {
+      return EMPTY_RPC;
+    }
+    return new RecordPrefetchContext(tp.getPubSubTopic().getName(), tp.getPartitionNumber(), keysToFetch);
   }
 
   void stop() {
@@ -296,5 +349,21 @@ class ConsumptionTask implements Runnable {
       this.msgCount = msgCount;
       this.byteSize = byteSize;
     }
+  }
+
+  private Comparator<PubSubTopicPartition> getPqComparator() {
+    return (o1, o2) -> {
+      ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> receiver1 =
+          dataReceiverMap.get(o1);
+      ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> receiver2 =
+          dataReceiverMap.get(o2);
+      if (receiver1 == null || receiver2 == null) {
+        LOGGER.error(
+            "Received records from `poll` request for topic partition : {} but no data receiver found",
+            receiver1 == null ? o1 : o2);
+        return receiver1 == null ? -1 : 1;
+      }
+      return Integer.compare(receiver1.getProcessingPriority(), receiver2.getProcessingPriority());
+    };
   }
 }

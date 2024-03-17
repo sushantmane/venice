@@ -34,4 +34,6 @@ public interface ConsumedDataReceiver<MESSAGE> {
   void notifyOfTopicDeletion(String topicName);
 
   PubSubTopicPartition getPubSubTopicPartition();
+
+  int getProcessingPriority();
 }
