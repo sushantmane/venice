@@ -6,10 +6,13 @@ import static com.linkedin.venice.VeniceConstants.REWIND_TIME_DECIDED_BY_SERVER;
 import static com.linkedin.venice.writer.LeaderCompleteState.LEADER_COMPLETE_STATE_UNKNOWN;
 import static com.linkedin.venice.writer.VeniceWriter.APP_DEFAULT_LOGICAL_TS;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.client.DaVinciRecordTransformer;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
 import com.linkedin.davinci.ingestion.LagType;
+import com.linkedin.davinci.kafka.consumer.PartitionConsumptionState.TransientRecord;
 import com.linkedin.davinci.replication.RmdWithValueSchemaId;
 import com.linkedin.davinci.replication.merge.MergeConflictResolver;
 import com.linkedin.davinci.replication.merge.MergeConflictResolverFactory;
@@ -61,6 +64,7 @@ import com.linkedin.venice.writer.PutMetadata;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,6 +75,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -94,6 +99,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   private final Map<Integer, KeyLevelLocksManager> keyLevelLocks;
   private final AggVersionedIngestionStats aggVersionedIngestionStats;
   private final RemoteIngestionRepairService remoteIngestionRepairService;
+  private final Map<Integer, LoadingCache<ByteArrayKey, TransientRecord>> prefechCacheMap = new ConcurrentHashMap<>();
 
   private static class ReusableObjects {
     // reuse buffer for rocksDB value object
@@ -145,6 +151,26 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
             isWriteComputationEnabled,
             getServerConfig().isComputeFastAvroEnabled());
     this.remoteIngestionRepairService = builder.getRemoteIngestionRepairService();
+  }
+
+  @Override
+  void setupReplicaInMemState(int partition) {
+    LOGGER.info("Setting up in-memory state for partition: {}", partition);
+    prefechCacheMap.computeIfAbsent(partition, k -> {
+      LoadingCache<ByteArrayKey, TransientRecord> prefetchCache =
+          Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(5)).maximumSize(1024).build(key -> {
+            TransientRecord transientRecord;
+            return null;
+          });
+      return prefetchCache;
+    });
+  }
+
+  @Override
+  void cleanReplicaInMemState(int partition) {
+    LOGGER.info("Cleaning up in-memory state for partition: {}", partition);
+    prefechCacheMap.remove(partition);
+    LOGGER.info("Delete prefetch cache for partition: {}", partition);
   }
 
   private KeyLevelLocksManager getKeyLevelLockManager(int partition) {
@@ -319,7 +345,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       byte[] key,
       int subPartition,
       long currentTimeForMetricsMs) {
-    PartitionConsumptionState.TransientRecord cachedRecord = partitionConsumptionState.getTransientRecord(key);
+    TransientRecord cachedRecord = partitionConsumptionState.getTransientRecord(key);
     if (cachedRecord != null) {
       getHostLevelIngestionStats().recordIngestionReplicationMetadataCacheHitCount(currentTimeForMetricsMs);
       return new RmdWithValueSchemaId(
@@ -340,6 +366,11 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     getRmdSerDe()
         .deserializeValueSchemaIdPrependedRmdBytes(replicationMetadataWithValueSchemaBytes, rmdWithValueSchemaId);
     return rmdWithValueSchemaId;
+  }
+
+  @Override
+  void prefetchRecords(int partitionId, List<KafkaKey> keys) {
+    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
   }
 
   public RmdSerDe getRmdSerDe() {
@@ -634,8 +665,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   }
 
   /**
-   * Get the value bytes for a key from {@link PartitionConsumptionState.TransientRecord} or from disk. The assumption
-   * is that the {@link PartitionConsumptionState.TransientRecord} only contains the full value.
+   * Get the value bytes for a key from {@link TransientRecord} or from disk. The assumption
+   * is that the {@link TransientRecord} only contains the full value.
    * @param partitionConsumptionState The {@link PartitionConsumptionState} of the current partition
    * @param key The key bytes of the incoming record.
    * @param topicPartition The {@link PubSubTopicPartition} from which the incoming record was consumed
@@ -650,7 +681,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     ByteBufferValueRecord<ByteBuffer> originalValue = null;
     // Find the existing value. If a value for this key is found from the transient map then use that value, otherwise
     // get it from DB.
-    PartitionConsumptionState.TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
+    TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
     if (transientRecord == null) {
       long lookupStartTimeInNS = System.nanoTime();
       ReusableObjects reusableObjects = threadLocalReusableObjects.get();
@@ -684,7 +715,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     return originalValue;
   }
 
-  ByteBuffer getCurrentValueFromTransientRecord(PartitionConsumptionState.TransientRecord transientRecord) {
+  ByteBuffer getCurrentValueFromTransientRecord(TransientRecord transientRecord) {
     ByteBuffer compressedValue =
         ByteBuffer.wrap(transientRecord.getValue(), transientRecord.getValueOffset(), transientRecord.getValueLen());
     try {
