@@ -10,7 +10,6 @@ import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.client.DaVinciRecordTransformer;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
 import com.linkedin.davinci.ingestion.LagType;
-import com.linkedin.davinci.kafka.consumer.ReplicaPrefetchEngine.RecordPrefetchContext;
 import com.linkedin.davinci.replication.RmdWithValueSchemaId;
 import com.linkedin.davinci.replication.merge.MergeConflictResolver;
 import com.linkedin.davinci.replication.merge.MergeConflictResolverFactory;
@@ -159,28 +158,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       PubSubTopicPartition topicPartition,
       String kafkaUrl,
       int kafkaClusterId) throws InterruptedException {
-    /**
-     * If the store is a hybrid store and the topic is a real-time topic, we will prefetch data.
-     */
-    if (storeVersion.getHybridStoreConfig() != null && topicPartition.isRealTime() && !isUserSystemStore()) {
-      List<KafkaKey> keys = new ArrayList<>();
-      for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> record: records) {
-        if (!record.getKey().isControlMessage()) {
-          keys.add(record.getKey());
-        }
-      }
-      if (!keys.isEmpty()) {
-        firePrefetchEngine(
-            new RecordPrefetchContext(versionTopic.getName(), topicPartition.getPartitionNumber(), keys));
-      }
-    }
-
     super.ingestBatch(records, topicPartition, kafkaUrl, kafkaClusterId);
-  }
-
-  private void firePrefetchEngine(RecordPrefetchContext recordPrefetchContext) {
-    LOGGER.info("Firing prefetch engine - {}", recordPrefetchContext);
-
   }
 
   @Override

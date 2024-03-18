@@ -65,6 +65,8 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
   private static final Logger LOGGER = LogManager.getLogger(RocksDBStoragePartition.class);
   private static final String ROCKSDB_ERROR_MESSAGE_FOR_RUNNING_OUT_OF_SPACE_QUOTA = "Max allowed space was reached";
   protected static final ReadOptions READ_OPTIONS_DEFAULT = new ReadOptions();
+  protected static final ReadOptions multiGetRo = getMultiGetRo();
+
   static final byte[] REPLICATION_METADATA_COLUMN_FAMILY = "timestamp_metadata".getBytes();
 
   private static final FlushOptions WAIT_FOR_FLUSH_OPTIONS = new FlushOptions().setWaitForFlush(true);
@@ -560,11 +562,29 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
     }
   }
 
+  private static ReadOptions getMultiGetRo() {
+    ReadOptions readOptions = new ReadOptions();
+    readOptions.setAsyncIo(true);
+    return readOptions;
+  }
+
   public List<byte[]> multiGet(List<byte[]> keys) {
     readCloseRWLock.readLock().lock();
     try {
       makeSureRocksDBIsStillOpen();
       return rocksDB.multiGetAsList(keys);
+    } catch (RocksDBException e) {
+      throw new VeniceException("Failed to get value from store: " + storeName + ", partition id: " + partitionId, e);
+    } finally {
+      readCloseRWLock.readLock().unlock();
+    }
+  }
+
+  public List<byte[]> multiGetOptimized(List<byte[]> keys) {
+    readCloseRWLock.readLock().lock();
+    try {
+      makeSureRocksDBIsStillOpen();
+      return rocksDB.multiGetAsList(multiGetRo, keys);
     } catch (RocksDBException e) {
       throw new VeniceException("Failed to get value from store: " + storeName + ", partition id: " + partitionId, e);
     } finally {
