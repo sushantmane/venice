@@ -157,6 +157,11 @@ public class StorePartitionDataReceiver
   }
 
   @Override
+  public StoreIngestionTask getStoreIngestionTask() {
+    return storeIngestionTask;
+  }
+
+  @Override
   public String toString() {
     return this.getClass().getSimpleName() + "{" + "VT=" + storeIngestionTask.getVersionTopic() + ", topicPartition="
         + topicPartition + '}';

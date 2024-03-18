@@ -179,9 +179,8 @@ class ConsumptionTask implements Runnable {
             PubSubTopicPartition tp = priorityQueue.poll();
             priorityOrderedTps.add(tp);
             RecordPrefetchContext rpc = rpcMap.get(tp);
-            if (rpc != null) {
-              priorityOrderedRpc.add(rpc);
-            }
+            priorityOrderedRpc.add(rpc);
+            ReplicaPrefetchEngine.triggerPrefetch(rpc);
           }
 
           // log who's determined to be prefetched
@@ -264,8 +263,12 @@ class ConsumptionTask implements Runnable {
       PubSubTopicPartition tp,
       List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> messages) {
     ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> receiver = dataReceiverMap.get(tp);
+    if (!tp.isRealTime()) {
+      LOGGER.debug("Not prefetching for non-realtime topic partition: {}", tp);
+      return EMPTY_RPC;
+    }
     if (receiver == null) {
-      LOGGER.error("Received records from `poll` request for topic partition : {} but no data receiver found", tp);
+      LOGGER.debug("Received records from `poll` request for topic partition : {} but no data receiver found", tp);
       return EMPTY_RPC;
     }
     int po = receiver.getProcessingPriority();
@@ -284,7 +287,7 @@ class ConsumptionTask implements Runnable {
     if (keysToFetch.isEmpty()) {
       return EMPTY_RPC;
     }
-    return new RecordPrefetchContext(tp.getPubSubTopic().getName(), tp.getPartitionNumber(), keysToFetch);
+    return new RecordPrefetchContext(receiver.getStoreIngestionTask(), tp.getPartitionNumber(), keysToFetch);
   }
 
   void stop() {

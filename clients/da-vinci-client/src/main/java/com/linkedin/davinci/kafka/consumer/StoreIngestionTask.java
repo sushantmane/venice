@@ -3557,6 +3557,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     return newConsumerProps;
   }
 
+  public boolean isPrefetchEnabled() {
+    return isActiveActiveReplicationEnabled;
+  }
+
+  public void prefetchRecords(int partitionId, List<KafkaKey> keys) {
+    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+  }
+
   /**
    * A function that would apply on a specific partition to check whether the partition is ready to serve.
    */
@@ -3935,4 +3943,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     }
     return true;
   }
+
+  /**
+   * Fetch values for given keys from the storage engine.
+   */
+
 }
