@@ -1778,6 +1778,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         PartitionConsumptionState newPartitionConsumptionState =
             new PartitionConsumptionState(partition, amplificationFactor, offsetRecord, hybridStoreConfig.isPresent());
         newPartitionConsumptionState.setLeaderFollowerState(leaderState);
+        setupReplicaInMemState(partition);
 
         partitionConsumptionStateMap.put(partition, newPartitionConsumptionState);
         kafkaDataIntegrityValidator.setPartitionState(partition, offsetRecord);
@@ -1863,7 +1864,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
          * {@link #kafkaDataValidationService}, we would like to drain all the buffered messages before cleaning up those
          * two variables to avoid the race condition.
          */
-        partitionConsumptionStateMap.remove(partition);
+        cleanUpPcs(partition);
         storageUtilizationManager.removePartition(partition);
         kafkaDataIntegrityValidator.clearPartition(partition);
         // Reset the error partition tracking
@@ -1895,6 +1896,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       default:
         throw new UnsupportedOperationException(operation.name() + " is not supported in " + getClass().getName());
     }
+  }
+
+  private void cleanUpPcs(int partition) {
+    partitionConsumptionStateMap.remove(partition);
+    cleanReplicaInMemState(partition);
+  }
+
+  void cleanReplicaInMemState(int partition) {
   }
 
   private void resetOffset(int partition, PubSubTopicPartition topicPartition, boolean restartIngestion) {
@@ -1931,6 +1940,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
               amplificationFactor,
               new OffsetRecord(partitionStateSerializer),
               hybridStoreConfig.isPresent()));
+      setupReplicaInMemState(partition);
       storageUtilizationManager.initPartition(partition);
       // Reset the error partition tracking
       partitionIngestionExceptionList.set(partition, null);
@@ -1943,6 +1953,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     }
     kafkaDataIntegrityValidator.clearPartition(partition);
     storageMetadataService.clearOffset(topicPartition.getPubSubTopic().getName(), partition);
+  }
+
+  void setupReplicaInMemState(int partition) {
   }
 
   /**
@@ -3557,14 +3570,6 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     return newConsumerProps;
   }
 
-  public boolean isPrefetchEnabled() {
-    return isActiveActiveReplicationEnabled;
-  }
-
-  public void prefetchRecords(int partitionId, List<KafkaKey> keys) {
-    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
-  }
-
   /**
    * A function that would apply on a specific partition to check whether the partition is ready to serve.
    */
@@ -3944,8 +3949,15 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     return true;
   }
 
+  public boolean isPrefetchEnabled() {
+    return isActiveActiveReplicationEnabled;
+  }
+
   /**
    * Fetch values for given keys from the storage engine.
    */
+  void prefetchRecords(int partitionId, List<KafkaKey> keys) {
+    LOGGER.info("No-OP: Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+  }
 
 }
