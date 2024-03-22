@@ -31,6 +31,7 @@ import com.linkedin.davinci.store.AbstractStorageEngine;
 import com.linkedin.davinci.store.StoragePartitionConfig;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheBackend;
 import com.linkedin.davinci.store.record.ValueRecord;
+import com.linkedin.davinci.utils.ByteArrayKey;
 import com.linkedin.davinci.utils.ChunkAssembler;
 import com.linkedin.davinci.validation.KafkaDataIntegrityValidator;
 import com.linkedin.venice.common.VeniceSystemStoreType;
@@ -3983,8 +3984,11 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   /**
    * Fetch values for given keys from the storage engine.
    */
-  void prefetchRecords(int partitionId, List<KafkaKey> keys) {
+  void prefetchRecords(int partitionId, List<PrefetchKeyContext> keys) {
     LOGGER.info("No-OP: Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
   }
 
+  PartitionConsumptionState.TransientRecord loadKeyFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
+    throw new UnsupportedOperationException("No-OP: Loading key from DB is not supported.");
+  }
 }

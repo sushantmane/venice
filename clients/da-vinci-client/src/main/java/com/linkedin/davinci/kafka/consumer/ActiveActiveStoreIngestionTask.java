@@ -354,23 +354,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           cachedRecord.getReplicationMetadataRecord(),
           cachedRecord.getRmdManifest());
     }
-    ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
-    byte[] replicationMetadataWithValueSchemaBytes =
-        getRmdWithValueSchemaByteBufferFromStorage(subPartition, key, rmdManifestContainer, currentTimeForMetricsMs);
-    if (replicationMetadataWithValueSchemaBytes == null) {
-      return null; // No RMD for this key
-    }
-    RmdWithValueSchemaId rmdWithValueSchemaId = new RmdWithValueSchemaId();
-    // Get old RMD manifest value from RMD Manifest container object.
-    rmdWithValueSchemaId.setRmdManifest(rmdManifestContainer.getManifest());
-    getRmdSerDe()
-        .deserializeValueSchemaIdPrependedRmdBytes(replicationMetadataWithValueSchemaBytes, rmdWithValueSchemaId);
-    return rmdWithValueSchemaId;
-  }
-
-  @Override
-  void prefetchRecords(int partitionId, List<KafkaKey> keys) {
-    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+    return loadRmdFromDB(key, subPartition);
   }
 
   public RmdSerDe getRmdSerDe() {
@@ -678,18 +662,38 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       PubSubTopicPartition topicPartition,
       ChunkedValueManifestContainer valueManifestContainer,
       long currentTimeForMetricsMs) {
-    ByteBufferValueRecord<ByteBuffer> originalValue = null;
     // Find the existing value. If a value for this key is found from the transient map then use that value, otherwise
     // get it from DB.
     TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
     if (transientRecord == null) {
+      return loadValueFromDB(key, getSubPartitionId(key, topicPartition));
+    }
+    hostLevelIngestionStats.recordIngestionValueBytesCacheHitCount(currentTimeForMetricsMs);
+    if (transientRecord.getValue() == null) {
+      return null;
+    }
+    // construct originalValue from this transient record only if it's not null.
+    if (valueManifestContainer != null) {
+      valueManifestContainer.setManifest(transientRecord.getValueManifest());
+    }
+    return new ByteBufferValueRecord<>(
+        getCurrentValueFromTransientRecord(transientRecord),
+        transientRecord.getValueSchemaId());
+  }
+
+  ByteBufferValueRecord<ByteBuffer> loadValueFromDB(byte[] key, int subPartition) {
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
       long lookupStartTimeInNS = System.nanoTime();
       ReusableObjects reusableObjects = threadLocalReusableObjects.get();
       ByteBuffer reusedRawValue = reusableObjects.reusedByteBuffer;
       BinaryDecoder binaryDecoder = reusableObjects.binaryDecoder;
-      originalValue = RawBytesChunkingAdapter.INSTANCE.getWithSchemaId(
+      final ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
+      ByteBufferValueRecord<ByteBuffer> originalValue = RawBytesChunkingAdapter.INSTANCE.getWithSchemaId(
           storageEngine,
-          getSubPartitionId(key, topicPartition),
+          subPartition,
           ByteBuffer.wrap(key),
           isChunked,
           reusedRawValue,
@@ -699,20 +703,63 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           valueManifestContainer);
       hostLevelIngestionStats.recordIngestionValueBytesLookUpLatency(
           LatencyUtils.getLatencyInMS(lookupStartTimeInNS),
-          currentTimeForMetricsMs);
-    } else {
-      hostLevelIngestionStats.recordIngestionValueBytesCacheHitCount(currentTimeForMetricsMs);
-      // construct originalValue from this transient record only if it's not null.
-      if (transientRecord.getValue() != null) {
-        if (valueManifestContainer != null) {
-          valueManifestContainer.setManifest(transientRecord.getValueManifest());
-        }
-        originalValue = new ByteBufferValueRecord<>(
-            getCurrentValueFromTransientRecord(transientRecord),
-            transientRecord.getValueSchemaId());
-      }
+          System.currentTimeMillis());
+      return originalValue;
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
     }
-    return originalValue;
+  }
+
+  protected RmdWithValueSchemaId loadRmdFromDB(byte[] key, int subPartition) {
+    final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
+    ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+    keyLevelLock.lock();
+    try {
+      ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
+      byte[] replicationMetadataWithValueSchemaBytes = getRmdWithValueSchemaByteBufferFromStorage(
+          subPartition,
+          key,
+          rmdManifestContainer,
+          System.currentTimeMillis());
+      if (replicationMetadataWithValueSchemaBytes == null) {
+        return null; // No RMD for this key
+      }
+      RmdWithValueSchemaId rmdWithValueSchemaId = new RmdWithValueSchemaId();
+      // Get old RMD manifest value from RMD Manifest container object.
+      rmdWithValueSchemaId.setRmdManifest(rmdManifestContainer.getManifest());
+      getRmdSerDe()
+          .deserializeValueSchemaIdPrependedRmdBytes(replicationMetadataWithValueSchemaBytes, rmdWithValueSchemaId);
+      return rmdWithValueSchemaId;
+    } finally {
+      keyLevelLock.unlock();
+      getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+    }
+  }
+
+  @Override
+  void prefetchRecords(int partitionId, List<PrefetchKeyContext> keys) {
+    LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
+    for (PrefetchKeyContext pkc: keys) {
+      PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
+      pcs.getCachedRecord(pkc.getByteArrayKey());
+    }
+  }
+
+  @Override
+  PartitionConsumptionState.TransientRecord loadKeyFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
+    int subPartition = getSubPartitionId(key.getBytes(), topicPartition);
+    RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition);
+    ByteBufferValueRecord<ByteBuffer> valueRecord = loadValueFromDB(key.getBytes(), subPartition);
+    valueRecord.value().position(0);
+
+    byte[] valueBytes = ByteUtils.extractByteArray(valueRecord.value());
+
+    TransientRecord transientRecord =
+        new TransientRecord(valueBytes, -2, valueBytes.length, valueRecord.writerSchemaId(), -2, -2);
+    transientRecord.setReplicationMetadataRecord(rmdWithValueSchemaId.getRmdRecord());
+    transientRecord.setRmdManifest(rmdWithValueSchemaId.getRmdManifest());
+    return null;
   }
 
   ByteBuffer getCurrentValueFromTransientRecord(TransientRecord transientRecord) {

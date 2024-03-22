@@ -1,6 +1,5 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import java.util.Collections;
 import java.util.Iterator;
@@ -67,25 +66,25 @@ public class ReplicaPrefetchEngine {
   }
 
   static class RecordPrefetchContext {
-    private final List<KafkaKey> keysToFetch;
+    private final List<PrefetchKeyContext> keysToFetch;
     private final StoreIngestionTask sit;
     private final int partitionId;
 
-    RecordPrefetchContext(StoreIngestionTask sit, int partitionId, List<KafkaKey> keysToFetch) {
+    RecordPrefetchContext(StoreIngestionTask sit, int partitionId, List<PrefetchKeyContext> keysToFetch) {
       this.partitionId = partitionId;
       this.keysToFetch = keysToFetch;
       this.sit = sit;
     }
 
-    void addKey(KafkaKey key) {
+    void addKey(PrefetchKeyContext key) {
       keysToFetch.add(key);
     }
 
-    Iterator<KafkaKey> getKeysToFetch() {
+    Iterator<PrefetchKeyContext> getKeysToFetch() {
       return keysToFetch.iterator();
     }
 
-    List<KafkaKey> getKeysToFetchList() {
+    List<PrefetchKeyContext> getKeysToFetchList() {
       return keysToFetch;
     }
 

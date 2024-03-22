@@ -102,7 +102,10 @@ class ConsumptionTask implements Runnable {
     this.cleaner = cleaner;
     String kafkaUrlForLogger = Utils.getSanitizedStringForLogger(kafkaUrl);
     this.LOGGER = LogManager.getLogger(getClass().getSimpleName() + "--" + kafkaUrlForLogger + "--t" + taskId);
+    this.sharedConsumerName = kafkaUrlForLogger + "-t" + taskId;
   }
+
+  private final String sharedConsumerName;
 
   @Override
   public void run() {
@@ -277,12 +280,13 @@ class ConsumptionTask implements Runnable {
       return EMPTY_RPC;
     }
 
-    List<KafkaKey> keysToFetch = new ArrayList<>();
+    List<PrefetchKeyContext> keysToFetch = new ArrayList<>();
     for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> message: messages) {
       if (message.getKey().isControlMessage()) {
         continue;
       }
-      keysToFetch.add(message.getKey());
+      PrefetchKeyContext prefetchKeyContext = new PrefetchKeyContext(tp, message.getKey(), sharedConsumerName);
+      keysToFetch.add(prefetchKeyContext);
     }
     if (keysToFetch.isEmpty()) {
       return EMPTY_RPC;

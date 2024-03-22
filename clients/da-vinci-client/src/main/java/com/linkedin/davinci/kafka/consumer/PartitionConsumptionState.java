@@ -1,5 +1,6 @@
 package com.linkedin.davinci.kafka.consumer;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.linkedin.davinci.helix.LeaderFollowerPartitionStateModel;
 import com.linkedin.davinci.utils.ByteArrayKey;
 import com.linkedin.venice.kafka.protocol.GUID;
@@ -25,12 +26,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
  * This class is used to maintain internal state for consumption of each partition.
  */
 public class PartitionConsumptionState {
+  private static final Logger LOGGER = LogManager.getLogger(PartitionConsumptionState.class);
+
   private final int partition;
   private final int amplificationFactor;
   private final int userPartition;
@@ -125,6 +130,8 @@ public class PartitionConsumptionState {
    * this map or from the DB.
    */
   private final ConcurrentMap<ByteArrayKey, TransientRecord> transientRecordMap = new VeniceConcurrentHashMap<>();
+  private LoadingCache<ByteArrayKey, TransientRecord> inMemWriteThroughCache;
+  private StoreIngestionTask storeIngestionTask;
 
   /**
    * In-memory hash set which keeps track of all previous status this sub-partition has reported. It is the in-memory
@@ -266,6 +273,21 @@ public class PartitionConsumptionState {
     this.leaderCompleteState = LeaderCompleteState.LEADER_COMPLETE_STATE_UNKNOWN;
     this.lastLeaderCompleteStateUpdateInMs = 0;
     this.firstHeartBeatSOSReceived = false;
+  }
+
+  public void setStoreIngestionTask(StoreIngestionTask storeIngestionTask) {
+    this.storeIngestionTask = storeIngestionTask;
+    if (storeIngestionTask == null) {
+      LOGGER.error("StoreIngestionTask is null for partition {}", this);
+      return;
+    }
+
+    // inMemWriteThroughCache = Caffeine.newBuilder()
+    // .maximumSize(100_000)
+    // .expireAfterAccess(Duration.ofMinutes(30))
+    // .build(key -> {
+    // storeIngestionTask.loadKeyFromDB(key);
+    // });
   }
 
   public int getPartition() {
@@ -557,6 +579,10 @@ public class PartitionConsumptionState {
 
   public TransientRecord getTransientRecord(byte[] key) {
     return transientRecordMap.get(ByteArrayKey.wrap(key));
+  }
+
+  public TransientRecord getCachedRecord(ByteArrayKey byteArrayKey) {
+    return inMemWriteThroughCache.get(byteArrayKey);
   }
 
   /**
