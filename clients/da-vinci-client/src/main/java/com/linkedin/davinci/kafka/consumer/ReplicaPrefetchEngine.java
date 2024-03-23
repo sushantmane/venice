@@ -1,7 +1,9 @@
 package com.linkedin.davinci.kafka.consumer;
 
+import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.utils.DaemonThreadFactory;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,7 +15,8 @@ import org.apache.logging.log4j.Logger;
 
 public class ReplicaPrefetchEngine {
   private static final Logger LOGGER = LogManager.getLogger(ReplicaPrefetchEngine.class);
-  static final RecordPrefetchContext EMPTY_RPC = new RecordPrefetchContext(null, -1, Collections.emptyList());
+  static final RecordPrefetchContext EMPTY_RPC =
+      new RecordPrefetchContext(null, -1, Collections.emptyList(), new EnumMap<>(MessageType.class));
   private static final ThreadPoolExecutor prefetchEngineExecutor = getThreadPoolExecutor();
 
   private static ThreadPoolExecutor getThreadPoolExecutor() {
@@ -69,11 +72,17 @@ public class ReplicaPrefetchEngine {
     private final List<PrefetchKeyContext> keysToFetch;
     private final StoreIngestionTask sit;
     private final int partitionId;
+    private final EnumMap<MessageType, Integer> msgTypeCount;
 
-    RecordPrefetchContext(StoreIngestionTask sit, int partitionId, List<PrefetchKeyContext> keysToFetch) {
+    RecordPrefetchContext(
+        StoreIngestionTask sit,
+        int partitionId,
+        List<PrefetchKeyContext> keysToFetch,
+        EnumMap<MessageType, Integer> msgTypeCount) {
       this.partitionId = partitionId;
       this.keysToFetch = keysToFetch;
       this.sit = sit;
+      this.msgTypeCount = msgTypeCount;
     }
 
     void addKey(PrefetchKeyContext key) {
@@ -99,7 +108,7 @@ public class ReplicaPrefetchEngine {
     @Override
     public String toString() {
       return "PrefetchContext{vtp: " + sit.getVersionTopic().getName() + "-" + partitionId + ", numKeys: " + numKeys()
-          + "}";
+          + ", msgTypeCount: " + msgTypeCount + "}";
     }
   }
 }

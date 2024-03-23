@@ -5,6 +5,7 @@ import static com.linkedin.davinci.kafka.consumer.ReplicaPrefetchEngine.*;
 import com.linkedin.davinci.ingestion.consumption.ConsumedDataReceiver;
 import com.linkedin.davinci.stats.AggKafkaConsumerServiceStats;
 import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
+import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
@@ -17,6 +18,7 @@ import io.tehuti.metrics.MetricConfig;
 import io.tehuti.metrics.stats.Rate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -281,17 +283,24 @@ class ConsumptionTask implements Runnable {
     }
 
     List<PrefetchKeyContext> keysToFetch = new ArrayList<>();
+    EnumMap<MessageType, Integer> msgTypeCount = new EnumMap<>(MessageType.class);
     for (PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> message: messages) {
       if (message.getKey().isControlMessage()) {
         continue;
       }
-      PrefetchKeyContext prefetchKeyContext = new PrefetchKeyContext(tp, message.getKey(), sharedConsumerName);
+      MessageType msgType = MessageType.valueOf(message.getValue().getMessageType());
+      msgTypeCount.put(msgType, msgTypeCount.getOrDefault(msgType, 0) + 1);
+      PrefetchKeyContext prefetchKeyContext = new PrefetchKeyContext(tp, message.getKey(), msgType, sharedConsumerName);
       keysToFetch.add(prefetchKeyContext);
     }
     if (keysToFetch.isEmpty()) {
       return EMPTY_RPC;
     }
-    return new RecordPrefetchContext(receiver.getStoreIngestionTask(), tp.getPartitionNumber(), keysToFetch);
+    return new RecordPrefetchContext(
+        receiver.getStoreIngestionTask(),
+        tp.getPartitionNumber(),
+        keysToFetch,
+        msgTypeCount);
   }
 
   void stop() {

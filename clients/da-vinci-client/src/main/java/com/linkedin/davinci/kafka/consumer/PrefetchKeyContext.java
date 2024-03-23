@@ -1,6 +1,7 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import com.linkedin.davinci.utils.ByteArrayKey;
+import com.linkedin.venice.kafka.protocol.enums.MessageType;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 
@@ -10,13 +11,16 @@ public class PrefetchKeyContext {
   private KafkaKey kafkaKey;
   private String triggeredBySharedConsumerId;
   private ByteArrayKey byteArrayKey;
+  private MessageType msgType;
 
   public PrefetchKeyContext(
       PubSubTopicPartition topicPartition,
       KafkaKey kafkaKey,
+      MessageType msgType,
       String triggeredBySharedConsumerId) {
     this.topicPartition = topicPartition;
     this.kafkaKey = kafkaKey;
+    this.msgType = msgType;
     this.triggeredBySharedConsumerId = triggeredBySharedConsumerId;
     this.byteArrayKey = ByteArrayKey.wrap(kafkaKey.getKey());
   }
@@ -31,6 +35,10 @@ public class PrefetchKeyContext {
 
   public ByteArrayKey getByteArrayKey() {
     return byteArrayKey;
+  }
+
+  public MessageType getMsgType() {
+    return msgType;
   }
 
   @Override

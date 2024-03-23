@@ -151,6 +151,10 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
             isWriteComputationEnabled,
             getServerConfig().isComputeFastAvroEnabled());
     this.remoteIngestionRepairService = builder.getRemoteIngestionRepairService();
+    LOGGER.info(
+        "### PREFETCH-ENGINE ### Active/Active store ingestion task created for store: {} version: {}",
+        storeName,
+        versionNumber);
   }
 
   @Override
@@ -762,7 +766,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
           continue;
         }
-        cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition);
+        cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition, pkc.getMsgType());
         pcs.setCachedRecord(byteArrayKey, cachedRecord);
         LOGGER.info("Prefetch cache miss for key: {} loaded and update from DB", pkc.getByteArrayKey());
       } finally {
@@ -772,22 +776,34 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     }
   }
 
-  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(ByteArrayKey key, int subPartition) {
+  boolean loadValues = true;
 
+  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(
+      ByteArrayKey key,
+      int subPartition,
+      MessageType msgType) {
+    if (msgType == MessageType.CONTROL_MESSAGE) {
+      return null;
+    }
     ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
     RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition, rmdManifestContainer);
 
-    ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
-    ByteBufferValueRecord<ByteBuffer> valueRecord =
-        loadValueFromDB(key.getBytes(), subPartition, valueManifestContainer);
-    byte[] valueBytes = ByteUtils.extractByteArray(valueRecord.value());
+    TransientRecord transientRecord;
+    if (msgType == MessageType.UPDATE && loadValues) {
+      ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
+      ByteBufferValueRecord<ByteBuffer> valueRecord =
+          loadValueFromDB(key.getBytes(), subPartition, valueManifestContainer);
+      byte[] valueBytes = valueRecord != null ? ByteUtils.extractByteArray(valueRecord.value()) : null;
+      int len = valueBytes != null ? valueBytes.length : 0;
+      int schemaId = valueRecord != null ? valueRecord.writerSchemaId() : -1;
+      transientRecord = new TransientRecord(valueBytes, -1, len, schemaId, -1, -1);
+      transientRecord.setValueManifest(valueManifestContainer.getManifest());
+    } else {
+      transientRecord = new TransientRecord(null, -1, 0, -1, -1, -1);
+    }
 
-    TransientRecord transientRecord =
-        new TransientRecord(valueBytes, -1, valueBytes.length, valueRecord.writerSchemaId(), -1, -1);
     transientRecord.setReplicationMetadataRecord(rmdWithValueSchemaId.getRmdRecord());
-    transientRecord.setValueManifest(valueManifestContainer.getManifest());
     transientRecord.setRmdManifest(rmdManifestContainer.getManifest());
-
     return transientRecord;
   }
 

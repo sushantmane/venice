@@ -132,10 +132,12 @@ public class PartitionConsumptionState {
    * this map or from the DB.
    */
   private final ConcurrentMap<ByteArrayKey, TransientRecord> transientRecordMap = new VeniceConcurrentHashMap<>();
-  private Cache<ByteArrayKey, TransientRecord> inMemWriteThroughCache =
-      Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(15)).removalListener((key, value, cause) -> {
-        LOGGER.info("Removing key {} from in-memory cache cause {}", key, cause);
-      }).maximumSize(10_000).build();
+  private Cache<ByteArrayKey, TransientRecord> inMemWriteThroughCache = Caffeine.newBuilder()
+      .expireAfterAccess(Duration.ofMinutes(10))
+      // .removalListener((key, value, cause) -> LOGGER.info("Removing key {} from in-memory cache cause {}", key,
+      // cause))
+      .maximumSize(10000)
+      .build();
 
   private StoreIngestionTask storeIngestionTask;
 
