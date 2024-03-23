@@ -354,7 +354,8 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
           cachedRecord.getReplicationMetadataRecord(),
           cachedRecord.getRmdManifest());
     }
-    return loadRmdFromDB(key, subPartition);
+    ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
+    return loadRmdFromDB(key, subPartition, rmdManifestContainer);
   }
 
   public RmdSerDe getRmdSerDe() {
@@ -666,7 +667,7 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     // get it from DB.
     TransientRecord transientRecord = partitionConsumptionState.getTransientRecord(key);
     if (transientRecord == null) {
-      return loadValueFromDB(key, getSubPartitionId(key, topicPartition));
+      return loadValueFromDB(key, getSubPartitionId(key, topicPartition), valueManifestContainer);
     }
     hostLevelIngestionStats.recordIngestionValueBytesCacheHitCount(currentTimeForMetricsMs);
     if (transientRecord.getValue() == null) {
@@ -681,7 +682,10 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
         transientRecord.getValueSchemaId());
   }
 
-  ByteBufferValueRecord<ByteBuffer> loadValueFromDB(byte[] key, int subPartition) {
+  ByteBufferValueRecord<ByteBuffer> loadValueFromDB(
+      byte[] key,
+      int subPartition,
+      ChunkedValueManifestContainer valueManifestContainer) {
     final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
     ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
     keyLevelLock.lock();
@@ -690,7 +694,6 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
       ReusableObjects reusableObjects = threadLocalReusableObjects.get();
       ByteBuffer reusedRawValue = reusableObjects.reusedByteBuffer;
       BinaryDecoder binaryDecoder = reusableObjects.binaryDecoder;
-      final ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
       ByteBufferValueRecord<ByteBuffer> originalValue = RawBytesChunkingAdapter.INSTANCE.getWithSchemaId(
           storageEngine,
           subPartition,
@@ -711,12 +714,14 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     }
   }
 
-  protected RmdWithValueSchemaId loadRmdFromDB(byte[] key, int subPartition) {
+  protected RmdWithValueSchemaId loadRmdFromDB(
+      byte[] key,
+      int subPartition,
+      ChunkedValueManifestContainer rmdManifestContainer) {
     final ByteArrayKey byteArrayKey = ByteArrayKey.wrap(key);
     ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
     keyLevelLock.lock();
     try {
-      ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
       byte[] replicationMetadataWithValueSchemaBytes = getRmdWithValueSchemaByteBufferFromStorage(
           subPartition,
           key,
@@ -742,24 +747,48 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
     for (PrefetchKeyContext pkc: keys) {
       PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
-      pcs.getCachedRecord(pkc.getByteArrayKey());
+      TransientRecord cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+      if (cachedRecord != null) {
+        LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
+        continue;
+      }
+      ByteArrayKey byteArrayKey = pkc.getByteArrayKey();
+      int subPartition = getSubPartitionId(byteArrayKey.getBytes(), pkc.getTopicPartition());
+      ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+      keyLevelLock.lock();
+      try {
+        cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+        if (cachedRecord != null) {
+          LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
+          continue;
+        }
+        cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition);
+        pcs.setCachedRecord(byteArrayKey, cachedRecord);
+        LOGGER.info("Prefetch cache miss for key: {} loaded and update from DB", pkc.getByteArrayKey());
+      } finally {
+        keyLevelLock.unlock();
+        getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+      }
     }
   }
 
-  @Override
-  PartitionConsumptionState.TransientRecord loadKeyFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
-    int subPartition = getSubPartitionId(key.getBytes(), topicPartition);
-    RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition);
-    ByteBufferValueRecord<ByteBuffer> valueRecord = loadValueFromDB(key.getBytes(), subPartition);
-    valueRecord.value().position(0);
+  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(ByteArrayKey key, int subPartition) {
 
+    ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
+    RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition, rmdManifestContainer);
+
+    ChunkedValueManifestContainer valueManifestContainer = new ChunkedValueManifestContainer();
+    ByteBufferValueRecord<ByteBuffer> valueRecord =
+        loadValueFromDB(key.getBytes(), subPartition, valueManifestContainer);
     byte[] valueBytes = ByteUtils.extractByteArray(valueRecord.value());
 
     TransientRecord transientRecord =
-        new TransientRecord(valueBytes, -2, valueBytes.length, valueRecord.writerSchemaId(), -2, -2);
+        new TransientRecord(valueBytes, -1, valueBytes.length, valueRecord.writerSchemaId(), -1, -1);
     transientRecord.setReplicationMetadataRecord(rmdWithValueSchemaId.getRmdRecord());
-    transientRecord.setRmdManifest(rmdWithValueSchemaId.getRmdManifest());
-    return null;
+    transientRecord.setValueManifest(valueManifestContainer.getManifest());
+    transientRecord.setRmdManifest(rmdManifestContainer.getManifest());
+
+    return transientRecord;
   }
 
   ByteBuffer getCurrentValueFromTransientRecord(TransientRecord transientRecord) {

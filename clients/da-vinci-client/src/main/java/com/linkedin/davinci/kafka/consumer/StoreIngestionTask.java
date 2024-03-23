@@ -3988,7 +3988,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     LOGGER.info("No-OP: Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
   }
 
-  PartitionConsumptionState.TransientRecord loadKeyFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
+  PartitionConsumptionState.TransientRecord loadRmdAndValFromDB(PubSubTopicPartition topicPartition, ByteArrayKey key) {
     throw new UnsupportedOperationException("No-OP: Loading key from DB is not supported.");
   }
 }

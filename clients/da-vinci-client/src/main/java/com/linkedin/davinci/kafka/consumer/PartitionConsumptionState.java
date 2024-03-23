@@ -1,6 +1,7 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.linkedin.davinci.helix.LeaderFollowerPartitionStateModel;
 import com.linkedin.davinci.utils.ByteArrayKey;
 import com.linkedin.venice.kafka.protocol.GUID;
@@ -19,6 +20,7 @@ import com.linkedin.venice.utils.PartitionUtils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.writer.LeaderCompleteState;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -130,7 +132,11 @@ public class PartitionConsumptionState {
    * this map or from the DB.
    */
   private final ConcurrentMap<ByteArrayKey, TransientRecord> transientRecordMap = new VeniceConcurrentHashMap<>();
-  private LoadingCache<ByteArrayKey, TransientRecord> inMemWriteThroughCache;
+  private Cache<ByteArrayKey, TransientRecord> inMemWriteThroughCache =
+      Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(15)).removalListener((key, value, cause) -> {
+        LOGGER.info("Removing key {} from in-memory cache cause {}", key, cause);
+      }).maximumSize(10_000).build();
+
   private StoreIngestionTask storeIngestionTask;
 
   /**
@@ -223,6 +229,7 @@ public class PartitionConsumptionState {
    * more details.
    */
   private boolean firstHeartBeatSOSReceived;
+  PubSubTopicPartition rt;
 
   public PartitionConsumptionState(int partition, int amplificationFactor, OffsetRecord offsetRecord, boolean hybrid) {
     this.partition = partition;
@@ -277,17 +284,6 @@ public class PartitionConsumptionState {
 
   public void setStoreIngestionTask(StoreIngestionTask storeIngestionTask) {
     this.storeIngestionTask = storeIngestionTask;
-    if (storeIngestionTask == null) {
-      LOGGER.error("StoreIngestionTask is null for partition {}", this);
-      return;
-    }
-
-    // inMemWriteThroughCache = Caffeine.newBuilder()
-    // .maximumSize(100_000)
-    // .expireAfterAccess(Duration.ofMinutes(30))
-    // .build(key -> {
-    // storeIngestionTask.loadKeyFromDB(key);
-    // });
   }
 
   public int getPartition() {
@@ -582,7 +578,11 @@ public class PartitionConsumptionState {
   }
 
   public TransientRecord getCachedRecord(ByteArrayKey byteArrayKey) {
-    return inMemWriteThroughCache.get(byteArrayKey);
+    return inMemWriteThroughCache.getIfPresent(byteArrayKey);
+  }
+
+  public void setCachedRecord(ByteArrayKey byteArrayKey, TransientRecord transientRecord) {
+    inMemWriteThroughCache.put(byteArrayKey, transientRecord);
   }
 
   /**
