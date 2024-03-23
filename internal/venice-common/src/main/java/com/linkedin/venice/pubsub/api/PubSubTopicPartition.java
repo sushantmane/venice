@@ -14,4 +14,8 @@ public interface PubSubTopicPartition {
   default String getTopicName() {
     return getPubSubTopic().getName();
   }
+
+  default boolean isRealTime() {
+    return getPubSubTopic().isRealTime();
+  }
 }
