@@ -564,7 +564,7 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
 
   private static ReadOptions getMultiGetRo() {
     ReadOptions readOptions = new ReadOptions();
-    readOptions.setAsyncIo(true);
+    // readOptions.setAsyncIo(true); // this not in 8.8.1; upgrade to 8.11.3
     return readOptions;
   }
 
