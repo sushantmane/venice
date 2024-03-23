@@ -266,7 +266,7 @@ class ConsumptionTask implements Runnable {
       PubSubTopicPartition tp,
       List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>> messages) {
     ConsumedDataReceiver<List<PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long>>> receiver = dataReceiverMap.get(tp);
-    if (!tp.isRealTime()) {
+    if (!tp.getPubSubTopic().isRealTime()) {
       LOGGER.debug("Not prefetching for non-realtime topic partition: {}", tp);
       return EMPTY_RPC;
     }
