@@ -750,28 +750,32 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
   void prefetchRecords(int partitionId, List<PrefetchKeyContext> keys) {
     LOGGER.info("Prefetching {} records for: {}-{}", keys.size(), kafkaVersionTopic, partitionId);
     for (PrefetchKeyContext pkc: keys) {
-      PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
-      TransientRecord cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
-      if (cachedRecord != null) {
-        LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
-        continue;
-      }
-      ByteArrayKey byteArrayKey = pkc.getByteArrayKey();
-      int subPartition = getSubPartitionId(byteArrayKey.getBytes(), pkc.getTopicPartition());
-      ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
-      keyLevelLock.lock();
       try {
-        cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+        PartitionConsumptionState pcs = partitionConsumptionStateMap.get(partitionId);
+        TransientRecord cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
         if (cachedRecord != null) {
           LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
           continue;
         }
-        cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition, pkc.getMsgType());
-        pcs.setCachedRecord(byteArrayKey, cachedRecord);
-        LOGGER.info("Prefetch cache miss for key: {} loaded and update from DB", pkc.getByteArrayKey());
-      } finally {
-        keyLevelLock.unlock();
-        getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+        ByteArrayKey byteArrayKey = pkc.getByteArrayKey();
+        int subPartition = getSubPartitionId(byteArrayKey.getBytes(), pkc.getTopicPartition());
+        ReentrantLock keyLevelLock = getKeyLevelLockManager(subPartition).acquireLockByKey(byteArrayKey);
+        keyLevelLock.lock();
+        try {
+          cachedRecord = pcs.getCachedRecord(pkc.getByteArrayKey());
+          if (cachedRecord != null) {
+            LOGGER.info("Prefetch cache hit for key: {}", pkc.getByteArrayKey());
+            continue;
+          }
+          cachedRecord = loadRmdAndValFromDB(byteArrayKey, subPartition, pkc.getMsgType());
+          pcs.setCachedRecord(byteArrayKey, cachedRecord);
+          // LOGGER.info("Prefetch cache miss for key: {} loaded and update from DB", pkc.getByteArrayKey());
+        } finally {
+          keyLevelLock.unlock();
+          getKeyLevelLockManager(subPartition).releaseLock(byteArrayKey);
+        }
+      } catch (Exception e) {
+        LOGGER.error("Error while prefetching records for partition: {}", partitionId, e);
       }
     }
   }
@@ -787,6 +791,9 @@ public class ActiveActiveStoreIngestionTask extends LeaderFollowerStoreIngestion
     }
     ChunkedValueManifestContainer rmdManifestContainer = new ChunkedValueManifestContainer();
     RmdWithValueSchemaId rmdWithValueSchemaId = loadRmdFromDB(key.getBytes(), subPartition, rmdManifestContainer);
+    if (rmdWithValueSchemaId == null) {
+      return TransientRecord.NON_EXISTENT_KEY;
+    }
 
     TransientRecord transientRecord;
     if (msgType == MessageType.UPDATE && loadValues) {

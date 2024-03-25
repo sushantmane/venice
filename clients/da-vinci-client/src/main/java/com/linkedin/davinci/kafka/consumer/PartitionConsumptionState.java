@@ -133,10 +133,11 @@ public class PartitionConsumptionState {
    */
   private final ConcurrentMap<ByteArrayKey, TransientRecord> transientRecordMap = new VeniceConcurrentHashMap<>();
   private Cache<ByteArrayKey, TransientRecord> inMemWriteThroughCache = Caffeine.newBuilder()
-      .expireAfterAccess(Duration.ofMinutes(10))
+      .expireAfterAccess(Duration.ofMinutes(1))
+      .expireAfterWrite(Duration.ofMinutes(1))
       // .removalListener((key, value, cause) -> LOGGER.info("Removing key {} from in-memory cache cause {}", key,
       // cause))
-      .maximumSize(10000)
+      .maximumSize(300)
       .build();
 
   private StoreIngestionTask storeIngestionTask;
@@ -646,6 +647,7 @@ public class PartitionConsumptionState {
    * The value could be either as received in kafka ConsumerRecord or it could be a write computed value.
    */
   public static class TransientRecord {
+    protected static final TransientRecord NON_EXISTENT_KEY = new TransientRecord(null, -1, -1, -1, -1, -1);
     private final byte[] value;
     private final int valueOffset;
     private final int valueLen;
