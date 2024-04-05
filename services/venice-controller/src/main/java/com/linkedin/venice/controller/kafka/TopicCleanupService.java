@@ -4,21 +4,20 @@ import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.VeniceControllerMultiClusterConfig;
 import com.linkedin.venice.controller.stats.TopicCleanupServiceStats;
-import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.service.AbstractVeniceService;
-import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -66,15 +65,12 @@ public class TopicCleanupService extends AbstractVeniceService {
   protected final int delayFactor;
   private final int minNumberOfUnusedKafkaTopicsToPreserve;
   private final AtomicBoolean stop = new AtomicBoolean(false);
-  private final List<String> childFabricList;
-  private final Map<String, Map<String, Integer>> multiDataCenterStoreToVersionTopicCount;
   private final PubSubTopicRepository pubSubTopicRepository;
   private final TopicCleanupServiceStats topicCleanupServiceStats;
-  private String localDatacenter;
-  private boolean isRTTopicDeletionBlocked = false;
+  private volatile boolean isRTTopicDeletionBlocked = false;
   private boolean isLeaderControllerOfControllerCluster = false;
-  private long refreshQueueCycle = Time.MS_PER_MINUTE;
   protected final VeniceControllerMultiClusterConfig multiClusterConfigs;
+  private final ChildRegions childRegions;
 
   public TopicCleanupService(
       Admin admin,
@@ -90,22 +86,28 @@ public class TopicCleanupService extends AbstractVeniceService {
     this.multiClusterConfigs = multiClusterConfigs;
     this.pubSubTopicRepository = pubSubTopicRepository;
     this.topicCleanupServiceStats = topicCleanupServiceStats;
-    this.childFabricList =
-        Utils.parseCommaSeparatedStringToList(multiClusterConfigs.getCommonConfig().getChildDatacenters());
-    if (!admin.isParent()) {
-      // Only perform cross fabric VT check for RT deletion in child fabrics.
-      this.multiDataCenterStoreToVersionTopicCount = new HashMap<>(childFabricList.size());
-      for (String datacenter: childFabricList) {
-        multiDataCenterStoreToVersionTopicCount.put(datacenter, new HashMap<>());
+    this.childRegions = getChildRegions(
+        Utils.parseCommaSeparatedStringToList(multiClusterConfigs.getCommonConfig().getChildDatacenters()));
+  }
+
+  private ChildRegions getChildRegions(List<String> childFabricList) {
+    String localPubSubAddress = getTopicManager().getPubSubClusterAddress();
+    ChildRegions childRegions = new ChildRegions();
+    for (String regionName: childFabricList) {
+      String pubSubAddress = multiClusterConfigs.getChildDataCenterKafkaUrlMap().get(regionName);
+      if (localPubSubAddress.equals(pubSubAddress)) {
+        childRegions.setLocalRegion(regionName, pubSubAddress);
+        continue;
       }
-    } else {
-      this.multiDataCenterStoreToVersionTopicCount = Collections.emptyMap();
+      childRegions.addRegion(regionName, pubSubAddress);
     }
+    return childRegions;
   }
 
   @Override
   public boolean startInner() throws Exception {
     cleanupThread.start();
+    LOGGER.info("TopicCleanupService started - regions: {}", childRegions);
     return true;
   }
 
@@ -169,165 +171,144 @@ public class TopicCleanupService extends AbstractVeniceService {
    * If version topic deletion takes more than certain time it refreshes the entire topic list and start deleting from RT topics again.
     */
   void cleanupVeniceTopics() {
-    PriorityQueue<PubSubTopic> allTopics = new PriorityQueue<>((s1, s2) -> s1.isRealTime() ? -1 : 0);
-    populateDeprecatedTopicQueue(allTopics);
-    topicCleanupServiceStats.recordDeletableTopicsCount(allTopics.size());
-    long refreshTime = System.currentTimeMillis();
-    while (!allTopics.isEmpty()) {
-      PubSubTopic topic = allTopics.poll();
-      try {
-        if (topic.isRealTime() && !multiDataCenterStoreToVersionTopicCount.isEmpty()) {
-          // Only delete realtime topic in child fabrics if all version topics are deleted in all child fabrics.
-          if (isRTTopicDeletionBlocked) {
-            LOGGER.warn(
-                "Topic deletion for topic: {} is blocked due to unable to fetch version topic info",
-                topic.getName());
-            topicCleanupServiceStats.recordTopicDeletionError();
-            continue;
-          }
-          boolean canDelete = true;
-          for (Map.Entry<String, Map<String, Integer>> mapEntry: multiDataCenterStoreToVersionTopicCount.entrySet()) {
-            if (mapEntry.getValue().containsKey(topic.getStoreName())) {
-              canDelete = false;
-              LOGGER.info(
-                  "Topic deletion for topic: {} is delayed due to {} version topics found in datacenter {}",
-                  topic.getName(),
-                  mapEntry.getValue().get(topic.getStoreName()),
-                  mapEntry.getKey());
-              break;
-            }
-          }
-          if (!canDelete) {
-            continue;
-          }
-        }
-        getTopicManager().ensureTopicIsDeletedAndBlockWithRetry(topic);
-        topicCleanupServiceStats.recordTopicDeleted();
-      } catch (VeniceException e) {
-        LOGGER.warn("Caught exception when trying to delete topic: {} - {}", topic.getName(), e.toString());
-        topicCleanupServiceStats.recordTopicDeletionError();
-        // No op, will try again in the next cleanup cycle.
-      }
-
-      if (!topic.isRealTime()) {
-        // If Version topic deletion took long time, skip further VT deletion and check if we have new RT topic to
-        // delete
-        if (System.currentTimeMillis() - refreshTime > refreshQueueCycle) {
-          allTopics.clear();
-          populateDeprecatedTopicQueue(allTopics);
-          if (allTopics.isEmpty()) {
-            break;
-          }
-          refreshTime = System.currentTimeMillis();
-        }
-      }
+    DeprecatedTopics deprecatedTopics = getTopicsToDelete();
+    topicCleanupServiceStats.recordDeletableTopicsCount(deprecatedTopics.size());
+    // delete RTs
+    if (!isRTTopicDeletionBlocked) {
+      deleteRealTimeTopics(deprecatedTopics);
     }
-  }
-
-  private void populateDeprecatedTopicQueue(PriorityQueue<PubSubTopic> topics) {
-    Map<PubSubTopic, Long> topicsWithRetention = getTopicManager().getAllTopicRetentions();
-    Map<String, Map<PubSubTopic, Long>> allStoreTopics = getAllVeniceStoreTopicsRetentions(topicsWithRetention);
-    AtomicBoolean realTimeTopicDeletionNeeded = new AtomicBoolean(false);
-    allStoreTopics.forEach((storeName, topicRetentions) -> {
-      int minNumOfUnusedVersionTopicsOverride = minNumberOfUnusedKafkaTopicsToPreserve;
-      PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
-      if (topicRetentions.containsKey(realTimeTopic)) {
-        if (admin.isTopicTruncatedBasedOnRetention(topicRetentions.get(realTimeTopic))) {
-          topics.offer(realTimeTopic);
-          minNumOfUnusedVersionTopicsOverride = 0;
-          realTimeTopicDeletionNeeded.set(true);
-        }
-        topicRetentions.remove(realTimeTopic);
-      }
-      List<PubSubTopic> oldTopicsToDelete =
-          extractVersionTopicsToCleanup(admin, topicRetentions, minNumOfUnusedVersionTopicsOverride, delayFactor);
-      if (!oldTopicsToDelete.isEmpty()) {
-        topics.addAll(oldTopicsToDelete);
-      }
-    });
-    if (realTimeTopicDeletionNeeded.get() && !multiDataCenterStoreToVersionTopicCount.isEmpty()) {
-      refreshMultiDataCenterStoreToVersionTopicCountMap(topicsWithRetention.keySet());
-    }
-  }
-
-  private void refreshMultiDataCenterStoreToVersionTopicCountMap(Set<PubSubTopic> localTopics) {
-    if (localDatacenter == null) {
-      String localPubSubBootstrapServer = getTopicManager().getPubSubClusterAddress();
-      for (String childFabric: childFabricList) {
-        if (localPubSubBootstrapServer.equals(multiClusterConfigs.getChildDataCenterKafkaUrlMap().get(childFabric))) {
-          localDatacenter = childFabric;
-          break;
-        }
-      }
-      if (localDatacenter == null) {
-        String childFabrics = String.join(",", childFabricList);
-        LOGGER.error(
-            "Blocking RT topic deletion. Cannot find local datacenter in child datacenter list: {}",
-            childFabrics);
-        isRTTopicDeletionBlocked = true;
-        return;
-      }
-    }
-    clearAndPopulateStoreToVersionTopicCountMap(
-        localTopics,
-        multiDataCenterStoreToVersionTopicCount.get(localDatacenter));
-    if (childFabricList.size() > 1) {
-      for (String childFabric: childFabricList) {
-        try {
-          if (childFabric.equals(localDatacenter)) {
-            continue;
-          }
-          String pubSubBootstrapServer = multiClusterConfigs.getChildDataCenterKafkaUrlMap().get(childFabric);
-          Set<PubSubTopic> remoteTopics = getTopicManager(pubSubBootstrapServer).getAllTopicRetentions().keySet();
-          clearAndPopulateStoreToVersionTopicCountMap(
-              remoteTopics,
-              multiDataCenterStoreToVersionTopicCount.get(childFabric));
-        } catch (Exception e) {
-          LOGGER.error("Failed to refresh store to version topic count map for fabric {}", childFabric, e);
-          isRTTopicDeletionBlocked = true;
-          return;
-        }
-      }
+    // delete VTs
+    for (PubSubTopic versionTopic: deprecatedTopics.getVersionTopics()) {
+      deleteTopic(versionTopic);
     }
     isRTTopicDeletionBlocked = false;
   }
 
-  private static void clearAndPopulateStoreToVersionTopicCountMap(
-      Set<PubSubTopic> topics,
-      Map<String, Integer> storeToVersionTopicCountMap) {
-    storeToVersionTopicCountMap.clear();
-    for (PubSubTopic topic: topics) {
-      String storeName = topic.getStoreName();
-      if (!storeName.isEmpty() && topic.isVersionTopic()) {
-        storeToVersionTopicCountMap.merge(storeName, 1, Integer::sum);
+  void deleteTopic(PubSubTopic topic) {
+    try {
+      getTopicManager().ensureTopicIsDeletedAndBlockWithRetry(topic);
+      topicCleanupServiceStats.recordTopicDeleted();
+    } catch (Exception e) {
+      LOGGER.warn("Caught exception when trying to delete topic: {} - {}", topic.getName(), e);
+      topicCleanupServiceStats.recordTopicDeletionError();
+      // No op, will try again in the next cleanup cycle.
+    }
+  }
+
+  void deleteRealTimeTopics(DeprecatedTopics deprecatedTopics) {
+    // delete RTs
+    for (RealTimeTopicDeletionContext deletionContext: deprecatedTopics.getRtDeletionContexts().values()) {
+      if (deletionContext.isOkToDelete()) {
+        deleteTopic(deletionContext.getRealTimeTopic());
+        continue;
+      }
+
+      LOGGER.info(
+          "Topic deletion for topic: {} is delayed due version topics found in datacenter: {}",
+          deletionContext.getRealTimeTopic().getName(),
+          deletionContext.getPerFabricVersionTopicCount());
+    }
+  }
+
+  private DeprecatedTopics getTopicsToDelete() {
+    Map<PubSubTopic, Long> allLocalTopicRetentions = getTopicManager().getAllTopicRetentions();
+    DeprecatedTopics deprecatedTopics = getDeprecatedTopics(allLocalTopicRetentions);
+    if (admin.isParent()) {
+      return deprecatedTopics;
+    }
+
+    // Fill in version topic count for stores associated with real-time topics marked for deletion.
+    Set<String> rtAssociatedStores =
+        deprecatedTopics.getRealTimeTopics().stream().map(PubSubTopic::getStoreName).collect(Collectors.toSet());
+    Set<PubSubTopic> allLocalTopics = allLocalTopicRetentions.keySet();
+    Map<String, Integer> storeToVersionTopicCount = getPerStoreVersionTopicCount(allLocalTopics, rtAssociatedStores);
+    fillInVtCountsForDeletableRts(childRegions.getLocalRegionName(), deprecatedTopics, storeToVersionTopicCount);
+    isRTTopicDeletionBlocked = false;
+    childRegions.getRemoteChildRegionToPubSubAddress().entrySet().parallelStream().forEach(entry -> {
+      try {
+        Set<PubSubTopic> allRemoteTopics = getTopicManager(entry.getValue()).listTopics();
+        Map<String, Integer> perFabricVersionTopicCount =
+            getPerStoreVersionTopicCount(allRemoteTopics, rtAssociatedStores);
+        fillInVtCountsForDeletableRts(entry.getKey(), deprecatedTopics, perFabricVersionTopicCount);
+      } catch (Exception e) {
+        LOGGER.error("Failed to fetch topics from remote fabric: {}", entry.getKey(), e);
+        isRTTopicDeletionBlocked = true;
+      }
+    });
+
+    return deprecatedTopics;
+  }
+
+  private DeprecatedTopics getDeprecatedTopics(Map<PubSubTopic, Long> topicRetentions) {
+    Map<String, Map<PubSubTopic, Long>> storeTopicRetentionMap = buildStoreTopicRetentionMap(topicRetentions);
+    DeprecatedTopics deprecatedTopics = new DeprecatedTopics();
+    for (Map.Entry<String, Map<PubSubTopic, Long>> entry: storeTopicRetentionMap.entrySet()) {
+      String storeName = entry.getKey();
+      Map<PubSubTopic, Long> retentions = entry.getValue();
+      int preserveCount = minNumberOfUnusedKafkaTopicsToPreserve;
+      PubSubTopic rt = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
+      if (retentions.containsKey(rt) && admin.isTopicTruncatedBasedOnRetention(retentions.get(rt))) {
+        deprecatedTopics.addRt(rt);
+        preserveCount = 0;
+      }
+      deprecatedTopics.addVersionTopics(extractVersionTopicsToCleanup(admin, retentions, preserveCount, delayFactor));
+    }
+    return deprecatedTopics;
+  }
+
+  void fillInVtCountsForDeletableRts(
+      String region,
+      DeprecatedTopics deprecatedTopics,
+      Map<String, Integer> storeToVtCount) {
+    Set<PubSubTopic> realTimeTopics = deprecatedTopics.getRealTimeTopics();
+    for (PubSubTopic rt: realTimeTopics) {
+      RealTimeTopicDeletionContext context = deprecatedTopics.getRtDeletionContexts().get(rt);
+      if (context == null) {
+        LOGGER.error("Real-time topic {} is missing from the context map", rt.getName());
+        continue;
+      }
+      if (storeToVtCount.containsKey(rt.getStoreName())) {
+        context.addPerFabricVersionTopicCount(region, storeToVtCount.get(rt.getStoreName()));
       }
     }
   }
 
-  /**
-   * @return a map object that maps from the store name to the Kafka topic name and its configured Kafka retention time.
-   */
-  public static Map<String, Map<PubSubTopic, Long>> getAllVeniceStoreTopicsRetentions(
-      Map<PubSubTopic, Long> topicsWithRetention) {
-    Map<String, Map<PubSubTopic, Long>> allStoreTopics = new HashMap<>();
+  private static Map<String, Integer> getPerStoreVersionTopicCount(
+      Set<PubSubTopic> topics,
+      Set<String> filterStoreNames) {
+    Map<String, Integer> storeToVersionTopicCount = new HashMap<>(filterStoreNames.size());
+    for (PubSubTopic topic: topics) {
+      if (filterStoreNames.contains(topic.getStoreName()) && topic.isVersionTopic()) {
+        storeToVersionTopicCount.merge(topic.getStoreName(), 1, Integer::sum);
+      }
+    }
+    return storeToVersionTopicCount;
+  }
 
-    for (Map.Entry<PubSubTopic, Long> entry: topicsWithRetention.entrySet()) {
+  /**
+   * Builds a map that connects each store name with its corresponding pub-sub topics
+   * and their configured retention times.
+   *
+   * @param topicRetentions a map containing pub-sub topics and their respective retention times
+   * @return a map associating store names with their pub-sub topics and retention times
+   */
+  public static Map<String, Map<PubSubTopic, Long>> buildStoreTopicRetentionMap(
+      Map<PubSubTopic, Long> topicRetentions) {
+    Map<String, Map<PubSubTopic, Long>> storeTopicRetentionMap = new HashMap<>();
+
+    for (Map.Entry<PubSubTopic, Long> entry: topicRetentions.entrySet()) {
       PubSubTopic topic = entry.getKey();
       long retention = entry.getValue();
       String storeName = topic.getStoreName();
-      if (storeName.isEmpty()) {
-        // TODO: check whether Venice needs to cleanup topics not belonging to Venice.
+
+      // Skip topics not belonging to a store
+      if (storeName == null || storeName.isEmpty()) {
         continue;
       }
-      allStoreTopics.compute(storeName, (s, topics) -> {
-        if (topics == null) {
-          topics = new HashMap<>();
-        }
-        topics.put(topic, retention);
-        return topics;
-      });
+
+      storeTopicRetentionMap.computeIfAbsent(storeName, k -> new HashMap<>()).put(topic, retention);
     }
-    return allStoreTopics;
+    return storeTopicRetentionMap;
   }
 
   /**
@@ -352,7 +333,7 @@ public class TopicCleanupService extends AbstractVeniceService {
     }
     Set<PubSubTopic> veniceTopics = topicRetentions.keySet();
     Optional<Integer> optionalMaxVersion = veniceTopics.stream()
-        .filter(vt -> Version.isVersionTopic(vt.getName()))
+        .filter(PubSubTopic::isVersionTopic)
         .map(vt -> Version.parseVersionFromKafkaTopicName(vt.getName()))
         .max(Integer::compare);
 
@@ -372,6 +353,7 @@ public class TopicCleanupService extends AbstractVeniceService {
         isStoreDeleted || isStoreZkShared ? maxVersion : maxVersion - minNumberOfUnusedKafkaTopicsToPreserve;
 
     return veniceTopics.stream()
+        .filter(PubSubTopic::isVersionTopic)
         /** Consider only truncated topics */
         .filter(t -> admin.isTopicTruncatedBasedOnRetention(topicRetentions.get(t)))
         /** Always preserve the last {@link #minNumberOfUnusedKafkaTopicsToPreserve} topics, whether they are healthy or not */
@@ -400,5 +382,93 @@ public class TopicCleanupService extends AbstractVeniceService {
           return true;
         })
         .collect(Collectors.toList());
+  }
+
+  static class DeprecatedTopics {
+    private final Set<PubSubTopic> versionTopics = ConcurrentHashMap.newKeySet();
+    private final Map<PubSubTopic, RealTimeTopicDeletionContext> realTimeTopics = new ConcurrentHashMap<>(3);
+
+    void addRt(PubSubTopic topic) {
+      realTimeTopics.put(topic, new RealTimeTopicDeletionContext(topic));
+    }
+
+    void addVersionTopics(List<PubSubTopic> topics) {
+      versionTopics.addAll(topics);
+    }
+
+    Set<PubSubTopic> getRealTimeTopics() {
+      return realTimeTopics.keySet();
+    }
+
+    Map<PubSubTopic, RealTimeTopicDeletionContext> getRtDeletionContexts() {
+      return realTimeTopics;
+    }
+
+    Set<PubSubTopic> getVersionTopics() {
+      return versionTopics;
+    }
+
+    int size() {
+      return realTimeTopics.size() + versionTopics.size();
+    }
+  }
+
+  static class RealTimeTopicDeletionContext {
+    private PubSubTopic realTimeTopic;
+    private final Map<String, Integer> perFabricVersionTopicCount;
+
+    RealTimeTopicDeletionContext(PubSubTopic realTimeTopic) {
+      if (!realTimeTopic.isRealTime()) {
+        throw new IllegalArgumentException("RealTimeTopicDeletionContext can only be created for real-time topics");
+      }
+      this.realTimeTopic = realTimeTopic;
+      this.perFabricVersionTopicCount = new ConcurrentHashMap<>(3);
+    }
+
+    Map<String, Integer> getPerFabricVersionTopicCount() {
+      return perFabricVersionTopicCount;
+    }
+
+    void addPerFabricVersionTopicCount(String region, int count) {
+      perFabricVersionTopicCount.put(region, count);
+    }
+
+    PubSubTopic getRealTimeTopic() {
+      return realTimeTopic;
+    }
+
+    boolean isOkToDelete() {
+      // If all version topics are deleted in all child fabrics, then it is safe to delete the real-time topic.
+      return perFabricVersionTopicCount.values().stream().allMatch(count -> count == 0);
+    }
+  }
+
+  static class ChildRegions {
+    private final Map<String, String> remoteChildRegionToPubSubAddress = new HashMap<>();
+    private String localRegionName;
+    private String localPubSubAddress;
+
+    public void addRegion(String region, String pubSubAddress) {
+      remoteChildRegionToPubSubAddress.put(region, pubSubAddress);
+    }
+
+    public void setLocalRegion(String localRegionName, String pubSubAddress) {
+      this.localRegionName = Objects.requireNonNull(localRegionName, "Local region name cannot be null");
+      this.localPubSubAddress = Objects.requireNonNull(pubSubAddress, "Local pubsub address cannot be null");
+    }
+
+    public Map<String, String> getRemoteChildRegionToPubSubAddress() {
+      return remoteChildRegionToPubSubAddress;
+    }
+
+    public String getLocalRegionName() {
+      return localRegionName;
+    }
+
+    @Override
+    public String toString() {
+      return "ChildRegions{" + "localRegionName='" + localRegionName + '\'' + ", remoteRegions="
+          + remoteChildRegionToPubSubAddress.keySet() + '}';
+    }
   }
 }
