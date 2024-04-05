@@ -885,7 +885,7 @@ public class StoresRoutes extends AbstractRoute {
         try {
           Map<PubSubTopic, Long> allTopicRetentions = admin.getTopicManager().getAllTopicRetentions();
           Map<String, Map<PubSubTopic, Long>> allStoreTopics =
-              TopicCleanupService.getAllVeniceStoreTopicsRetentions(allTopicRetentions);
+              TopicCleanupService.buildStoreTopicRetentionMap(allTopicRetentions);
           List<String> deletableTopicsList = new ArrayList<>();
           int minNumberOfUnusedKafkaTopicsToPreserve = admin.getMinNumberOfUnusedKafkaTopicsToPreserve();
           allStoreTopics.forEach((storeName, topicsWithRetention) -> {
