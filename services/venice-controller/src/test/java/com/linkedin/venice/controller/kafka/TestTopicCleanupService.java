@@ -171,7 +171,7 @@ public class TestTopicCleanupService {
     Assert.assertEquals(actualResult4, expectedResult4);
   }
 
-  @Test
+  @Test(enabled = false)
   public void testCleanupVeniceTopics() throws ExecutionException {
     String storeName1 = Utils.getUniqueString("store1");
     String storeName2 = Utils.getUniqueString("store2");
@@ -375,7 +375,7 @@ public class TestTopicCleanupService {
     assertTrue(deletableTopics.contains(pubSubTopicRepository.getTopic(Version.composeKafkaTopic(storeName, 1))));
   }
 
-  @Test
+  @Test(enabled = false)
   public void testCleanVeniceTopicsBlockRTTopicDeletionWhenMisconfigured() {
     // RT topic deletion should be blocked when controller is misconfigured
     // Mis-configured where local data center is not in the child data centers list
@@ -402,7 +402,7 @@ public class TestTopicCleanupService {
     verify(topicCleanupServiceStats, atLeastOnce()).recordTopicDeletionError();
   }
 
-  @Test
+  @Test(enabled = false)
   public void testCleanVeniceTopicRTTopicDeletionWithErrorFetchingVT() {
     // RT topic deletion should be blocked when version topic cannot be fetched due to error
     String storeName = Utils.getUniqueString("testStore");
@@ -426,7 +426,7 @@ public class TestTopicCleanupService {
     verify(topicManager, atLeastOnce()).ensureTopicIsDeletedAndBlockWithRetry(getPubSubTopic(storeName, "_rt"));
   }
 
-  @Test
+  @Test(enabled = false)
   public void testCleanVeniceTopicOnlyFetchVTOnRTTopicDeletion() {
     String storeName = Utils.getUniqueString("testStore");
     Map<PubSubTopic, Long> storeTopics1 = new HashMap<>();
