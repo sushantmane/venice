@@ -15,7 +15,6 @@ import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.VeniceControllerConfig;
 import com.linkedin.venice.controller.VeniceControllerMultiClusterConfig;
 import com.linkedin.venice.controller.stats.TopicCleanupServiceStats;
-import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixReadOnlyStoreConfigRepository;
 import com.linkedin.venice.meta.StoreConfig;
 import com.linkedin.venice.meta.Version;
@@ -373,80 +372,5 @@ public class TestTopicCleanupService {
     List<PubSubTopic> deletableTopics = TopicCleanupService.extractVersionTopicsToCleanup(admin, topicRetentions, 2, 0);
     assertEquals(deletableTopics.size(), 1, "There should only be one deletable topic");
     assertTrue(deletableTopics.contains(pubSubTopicRepository.getTopic(Version.composeKafkaTopic(storeName, 1))));
-  }
-
-  @Test(enabled = false)
-  public void testCleanVeniceTopicsBlockRTTopicDeletionWhenMisconfigured() {
-    // RT topic deletion should be blocked when controller is misconfigured
-    // Mis-configured where local data center is not in the child data centers list
-    VeniceControllerConfig veniceControllerConfig = mock(VeniceControllerConfig.class);
-    doReturn(veniceControllerConfig).when(veniceControllerMultiClusterConfig).getCommonConfig();
-    doReturn("remote").when(veniceControllerConfig).getChildDatacenters();
-    TopicCleanupService blockedTopicCleanupService = new TopicCleanupService(
-        admin,
-        veniceControllerMultiClusterConfig,
-        pubSubTopicRepository,
-        topicCleanupServiceStats);
-    String storeName = Utils.getUniqueString("testStore");
-    Map<PubSubTopic, Long> storeTopics = new HashMap<>();
-    storeTopics.put(getPubSubTopic(storeName, "_rt"), 1000L);
-    doReturn(false).when(admin).isTopicTruncatedBasedOnRetention(Long.MAX_VALUE);
-    doReturn(true).when(admin).isTopicTruncatedBasedOnRetention(1000L);
-    doReturn(storeTopics).when(topicManager).getAllTopicRetentions();
-    doReturn(storeTopics).when(remoteTopicManager).getAllTopicRetentions();
-    doReturn(Optional.of(new StoreConfig(storeName))).when(storeConfigRepository).getStoreConfig(storeName);
-    blockedTopicCleanupService.cleanupVeniceTopics();
-    verify(topicManager, atLeastOnce()).getPubSubClusterAddress();
-    verify(topicManager, never()).ensureTopicIsDeletedAndBlockWithRetry(getPubSubTopic(storeName, "_rt"));
-    verify(topicCleanupServiceStats, atLeastOnce()).recordDeletableTopicsCount(1);
-    verify(topicCleanupServiceStats, atLeastOnce()).recordTopicDeletionError();
-  }
-
-  @Test(enabled = false)
-  public void testCleanVeniceTopicRTTopicDeletionWithErrorFetchingVT() {
-    // RT topic deletion should be blocked when version topic cannot be fetched due to error
-    String storeName = Utils.getUniqueString("testStore");
-    Map<PubSubTopic, Long> storeTopics = new HashMap<>();
-    storeTopics.put(getPubSubTopic(storeName, "_rt"), 1000L);
-    doReturn(false).when(admin).isTopicTruncatedBasedOnRetention(Long.MAX_VALUE);
-    doReturn(true).when(admin).isTopicTruncatedBasedOnRetention(1000L);
-    doReturn(storeTopics).when(topicManager).getAllTopicRetentions();
-    doReturn(Optional.of(new StoreConfig(storeName))).when(storeConfigRepository).getStoreConfig(storeName);
-    when(remoteTopicManager.getAllTopicRetentions()).thenThrow(new VeniceException("test")).thenReturn(storeTopics);
-
-    topicCleanupService.cleanupVeniceTopics();
-
-    verify(topicManager, never()).ensureTopicIsDeletedAndBlockWithRetry(getPubSubTopic(storeName, "_rt"));
-    verify(remoteTopicManager, atLeastOnce()).getAllTopicRetentions();
-    verify(topicCleanupServiceStats, atLeastOnce()).recordDeletableTopicsCount(1);
-    verify(topicCleanupServiceStats, atLeastOnce()).recordTopicDeletionError();
-
-    topicCleanupService.cleanupVeniceTopics();
-
-    verify(topicManager, atLeastOnce()).ensureTopicIsDeletedAndBlockWithRetry(getPubSubTopic(storeName, "_rt"));
-  }
-
-  @Test(enabled = false)
-  public void testCleanVeniceTopicOnlyFetchVTOnRTTopicDeletion() {
-    String storeName = Utils.getUniqueString("testStore");
-    Map<PubSubTopic, Long> storeTopics1 = new HashMap<>();
-    Map<PubSubTopic, Long> storeTopics2 = new HashMap<>();
-    storeTopics1.put(getPubSubTopic(storeName, "_rt"), Long.MAX_VALUE);
-    storeTopics1.put(getPubSubTopic(storeName, "_v1"), 1000L);
-    storeTopics1.put(getPubSubTopic(storeName, "_v2"), Long.MAX_VALUE);
-    storeTopics2.put(getPubSubTopic(storeName, "_rt"), 1000L);
-    storeTopics2.put(getPubSubTopic(storeName, "_v2"), 1000L);
-    doReturn(false).when(admin).isTopicTruncatedBasedOnRetention(Long.MAX_VALUE);
-    doReturn(true).when(admin).isTopicTruncatedBasedOnRetention(1000L);
-    when(topicManager.getAllTopicRetentions()).thenReturn(storeTopics1).thenReturn(storeTopics2);
-    doReturn(storeTopics2).when(remoteTopicManager).getAllTopicRetentions();
-
-    topicCleanupService.cleanupVeniceTopics();
-
-    verify(remoteTopicManager, never()).getAllTopicRetentions();
-
-    topicCleanupService.cleanupVeniceTopics();
-
-    verify(remoteTopicManager, atLeastOnce()).getAllTopicRetentions();
   }
 }
