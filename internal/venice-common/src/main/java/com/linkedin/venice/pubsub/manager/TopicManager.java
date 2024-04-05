@@ -374,13 +374,6 @@ public class TopicManager implements Closeable {
     return topicRetentions;
   }
 
-  public Map<PubSubTopic, Long> getTopicRetentions(Set<PubSubTopic> pubSubTopics) {
-    long startTime = System.nanoTime();
-    Map<PubSubTopic, Long> topicRetentions = pubSubAdminAdapter.getTopicRetentions(pubSubTopics);
-    stats.recordLatency(GET_ALL_TOPIC_RETENTIONS, startTime);
-    return topicRetentions;
-  }
-
   /**
    * Return topic retention time in MS.
    */

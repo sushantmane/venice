@@ -462,18 +462,6 @@ public class ApacheKafkaAdminAdapter implements PubSubAdminAdapter {
         "retention");
   }
 
-  @Override
-  public Map<PubSubTopic, Long> getTopicRetentions(Set<PubSubTopic> pubSubTopics) {
-    return getSomethingForSomeTopics(
-        pubSubTopics,
-        config -> Optional.ofNullable(config.get(TopicConfig.RETENTION_MS_CONFIG))
-            // Option A: perform a string-to-long conversion if it's present...
-            .map(configEntry -> Long.parseLong(configEntry.value()))
-            // Option B: ... or default to a sentinel value if it's missing
-            .orElse(PubSubConstants.PUBSUB_TOPIC_UNKNOWN_RETENTION),
-        "retention");
-  }
-
   private <T> Map<PubSubTopic, T> getSomethingForAllTopics(Function<Config, T> configTransformer, String content) {
     try {
       Set<PubSubTopic> pubSubTopics = internalKafkaAdminClient.listTopics()
