@@ -99,7 +99,7 @@ public class TestTopicCleanupService {
     storeTopics.put(getPubSubTopic("store2_v11", ""), Long.MAX_VALUE);
 
     Map<String, Map<PubSubTopic, Long>> filteredStoreTopics =
-        TopicCleanupService.getAllVeniceStoreTopicsRetentions(storeTopics);
+        TopicCleanupService.buildStoreTopicRetentionMap(storeTopics);
     Assert.assertEquals(filteredStoreTopics.size(), 2);
     Assert.assertEquals(filteredStoreTopics.get("store1").size(), 4);
     Assert.assertEquals(filteredStoreTopics.get("store2").size(), 2);
@@ -116,6 +116,8 @@ public class TestTopicCleanupService {
     topicRetentions1.put(pubSubTopicRepository.getTopic("store1_v2"), LOW_RETENTION_POLICY);
     topicRetentions1.put(pubSubTopicRepository.getTopic("store1_v3"), HIGH_RETENTION_POLICY);
     topicRetentions1.put(pubSubTopicRepository.getTopic("store1_v4"), HIGH_RETENTION_POLICY);
+    // should ignore RT topics
+    topicRetentions1.put(pubSubTopicRepository.getTopic("store1_rt"), LOW_RETENTION_POLICY);
     List<String> expectedResult1 = Arrays.asList("store1_v1", "store1_v2");
     List<String> actualResult1 = TopicCleanupService
         .extractVersionTopicsToCleanup(admin, topicRetentions1, admin.getMinNumberOfUnusedKafkaTopicsToPreserve(), 0)
