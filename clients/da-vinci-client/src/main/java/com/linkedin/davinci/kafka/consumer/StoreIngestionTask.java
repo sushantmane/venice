@@ -99,6 +99,7 @@ import com.linkedin.venice.utils.RedundantExceptionFilter;
 import com.linkedin.venice.utils.SparseConcurrentList;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Timer;
+import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.utils.lazy.Lazy;
@@ -1736,7 +1737,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           long offsetLag = measureHybridOffsetLag(newPartitionConsumptionState, true);
           if (previousOffsetLag != OffsetRecord.DEFAULT_OFFSET_LAG) {
             LOGGER.info(
-                "Checking offset Lag behavior: current offset lag: {}, previous offset lag: {}, offset lag threshold: {}",
+                "Checking offset Lag behavior for {}: current offset lag: {}, previous offset lag: {}, offset lag threshold: {}",
+                Utils.getTp(versionTopic, partition),
                 offsetLag,
                 previousOffsetLag,
                 offsetLagThreshold);
