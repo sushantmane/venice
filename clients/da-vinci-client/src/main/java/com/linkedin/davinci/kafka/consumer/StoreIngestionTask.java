@@ -1738,7 +1738,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           if (previousOffsetLag != OffsetRecord.DEFAULT_OFFSET_LAG) {
             LOGGER.info(
                 "Checking offset Lag behavior for {}: current offset lag: {}, previous offset lag: {}, offset lag threshold: {}",
-                Utils.getTp(versionTopic, partition),
+                Utils.getReplicaId(versionTopic, partition),
                 offsetLag,
                 previousOffsetLag,
                 offsetLagThreshold);
@@ -1789,8 +1789,12 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         OffsetRecord offsetRecord = storageMetadataService.getLastOffset(topic, partition);
 
         // Let's try to restore the state retrieved from the OffsetManager
-        PartitionConsumptionState newPartitionConsumptionState =
-            new PartitionConsumptionState(partition, amplificationFactor, offsetRecord, hybridStoreConfig.isPresent());
+        PartitionConsumptionState newPartitionConsumptionState = new PartitionConsumptionState(
+            Utils.getReplicaId(versionTopic, partition),
+            partition,
+            amplificationFactor,
+            offsetRecord,
+            hybridStoreConfig.isPresent());
         newPartitionConsumptionState.setLeaderFollowerState(leaderState);
 
         partitionConsumptionStateMap.put(partition, newPartitionConsumptionState);
@@ -1941,6 +1945,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       partitionConsumptionStateMap.put(
           partition,
           new PartitionConsumptionState(
+              Utils.getReplicaId(versionTopic, partition),
               partition,
               amplificationFactor,
               new OffsetRecord(partitionStateSerializer),

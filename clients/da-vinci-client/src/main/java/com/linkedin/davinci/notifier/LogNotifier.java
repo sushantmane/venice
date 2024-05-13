@@ -72,7 +72,7 @@ public class LogNotifier implements VeniceNotifier {
       LOGGER.info(
           "{} for replica: {}{}{}",
           header,
-          Utils.getTp(pubSubTopic, partitionId),
+          Utils.getReplicaId(pubSubTopic, partitionId),
           pubSubTopic,
           partitionId,
           offset == null ? "" : " offset " + offset,
@@ -81,7 +81,7 @@ public class LogNotifier implements VeniceNotifier {
       LOGGER.error(
           "{} for replica: {}{}{}",
           header,
-          Utils.getTp(pubSubTopic, partitionId),
+          Utils.getReplicaId(pubSubTopic, partitionId),
           offset == null ? "" : " offset " + offset,
           (message == null || message.isEmpty()) ? "" : " message " + message,
           ex);

@@ -908,15 +908,15 @@ public class Utils {
   /**
    * Standard logging format for TopicPartition
    */
-  public static String getTp(PubSubTopicPartition topicPartition) {
-    return getTp(topicPartition.getPubSubTopic(), topicPartition.getPartitionNumber());
+  public static String getReplicaId(PubSubTopicPartition topicPartition) {
+    return getReplicaId(topicPartition.getPubSubTopic(), topicPartition.getPartitionNumber());
   }
 
-  public static String getTp(String topic, int partition) {
+  public static String getReplicaId(String topic, int partition) {
     return topic + "-" + partition;
   }
 
-  public static String getTp(PubSubTopic topic, int partition) {
+  public static String getReplicaId(PubSubTopic topic, int partition) {
     return topic + "-" + partition;
   }
 }
