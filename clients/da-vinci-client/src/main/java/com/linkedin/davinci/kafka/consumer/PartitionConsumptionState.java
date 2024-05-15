@@ -880,4 +880,8 @@ public class PartitionConsumptionState {
   public void setLastLeaderCompleteStateUpdateInMs(long lastLeaderCompleteStateUpdateInMs) {
     this.lastLeaderCompleteStateUpdateInMs = lastLeaderCompleteStateUpdateInMs;
   }
+
+  public String getReplicaId() {
+    return replicaId;
+  }
 }
