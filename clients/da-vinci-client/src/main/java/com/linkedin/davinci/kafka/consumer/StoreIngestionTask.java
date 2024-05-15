@@ -10,6 +10,7 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.LogMessages.KILLED_JOB_MESSAGE;
 import static com.linkedin.venice.kafka.protocol.enums.ControlMessageType.START_OF_SEGMENT;
 import static com.linkedin.venice.utils.Utils.FATAL_DATA_VALIDATION_ERROR;
+import static com.linkedin.venice.utils.Utils.getReplicaId;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -2674,10 +2675,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     final ControlMessageType type = ControlMessageType.valueOf(controlMessage);
     if (!isSegmentControlMsg(type)) {
       LOGGER.info(
-          "{} : Received {} control message. Partition: {}, Offset: {}",
-          ingestionTaskName,
+          "Received {} control message. Replica: {}, Offset: {}",
           type.name(),
-          partition,
+          partitionConsumptionState.getReplicaId(),
           offset);
     }
     switch (type) {
@@ -2796,9 +2796,10 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         } else {
           LOGGER.warn(
               "Encountered errors during updating metadata for 2nd round DIV validation "
-                  + "after EOP consuming from: {} offset: {} ExMsg: {}",
+                  + "after EOP consuming from: {} offset: {} replica: {} ExMsg: {}",
               consumerRecord.getTopicPartition(),
               consumerRecord.getOffset(),
+              partitionConsumptionState.getReplicaId(),
               fatalException.getMessage());
         }
       }
@@ -2850,16 +2851,19 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       }
     } catch (DuplicateDataException e) {
       divErrorMetricCallback.accept(e);
-      if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("{} : Skipping a duplicate record at offset: {}", ingestionTaskName, consumerRecord.getOffset());
-      }
+      LOGGER.debug(
+          "Skipping a duplicate record at offset: {} from topic-partition: {} for replica: {}",
+          consumerRecord.getOffset(),
+          consumerRecord.getTopicPartition(),
+          partitionConsumptionState.getReplicaId());
     } catch (PersistenceFailureException ex) {
       if (partitionConsumptionStateMap.containsKey(consumerRecord.getTopicPartition().getPartitionNumber())) {
         // If we actually intend to be consuming this partition, then we need to bubble up the failure to persist.
         LOGGER.error(
-            "Met PersistenceFailureException while processing record with offset: {}, topic: {}, meta data of the record: {}",
+            "Met PersistenceFailureException for replica: {} while processing record with offset: {}, topic-partition: {}, meta data of the record: {}",
+            partitionConsumptionState.getReplicaId(),
             consumerRecord.getOffset(),
-            kafkaVersionTopic,
+            consumerRecord.getTopicPartition(),
             consumerRecord.getValue().producerMetadata);
         throw ex;
       } else {
@@ -2876,7 +2880,11 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
     // We want to update offsets in all cases, except when we hit the PersistenceFailureException
     if (partitionConsumptionState == null) {
-      LOGGER.info("{} has been unsubscribed, will skip offset update", consumerRecord.getTopicPartition());
+      LOGGER.info(
+          "PCS for replica: {} is null, will skip offset update. Processed record was from topic-partition: {} offset: {}",
+          getReplicaId(versionTopic, consumerRecord.getPartition()),
+          consumerRecord.getTopicPartition(),
+          consumerRecord.getOffset());
     } else {
       OffsetRecord offsetRecord = partitionConsumptionState.getOffsetRecord();
       /**
@@ -2956,10 +2964,11 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       // TODO: remove this condition check after fixing the bug that drainer in leaders is validating RT DIV info
       if (consumerRecord.getValue().producerMetadata.messageSequenceNumber != 1) {
         LOGGER.warn(
-            "Data integrity validation problem with: {} offset: {}, "
-                + "but consumption will continue since EOP is already received. Msg: {}",
+            "Data integrity validation problem with incoming record from topic-partition: {} and offset: {}, "
+                + "but consumption will continue since EOP is already received for replica: {}. Msg: {}",
             consumerRecord.getTopicPartition(),
             consumerRecord.getOffset(),
+            partitionConsumptionState.getReplicaId(),
             warningException.getMessage());
       }
 
@@ -3067,10 +3076,10 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected void logStorageOperationWhileUnsubscribed(int partition) {
     // TODO Consider if this is going to be too noisy, in which case we could mute it.
     LOGGER.info(
-        "Attempted to interact with the storage engine for partition {} while the "
+        "Attempted to interact with the storage engine for partition: {} while the "
             + "partitionConsumptionStateMap does not contain this partition. "
             + "Will ignore the operation as it probably indicates the partition was unsubscribed.",
-        partition);
+        Utils.getReplicaId(versionTopic, partition));
   }
 
   public boolean consumerHasAnySubscription() {
@@ -3086,11 +3095,12 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   public void consumerUnSubscribe(PubSubTopic topic, PartitionConsumptionState partitionConsumptionState) {
     Instant startTime = Instant.now();
     int partitionId = partitionConsumptionState.getPartition();
-    aggKafkaConsumerService.unsubscribeConsumerFor(versionTopic, new PubSubTopicPartitionImpl(topic, partitionId));
+    PubSubTopicPartition topicPartition = new PubSubTopicPartitionImpl(topic, partitionId);
+    aggKafkaConsumerService.unsubscribeConsumerFor(versionTopic, topicPartition);
     LOGGER.info(
-        "Consumer unsubscribed topic {} partition {}. Took {} ms",
-        topic,
-        partitionId,
+        "Consumer unsubscribed to topic-partition: {} for replica: {}. Took {} ms",
+        topicPartition,
+        partitionConsumptionState.getReplicaId(),
         Instant.now().toEpochMilli() - startTime.toEpochMilli());
   }
 
@@ -3274,10 +3284,9 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
     if (traceEnabled) {
       LOGGER.trace(
-          "{} : Completed {} to Store: {} in {} ns at {}",
-          ingestionTaskName,
+          "Completed {} to replica: {} in {} ns at {}",
           messageType,
-          kafkaVersionTopic,
+          partitionConsumptionState.getReplicaId(),
           System.nanoTime() - startTimeNs,
           System.currentTimeMillis());
     }
@@ -3461,7 +3470,11 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     if (valueSchema != null) {
       Schema schema = valueSchema.getSchema();
       new AvroGenericDeserializer<>(schema, schema).deserialize(value);
-      LOGGER.info("Value deserialization succeeded with schema id {} for: {}", schemaId, record.getTopicPartition());
+      LOGGER.info(
+          "Value deserialization succeeded with schema id {} for incoming record from: {} for replica: {}",
+          schemaId,
+          record.getTopicPartition(),
+          Utils.getReplicaId(versionTopic, record.getPartition()));
       deserializedSchemaIds.set(schemaId, new Object());
     }
   }
@@ -3640,8 +3653,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           if (suppressLiveUpdates) {
             // If live updates suppression is enabled, stop consuming any new messages once the partition is ready to
             // serve.
-            String msg =
-                ingestionTaskName + " Live update suppression is enabled. Stop consumption for partition " + partition;
+            String msg = ingestionTaskName + " Live update suppression is enabled. Stop consumption for replica: "
+                + partitionConsumptionState.getReplicaId();
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
               LOGGER.info(msg);
             }
@@ -3660,7 +3673,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
   void reportCompleted(PartitionConsumptionState partitionConsumptionState, boolean forceCompletion) {
     statusReportAdapter.reportCompleted(partitionConsumptionState, forceCompletion);
-    LOGGER.info("{} Partition {} is ready to serve", ingestionTaskName, partitionConsumptionState.getPartition());
+    LOGGER.info("Replica: {} is ready to serve", partitionConsumptionState.getReplicaId());
   }
 
   /**
@@ -3849,11 +3862,11 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
         }
       } else if (!REDUNDANT_LOGGING_FILTER.isRedundantException(storeName, "IllegalTimestamp")) {
         LOGGER.warn(
-            "Illegal timestamp for storeName: {}, versionNumber: {}, partition: {}, "
+            "Illegal timestamp for storeName: {}, versionNumber: {}, replica: {}, "
                 + "leaderProducedRecordContext: {}, producerTimestamp: {}",
             storeName,
             versionNumber,
-            partitionConsumptionState.getPartition(),
+            partitionConsumptionState.getReplicaId(),
             leaderProducedRecordContext == null ? "NA" : leaderProducedRecordContext,
             producerTimestamp);
       }
