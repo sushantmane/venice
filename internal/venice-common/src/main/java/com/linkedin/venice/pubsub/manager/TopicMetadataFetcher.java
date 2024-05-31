@@ -62,8 +62,10 @@ class TopicMetadataFetcher implements Closeable {
   private static final Logger LOGGER = LogManager.getLogger(TopicMetadataFetcher.class);
   private static final int DEFAULT_MAX_RETRIES_FOR_POPULATING_TMD_CACHE_ENTRY = 5;
   private static final Duration INITIAL_RETRY_DELAY = Duration.ofMillis(100);
-  private static final List<Class<? extends Throwable>> PUBSUB_RETRIABLE_FAILURES =
-      Arrays.asList(PubSubTopicDoesNotExistException.class, PubSubOpTimeoutException.class);
+  private static final List<Class<? extends Throwable>> PUBSUB_RETRIABLE_FAILURES = Arrays.asList(
+      PubSubTopicDoesNotExistException.class,
+      PubSubOpTimeoutException.class,
+      PubSubClientRetriableException.class);
 
   /**
    * Blocking queue is used to ensure single-threaded access to a consumer as PubSubConsumerAdapter
