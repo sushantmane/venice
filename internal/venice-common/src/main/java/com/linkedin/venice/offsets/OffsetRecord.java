@@ -100,6 +100,18 @@ public class OffsetRecord {
     this.partitionState.offsetLag = offsetLag;
   }
 
+  public void setCurrentTermId(long currentTermId) {
+    this.partitionState.currentTermId = currentTermId;
+  }
+
+  public void setCurrentTermIdLatestOffset(long currentTermLatestOffset) {
+    this.partitionState.currentTermLatestOffset = currentTermLatestOffset;
+  }
+
+  public void setCurrentTermStartOffset(long currentTermStartOffset) {
+    this.partitionState.currentTermStartOffset = currentTermStartOffset;
+  }
+
   /**
    * @return the last messageTimeStamp across all producers tracked by this OffsetRecord
    */

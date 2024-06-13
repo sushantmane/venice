@@ -389,7 +389,29 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           return;
         }
 
+        /**
+         *  TODO: Re-evaluate this case.
+         *  What will be DoLRecord for this re-nominated leader.
+         *
+         *  Maybe we should, acquire VW lock for the partition.
+         *  close the current segment
+         *  producer DOLRecord with the new termId
+         *  release the lock
+         *
+         *  or
+         *  case 1) if replica was already a leader fetch the leadership history and see if the previous
+         *  term was also indeed from this replica; if that's not the case then it means that there was another leader and this replica didn't notice it. And this could result in the data loss. So what we can do is put this replica in ERROR state
+         *
+         *  if there was no discrepancy then we'll acquire VW lock for the partition.
+         *  close the current segment
+         *  producer DOLRecord with the new termId
+         *  release the lock
+         * and return without additional booking
+         *
+         */
         if (partitionConsumptionState.getLeaderFollowerState().equals(LEADER)) {
+          partitionConsumptionState.setCurrentTermId(checker.getCurrentTermId());
+          partitionConsumptionState.getMyLastLeaderTermId(checker.getCurrentTermId());
           LOGGER.info(
               "State transition from STANDBY to LEADER is skipped for replica: {} as it is already the partition leader.",
               Utils.getReplicaId(topicName, partition));
@@ -535,6 +557,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           break;
 
         case IN_TRANSITION_FROM_STANDBY_TO_LEADER:
+          veniceWriter.get().sendStartOfSegment();
           if (canSwitchToLeaderTopic(partitionConsumptionState)) {
             LOGGER.info(
                 "Initiating promotion of replica: {} to leader for the partition. Unsubscribing from the current topic: {}",
@@ -700,6 +723,13 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     }
   }
 
+  /**
+   * TODO:: replace this with new semantic
+   * 1) f
+   *
+   * @param pcs
+   * @return
+   */
   private boolean canSwitchToLeaderTopic(PartitionConsumptionState pcs) {
     /**
      * Potential risk: it's possible that Kafka consumer would starve one of the partitions for a long

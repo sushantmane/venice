@@ -1576,14 +1576,14 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param partition the Kafka partition to write to.
    * @param debugInfo arbitrary key/value pairs of information that will be propagated alongside the control message.
    */
-  public void sendStartOfSegment(int partition, Map<String, String> debugInfo) {
+  public PubSubProduceResult sendStartOfSegment(int partition, Map<String, String> debugInfo) {
     ControlMessage controlMessage = new ControlMessage();
     controlMessage.controlMessageType = ControlMessageType.START_OF_SEGMENT.getValue();
     StartOfSegment startOfSegment = new StartOfSegment();
     startOfSegment.checksumType = checkSumType.getValue();
     startOfSegment.upcomingAggregates = new ArrayList<>(); // TODO Add extra aggregates
     controlMessage.controlMessageUnion = startOfSegment;
-    sendControlMessageWithRetriesForNonExistentTopic(
+    return sendControlMessageWithRetriesForNonExistentTopic(
         controlMessage,
         partition,
         debugInfo,
@@ -1688,7 +1688,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    * @param debugInfo arbitrary key/value pairs of information that will be propagated alongside the control message.
    * @param callback callback to execute when the record has been acknowledged by the Kafka server (null means no callback)
    */
-  public void sendControlMessageWithRetriesForNonExistentTopic(
+  public PubSubProduceResult sendControlMessageWithRetriesForNonExistentTopic(
       ControlMessage controlMessage,
       int partition,
       Map<String, String> debugInfo,
@@ -1704,7 +1704,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       // String implementation.
       while (true) {
         try {
-          sendMessage(
+          return sendMessage(
               this::getControlMessageKey,
               MessageType.CONTROL_MESSAGE,
               controlMessage,
@@ -1714,7 +1714,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
               updateCheckSum,
               leaderMetadataWrapper,
               VENICE_DEFAULT_LOGICAL_TS).get();
-          return;
         } catch (InterruptedException | ExecutionException e) {
           if (ExceptionUtils.recursiveClassEquals(e, PubSubTopicDoesNotExistException.class)) {
             /**
@@ -2036,6 +2035,11 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         } finally {
           // Mark the segment as ended. This is because if we fail to send EOS, the next write can create a new segment
           currentSegment.end(finalSegment);
+
+          // if this is the final segment for this partition, clear up segment state for this partition
+          if (finalSegment) {
+            segments[partition] = null;
+          }
         }
       }
     }

@@ -37,6 +37,19 @@ public class PartitionConsumptionState {
   private final int userPartition;
   private final boolean hybrid;
   private final OffsetRecord offsetRecord;
+  /**
+   * This is the highest term see by this replica.
+   * It should only be updated by the leader consumer threads and should NOT be used directly to update on disk state replica state.
+   * On disk state must be updated by looking at the termId of the most recent record that was
+   * saved to disk.
+   */
+  private long currentTermId;
+
+  /**
+   * The termId from the latest leadership turn of this replica. Only updated
+   * on TO LEADER state transitions and mainly used to catch any issues code.
+   */
+  private long myLastLeaderTermId = -1;
 
   private GUID leaderGUID;
 
@@ -883,5 +896,21 @@ public class PartitionConsumptionState {
 
   public String getReplicaId() {
     return replicaId;
+  }
+
+  public long getCurrentTermId() {
+    return currentTermId;
+  }
+
+  public void setCurrentTermId(long currentTermId) {
+    this.currentTermId = currentTermId;
+  }
+
+  public long getMyLastLeaderTermId() {
+    return myLastLeaderTermId;
+  }
+
+  public void getMyLastLeaderTermId(long myLastLeaderTermId) {
+    this.myLastLeaderTermId = myLastLeaderTermId;
   }
 }
