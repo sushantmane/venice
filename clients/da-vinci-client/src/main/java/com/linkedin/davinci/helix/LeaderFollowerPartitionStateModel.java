@@ -3,6 +3,7 @@ package com.linkedin.davinci.helix;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
 import com.linkedin.davinci.ingestion.IngestionBackend;
 import com.linkedin.davinci.kafka.consumer.LeaderFollowerStoreIngestionTask;
+import com.linkedin.davinci.kafka.consumer.PartitionConsumptionState;
 import com.linkedin.davinci.stats.ParticipantStateTransitionStats;
 import com.linkedin.davinci.stats.ingestion.heartbeat.HeartbeatMonitoringService;
 import com.linkedin.venice.common.VeniceSystemStoreUtils;
@@ -132,7 +133,10 @@ public class LeaderFollowerPartitionStateModel extends AbstractPartitionStateMod
 
   @Transition(to = HelixState.LEADER_STATE, from = HelixState.STANDBY_STATE)
   public void onBecomeLeaderFromStandby(Message message, NotificationContext context) {
-    LeaderSessionIdChecker checker = new LeaderSessionIdChecker(leaderSessionId.incrementAndGet(), leaderSessionId);
+    // TODO(sushant): Fetch termId bu calling Message::getLeaderTerm API once it is ready
+    long newTermId = message.getCreateTimeStamp();
+    LeaderSessionIdChecker checker =
+        new LeaderSessionIdChecker(newTermId, leaderSessionId.incrementAndGet(), leaderSessionId);
     /**
      * We set up the lag monitor first for leader transitions because we want to monitor the amount of time
      * where a slice doesn't have a replicating leader.  While this state transition executes, there should be no
@@ -152,7 +156,29 @@ public class LeaderFollowerPartitionStateModel extends AbstractPartitionStateMod
 
   @Transition(to = HelixState.STANDBY_STATE, from = HelixState.LEADER_STATE)
   public void onBecomeStandbyFromLeader(Message message, NotificationContext context) {
-    LeaderSessionIdChecker checker = new LeaderSessionIdChecker(leaderSessionId.incrementAndGet(), leaderSessionId);
+    PartitionConsumptionState replica =
+        getIngestionBackend().getStoreIngestionService().getReplica(getStoreAndServerConfigs(), getPartition());
+    if (replica == null) {
+      logger.warn(
+          "Replica: {} is not found. Ignoring LEADER->STANDBY state transition",
+          Utils.getReplicaId(message.getResourceName(), getPartition()));
+      return;
+    }
+
+    if (replica.getCurrentTermId() != replica.getMyLastLeaderTermId()) {
+      logger.warn(
+          "[DoLStamp] Leaders last term id: {} does not match with the current term id: {}."
+              + " This is potentially due to a bug in the code."
+              + " Throwing error for the LEADER->STANDBY state transition for replica: {}",
+          replica.getMyLastLeaderTermId(),
+          replica.getCurrentTermId(),
+          Utils.getReplicaId(message.getResourceName(), getPartition()));
+      // TODO(sushant): Put this check behind a config flag
+      // throw new VeniceException("Leaders last term id does not match with the current term id.");
+    }
+
+    LeaderSessionIdChecker checker =
+        new LeaderSessionIdChecker(replica.getCurrentTermId(), leaderSessionId.incrementAndGet(), leaderSessionId);
     updateLagMonitor(
         message.getResourceName(),
         heartbeatMonitoringService::addFollowerLagMonitor,
@@ -271,14 +297,20 @@ public class LeaderFollowerPartitionStateModel extends AbstractPartitionStateMod
   public static class LeaderSessionIdChecker {
     private final long assignedSessionId;
     private final AtomicLong latestSessionIdHandle;
+    private final long currentTermId;
 
-    public LeaderSessionIdChecker(long assignedSessionId, AtomicLong latestSessionIdHandle) {
+    public LeaderSessionIdChecker(long currentTermId, long assignedSessionId, AtomicLong latestSessionIdHandle) {
+      this.currentTermId = currentTermId;
       this.assignedSessionId = assignedSessionId;
       this.latestSessionIdHandle = latestSessionIdHandle;
     }
 
     public boolean isSessionIdValid() {
       return assignedSessionId == latestSessionIdHandle.get();
+    }
+
+    public long getCurrentTermId() {
+      return currentTermId;
     }
   }
 }

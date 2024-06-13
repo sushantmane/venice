@@ -27,6 +27,7 @@ import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.io.IOException;
 import java.util.HashMap;
@@ -71,6 +72,7 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
       new VeniceConcurrentHashMap<>();
   private final Map<String, String> kafkaClusterUrlToAliasMap;
   private final Object2IntMap<String> kafkaClusterUrlToIdMap;
+  private final Int2ObjectMap<String> kafkaClusterIdToAliasMap;
   private final PubSubMessageDeserializer pubSubDeserializer;
   private final Function<String, String> kafkaClusterUrlResolver;
   private final PubSubPropertiesSupplier pubSubPropertiesSupplier;
@@ -113,6 +115,7 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     this.sharedConsumerAssignmentStrategy = serverConfig.getSharedConsumerAssignmentStrategy();
     this.kafkaClusterUrlToAliasMap = serverConfig.getKafkaClusterUrlToAliasMap();
     this.kafkaClusterUrlToIdMap = serverConfig.getKafkaClusterUrlToIdMap();
+    this.kafkaClusterIdToAliasMap = serverConfig.getKafkaClusterIdToAliasMap();
     this.isKafkaConsumerOffsetCollectionEnabled = serverConfig.isKafkaConsumerOffsetCollectionEnabled();
     this.pubSubDeserializer = pubSubDeserializer;
     this.kafkaClusterUrlResolver = serverConfig.getKafkaClusterUrlResolver();

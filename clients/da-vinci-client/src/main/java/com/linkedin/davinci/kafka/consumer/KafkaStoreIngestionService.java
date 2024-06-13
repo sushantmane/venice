@@ -704,6 +704,15 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     }
   }
 
+  @Override
+  public PartitionConsumptionState getReplica(VeniceStoreVersionConfig veniceStoreVersionConfig, int partitionId) {
+    final String topic = veniceStoreVersionConfig.getStoreVersionName();
+    try (AutoCloseableLock ignore = topicLockManager.getLockForResource(topic)) {
+      StoreIngestionTask storeIngestionTask = topicNameToIngestionTaskMap.get(topic);
+      return storeIngestionTask.getPartitionConsumptionState(partitionId);
+    }
+  }
+
   public void waitIngestionTaskToCompleteAllPartitionPendingActions(
       String topicName,
       int partition,

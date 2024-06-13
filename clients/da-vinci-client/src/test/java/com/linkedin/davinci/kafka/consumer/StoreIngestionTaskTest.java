@@ -39,8 +39,8 @@ import static com.linkedin.venice.utils.Time.MS_PER_HOUR;
 import static com.linkedin.venice.writer.LeaderCompleteState.LEADER_COMPLETED;
 import static com.linkedin.venice.writer.LeaderCompleteState.LEADER_NOT_COMPLETED;
 import static com.linkedin.venice.writer.VeniceWriter.DEFAULT_LEADER_METADATA_WRAPPER;
-import static com.linkedin.venice.writer.VeniceWriter.generateHeartbeatMessage;
 import static com.linkedin.venice.writer.VeniceWriter.getHeartbeatKME;
+import static com.linkedin.venice.writer.VeniceWriter.getStartOfSegmentControlMessage;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -1292,7 +1292,7 @@ public abstract class StoreIngestionTaskTest {
           new HashMap<>());
       storeIngestionTaskUnderTest.promoteToLeader(
           fooTopicPartition,
-          new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(1, new AtomicLong(1)));
+          new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(0, 1, new AtomicLong(1)));
       try {
         rtWriter.put(putKeyFoo, putValue, EXISTING_SCHEMA_ID, PUT_KEY_FOO_TIMESTAMP, null).get();
         rtWriter.delete(deleteKeyFoo, DELETE_KEY_FOO_TIMESTAMP, null).get();
@@ -3384,13 +3384,18 @@ public abstract class StoreIngestionTaskTest {
             null);
 
     OffsetRecord mockOffsetRecord = mock(OffsetRecord.class);
-    PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(topic, PARTITION_FOO), PARTITION_FOO, mockOffsetRecord, true);
-
+    PartitionConsumptionState partitionConsumptionState = new PartitionConsumptionState(
+        fooTopicPartition.getPubSubTopic(),
+        PARTITION_FOO,
+        mockOffsetRecord,
+        true);
     long producerTimestamp = System.currentTimeMillis();
     LeaderMetadataWrapper mockLeaderMetadataWrapper = mock(LeaderMetadataWrapper.class);
-    KafkaMessageEnvelope kafkaMessageEnvelope =
-        getHeartbeatKME(producerTimestamp, mockLeaderMetadataWrapper, generateHeartbeatMessage(CheckSumType.NONE), "0");
+    KafkaMessageEnvelope kafkaMessageEnvelope = getHeartbeatKME(
+        producerTimestamp,
+        mockLeaderMetadataWrapper,
+        getStartOfSegmentControlMessage(CheckSumType.NONE),
+        "0");
 
     PubSubMessageHeaders pubSubMessageHeaders = new PubSubMessageHeaders();
     pubSubMessageHeaders.add(VeniceWriter.getLeaderCompleteStateHeader(LEADER_COMPLETED));
@@ -3664,9 +3669,7 @@ public abstract class StoreIngestionTaskTest {
 
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
     doReturn(pubSubTopicRepository.getTopic(versionTopicName)).when(offsetRecord).getLeaderTopic(any());
-    PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(versionTopicName, 0), 0, offsetRecord, false);
-
+    PartitionConsumptionState partitionConsumptionState = new PartitionConsumptionState(pubSubTopicRepository.getTopic(versionTopicName), 0, offsetRecord, false);
     long localVersionTopicOffset = 100L;
     long remoteVersionTopicOffset = 200L;
     partitionConsumptionState.updateLatestProcessedLocalVersionTopicOffset(localVersionTopicOffset);
@@ -4006,9 +4009,7 @@ public abstract class StoreIngestionTaskTest {
 
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
     doReturn(pubSubTopic).when(offsetRecord).getLeaderTopic(any());
-    PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(pubSubTopic, 0), 0, offsetRecord, false);
-
+    PartitionConsumptionState partitionConsumptionState = new PartitionConsumptionState(pubSubTopic, 0, offsetRecord, false);
     storeIngestionTaskUnderTest.updateLeaderTopicOnFollower(partitionConsumptionState);
     storeIngestionTaskUnderTest.startConsumingAsLeader(partitionConsumptionState);
     String dataRecoverySourceTopic = Version.composeKafkaTopic(storeNameWithoutVersionInfo, 1);

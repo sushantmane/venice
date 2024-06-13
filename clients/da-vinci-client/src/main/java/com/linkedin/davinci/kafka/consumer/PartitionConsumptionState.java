@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.avro.generic.GenericRecord;
 
 
@@ -29,10 +30,30 @@ import org.apache.avro.generic.GenericRecord;
  * This class is used to maintain internal state for consumption of each partition.
  */
 public class PartitionConsumptionState {
-  private final String replicaId;
+  private final PubSubTopicPartition vtPartition;
   private final int partition;
   private final boolean hybrid;
   private final OffsetRecord offsetRecord;
+
+  /**
+   * This is the highest term see by this replica.
+   * It should only be updated by the leader consumer threads and should NOT be used directly to update on disk state replica state.
+   * On disk state must be updated by looking at the termId of the most recent record that was
+   * saved to disk.
+   */
+  private long currentTermId;
+
+  /**
+   * The termId from the latest leadership turn of this replica. Only updated
+   * upon STANDBY_TO_LEADER state transitions and mainly used to catch any issues code.
+   */
+  private long myLastLeaderTermId = -1;
+
+  private LeadershipTransitionContext leadershipTransitionContext = null;
+  /**
+   * Lock to ensure that only one thread can update the leadership transition context at a time.
+   */
+  private final ReentrantLock ltcLock = new ReentrantLock();
 
   private GUID leaderGUID;
 
@@ -203,8 +224,12 @@ public class PartitionConsumptionState {
   private LeaderCompleteState leaderCompleteState;
   private long lastLeaderCompleteStateUpdateInMs;
 
-  public PartitionConsumptionState(String replicaId, int partition, OffsetRecord offsetRecord, boolean hybrid) {
-    this.replicaId = replicaId;
+  public PartitionConsumptionState(
+      PubSubTopic versionTopic,
+      int partition,
+      OffsetRecord offsetRecord,
+      boolean hybrid) {
+    this.vtPartition = new PubSubTopicPartitionImpl(versionTopic, partition);
     this.partition = partition;
     this.hybrid = hybrid;
     this.offsetRecord = offsetRecord;
@@ -249,7 +274,7 @@ public class PartitionConsumptionState {
   }
 
   public int getPartition() {
-    return this.partition;
+    return this.vtPartition.getPartitionNumber();
   }
 
   public CompletableFuture<Void> getLastVTProduceCallFuture() {
@@ -356,7 +381,7 @@ public class PartitionConsumptionState {
   public String toString() {
     return new StringBuilder().append("PCS{")
         .append("replicaId=")
-        .append(replicaId)
+        .append(vtPartition)
         .append(", hybrid=")
         .append(hybrid)
         .append(", latestProcessedLocalVersionTopicOffset=")
@@ -579,6 +604,19 @@ public class PartitionConsumptionState {
 
   public void setSkipKafkaMessage(boolean skipKafkaMessage) {
     this.skipKafkaMessage = skipKafkaMessage;
+  }
+
+  public LeadershipTransitionContext getleadershipTransitionContext() {
+    return leadershipTransitionContext;
+  }
+
+  public ReentrantLock getLtcLock() {
+    return ltcLock;
+  }
+
+  public PartitionConsumptionState setLeadershipTransitionContext(LeadershipTransitionContext ltCtx) {
+    this.leadershipTransitionContext = ltCtx;
+    return this;
   }
 
   /**
@@ -831,6 +869,26 @@ public class PartitionConsumptionState {
   }
 
   public String getReplicaId() {
-    return replicaId;
+    return vtPartition.toString();
+  }
+
+  public long getCurrentTermId() {
+    return currentTermId;
+  }
+
+  public void setCurrentTermId(long currentTermId) {
+    this.currentTermId = currentTermId;
+  }
+
+  public long getMyLastLeaderTermId() {
+    return myLastLeaderTermId;
+  }
+
+  public void getMyLastLeaderTermId(long myLastLeaderTermId) {
+    this.myLastLeaderTermId = myLastLeaderTermId;
+  }
+
+  public PubSubTopicPartition getVtPartition() {
+    return vtPartition;
   }
 }

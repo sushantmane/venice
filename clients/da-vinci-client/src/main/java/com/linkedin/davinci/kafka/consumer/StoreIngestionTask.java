@@ -80,11 +80,14 @@ import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeader;
+import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubUnsubscribedTopicPartitionException;
 import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.pubsub.manager.TopicManagerRepository;
+import com.linkedin.venice.replica.state.DoLStamp;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.ChunkedValueManifestSerializer;
@@ -107,6 +110,7 @@ import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import com.linkedin.venice.utils.lazy.Lazy;
+import com.linkedin.venice.utils.locks.AutoCloseableLock;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.io.Closeable;
 import java.io.IOException;
@@ -1761,7 +1765,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
         // Let's try to restore the state retrieved from the OffsetManager
         PartitionConsumptionState newPartitionConsumptionState = new PartitionConsumptionState(
-            Utils.getReplicaId(versionTopic, partition),
+            versionTopic,
             partition,
             offsetRecord,
             hybridStoreConfig.isPresent());
@@ -1907,7 +1911,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       partitionConsumptionStateMap.put(
           partition,
           new PartitionConsumptionState(
-              Utils.getReplicaId(versionTopic, partition),
+              versionTopic,
               partition,
               new OffsetRecord(partitionStateSerializer),
               hybridStoreConfig.isPresent()));
@@ -2720,6 +2724,12 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       LeaderProducedRecordContext leaderProducedRecordContext,
       String kafkaUrl,
       long beforeProcessingRecordTimestampNs) {
+    DoLStamp doLStamp = null;
+    LOGGER.info(
+        "[Drainer - DoLStamp] {}/{} Headers: {}",
+        consumerRecord,
+        kafkaUrl,
+        consumerRecord.getPubSubMessageHeaders());
     // De-serialize payload into Venice Message format
     KafkaKey kafkaKey = consumerRecord.getKey();
     KafkaMessageEnvelope kafkaValue = consumerRecord.getValue();
@@ -2796,9 +2806,12 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
             consumerRecord.getOffset(),
             partitionConsumptionState);
         try {
-          if (controlMessage.controlMessageType == START_OF_SEGMENT.getValue()
-              && Arrays.equals(consumerRecord.getKey().getKey(), KafkaKey.HEART_BEAT.getKey())) {
-            recordHeartbeatReceived(partitionConsumptionState, consumerRecord, kafkaUrl);
+          if (controlMessage.controlMessageType == START_OF_SEGMENT.getValue()) {
+            if (Arrays.equals(consumerRecord.getKey().getKey(), KafkaKey.HEART_BEAT.getKey())) {
+              recordHeartbeatReceived(partitionConsumptionState, consumerRecord, kafkaUrl);
+            } else {
+              doLStamp = extractDoLStampFromControlMessage(consumerRecord);
+            }
           }
         } catch (Exception e) {
           LOGGER.error("Failed to record Record heartbeat with message: ", e);
@@ -2883,11 +2896,65 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
           leaderProducedRecordContext,
           kafkaUrl,
           false);
+
+      if (doLStamp != null) {
+        LOGGER.info("DoLStamp: {} received for replica: {}", doLStamp, partitionConsumptionState.getReplicaId());
+        syncOffset(partitionConsumptionState.getVtPartition().getTopicName(), partitionConsumptionState);
+        validateDoLAndUpdateReplicaState(partitionConsumptionState, doLStamp);
+      }
+
       if (checkReadyToServeAfterProcess) {
         defaultReadyToServeChecker.apply(partitionConsumptionState);
       }
     }
     return sizeOfPersistedData;
+  }
+
+  private void validateDoLAndUpdateReplicaState(PartitionConsumptionState pcs, DoLStamp incomingDoLStamp) {
+    if (incomingDoLStamp == null || pcs == null || pcs.getleadershipTransitionContext() == null) {
+      return;
+    }
+
+    try (AutoCloseableLock ignored = AutoCloseableLock.of(pcs.getLtcLock())) {
+      LeadershipTransitionContext transitionContext = pcs.getleadershipTransitionContext();
+      if (isInvalidTransitionContext(transitionContext, incomingDoLStamp)) {
+        return;
+      }
+      transitionContext.setLeaderTransitionStage(LeaderTransitionStage.LOOPBACK_COMPLETED);
+      LOGGER.info(
+          "DoLStamp Processed. Replica: {} completed the loopback step of leader promotion. TermId: {}, offset: {}, duration: {} ms LeaderTransitionStage: LOOPBACK_COMPLETED",
+          pcs.getReplicaId(),
+          incomingDoLStamp.getTermId(),
+          incomingDoLStamp.getOffset(),
+          LatencyUtils.getElapsedTimeFromMsToMs(incomingDoLStamp.getTimestamp()));
+    }
+  }
+
+  private boolean isInvalidTransitionContext(LeadershipTransitionContext transitionContext, DoLStamp incomingDoLStamp) {
+    return transitionContext == null || transitionContext.getDoLStamp() == null
+        || transitionContext.getLeaderTransitionStage() != LeaderTransitionStage.LOOPBACK_INITIATED
+        || !incomingDoLStamp.equals(transitionContext.getDoLStamp());
+  }
+
+  /**
+   * Extract DoLStamp from SoS ControlMessage
+   * @param message ControlMessage of type START_OF_SEGMENT
+   * @return DoLStamp object if the message contains DoLStamp information, otherwise null
+   */
+  private DoLStamp extractDoLStampFromControlMessage(PubSubMessage<KafkaKey, KafkaMessageEnvelope, Long> message) {
+    PubSubMessageHeaders headers = message.getPubSubMessageHeaders();
+    if (headers == null || headers.size() == 0) {
+      return null;
+    }
+    PubSubMessageHeader termIdHeader = headers.get(DoLStamp.DOL_STAMP_TERM_ID);
+    PubSubMessageHeader tsHeader = headers.get(DoLStamp.DOL_STAMP_TIMESTAMP);
+    if (termIdHeader == null || termIdHeader.value() == null || tsHeader == null || tsHeader.value() == null) {
+      return null;
+    }
+
+    DoLStamp doLStamp = new DoLStamp(termIdHeader.value(), tsHeader.value());
+    doLStamp.setOffset(message.getOffset());
+    return doLStamp;
   }
 
   protected void recordWriterStats(
@@ -3064,6 +3131,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
             + "partitionConsumptionStateMap does not contain this partition. "
             + "Will ignore the operation as it probably indicates the partition was unsubscribed.",
         Utils.getReplicaId(versionTopic, partition));
+  }
+
+  public boolean isSubscribedToLocalVersionTopic(PartitionConsumptionState pcs) {
+    return aggKafkaConsumerService.hasConsumerAssignedFor(localKafkaServer, versionTopic, pcs.getVtPartition());
+  }
+
+  public void subscribeToLocalVersionTopic(PartitionConsumptionState pcs) {
+    consumerSubscribe(pcs.getVtPartition(), pcs.getLatestProcessedLocalVersionTopicOffset(), localKafkaServer);
   }
 
   public boolean consumerHasAnySubscription() {

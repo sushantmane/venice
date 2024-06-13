@@ -41,4 +41,9 @@ public class PubSubMessageHeader {
     PubSubMessageHeader otherHeader = (PubSubMessageHeader) otherObj;
     return key.equals(otherHeader.key()) && Arrays.equals(value, otherHeader.value());
   }
+
+  @Override
+  public String toString() {
+    return "Header{key='" + key + "}";
+  }
 }

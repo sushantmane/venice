@@ -56,6 +56,8 @@ public interface StoreIngestionService extends IngestionMetadataRetriever {
       int partitionId,
       LeaderFollowerPartitionStateModel.LeaderSessionIdChecker checker);
 
+  PartitionConsumptionState getReplica(VeniceStoreVersionConfig veniceStoreVersionConfig, int partitionId);
+
   /**
    * Adds Notifier to get Notifications for get various status of the consumption
    * tasks like start, completed, progress and error states.
