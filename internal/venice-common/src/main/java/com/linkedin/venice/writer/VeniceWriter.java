@@ -279,7 +279,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
     this.time = params.getTime();
     this.partitioner = params.getPartitioner();
     this.closeTimeOutInMs = props.getInt(CLOSE_TIMEOUT_MS, DEFAULT_CLOSE_TIMEOUT_MS);
-    this.checkSumType = CheckSumType.valueOf(props.getString(CHECK_SUM_TYPE, DEFAULT_CHECK_SUM_TYPE));
+    this.checkSumType = CheckSumType.NONE;
     // override factory chunking settings
     this.isChunkingEnabled = params.isChunkingEnabled();
     this.isChunkingSet = true;
