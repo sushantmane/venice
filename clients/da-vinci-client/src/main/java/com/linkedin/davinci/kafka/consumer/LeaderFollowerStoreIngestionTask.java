@@ -366,6 +366,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     ConsumerActionType operation = message.getType();
     String topicName = message.getTopic();
     int partition = message.getPartition();
+    PartitionConsumptionState pcs;
     switch (operation) {
       case STANDBY_TO_LEADER:
         LeaderFollowerPartitionStateModel.LeaderSessionIdChecker checker = message.getLeaderSessionIdChecker();
@@ -381,53 +382,45 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           return;
         }
 
-        PartitionConsumptionState partitionConsumptionState = partitionConsumptionStateMap.get(partition);
-        if (partitionConsumptionState == null) {
+        pcs = partitionConsumptionStateMap.get(partition);
+        if (pcs == null) {
           LOGGER.info(
               "State transition from STANDBY to LEADER is skipped for replica: {}, because PCS is null and the partition may have been unsubscribed.",
               Utils.getReplicaId(topicName, partition));
           return;
         }
 
-        /**
-         *  TODO: Re-evaluate this case.
-         *  What will be DoLRecord for this re-nominated leader.
-         *
-         *  Maybe we should, acquire VW lock for the partition.
-         *  close the current segment
-         *  producer DOLRecord with the new termId
-         *  release the lock
-         *
-         *  or
-         *  case 1) if replica was already a leader fetch the leadership history and see if the previous
-         *  term was also indeed from this replica; if that's not the case then it means that there was another leader and this replica didn't notice it. And this could result in the data loss. So what we can do is put this replica in ERROR state
-         *
-         *  if there was no discrepancy then we'll acquire VW lock for the partition.
-         *  close the current segment
-         *  producer DOLRecord with the new termId
-         *  release the lock
-         * and return without additional booking
-         *
-         */
-        if (partitionConsumptionState.getLeaderFollowerState().equals(LEADER)) {
-          partitionConsumptionState.setCurrentTermId(checker.getCurrentTermId());
-          partitionConsumptionState.getMyLastLeaderTermId(checker.getCurrentTermId());
+        if (pcs.getLeaderFollowerState().equals(LEADER)) {
+          /**
+           * TODO(sushantmane): Handle a case where the replica is already the leader for the partition.
+           * Steps we should perform in this case:
+           * Fetch the leadership history and see if the previous term was also indeed from this replica;
+           * If that's not the case then it means that there was another leader and this replica didn't notice it.
+           * And this could result in the data loss. So what we can do is put this replica in ERROR state or make it
+           * consumer VT from the previous leader's DOLOffset.
+           * If there was no discrepancy then we'll acquire VW lock for the partition.
+           * Close the current segment.
+           * Producer DOLRecord with the new termId.
+           * Release the lock and return without additional booking.
+           * We should also log this case.
+           */
+          pcs.setCurrentTermId(checker.getCurrentTermId());
+          pcs.getMyLastLeaderTermId(checker.getCurrentTermId());
           LOGGER.info(
               "State transition from STANDBY to LEADER is skipped for replica: {} as it is already the partition leader.",
               Utils.getReplicaId(topicName, partition));
           return;
         }
+
         if (store.isMigrationDuplicateStore()) {
-          partitionConsumptionState.setLeaderFollowerState(PAUSE_TRANSITION_FROM_STANDBY_TO_LEADER);
+          pcs.setLeaderFollowerState(PAUSE_TRANSITION_FROM_STANDBY_TO_LEADER);
           LOGGER.info(
               "State transition from STANDBY to LEADER is paused for replica: {} as this store is undergoing migration",
-              partitionConsumptionState.getReplicaId());
+              pcs.getReplicaId());
         } else {
           // Mark this partition in the middle of STANDBY to LEADER transition
-          partitionConsumptionState.setLeaderFollowerState(IN_TRANSITION_FROM_STANDBY_TO_LEADER);
-          LOGGER.info(
-              "Replica: {} is in state transition from STANDBY to LEADER",
-              partitionConsumptionState.getReplicaId());
+          pcs.setLeaderFollowerState(IN_TRANSITION_FROM_STANDBY_TO_LEADER);
+          LOGGER.info("Replica: {} is in state transition from STANDBY to LEADER", pcs.getReplicaId());
         }
         break;
       case LEADER_TO_STANDBY:
@@ -444,18 +437,18 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           return;
         }
 
-        partitionConsumptionState = partitionConsumptionStateMap.get(partition);
-        if (partitionConsumptionState == null) {
+        pcs = partitionConsumptionStateMap.get(partition);
+        if (pcs == null) {
           LOGGER.info(
               "State transition from LEADER to STANDBY is skipped for replica: {}, because PCS is null and the partition may have been unsubscribed.",
               Utils.getReplicaId(topicName, partition));
           return;
         }
 
-        if (partitionConsumptionState.getLeaderFollowerState().equals(STANDBY)) {
+        if (pcs.getLeaderFollowerState().equals(STANDBY)) {
           LOGGER.info(
               "State transition from LEADER to STANDBY is skipped for replica: {} as this replica is already a follower.",
-              partitionConsumptionState.getReplicaId());
+              pcs.getReplicaId());
           return;
         }
 
@@ -467,44 +460,42 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
          *    produce; finally the new follower will switch back to consume from local VT using the latest VT offset
          *    tracked by producer callback.
          */
-        OffsetRecord offsetRecord = partitionConsumptionState.getOffsetRecord();
+        OffsetRecord offsetRecord = pcs.getOffsetRecord();
         PubSubTopic topic = message.getTopicPartition().getPubSubTopic();
         PubSubTopic leaderTopic = offsetRecord.getLeaderTopic(pubSubTopicRepository);
-        if (leaderTopic != null && (!topic.equals(leaderTopic) || partitionConsumptionState.consumeRemotely())) {
-          consumerUnSubscribe(leaderTopic, partitionConsumptionState);
-          waitForAllMessageToBeProcessedFromTopicPartition(
-              new PubSubTopicPartitionImpl(leaderTopic, partition),
-              partitionConsumptionState);
+        if (leaderTopic != null && (!topic.equals(leaderTopic) || pcs.consumeRemotely())) {
+          consumerUnSubscribe(leaderTopic, pcs);
+          waitForAllMessageToBeProcessedFromTopicPartition(new PubSubTopicPartitionImpl(leaderTopic, partition), pcs);
 
-          partitionConsumptionState.setConsumeRemotely(false);
+          pcs.setConsumeRemotely(false);
           LOGGER.info(
               "Disabled remote consumption from topic-partition: {} for replica: {}",
               Utils.getReplicaId(leaderTopic, partition),
-              partitionConsumptionState.getReplicaId());
+              pcs.getReplicaId());
           // Followers always consume local VT and should not skip kafka message
-          partitionConsumptionState.setSkipKafkaMessage(false);
-          partitionConsumptionState.setLeaderFollowerState(STANDBY);
-          updateLeaderTopicOnFollower(partitionConsumptionState);
+          pcs.setSkipKafkaMessage(false);
+          pcs.setLeaderFollowerState(STANDBY);
+          updateLeaderTopicOnFollower(pcs);
           // subscribe back to local VT/partition
           consumerSubscribe(
-              partitionConsumptionState.getSourceTopicPartition(topic),
-              partitionConsumptionState.getLatestProcessedLocalVersionTopicOffset(),
+              pcs.getSourceTopicPartition(topic),
+              pcs.getLatestProcessedLocalVersionTopicOffset(),
               localKafkaServer);
           /**
            * When switching leader to follower, we may adjust the underlying storage partition to optimize the performance.
            * Only adjust the storage engine after the batch portion as compaction tuning is meaningless for the batch portion.
            */
-          if (partitionConsumptionState.isEndOfPushReceived()) {
+          if (pcs.isEndOfPushReceived()) {
             storageEngine.adjustStoragePartition(
                 partition,
                 AbstractStorageEngine.StoragePartitionAdjustmentTrigger.DEMOTE_TO_FOLLOWER,
-                getStoragePartitionConfig(partitionConsumptionState));
+                getStoragePartitionConfig(pcs));
           }
         } else {
-          partitionConsumptionState.setLeaderFollowerState(STANDBY);
-          updateLeaderTopicOnFollower(partitionConsumptionState);
+          pcs.setLeaderFollowerState(STANDBY);
+          updateLeaderTopicOnFollower(pcs);
         }
-        LOGGER.info("Replica: {} moved to standby/follower state", partitionConsumptionState.getReplicaId());
+        LOGGER.info("Replica: {} moved to standby/follower state", pcs.getReplicaId());
 
         /**
          * Close the writer to make sure the current segment is closed after the leader is demoted to standby.
@@ -557,7 +548,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           break;
 
         case IN_TRANSITION_FROM_STANDBY_TO_LEADER:
-          veniceWriter.get().sendStartOfSegment();
+          // veniceWriter.get().sendStartOfSegment();
           if (canSwitchToLeaderTopic(partitionConsumptionState)) {
             LOGGER.info(
                 "Initiating promotion of replica: {} to leader for the partition. Unsubscribing from the current topic: {}",
@@ -2030,7 +2021,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
    * 1. checkLeaderCompleteStateInFollower feature is enabled based on configs <br>
    * 2. leaderCompleteStatus has the leader state=completed and <br>
    * 3. the last update time was within the configured time interval to not use the stale leader state: check
-   *    {@link com.linkedin.venice.ConfigKeys.SERVER_LEADER_COMPLETE_STATE_CHECK_IN_FOLLOWER_VALID_INTERVAL_MS}
+   *    {@link com.linkedin.venice.ConfigKeys#SERVER_LEADER_COMPLETE_STATE_CHECK_IN_FOLLOWER_VALID_INTERVAL_MS}
    */
   @Override
   protected boolean checkAndLogIfLagIsAcceptableForHybridStore(

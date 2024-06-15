@@ -10,6 +10,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.api.PubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -37,6 +38,7 @@ public class PartitionConsumptionState {
   private final int userPartition;
   private final boolean hybrid;
   private final OffsetRecord offsetRecord;
+
   /**
    * This is the highest term see by this replica.
    * It should only be updated by the leader consumer threads and should NOT be used directly to update on disk state replica state.
@@ -47,9 +49,15 @@ public class PartitionConsumptionState {
 
   /**
    * The termId from the latest leadership turn of this replica. Only updated
-   * on TO LEADER state transitions and mainly used to catch any issues code.
+   * upon STANDBY_TO_LEADER state transitions and mainly used to catch any issues code.
    */
   private long myLastLeaderTermId = -1;
+
+  /**
+   * Future representing the DoLStamp message sent to announce leadership for this partition corresponding to the most recent term.
+   *  DoLStamp: Declaration of Leadership Stamp
+   */
+  CompletableFuture<PubSubMessage> dolStampFuture;
 
   private GUID leaderGUID;
 
