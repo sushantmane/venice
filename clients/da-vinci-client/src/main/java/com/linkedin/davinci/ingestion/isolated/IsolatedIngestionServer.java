@@ -13,7 +13,6 @@ import com.linkedin.davinci.compression.StorageEngineBackedCompressorFactory;
 import com.linkedin.davinci.config.VeniceConfigLoader;
 import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.davinci.config.VeniceStoreVersionConfig;
-import com.linkedin.davinci.helix.LeaderFollowerPartitionStateModel;
 import com.linkedin.davinci.ingestion.DefaultIngestionBackend;
 import com.linkedin.davinci.ingestion.IsolatedIngestionBackend;
 import com.linkedin.davinci.ingestion.main.MainIngestionMonitorService;
@@ -402,18 +401,6 @@ public class IsolatedIngestionServer extends AbstractVeniceService {
 
   public RedundantExceptionFilter getRedundantExceptionFilter() {
     return redundantExceptionFilter;
-  }
-
-  public synchronized LeaderFollowerPartitionStateModel.LeaderSessionIdChecker getLeaderSectionIdChecker(
-      String topicName,
-      int partitionId) {
-    leaderSessionIdMap.putIfAbsent(topicName, new VeniceConcurrentHashMap<>());
-    Map<Integer, AtomicLong> partitionIdToLeaderSessionIdMap = leaderSessionIdMap.get(topicName);
-    partitionIdToLeaderSessionIdMap.putIfAbsent(partitionId, new AtomicLong(0));
-    AtomicLong leaderSessionId = partitionIdToLeaderSessionIdMap.get(partitionId);
-    return new LeaderFollowerPartitionStateModel.LeaderSessionIdChecker(
-        leaderSessionId.incrementAndGet(),
-        leaderSessionId);
   }
 
   // Set the topic partition state to be unsubscribed.
