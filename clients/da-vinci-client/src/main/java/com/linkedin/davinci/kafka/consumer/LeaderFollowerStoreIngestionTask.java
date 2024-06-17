@@ -361,6 +361,16 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     });
   }
 
+  /**
+   * The following method will ensure that
+   * 1. Write a message in the VersionTopic to Declare the leadership  (DoLStamp)
+   * 1. Replica is subscribed to the local version topic. If not, subscribe to the local version topic.
+   * @param pcs
+   */
+  private void ensurePreconditionsForStandbyToLeaderTransition(PartitionConsumptionState pcs) {
+
+  }
+
   @Override
   protected void processConsumerAction(ConsumerAction message, Store store) throws InterruptedException {
     ConsumerActionType operation = message.getType();
@@ -392,8 +402,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
         if (pcs.getLeaderFollowerState().equals(LEADER)) {
           /**
-           * TODO(sushantmane): Handle a case where the replica is already the leader for the partition.
-           * Steps we should perform in this case:
+           * TODO(sushant): Handle a case where the replica is already the leader for the partition.
+           * Steps to perform in this case:
            * Fetch the leadership history and see if the previous term was also indeed from this replica;
            * If that's not the case then it means that there was another leader and this replica didn't notice it.
            * And this could result in the data loss. So what we can do is put this replica in ERROR state or make it
@@ -422,6 +432,14 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           pcs.setLeaderFollowerState(IN_TRANSITION_FROM_STANDBY_TO_LEADER);
           LOGGER.info("Replica: {} is in state transition from STANDBY to LEADER", pcs.getReplicaId());
         }
+
+        pcs.setLeaderTransitionStage(LeaderTransitionStage.BEGIN);
+        /**
+         * TODO(sushant): Replace it with async call so that we don't block the main thread and affect other partitions.
+         */
+        PubSubProduceResult result = sendDoLStamp(pcs, checker.getCurrentTermId());
+        pcs.setLatestDoLStamp(result);
+        pcs.setLeaderTransitionStage(LeaderTransitionStage.LOOPBACK_INITIATED);
         break;
       case LEADER_TO_STANDBY:
         checker = message.getLeaderSessionIdChecker();
@@ -714,9 +732,16 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
     }
   }
 
+  protected PubSubProduceResult sendDoLStamp(PartitionConsumptionState pcs, long termId) {
+    VeniceWriter vw = veniceWriter.get();
+    // TODO(sushant): Clear up previous segment states for this replica from the VeniceWriter
+    vw.closePartition(pcs.getPartition());
+    return vw.registerNewTermId(pcs.getPartition(), termId);
+  }
+
   /**
    * TODO:: replace this with new semantic
-   * 1) f
+   * 1) sendDoLStamp
    *
    * @param pcs
    * @return
@@ -2266,7 +2291,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
 
       validateRecordBeforeProducingToLocalKafka(consumerRecord, partitionConsumptionState, kafkaUrl, kafkaClusterId);
 
-      if (consumerRecord.getTopicPartition().getPubSubTopic().isRealTime()) {
+      if (consumerRecord.getTopic().isRealTime()) {
         recordRegionHybridConsumptionStats(
             kafkaClusterId,
             consumerRecord.getPayloadSize(),
@@ -2380,7 +2405,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
              * There is one exception that overrules the above conditions. i.e. if the SOS is a heartbeat from the RT topic.
              * In such case the heartbeat is produced to VT with updated {@link LeaderMetadataWrapper}.
              */
-            if (!consumerRecord.getTopicPartition().getPubSubTopic().isRealTime()) {
+            if (!consumerRecord.getTopic().isRealTime()) {
               produceToLocalKafka(
                   consumerRecord,
                   partitionConsumptionState,

@@ -1807,7 +1807,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
 
         // Let's try to restore the state retrieved from the OffsetManager
         PartitionConsumptionState newPartitionConsumptionState = new PartitionConsumptionState(
-            Utils.getReplicaId(versionTopic, partition),
+            versionTopic,
             partition,
             amplificationFactor,
             offsetRecord,
@@ -1965,7 +1965,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       partitionConsumptionStateMap.put(
           partition,
           new PartitionConsumptionState(
-              Utils.getReplicaId(versionTopic, partition),
+              versionTopic,
               partition,
               amplificationFactor,
               new OffsetRecord(partitionStateSerializer),
@@ -3123,6 +3123,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
             + "partitionConsumptionStateMap does not contain this partition. "
             + "Will ignore the operation as it probably indicates the partition was unsubscribed.",
         Utils.getReplicaId(versionTopic, partition));
+  }
+
+  public boolean isSubscribedToLocalVersionTopic(PartitionConsumptionState pcs) {
+    return aggKafkaConsumerService.hasConsumerAssignedFor(localKafkaServer, versionTopic, pcs.getVtPartition());
+  }
+
+  public void subscribeToLocalVersionTopic(PartitionConsumptionState pcs) {
+    consumerSubscribe(pcs.getVtPartition(), pcs.getLatestProcessedLocalVersionTopicOffset(), localKafkaServer);
   }
 
   public boolean consumerHasAnySubscription() {

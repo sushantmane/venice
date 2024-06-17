@@ -59,6 +59,7 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.VeniceResourceCloseResult;
+import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -257,6 +258,11 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
 
   private final ControlMessage heartBeatMessage;
 
+  /**
+   * Partition to current term ID mapping.
+   */
+  private final Map<Integer, Long> currentTermByPartition = new VeniceConcurrentHashMap<>();
+
   public VeniceWriter(VeniceWriterOptions params, VeniceProperties props, PubSubProducerAdapter producerAdapter) {
     this(params, props, producerAdapter, KafkaMessageEnvelope.SCHEMA$);
   }
@@ -363,6 +369,26 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       logger.error("VeniceWriter cannot be constructed with the props: {}", props);
       throw new VeniceException("Error while constructing VeniceWriter for store name: " + topicName, e);
     }
+  }
+
+  /**
+   * Register a new term ID for a partition and send out DoLStamp message.
+   * @param partition partition number
+   * @param termId term ID
+   * @return PubSubProduceResult
+   */
+  public PubSubProduceResult registerNewTermId(int partition, long termId) {
+    synchronized (partitionLocks[partition]) {
+      currentTermByPartition.put(partition, termId);
+      Map<String, String> debugInfo = new HashMap<>(2);
+      debugInfo.put("DoLStamp", String.valueOf(termId));
+      // Send the DoLStamp message
+      return sendStartOfSegment(partition, debugInfo);
+    }
+  }
+
+  public void cleanupPartitionState(int partition) {
+    currentTermByPartition.remove(partition);
   }
 
   public static ControlMessage generateHeartbeatMessage(CheckSumType checkSumType) {
@@ -1349,7 +1375,7 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
             partition,
             key,
             kafkaValue,
-            getHeaders(kafkaValue.getProducerMetadata()),
+            getHeaders(kafkaValue.getProducerMetadata(), partition),
             messageCallback);
       } catch (Exception e) {
         if (ExceptionUtils.recursiveClassEquals(e, PubSubTopicAuthorizationException.class)) {
@@ -1366,8 +1392,8 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
   /**
    * We only include the protocol schema headers on this writer's first message to each partition.
    */
-  private PubSubMessageHeaders getHeaders(ProducerMetadata producerMetadata) {
-    return getHeaders(producerMetadata, false, LeaderCompleteState.LEADER_NOT_COMPLETED);
+  private PubSubMessageHeaders getHeaders(ProducerMetadata producerMetadata, int partition) {
+    return getHeaders(producerMetadata, partition, false, LeaderCompleteState.LEADER_NOT_COMPLETED);
   }
 
   /**
@@ -1386,25 +1412,24 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
    */
   private PubSubMessageHeaders getHeaders(
       ProducerMetadata producerMetadata,
+      int partition,
       boolean addLeaderCompleteState,
       LeaderCompleteState leaderCompleteState) {
-    PubSubMessageHeaders returnPubSubMessageHeaders;
-    PubSubMessageHeaders pubSubMessageHeaders =
-        producerMetadata.getSegmentNumber() == 0 && producerMetadata.getMessageSequenceNumber() == 0
-            ? protocolSchemaHeaders
-            : EmptyPubSubMessageHeaders.SINGLETON;
-
-    if (addLeaderCompleteState) {
-      // copy protocolSchemaHeaders locally and add extra header for leaderCompleteState
-      returnPubSubMessageHeaders = new PubSubMessageHeaders();
-      for (PubSubMessageHeader header: pubSubMessageHeaders.toList()) {
-        returnPubSubMessageHeaders.add(header);
-      }
-      returnPubSubMessageHeaders.add(getLeaderCompleteStateHeader(leaderCompleteState));
-    } else {
-      returnPubSubMessageHeaders = pubSubMessageHeaders;
+    PubSubMessageHeaders headers = new PubSubMessageHeaders();
+    if (producerMetadata.getSegmentNumber() == 0 && producerMetadata.getMessageSequenceNumber() == 0) {
+      protocolSchemaHeaders.toList().forEach(headers::add);
     }
-    return returnPubSubMessageHeaders;
+    if (addLeaderCompleteState) {
+      headers.add(getLeaderCompleteStateHeader(leaderCompleteState));
+    }
+    headers.add(PubSubMessageHeaders.LEADER_TERM_ID_HEADER, longToBytes(currentTermByPartition.get(partition)));
+    return headers;
+  }
+
+  public static byte[] longToBytes(long value) {
+    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+    buffer.putLong(value);
+    return buffer.array();
   }
 
   public static PubSubMessageHeader getLeaderCompleteStateHeader(LeaderCompleteState leaderCompleteState) {
@@ -1847,13 +1872,34 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
       long originTimeStampMs) {
     KafkaMessageEnvelope kafkaMessageEnvelope =
         getHeartbeatKME(originTimeStampMs, leaderMetadataWrapper, heartBeatMessage, writerId);
-    return producerAdapter.sendMessage(
-        topicPartition.getPubSubTopic().getName(),
-        topicPartition.getPartitionNumber(),
-        KafkaKey.HEART_BEAT,
-        kafkaMessageEnvelope,
-        getHeaders(kafkaMessageEnvelope.getProducerMetadata(), addLeaderCompleteState, leaderCompleteState),
-        callback);
+
+    if (topicPartition.getPubSubTopic().isRealTime()) {
+      return producerAdapter.sendMessage(
+          topicPartition.getTopicName(),
+          topicPartition.getPartitionNumber(),
+          KafkaKey.HEART_BEAT,
+          kafkaMessageEnvelope,
+          getHeaders(
+              kafkaMessageEnvelope.getProducerMetadata(),
+              topicPartition.getPartitionNumber(),
+              addLeaderCompleteState,
+              leaderCompleteState),
+          callback);
+    }
+
+    synchronized (this.partitionLocks[topicPartition.getPartitionNumber()]) {
+      return producerAdapter.sendMessage(
+          topicPartition.getTopicName(),
+          topicPartition.getPartitionNumber(),
+          KafkaKey.HEART_BEAT,
+          kafkaMessageEnvelope,
+          getHeaders(
+              kafkaMessageEnvelope.getProducerMetadata(),
+              topicPartition.getPartitionNumber(),
+              addLeaderCompleteState,
+              leaderCompleteState),
+          callback);
+    }
   }
 
   /**
@@ -2035,11 +2081,6 @@ public class VeniceWriter<K, V, U> extends AbstractVeniceWriter<K, V, U> {
         } finally {
           // Mark the segment as ended. This is because if we fail to send EOS, the next write can create a new segment
           currentSegment.end(finalSegment);
-
-          // if this is the final segment for this partition, clear up segment state for this partition
-          if (finalSegment) {
-            segments[partition] = null;
-          }
         }
       }
     }

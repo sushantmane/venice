@@ -10,7 +10,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
-import com.linkedin.venice.pubsub.api.PubSubMessage;
+import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -32,8 +32,7 @@ import org.apache.avro.generic.GenericRecord;
  * This class is used to maintain internal state for consumption of each partition.
  */
 public class PartitionConsumptionState {
-  private final String replicaId;
-  private final int partition;
+  private final PubSubTopicPartition vtPartition;
   private final int amplificationFactor;
   private final int userPartition;
   private final boolean hybrid;
@@ -57,7 +56,12 @@ public class PartitionConsumptionState {
    * Future representing the DoLStamp message sent to announce leadership for this partition corresponding to the most recent term.
    *  DoLStamp: Declaration of Leadership Stamp
    */
-  CompletableFuture<PubSubMessage> dolStampFuture;
+  private PubSubProduceResult latestDoLStamp;
+
+  /**
+   * Indicates the stage of the leader transition process.
+   */
+  private LeaderTransitionStage leaderTransitionStage = LeaderTransitionStage.BEGIN;
 
   private GUID leaderGUID;
 
@@ -240,15 +244,14 @@ public class PartitionConsumptionState {
   private long lastLeaderCompleteStateUpdateInMs;
 
   public PartitionConsumptionState(
-      String replicaId,
+      PubSubTopic versionTopic,
       int partition,
       int amplificationFactor,
       OffsetRecord offsetRecord,
       boolean hybrid) {
-    this.replicaId = replicaId;
-    this.partition = partition;
+    this.vtPartition = new PubSubTopicPartitionImpl(versionTopic, partition);
     this.amplificationFactor = amplificationFactor;
-    this.userPartition = PartitionUtils.getUserPartition(partition, amplificationFactor);
+    this.userPartition = PartitionUtils.getUserPartition(vtPartition.getPartitionNumber(), amplificationFactor);
     this.hybrid = hybrid;
     this.offsetRecord = offsetRecord;
     this.errorReported = false;
@@ -297,7 +300,7 @@ public class PartitionConsumptionState {
   }
 
   public int getPartition() {
-    return this.partition;
+    return this.vtPartition.getPartitionNumber();
   }
 
   public CompletableFuture<Void> getLastVTProduceCallFuture() {
@@ -412,7 +415,7 @@ public class PartitionConsumptionState {
   public String toString() {
     return new StringBuilder().append("PCS{")
         .append("replicaId=")
-        .append(replicaId)
+        .append(vtPartition)
         .append(", hybrid=")
         .append(hybrid)
         .append(", latestProcessedLocalVersionTopicOffset=")
@@ -903,7 +906,7 @@ public class PartitionConsumptionState {
   }
 
   public String getReplicaId() {
-    return replicaId;
+    return vtPartition.toString();
   }
 
   public long getCurrentTermId() {
@@ -920,5 +923,25 @@ public class PartitionConsumptionState {
 
   public void getMyLastLeaderTermId(long myLastLeaderTermId) {
     this.myLastLeaderTermId = myLastLeaderTermId;
+  }
+
+  public PubSubTopicPartition getVtPartition() {
+    return vtPartition;
+  }
+
+  public LeaderTransitionStage getLeaderTransitionStage() {
+    return leaderTransitionStage;
+  }
+
+  public void setLeaderTransitionStage(LeaderTransitionStage leaderTransitionStage) {
+    this.leaderTransitionStage = leaderTransitionStage;
+  }
+
+  public PubSubProduceResult getLatestDoLStamp() {
+    return latestDoLStamp;
+  }
+
+  public void setLatestDoLStamp(PubSubProduceResult latestDoLStamp) {
+    this.latestDoLStamp = latestDoLStamp;
   }
 }

@@ -15,11 +15,16 @@ public class PubSubMessageHeaders {
    * N.B.: Kafka allows duplicate keys in the headers but some pubsub systems may not
    * allow it. Hence, we will enforce uniqueness of keys in headers from the beginning.
    */
-  private final Map<String, PubSubMessageHeader> headers = new LinkedHashMap<>();
+  private final Map<String, PubSubMessageHeader> headers = new LinkedHashMap<>(2);
 
   public static final String VENICE_TRANSPORT_PROTOCOL_HEADER = "vtp";
   /** Header to denote whether the leader is completed or not */
   public static final String VENICE_LEADER_COMPLETION_STATE_HEADER = "lcs";
+
+  /**
+   * Header to denote the term id of the leader that produced the message.
+   */
+  public static final String LEADER_TERM_ID_HEADER = "tid";
 
   public PubSubMessageHeaders add(PubSubMessageHeader header) {
     headers.put(header.key(), header);

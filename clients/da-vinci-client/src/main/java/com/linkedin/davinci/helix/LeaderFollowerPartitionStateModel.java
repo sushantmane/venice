@@ -133,7 +133,7 @@ public class LeaderFollowerPartitionStateModel extends AbstractPartitionStateMod
 
   @Transition(to = HelixState.LEADER_STATE, from = HelixState.STANDBY_STATE)
   public void onBecomeLeaderFromStandby(Message message, NotificationContext context) {
-    // TODO(sushantmane): Fetch termId bu calling Message::getLeaderTerm API once it is ready
+    // TODO(sushant): Fetch termId bu calling Message::getLeaderTerm API once it is ready
     long newTermId = message.getCreateTimeStamp();
     LeaderSessionIdChecker checker =
         new LeaderSessionIdChecker(newTermId, leaderSessionId.incrementAndGet(), leaderSessionId);
