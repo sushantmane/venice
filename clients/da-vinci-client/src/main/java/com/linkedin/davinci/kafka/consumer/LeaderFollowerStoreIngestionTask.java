@@ -432,14 +432,18 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           pcs.setLeaderFollowerState(IN_TRANSITION_FROM_STANDBY_TO_LEADER);
           LOGGER.info("Replica: {} is in state transition from STANDBY to LEADER", pcs.getReplicaId());
         }
-
         pcs.setLeaderTransitionStage(LeaderTransitionStage.BEGIN);
         /**
-         * TODO(sushant): Replace it with async call so that we don't block the main thread and affect other partitions.
+         * TODO(sushant): Send DoLStamp asynchronously so that we don't block the main thread and affect other partitions.
          */
         PubSubProduceResult result = sendDoLStamp(pcs, checker.getCurrentTermId());
         pcs.setLatestDoLStamp(result);
         pcs.setLeaderTransitionStage(LeaderTransitionStage.LOOPBACK_INITIATED);
+        LOGGER.info(
+            "Replica: {} sent DoLStamp for termId: {} offset: {}",
+            pcs.getReplicaId(),
+            checker.getCurrentTermId(),
+            result.getOffset());
         break;
       case LEADER_TO_STANDBY:
         checker = message.getLeaderSessionIdChecker();

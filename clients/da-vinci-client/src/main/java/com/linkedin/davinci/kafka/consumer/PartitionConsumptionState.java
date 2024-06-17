@@ -52,16 +52,7 @@ public class PartitionConsumptionState {
    */
   private long myLastLeaderTermId = -1;
 
-  /**
-   * Future representing the DoLStamp message sent to announce leadership for this partition corresponding to the most recent term.
-   *  DoLStamp: Declaration of Leadership Stamp
-   */
-  private PubSubProduceResult latestDoLStamp;
-
-  /**
-   * Indicates the stage of the leader transition process.
-   */
-  private LeaderTransitionStage leaderTransitionStage = LeaderTransitionStage.BEGIN;
+  private LeadershipTransitionContext leadershipTransitionContext = null;
 
   private GUID leaderGUID;
 
