@@ -15,15 +15,18 @@ public class LeadershipTransitionContext {
   /**
    * Indicates the stage of the leader transition process.
    */
-  private final LeaderTransitionStage leaderTransitionStage;
+  private LeaderTransitionStage leaderTransitionStage = LeaderTransitionStage.BEGIN;
 
-  public LeadershipTransitionContext(LeaderTransitionStage leaderTransitionStage, long termId) {
-    this.leaderTransitionStage = leaderTransitionStage;
+  public LeadershipTransitionContext(long termId) {
     this.termId = termId;
   }
 
   public LeaderTransitionStage getLeaderTransitionStage() {
     return leaderTransitionStage;
+  }
+
+  public void setLeaderTransitionStage(LeaderTransitionStage leaderTransitionStage) {
+    this.leaderTransitionStage = leaderTransitionStage;
   }
 
   public long getTermId() {

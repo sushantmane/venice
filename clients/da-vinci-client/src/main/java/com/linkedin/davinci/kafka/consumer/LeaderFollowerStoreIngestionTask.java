@@ -422,6 +422,8 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           return;
         }
 
+        LeadershipTransitionContext transitionContext = new LeadershipTransitionContext(checker.getCurrentTermId());
+        pcs.setLeadershipTransitionContext(transitionContext);
         if (store.isMigrationDuplicateStore()) {
           pcs.setLeaderFollowerState(PAUSE_TRANSITION_FROM_STANDBY_TO_LEADER);
           LOGGER.info(
@@ -432,13 +434,12 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           pcs.setLeaderFollowerState(IN_TRANSITION_FROM_STANDBY_TO_LEADER);
           LOGGER.info("Replica: {} is in state transition from STANDBY to LEADER", pcs.getReplicaId());
         }
-        pcs.setLeaderTransitionStage(LeaderTransitionStage.BEGIN);
         /**
          * TODO(sushant): Send DoLStamp asynchronously so that we don't block the main thread and affect other partitions.
          */
         PubSubProduceResult result = sendDoLStamp(pcs, checker.getCurrentTermId());
-        pcs.setLatestDoLStamp(result);
-        pcs.setLeaderTransitionStage(LeaderTransitionStage.LOOPBACK_INITIATED);
+        transitionContext.setLatestDoLStamp(result);
+        transitionContext.setLeaderTransitionStage(LeaderTransitionStage.LEADER_INITIATED);
         LOGGER.info(
             "Replica: {} sent DoLStamp for termId: {} offset: {}",
             pcs.getReplicaId(),
@@ -570,8 +571,14 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
           break;
 
         case IN_TRANSITION_FROM_STANDBY_TO_LEADER:
-          // veniceWriter.get().sendStartOfSegment();
-          if (canSwitchToLeaderTopic(partitionConsumptionState)) {
+          boolean readyToSwitchToLeaderTopic = false;
+          if (isLoopbackModeEnabled() && isLoopbackCompleted()) {
+            readyToSwitchToLeader = true;
+          } else {
+            readyToSwitchToLeaderTopic = canSwitchToLeaderTopic(partitionConsumptionState);
+          }
+
+          if (readyToSwitchToLeaderTopic) {
             LOGGER.info(
                 "Initiating promotion of replica: {} to leader for the partition. Unsubscribing from the current topic: {}",
                 partitionConsumptionState.getReplicaId(),
@@ -734,6 +741,15 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       LOGGER.error(errorMsg);
       throw new VeniceTimeoutException(errorMsg);
     }
+  }
+
+  private boolean isLoopbackCompleted(PartitionConsumptionState pcs) {
+    return pcs.getleadershipTransitionContext().getLeaderTransitionStage() == LeaderTransitionStage.LOOPBACK_COMPLETED;
+  }
+
+  private boolean isLoopbackModeEnabled() {
+    // return store.isLoopbackModeEnabled();
+    return true;
   }
 
   protected PubSubProduceResult sendDoLStamp(PartitionConsumptionState pcs, long termId) {

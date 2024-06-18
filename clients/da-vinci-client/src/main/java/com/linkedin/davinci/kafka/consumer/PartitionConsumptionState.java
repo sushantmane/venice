@@ -10,7 +10,6 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
-import com.linkedin.venice.pubsub.api.PubSubProduceResult;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
@@ -647,6 +646,16 @@ public class PartitionConsumptionState {
     this.skipKafkaMessage = skipKafkaMessage;
   }
 
+  public LeadershipTransitionContext getleadershipTransitionContext() {
+    return leadershipTransitionContext;
+  }
+
+  public PartitionConsumptionState setLeadershipTransitionContext(
+      LeadershipTransitionContext leadershipTransitionContext) {
+    this.leadershipTransitionContext = leadershipTransitionContext;
+    return this;
+  }
+
   /**
    * This immutable class holds a association between a key and value and the source offset of the consumed message.
    * The value could be either as received in kafka ConsumerRecord or it could be a write computed value.
@@ -918,21 +927,5 @@ public class PartitionConsumptionState {
 
   public PubSubTopicPartition getVtPartition() {
     return vtPartition;
-  }
-
-  public LeaderTransitionStage getLeaderTransitionStage() {
-    return leaderTransitionStage;
-  }
-
-  public void setLeaderTransitionStage(LeaderTransitionStage leaderTransitionStage) {
-    this.leaderTransitionStage = leaderTransitionStage;
-  }
-
-  public PubSubProduceResult getLatestDoLStamp() {
-    return latestDoLStamp;
-  }
-
-  public void setLatestDoLStamp(PubSubProduceResult latestDoLStamp) {
-    this.latestDoLStamp = latestDoLStamp;
   }
 }

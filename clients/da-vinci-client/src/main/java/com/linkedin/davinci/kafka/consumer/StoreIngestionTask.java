@@ -2861,6 +2861,14 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
               && Arrays.equals(consumerRecord.getKey().getKey(), KafkaKey.HEART_BEAT.getKey())) {
             recordHeartbeatReceived(partitionConsumptionState, consumerRecord, kafkaUrl);
           }
+          // TODO(sushant): call flush for DoLStamp; Also add verification that the DoLStamp and current leaderships are
+          // in sync
+          syncOffset(partitionConsumptionState.getVtPartition().getTopicName(), partitionConsumptionState);
+          LOGGER.info(
+              "Processed DoLStamp for replica: {} termId: {} offset: {}",
+              partitionConsumptionState.getReplicaId(),
+              consumerRecord.getOffset());
+
         } catch (Exception e) {
           LOGGER.error("Failed to record Record heartbeat with message: ", e);
         }
