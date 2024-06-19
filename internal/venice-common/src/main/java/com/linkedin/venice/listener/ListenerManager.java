@@ -19,19 +19,14 @@ import org.apache.logging.log4j.Logger;
  * @param <T> T should be a type of listener
  */
 public class ListenerManager<T> {
-  private final ConcurrentMap<String, Set<T>> listenerMap;
-
-  private final ExecutorService threadPool;
-
-  // TODO make thread count and keepAlive time configurable.
-  private final int threadCount = 1;
-
   private static final Logger LOGGER = LogManager.getLogger(ListenerManager.class);
+  private final ConcurrentMap<String, Set<T>> listenerMap;
+  private final ExecutorService threadPool;
 
   public ListenerManager() {
     listenerMap = new ConcurrentHashMap<>();
     // TODO maybe we can share the thread pool with other use-cases.
-    threadPool = Executors.newFixedThreadPool(threadCount, new DaemonThreadFactory("Venice-controller"));
+    threadPool = Executors.newFixedThreadPool(1, new DaemonThreadFactory("Venice-controller"));
   }
 
   public synchronized void subscribe(String key, T listener) {

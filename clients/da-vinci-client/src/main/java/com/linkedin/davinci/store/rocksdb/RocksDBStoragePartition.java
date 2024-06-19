@@ -138,8 +138,6 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
   private final Optional<Statistics> aggStatistics;
   private final RocksDBMemoryStats rocksDBMemoryStats;
 
-  private Optional<Supplier<byte[]>> expectedChecksumSupplier;
-
   /**
    * Column Family is the concept in RocksDB to create isolation between different value for the same key. All KVs are
    * stored in `DEFAULT` column family, if no column family is specified.
@@ -203,7 +201,6 @@ public class RocksDBStoragePartition extends AbstractStoragePartition {
     // Direct write is not efficient when there are a lot of ongoing pushes
     this.envOptions.setUseDirectWrites(false);
     this.rocksDBMemoryStats = rocksDBMemoryStats;
-    this.expectedChecksumSupplier = Optional.empty();
     this.rocksDBThrottler = rocksDbThrottler;
     this.fullPathForTempSSTFileDir = RocksDBUtils.composeTempSSTFileDir(dbDir, storeNameAndVersion, partitionId);
     this.fullPathForPartitionDBSnapshot =

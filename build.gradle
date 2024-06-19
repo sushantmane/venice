@@ -8,7 +8,7 @@ plugins {
   id 'idea'
   id 'java'
   id 'maven-publish'
-  id 'com.diffplug.spotless' version '6.12.0'
+  id 'com.diffplug.spotless' version '6.25.0'
   id 'com.dorongold.task-tree' version '2.1.0'
   id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
   id 'com.github.spotbugs' version '4.8.0' apply false
@@ -125,8 +125,8 @@ ext.libraries = [
     slf4jSimple: 'org.slf4j:slf4j-simple:1.7.36',
     snappy: 'org.iq80.snappy:snappy:0.4',
     spark: 'com.sparkjava:spark-core:2.9.4', // Spark-Java Rest framework
-    spotbugs: 'com.github.spotbugs:spotbugs:4.5.2',
     tehuti: 'io.tehuti:tehuti:0.12.3',
+    spotbugs: 'com.github.spotbugs:spotbugs:4.8.6',
     testcontainers: 'org.testcontainers:testcontainers:1.18.0',
     testng: 'org.testng:testng:6.14.3',
     tomcatAnnotations: 'org.apache.tomcat:annotations-api:6.0.53',
@@ -479,10 +479,12 @@ subprojects {
     jacocoTestReport {
       dependsOn test // tests are required to run before generating the report
 
-//      reports {
-//        xml = true
-//        html = true
-//      }
+      reports {
+        xml.required.set(true) // Enable the XML report
+        html.required.set(true) // Enable the HTML report
+        csv.required.set(false)
+//        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
+      }
 
       doLast {
         parseJacocoXml("$buildDir/reports/jacoco/test/jacocoTestReport.xml")

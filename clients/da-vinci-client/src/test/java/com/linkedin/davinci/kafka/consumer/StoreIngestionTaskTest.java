@@ -429,6 +429,7 @@ public abstract class StoreIngestionTaskTest {
   private Supplier<StoreVersionState> storeVersionStateSupplier = () -> new StoreVersionState();
   private MockStoreVersionConfigs storeAndVersionConfigsUnderTest;
 
+
   private static byte[] getRandomKey(Integer partition) {
     String randomString = Utils.getUniqueString("KeyForPartition" + partition);
     return ByteBuffer.allocate(randomString.length() + 1)
@@ -1220,7 +1221,6 @@ public abstract class StoreIngestionTaskTest {
   }
 
   void setStoreVersionStateSupplier(StoreVersionState svs) {
-    storeVersionStateSupplier = () -> svs;
     AbstractStoragePartition metadataPartition = mock(AbstractStoragePartition.class);
     InternalAvroSpecificSerializer<StoreVersionState> storeVersionStateSerializer =
         AvroProtocolDefinition.STORE_VERSION_STATE.getSerializer();
