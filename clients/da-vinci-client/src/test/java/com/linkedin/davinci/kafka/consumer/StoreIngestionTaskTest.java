@@ -422,8 +422,6 @@ public abstract class StoreIngestionTaskTest {
   private PubSubConsumerAdapterFactory mockFactory = mock(PubSubConsumerAdapterFactory.class);
   private final MetricsRepository mockMetricRepo = mock(MetricsRepository.class);
 
-  private Supplier<StoreVersionState> storeVersionStateSupplier = () -> new StoreVersionState();
-
   private static byte[] getRandomKey(Integer partition) {
     String randomString = Utils.getUniqueString("KeyForPartition" + partition);
     return ByteBuffer.allocate(randomString.length() + 1)
@@ -1160,7 +1158,6 @@ public abstract class StoreIngestionTaskTest {
   }
 
   void setStoreVersionStateSupplier(StoreVersionState svs) {
-    storeVersionStateSupplier = () -> svs;
     AbstractStoragePartition metadataPartition = mock(AbstractStoragePartition.class);
     InternalAvroSpecificSerializer<StoreVersionState> storeVersionStateSerializer =
         AvroProtocolDefinition.STORE_VERSION_STATE.getSerializer();

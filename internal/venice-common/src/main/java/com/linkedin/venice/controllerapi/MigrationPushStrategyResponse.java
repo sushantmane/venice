@@ -16,7 +16,6 @@ public class MigrationPushStrategyResponse extends ControllerResponse {
 
   @Override
   public String toString() {
-    return super.toString() + ", strategies: " + strategies.toString();
+    return super.toString() + ", strategies: " + (strategies == null ? "null" : strategies.toString());
   }
-
 }

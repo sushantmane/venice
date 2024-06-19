@@ -75,11 +75,13 @@ public class NettyH2Server {
   }
 
   public void stop() throws Exception {
-    ChannelFuture shutdown = serverFuture.channel().closeFuture();
+    ChannelFuture shutdown = serverFuture != null ? serverFuture.channel().closeFuture() : null;
     Thread.sleep(TimeUnit.SECONDS.toMillis(1));
     workerGroup.shutdownGracefully();
     bossGroup.shutdownGracefully();
-    shutdown.sync();
+    if (shutdown != null) {
+      shutdown.sync();
+    }
     LOGGER.info("NettyH2Server stopped");
   }
 

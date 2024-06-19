@@ -16,8 +16,8 @@ public class StoragePersonaResponse extends ControllerResponse {
 
   @Override
   public String toString() {
-    return StoragePersonaResponse.class.getSimpleName() + "(\n" + storagePersona.toString() + ",\n" + super.toString()
-        + ")";
+    return StoragePersonaResponse.class.getSimpleName() + "(\n"
+        + (storagePersona == null ? "null" : storagePersona.toString()) + ",\n" + super.toString() + ")";
   }
 
 }
