@@ -76,7 +76,6 @@ public class ReplicationConsumptionBenchmark {
   private VeniceServerConfig serverConfig;
   private VeniceStoreVersionConfig storeConfig;
   private RocksDBStorageEngineFactory factory;
-  private int syncPerRecords;
   private org.rocksdb.Options options;
 
   @Setup
@@ -104,7 +103,6 @@ public class ReplicationConsumptionBenchmark {
         ROCKSDB_THROTTLER,
         rocksDBServerConfig,
         storeConfig);
-    syncPerRecords = 10000;
 
     // JMH benchmark relies on System.exit to finish one round of benchmark run, otherwise it will hang there.
     TestUtils.restoreSystemExit();

@@ -80,7 +80,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
-import java.security.Permission;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -596,29 +595,29 @@ public class TestUtils {
   }
 
   public static void preventSystemExit() {
-    System.setSecurityManager(new SecurityManager() {
-      @Override
-      public void checkPermission(Permission perm) {
-      }
-
-      @Override
-      public void checkPermission(Permission perm, Object context) {
-      }
-
-      @Override
-      public void checkExit(int status) {
-        if (status != 0) {
-          String message = "System exit requested with error " + status;
-          SecurityException e = new SecurityException(message);
-          LOGGER.info("checkExit called", e);
-          throw e;
-        }
-      }
-    });
+    // System.setSecurityManager(new SecurityManager() {
+    // @Override
+    // public void checkPermission(Permission perm) {
+    // }
+    //
+    // @Override
+    // public void checkPermission(Permission perm, Object context) {
+    // }
+    //
+    // @Override
+    // public void checkExit(int status) {
+    // if (status != 0) {
+    // String message = "System exit requested with error " + status;
+    // SecurityException e = new SecurityException(message);
+    // LOGGER.info("checkExit called", e);
+    // throw e;
+    // }
+    // }
+    // });
   }
 
   public static void restoreSystemExit() {
-    System.setSecurityManager(null);
+    // System.setSecurityManager(null);
   }
 
   public static void createAndVerifyStoreInAllRegions(
