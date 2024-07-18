@@ -366,8 +366,9 @@ public class TestStoreMigration {
       endMigration(parentControllerUrl, storeName);
       checkMigrationStatus(parentControllerUrl, storeName, printFunction);
 
-      Assert
-          .assertFalse(statusOutput.contains(String.format("%s exists in this cluster %s", storeName, srcClusterName)));
+      Assert.assertFalse(
+          statusOutput.contains(String.format("%s exists in this cluster %s", storeName, srcClusterName)),
+          statusOutput.toString());
       Assert
           .assertTrue(statusOutput.contains(String.format("%s exists in this cluster %s", storeName, destClusterName)));
       Assert.assertFalse(
