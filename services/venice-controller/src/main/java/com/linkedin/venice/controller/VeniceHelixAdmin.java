@@ -1483,14 +1483,11 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       Store migratingStore = this.getStore(srcClusterName, migratingStoreName);
       List<Version> versionsToMigrate = getVersionsToMigrate(srcStoresInChildColos, migratingStore);
       for (Version version: versionsToMigrate) {
-        if (!isParent()) {
-          LOGGER.info(
-              "###Send DELETE KILL message for version {} in store {} in dest cluster {}",
-              version.kafkaTopicName(),
-              migratingStoreName,
-              destClusterName);
-          removeKillPushJobMessageFromParticipantStore(destClusterName, version.kafkaTopicName());
-        }
+        LOGGER.info(
+            "Send delete KILL message for store-version: {} in dest cluster: {}",
+            version.kafkaTopicName(),
+            destClusterName);
+        removeKillPushJobMessageFromParticipantStore(destClusterName, version.kafkaTopicName());
       }
       LOGGER.info(
           "Adding versions {} to store {} in dest cluster {}",
@@ -1498,7 +1495,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           migratingStoreName,
           destClusterName);
       for (Version version: versionsToMigrate) {
-        // waitForKillPushJobMessageRemoval(destClusterName, version.kafkaTopicName());
+        waitForKillPushJobMessageRemoval(destClusterName, version.kafkaTopicName());
         VersionResponse versionResponse = destControllerClient.addVersionAndStartIngestion(
             migratingStoreName,
             version.getPushJobId(),
@@ -1533,6 +1530,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   private void removeKillPushJobMessageFromParticipantStore(String clusterName, String topicName) {
+    if (isParent()) {
+      return;
+    }
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
     key.resourceName = topicName;
@@ -1553,6 +1553,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   private void waitForKillPushJobMessageRemoval(String clusterName, String topicName) {
+    if (isParent()) {
+      return;
+    }
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
     key.resourceName = topicName;
