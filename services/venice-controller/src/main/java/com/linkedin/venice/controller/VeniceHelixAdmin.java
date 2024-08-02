@@ -1482,13 +1482,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     Consumer<String> versionMigrationConsumer = migratingStoreName -> {
       Store migratingStore = this.getStore(srcClusterName, migratingStoreName);
       List<Version> versionsToMigrate = getVersionsToMigrate(srcStoresInChildColos, migratingStore);
-      for (Version version: versionsToMigrate) {
-        LOGGER.info(
-            "Send delete KILL message for store-version: {} in dest cluster: {}",
-            version.kafkaTopicName(),
-            destClusterName);
-        removeKillPushJobMessageFromParticipantStore(destClusterName, version.kafkaTopicName());
-      }
+      deleteOldIngestionKillMessagesInDestCluster(srcClusterName, destClusterName, versionsToMigrate);
       LOGGER.info(
           "Adding versions {} to store {} in dest cluster {}",
           versionsToMigrate.stream().map(Version::getNumber).map(String::valueOf).collect(Collectors.joining(",")),
@@ -1529,9 +1523,28 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     versionMigrationConsumer.accept(storeName);
   }
 
-  private void removeKillPushJobMessageFromParticipantStore(String clusterName, String topicName) {
+  private void deleteOldIngestionKillMessagesInDestCluster(
+      String srcClusterName,
+      String destClusterName,
+      List<Version> versionsToMigrate) {
+    List<Version> versionsWithKillInDestCluster = new ArrayList<>(versionsToMigrate.size());
+    for (Version version: versionsToMigrate) {
+      LOGGER.info(
+          "Send delete KILL message for store-version: {} in dest cluster: {}",
+          version.kafkaTopicName(),
+          destClusterName);
+      if (removeKillPushJobMessageFromParticipantStore(destClusterName, version.kafkaTopicName())) {
+        versionsWithKillInDestCluster.add(version);
+      }
+    }
+    for (Version version: versionsWithKillInDestCluster) {
+      waitForKillPushJobMessageRemoval(destClusterName, version.kafkaTopicName());
+    }
+  }
+
+  private boolean removeKillPushJobMessageFromParticipantStore(String clusterName, String topicName) {
     if (isParent()) {
-      return;
+      return false;
     }
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
@@ -1539,7 +1552,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     try {
       if (participantStoreClients.getReader(clusterName).get(key).get() == null) {
         // Kill message does not exist in participant store. No need to remove.
-        return;
+        return false;
       }
     } catch (Exception e) {
       LOGGER.error(
@@ -1550,6 +1563,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     }
     // Remove kill message from participant store
     deleteParticipantStoreKillMessage(clusterName, topicName);
+    return true;
   }
 
   private void waitForKillPushJobMessageRemoval(String clusterName, String topicName) {
