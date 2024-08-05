@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.d2.balancer.D2Client;
 import com.linkedin.venice.controller.ParticipantStoreClients;
 import com.linkedin.venice.controller.VeniceHelixAdmin;
 import com.linkedin.venice.meta.PartitionerConfig;
@@ -25,7 +24,6 @@ import org.testng.annotations.Test;
 public class TestDataRecoveryManager {
   private final VeniceHelixAdmin veniceAdmin = mock(VeniceHelixAdmin.class);
   private final ParticipantStoreClients participantStoreClients = mock(ParticipantStoreClients.class);
-  private final D2Client d2Client = mock(D2Client.class);
   private final DataRecoveryManager dataRecoveryManager =
       new DataRecoveryManager(veniceAdmin, Optional.empty(), new PubSubTopicRepository(), participantStoreClients);
   private static final String clusterName = "testCluster";
