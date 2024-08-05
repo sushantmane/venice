@@ -418,7 +418,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   private int defaultMaxRecordSizeBytes;
 
   private DataRecoveryManager dataRecoveryManager;
-  private ParticipantStoreClients participantStoreClients;
+  private ParticipantStoreClientsManager participantStoreClientsManager;
   protected final PubSubTopicRepository pubSubTopicRepository;
 
   private final Object PUSH_JOB_DETAILS_CLIENT_LOCK = new Object();
@@ -586,13 +586,14 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     });
 
     clusterToLiveClusterConfigRepo = new VeniceConcurrentHashMap<>();
-    participantStoreClients = new ParticipantStoreClients(
+    participantStoreClientsManager = new ParticipantStoreClientsManager(
         d2Client,
         commonConfig.getClusterDiscoveryD2ServiceName(),
         topicManagerRepository,
         veniceWriterFactory,
         pubSubTopicRepository);
-    dataRecoveryManager = new DataRecoveryManager(this, icProvider, pubSubTopicRepository, participantStoreClients);
+    dataRecoveryManager =
+        new DataRecoveryManager(this, icProvider, pubSubTopicRepository, participantStoreClientsManager);
 
     List<ClusterLeaderInitializationRoutine> initRoutines = new ArrayList<>();
     initRoutines.add(
@@ -1486,7 +1487,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
       // Remove any existing KILL messages from the participant store before initiating store migration
       if (!isParent()) {
-        deleteOldIngestionKillMessagesInDestCluster(destClusterName, versionsToMigrate);
+        List<String> versionTopics =
+            versionsToMigrate.stream().map(Version::kafkaTopicName).collect(Collectors.toList());
+        deleteOldIngestionKillMessagesInDestCluster(destClusterName, storeName, versionTopics);
       }
       LOGGER.info(
           "Adding versions {} to store {} in dest cluster {}",
@@ -1529,27 +1532,49 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   /**
    * Delete stale KILL messages in destination cluster for the versions to be migrated. This is the best effort and
-   * the maximum wait time is 10 minutes.
-   * @param destClusterName destination cluster name
-   * @param versionsToMigrate list of versions to be migrated
+   * the maximum wait time is 5 minutes.
+   * @param destClusterName name of the destination cluster.
+   *                        This is the cluster where the store is being migrated to.
+   * @param storeName name of the store.
+   * @param versionTopics list of version topics to be checked for KILL messages.
    */
-  private void deleteOldIngestionKillMessagesInDestCluster(String destClusterName, List<Version> versionsToMigrate) {
+  public void deleteOldIngestionKillMessagesInDestCluster(
+      String destClusterName,
+      String storeName,
+      List<String> versionTopics) {
+    if (versionTopics.isEmpty()) {
+      return;
+    }
+    long startTime = System.currentTimeMillis();
     List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (Version version: versionsToMigrate) {
-      CompletableFuture<Void> future = handleKillIngestionMessage(destClusterName, version.kafkaTopicName());
+    for (String versionTopic: versionTopics) {
+      CompletableFuture<Void> future = handleKillIngestionMessage(destClusterName, versionTopic);
       futures.add(future);
     }
 
     // Wait for all futures to complete
     CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     try {
-      allFutures.get(10, TimeUnit.MINUTES);
+      LOGGER.info(
+          "Waiting for kill message removal in destination cluster: {} for store: {}",
+          destClusterName,
+          storeName);
+      allFutures.get(5, TimeUnit.MINUTES);
+      LOGGER.info(
+          "Completed waiting for kill message removal in destination cluster: {} for store: {} in {} ms",
+          destClusterName,
+          storeName,
+          System.currentTimeMillis() - startTime);
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
       LOGGER.error("Error while waiting for kill message removal in destination cluster: {}", destClusterName, e);
     }
   }
 
-  private CompletableFuture<Void> handleKillIngestionMessage(String clusterName, String topicName) {
+  protected CompletableFuture<Void> handleKillIngestionMessage(String clusterName, String topicName) {
+    LOGGER.info(
+        "Checking if kill message exists in participant store for topic: {} in cluster: {}",
+        topicName,
+        clusterName);
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
     key.resourceName = topicName;
@@ -1557,7 +1582,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     return CompletableFuture.supplyAsync(() -> {
       try {
         ParticipantMessageValue value = RetryUtils.executeWithMaxAttempt(
-            () -> participantStoreClients.getReader(clusterName).get(key).get(),
+            () -> participantStoreClientsManager.getReader(clusterName).get(key).get(),
             3,
             Duration.ofSeconds(5),
             Collections.singletonList(Exception.class));
@@ -1581,7 +1606,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       try {
         RetryUtils.executeWithMaxAttempt(() -> {
           try {
-            ParticipantMessageValue value = participantStoreClients.getReader(clusterName).get(key).get();
+            ParticipantMessageValue value = participantStoreClientsManager.getReader(clusterName).get(key).get();
             if (value != null) {
               throw new VeniceException(
                   "Kill message still exists in participant store for topic: " + topicName + " in cluster: "
@@ -6683,7 +6708,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         "Delete KILL ingestion message for topic: {} from participant store in cluster: {}",
         kafkaTopic,
         clusterName);
-    VeniceWriter writer = participantStoreClients.getWriter(clusterName);
+    VeniceWriter writer = participantStoreClientsManager.getWriter(clusterName);
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.resourceName = kafkaTopic;
     key.messageType = ParticipantMessageType.KILL_PUSH_JOB.getValue();
@@ -6691,9 +6716,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     writer.flush();
   }
 
-  private void sendKillMessageToParticipantStore(String clusterName, String kafkaTopic) {
+  public void sendKillMessageToParticipantStore(String clusterName, String kafkaTopic) {
     LOGGER.info("Send kill message for topic: {} to participant store of cluster: {}", kafkaTopic, clusterName);
-    VeniceWriter writer = participantStoreClients.getWriter(clusterName);
+    VeniceWriter writer = participantStoreClientsManager.getWriter(clusterName);
     ParticipantMessageType killPushJobType = ParticipantMessageType.KILL_PUSH_JOB;
     ParticipantMessageKey key = new ParticipantMessageKey();
     key.resourceName = kafkaTopic;
@@ -7070,7 +7095,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     participantMessageWriterMap.forEach((k, v) -> Utils.closeQuietlyWithErrorLogged(v));
     participantMessageWriterMap.clear();
     dataRecoveryManager.close();
-    participantStoreClients.close();
+    participantStoreClientsManager.close();
     Utils.closeQuietlyWithErrorLogged(topicManagerRepository);
     Utils.closeQuietlyWithErrorLogged(pushJobDetailsStoreClient);
     Utils.closeQuietlyWithErrorLogged(livenessHeartbeatStoreClient);

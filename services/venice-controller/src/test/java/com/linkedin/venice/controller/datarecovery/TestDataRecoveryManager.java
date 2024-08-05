@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.venice.controller.ParticipantStoreClients;
+import com.linkedin.venice.controller.ParticipantStoreClientsManager;
 import com.linkedin.venice.controller.VeniceHelixAdmin;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.Store;
@@ -23,9 +23,13 @@ import org.testng.annotations.Test;
 
 public class TestDataRecoveryManager {
   private final VeniceHelixAdmin veniceAdmin = mock(VeniceHelixAdmin.class);
-  private final ParticipantStoreClients participantStoreClients = mock(ParticipantStoreClients.class);
-  private final DataRecoveryManager dataRecoveryManager =
-      new DataRecoveryManager(veniceAdmin, Optional.empty(), new PubSubTopicRepository(), participantStoreClients);
+  private final ParticipantStoreClientsManager participantStoreClientsManager =
+      mock(ParticipantStoreClientsManager.class);
+  private final DataRecoveryManager dataRecoveryManager = new DataRecoveryManager(
+      veniceAdmin,
+      Optional.empty(),
+      new PubSubTopicRepository(),
+      participantStoreClientsManager);
   private static final String clusterName = "testCluster";
   private static final String storeName = "testStore";
   private static final String sourceFabric = "dc-0";

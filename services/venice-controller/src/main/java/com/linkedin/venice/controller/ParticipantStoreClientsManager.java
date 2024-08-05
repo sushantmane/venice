@@ -29,7 +29,7 @@ import java.util.Objects;
 /**
  * A helper class that wraps the readers and writers for the participant stores.
  */
-public class ParticipantStoreClients implements Closeable {
+public class ParticipantStoreClientsManager implements Closeable {
   private final D2Client d2Client;
   private final String clusterDiscoveryD2ServiceName;
   protected final PubSubTopicRepository pubSubTopicRepository;
@@ -39,13 +39,13 @@ public class ParticipantStoreClients implements Closeable {
       new VeniceConcurrentHashMap<>();
   private final Map<String, VeniceWriter> writeClients = new VeniceConcurrentHashMap<>();
 
-  public ParticipantStoreClients(
+  public ParticipantStoreClientsManager(
       D2Client d2Client,
       String clusterDiscoveryD2ServiceName,
       TopicManagerRepository topicManagerRepository,
       VeniceWriterFactory veniceWriterFactory,
       PubSubTopicRepository pubSubTopicRepository) {
-    this.d2Client = Objects.requireNonNull(d2Client, "ParticipantStoreClients requires D2Client to be provided");
+    this.d2Client = Objects.requireNonNull(d2Client, "ParticipantStoreClientsManager requires D2Client to be provided");
     this.clusterDiscoveryD2ServiceName = clusterDiscoveryD2ServiceName;
     this.topicManagerRepository = topicManagerRepository;
     this.veniceWriterFactory = veniceWriterFactory;

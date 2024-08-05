@@ -1,7 +1,7 @@
 package com.linkedin.venice.controller.datarecovery;
 
 import com.linkedin.venice.controller.Admin;
-import com.linkedin.venice.controller.ParticipantStoreClients;
+import com.linkedin.venice.controller.ParticipantStoreClientsManager;
 import com.linkedin.venice.controller.VeniceHelixAdmin;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceNoStoreException;
@@ -34,17 +34,17 @@ public class DataRecoveryManager implements Closeable {
   private final VeniceHelixAdmin veniceAdmin;
   private final Optional<ICProvider> icProvider;
   private final PubSubTopicRepository pubSubTopicRepository;
-  private ParticipantStoreClients participantStoreClients;
+  private ParticipantStoreClientsManager participantStoreClientsManager;
 
   public DataRecoveryManager(
       VeniceHelixAdmin veniceAdmin,
       Optional<ICProvider> icProvider,
       PubSubTopicRepository pubSubTopicRepository,
-      ParticipantStoreClients participantStoreClients) {
+      ParticipantStoreClientsManager participantStoreClientsManager) {
     this.veniceAdmin = veniceAdmin;
     this.icProvider = icProvider;
     this.pubSubTopicRepository = pubSubTopicRepository;
-    this.participantStoreClients = participantStoreClients;
+    this.participantStoreClientsManager = participantStoreClientsManager;
   }
 
   private String getRecoveryPushJobId(String srcPushJobId) {
@@ -183,10 +183,12 @@ public class DataRecoveryManager implements Closeable {
     ParticipantMessageValue value;
     if (icProvider.isPresent()) {
       value = icProvider.get()
-          .call(this.getClass().getCanonicalName(), () -> participantStoreClients.getReader(clusterName).get(key))
+          .call(
+              this.getClass().getCanonicalName(),
+              () -> participantStoreClientsManager.getReader(clusterName).get(key))
           .get();
     } else {
-      value = participantStoreClients.getReader(clusterName).get(key).get();
+      value = participantStoreClientsManager.getReader(clusterName).get(key).get();
     }
     return value == null;
   }
