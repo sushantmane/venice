@@ -225,6 +225,11 @@ public class TestStoreMigration {
   }
 
   @Test(timeOut = TEST_TIMEOUT)
+  public void testStoreMigrationAfterFailedAttempt() {
+
+  }
+
+  @Test(timeOut = TEST_TIMEOUT)
   public void testStoreMigrationWithMetaSystemStore() throws Exception {
     String storeName = Utils.getUniqueString("testWithMetaSystemStore");
     createAndPushStore(srcClusterName, storeName);
