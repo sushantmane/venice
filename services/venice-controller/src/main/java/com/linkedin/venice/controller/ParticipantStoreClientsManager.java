@@ -72,7 +72,7 @@ public class ParticipantStoreClientsManager implements Closeable {
       PubSubTopic topic = pubSubTopicRepository.getTopic(
           Version.composeRealTimeTopic(VeniceSystemStoreUtils.getParticipantStoreNameForCluster(clusterName)));
       while (attempts < INTERNAL_STORE_GET_RRT_TOPIC_ATTEMPTS) {
-        if (this.topicManagerRepository.getLocalTopicManager().containsTopicAndAllPartitionsAreOnline(topic)) {
+        if (topicManagerRepository.getLocalTopicManager().containsTopicAndAllPartitionsAreOnline(topic)) {
           verified = true;
           break;
         }
@@ -94,8 +94,20 @@ public class ParticipantStoreClientsManager implements Closeable {
 
   @Override
   public void close() {
+    for (VeniceWriter client: writeClients.values()) {
+      client.close();
+    }
     for (AvroSpecificStoreClient client: readClients.values()) {
       client.close();
     }
+  }
+
+  // following methods are visible for testing
+  Map<String, AvroSpecificStoreClient<ParticipantMessageKey, ParticipantMessageValue>> getReadClients() {
+    return readClients;
+  }
+
+  Map<String, VeniceWriter> getWriteClients() {
+    return writeClients;
   }
 }
