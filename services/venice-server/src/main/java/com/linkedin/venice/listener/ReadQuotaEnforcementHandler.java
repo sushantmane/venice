@@ -58,6 +58,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private HelixCustomizedViewOfflinePushRepository customizedViewRepository;
   private volatile boolean initializedVolatile = false;
   private boolean initialized = false;
+  private final VeniceServerNettyStats nettyStats;
+  private PriorityBasedResponseScheduler priorityBasedResponseScheduler;
 
   public ReadQuotaEnforcementHandler(
       long storageNodeRcuCapacity,
@@ -73,6 +75,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
         nodeId,
         stats,
         metricsRepository,
+        null,
         Clock.systemUTC());
   }
 
@@ -83,7 +86,12 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       String nodeId,
       AggServerQuotaUsageStats stats,
       MetricsRepository metricsRepository,
+      VeniceServerNettyStats nettyStats,
       Clock clock) {
+    this.nettyStats = nettyStats;
+    if (nettyStats != null) {
+      this.priorityBasedResponseScheduler = nettyStats.getPriorityBasedResponseScheduler();
+    }
     this.clock = clock;
     this.storageNodeBucket = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
     this.storageNodeTokenBucketStats =
@@ -186,6 +194,17 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
 
   @Override
   public void channelRead0(ChannelHandlerContext ctx, RouterRequest request) {
+    long startTs = System.nanoTime();
+    try {
+      channelReadInner(ctx, request);
+    } finally {
+      if (nettyStats != null) {
+        nettyStats.recordTimeSpentInQuotaEnforcement(startTs);
+      }
+    }
+  }
+
+  private void channelReadInner(ChannelHandlerContext ctx, RouterRequest request) {
     String storeName = request.getStoreName();
     Store store = storeRepository.getStore(storeName);
 

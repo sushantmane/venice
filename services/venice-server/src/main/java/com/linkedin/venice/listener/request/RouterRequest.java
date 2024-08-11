@@ -5,6 +5,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.streaming.StreamingUtils;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 
 /**
@@ -21,6 +22,8 @@ public abstract class RouterRequest {
   private final String resourceName;
   private final String storeName;
   private final boolean isStreamingRequest;
+  private boolean isQuotaRejectedRequest;
+  private HttpResponseStatus httpResponseStatus;
 
   public RouterRequest(String resourceName, HttpRequest request) {
     this.isRetryRequest = containRetryHeader(request);
@@ -66,5 +69,18 @@ public abstract class RouterRequest {
 
   public boolean shouldRequestBeTerminatedEarly() {
     return requestTimeoutInNS != NO_REQUEST_TIMEOUT && System.nanoTime() > requestTimeoutInNS;
+  }
+
+  public void markAsQuotaRejectedRequest(HttpResponseStatus status) {
+    isQuotaRejectedRequest = true;
+    httpResponseStatus = status;
+  }
+
+  public boolean isQuotaRejectedRequest() {
+    return isQuotaRejectedRequest;
+  }
+
+  public HttpResponseStatus getQuotaRejectedResponseStatus() {
+    return httpResponseStatus;
   }
 }

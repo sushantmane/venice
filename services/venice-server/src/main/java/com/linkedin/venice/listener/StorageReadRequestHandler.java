@@ -123,6 +123,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       new VeniceConcurrentHashMap<>();
   private final StorageEngineBackedCompressorFactory compressorFactory;
   private final Optional<ResourceReadUsageTracker> resourceReadUsageTracker;
+  private final VeniceServerNettyStats nettyStats;
 
   private static class PerStoreVersionState {
     final StoreDeserializerCache<GenericRecord> storeDeserializerCache;
@@ -188,6 +189,41 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       VeniceServerConfig serverConfig,
       StorageEngineBackedCompressorFactory compressorFactory,
       Optional<ResourceReadUsageTracker> resourceReadUsageTracker) {
+    this(
+        executor,
+        computeExecutor,
+        storageEngineRepository,
+        metadataStoreRepository,
+        schemaRepository,
+        ingestionMetadataRetriever,
+        readMetadataRetriever,
+        healthCheckService,
+        fastAvroEnabled,
+        parallelBatchGetEnabled,
+        parallelBatchGetChunkSize,
+        serverConfig,
+        compressorFactory,
+        resourceReadUsageTracker,
+        null);
+  }
+
+  public StorageReadRequestHandler(
+      ThreadPoolExecutor executor,
+      ThreadPoolExecutor computeExecutor,
+      StorageEngineRepository storageEngineRepository,
+      ReadOnlyStoreRepository metadataStoreRepository,
+      ReadOnlySchemaRepository schemaRepository,
+      IngestionMetadataRetriever ingestionMetadataRetriever,
+      ReadMetadataRetriever readMetadataRetriever,
+      DiskHealthCheckService healthCheckService,
+      boolean fastAvroEnabled,
+      boolean parallelBatchGetEnabled,
+      int parallelBatchGetChunkSize,
+      VeniceServerConfig serverConfig,
+      StorageEngineBackedCompressorFactory compressorFactory,
+      Optional<ResourceReadUsageTracker> resourceReadUsageTracker,
+      VeniceServerNettyStats nettyStats) {
+    this.nettyStats = nettyStats;
     this.executor = executor;
     this.computeExecutor = computeExecutor;
     this.storageEngineRepository = storageEngineRepository;
@@ -209,9 +245,11 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     this.resourceReadUsageTracker = resourceReadUsageTracker;
   }
 
+  private static final String QUOTA_REJECTED_RESPONSE = "Quota rejected";
+
   @Override
   public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
-    final long preSubmissionTimeNs = System.nanoTime();
+    final long preSubmissionTimeNs = System.nanoTime(); // <== netty IO
 
     /**
      * N.B.: This is the only place in the entire class where we submit things into the {@link executor}.
@@ -240,7 +278,8 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
         // Try to make the response short
         VeniceRequestEarlyTerminationException earlyTerminationException =
             new VeniceRequestEarlyTerminationException(request.getStoreName());
-        context.writeAndFlush(
+        writeAndFlushBadRequests(
+            context,
             new HttpShortcutResponse(
                 earlyTerminationException.getMessage(),
                 earlyTerminationException.getHttpResponseStatus()));
@@ -254,96 +293,125 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       if (parallelBatchGetEnabled && request.getRequestType().equals(RequestType.MULTI_GET)) {
         handleMultiGetRequestInParallel((MultiGetRouterRequestWrapper) request, parallelBatchGetChunkSize)
             .whenComplete((v, e) -> {
-              if (e != null) {
-                if (e instanceof VeniceRequestEarlyTerminationException) {
-                  VeniceRequestEarlyTerminationException earlyTerminationException =
-                      (VeniceRequestEarlyTerminationException) e;
-                  context.writeAndFlush(
-                      new HttpShortcutResponse(
-                          earlyTerminationException.getMessage(),
-                          earlyTerminationException.getHttpResponseStatus()));
-                } else if (e instanceof VeniceNoStoreException) {
-                  HttpResponseStatus status = getHttpResponseStatus((VeniceNoStoreException) e);
-                  context.writeAndFlush(
-                      new HttpShortcutResponse(
-                          "No storage exists for: " + ((VeniceNoStoreException) e).getStoreName(),
-                          status));
-                } else {
-                  LOGGER.error("Exception thrown in parallel batch get for {}", request.getResourceName(), e);
-                  HttpShortcutResponse shortcutResponse =
-                      new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                  shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
-                  context.writeAndFlush(shortcutResponse);
-                }
-              } else {
-                context.writeAndFlush(v);
+              if (e == null) {
+                writeAndFlush(context, v);
+                return;
               }
+              if (e instanceof VeniceRequestEarlyTerminationException) {
+                VeniceRequestEarlyTerminationException earlyTerminationException =
+                    (VeniceRequestEarlyTerminationException) e;
+                writeAndFlushBadRequests(
+                    context,
+                    new HttpShortcutResponse(
+                        earlyTerminationException.getMessage(),
+                        earlyTerminationException.getHttpResponseStatus()));
+                return;
+              }
+              if (e instanceof VeniceNoStoreException) {
+                HttpResponseStatus status = getHttpResponseStatus((VeniceNoStoreException) e);
+                writeAndFlushBadRequests(
+                    context,
+                    new HttpShortcutResponse(
+                        "No storage exists for: " + ((VeniceNoStoreException) e).getStoreName(),
+                        status));
+                return;
+              }
+              LOGGER.error("Exception thrown in parallel batch get for {}", request.getResourceName(), e);
+              HttpShortcutResponse shortcutResponse =
+                  new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+              shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
+              writeAndFlushBadRequests(context, shortcutResponse);
             });
         return;
       }
 
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
-      executor.submit(() -> {
+      executor.execute(() -> {
+        long readExecutionStartTime = System.nanoTime();
+        nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(preSubmissionTimeNs, readExecutionStartTime);
+
         try {
-          if (request.shouldRequestBeTerminatedEarly()) {
-            throw new VeniceRequestEarlyTerminationException(request.getStoreName());
+          try {
+            if (request.isQuotaRejectedRequest()) {
+              HttpResponseStatus rejectedResponseStatus = request.getQuotaRejectedResponseStatus();
+              rejectedResponseStatus =
+                  rejectedResponseStatus == null ? HttpResponseStatus.TOO_MANY_REQUESTS : rejectedResponseStatus;
+              context.writeAndFlush(new HttpShortcutResponse(QUOTA_REJECTED_RESPONSE, rejectedResponseStatus));
+              return;
+            }
+
+            if (request.shouldRequestBeTerminatedEarly()) {
+              throw new VeniceRequestEarlyTerminationException(request.getStoreName());
+            }
+            int queueLen = executor.getQueue().size();
+            ReadResponse response;
+            switch (request.getRequestType()) {
+              case SINGLE_GET:
+                response = handleSingleGetRequest((GetRouterRequest) request);
+                break;
+              case MULTI_GET:
+                response = handleMultiGetRequest((MultiGetRouterRequestWrapper) request);
+                break;
+              case COMPUTE:
+                response = handleComputeRequest((ComputeRouterRequestWrapper) message);
+                break;
+              default:
+                throw new VeniceException("Unknown request type: " + request.getRequestType());
+            }
+            response.setStorageExecutionQueueLen(queueLen);
+            response.setRCU(ReadQuotaEnforcementHandler.getRcu(request));
+            if (request.isStreamingRequest()) {
+              response.setStreamingResponse();
+            }
+            writeAndFlush(context, response);
+          } catch (VeniceNoStoreException e) {
+            String msg = "No storage exists for store: " + e.getStoreName();
+            if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+              LOGGER.error(msg, e);
+            }
+            HttpResponseStatus status = getHttpResponseStatus(e);
+            writeAndFlushBadRequests(
+                context,
+                new HttpShortcutResponse("No storage exists for: " + e.getStoreName(), status));
+          } catch (VeniceRequestEarlyTerminationException e) {
+            String msg = "Request timed out for store: " + e.getStoreName();
+            if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+              LOGGER.error(msg, e);
+            }
+            writeAndFlushBadRequests(
+                context,
+                new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.REQUEST_TIMEOUT));
+          } catch (OperationNotAllowedException e) {
+            String msg = "METHOD_NOT_ALLOWED: " + e.getMessage();
+            if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+              LOGGER.error(msg, e);
+            }
+            writeAndFlushBadRequests(
+                context,
+                new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.METHOD_NOT_ALLOWED));
+          } catch (Exception e) {
+            LOGGER.error("Exception thrown for {}", request.getResourceName(), e);
+            HttpShortcutResponse shortcutResponse =
+                new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
+            writeAndFlushBadRequests(context, shortcutResponse);
           }
-          double submissionWaitTime = LatencyUtils.getElapsedTimeFromNSToMS(preSubmissionTimeNs);
-          int queueLen = executor.getQueue().size();
-          ReadResponse response;
-          switch (request.getRequestType()) {
-            case SINGLE_GET:
-              response = handleSingleGetRequest((GetRouterRequest) request);
-              break;
-            case MULTI_GET:
-              response = handleMultiGetRequest((MultiGetRouterRequestWrapper) request);
-              break;
-            case COMPUTE:
-              response = handleComputeRequest((ComputeRouterRequestWrapper) message);
-              break;
-            default:
-              throw new VeniceException("Unknown request type: " + request.getRequestType());
-          }
-          response.setStorageExecutionSubmissionWaitTime(submissionWaitTime);
-          response.setStorageExecutionQueueLen(queueLen);
-          response.setRCU(ReadQuotaEnforcementHandler.getRcu(request));
-          if (request.isStreamingRequest()) {
-            response.setStreamingResponse();
-          }
-          context.writeAndFlush(response);
-        } catch (VeniceNoStoreException e) {
-          String msg = "No storage exists for store: " + e.getStoreName();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          HttpResponseStatus status = getHttpResponseStatus(e);
-          context.writeAndFlush(new HttpShortcutResponse("No storage exists for: " + e.getStoreName(), status));
-        } catch (VeniceRequestEarlyTerminationException e) {
-          String msg = "Request timed out for store: " + e.getStoreName();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.REQUEST_TIMEOUT));
-        } catch (OperationNotAllowedException e) {
-          String msg = "METHOD_NOT_ALLOWED: " + e.getMessage();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.METHOD_NOT_ALLOWED));
-        } catch (Exception e) {
-          LOGGER.error("Exception thrown for {}", request.getResourceName(), e);
-          HttpShortcutResponse shortcutResponse =
-              new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-          shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
-          context.writeAndFlush(shortcutResponse);
+        } finally {
+          nettyStats
+              .recordIoRequestProcessingRate(LatencyUtils.convertNSToMS(System.nanoTime() - readExecutionStartTime));
         }
       });
-
+      nettyStats.recordIoRequestArrivalRate();
+      Long startTime = context.channel().attr(VeniceServerNettyStats.FIRST_HANDLER_TIMESTAMP_KEY).get();
+      if (startTime != null) {
+        nettyStats.recordTimeSpentTillHandoffToReadHandler(startTime);
+      }
     } else if (message instanceof HealthCheckRequest) {
       if (diskHealthCheckService.isDiskHealthy()) {
-        context.writeAndFlush(new HttpShortcutResponse("OK", HttpResponseStatus.OK));
+        writeAndFlush(context, new HttpShortcutResponse("OK", HttpResponseStatus.OK));
       } else {
-        context.writeAndFlush(
+        writeAndFlushBadRequests(
+            context,
             new HttpShortcutResponse(
                 "Venice storage node hardware is not healthy!",
                 HttpResponseStatus.INTERNAL_SERVER_ERROR));
@@ -353,33 +421,42 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       }
     } else if (message instanceof DictionaryFetchRequest) {
       BinaryResponse response = handleDictionaryFetchRequest((DictionaryFetchRequest) message);
-      context.writeAndFlush(response);
+      writeAndFlush(context, response);
     } else if (message instanceof AdminRequest) {
       AdminResponse response = handleServerAdminRequest((AdminRequest) message);
-      context.writeAndFlush(response);
+      writeAndFlush(context, response);
     } else if (message instanceof MetadataFetchRequest) {
       try {
         MetadataResponse response = handleMetadataFetchRequest((MetadataFetchRequest) message);
-        context.writeAndFlush(response);
+        writeAndFlush(context, response);
       } catch (UnsupportedOperationException e) {
         LOGGER.warn(
             "Metadata requested by a storage node read quota not enabled store: {}",
             ((MetadataFetchRequest) message).getStoreName());
-        context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.FORBIDDEN));
+        writeAndFlushBadRequests(context, new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.FORBIDDEN));
       }
     } else if (message instanceof CurrentVersionRequest) {
       ServerCurrentVersionResponse response = handleCurrentVersionRequest((CurrentVersionRequest) message);
-      context.writeAndFlush(response);
+      writeAndFlush(context, response);
     } else if (message instanceof TopicPartitionIngestionContextRequest) {
       TopicPartitionIngestionContextResponse response =
           handleTopicPartitionIngestionContextRequest((TopicPartitionIngestionContextRequest) message);
-      context.writeAndFlush(response);
+      writeAndFlush(context, response);
     } else {
-      context.writeAndFlush(
+      writeAndFlushBadRequests(
+          context,
           new HttpShortcutResponse(
               "Unrecognized object in StorageExecutionHandler",
               HttpResponseStatus.INTERNAL_SERVER_ERROR));
     }
+  }
+
+  private void writeAndFlush(ChannelHandlerContext context, Object message) {
+    context.writeAndFlush(message);
+  }
+
+  private void writeAndFlushBadRequests(ChannelHandlerContext context, Object message) {
+    context.writeAndFlush(message);
   }
 
   private HttpResponseStatus getHttpResponseStatus(VeniceNoStoreException e) {

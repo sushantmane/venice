@@ -1,5 +1,6 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.listener.VeniceServerNettyStats.FIRST_HANDLER_TIMESTAMP_KEY;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
@@ -16,22 +17,27 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 public class StatsHandler extends ChannelDuplexHandler {
+  private static final Logger LOGGER = LogManager.getLogger(StatsHandler.class);
   private final ServerStatsContext serverStatsContext;
   private final AggServerHttpRequestStats singleGetStats;
   private final AggServerHttpRequestStats multiGetStats;
   private final AggServerHttpRequestStats computeStats;
+  private final VeniceServerNettyStats nettyStats;
 
   public StatsHandler(
       AggServerHttpRequestStats singleGetStats,
       AggServerHttpRequestStats multiGetStats,
-      AggServerHttpRequestStats computeStats) {
+      AggServerHttpRequestStats computeStats,
+      VeniceServerNettyStats nettyStats) {
     this.singleGetStats = singleGetStats;
     this.multiGetStats = multiGetStats;
     this.computeStats = computeStats;
-
+    this.nettyStats = nettyStats;
     this.serverStatsContext = new ServerStatsContext(singleGetStats, multiGetStats, computeStats);
   }
 
@@ -107,10 +113,6 @@ public class StatsHandler extends ChannelDuplexHandler {
     serverStatsContext.setCountOperatorCount(count);
   }
 
-  public void setStorageExecutionHandlerSubmissionWaitTime(double storageExecutionSubmissionWaitTime) {
-    serverStatsContext.setStorageExecutionHandlerSubmissionWaitTime(storageExecutionSubmissionWaitTime);
-  }
-
   public void setStorageExecutionQueueLen(int storageExecutionQueueLen) {
     serverStatsContext.setStorageExecutionQueueLen(storageExecutionQueueLen);
   }
@@ -153,6 +155,8 @@ public class StatsHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    nettyStats.recordRequestArrivalRate();
+    ctx.channel().attr(FIRST_HANDLER_TIMESTAMP_KEY).set(System.nanoTime());
     if (serverStatsContext.isNewRequest()) {
       // Reset for every request
       serverStatsContext.resetContext();
@@ -214,6 +218,12 @@ public class StatsHandler extends ChannelDuplexHandler {
         } else if (!serverStatsContext.getResponseStatus().equals(TOO_MANY_REQUESTS)) {
           serverStatsContext.errorRequest(serverHttpRequestStats, elapsedTime);
         }
+
+        if (result.isSuccess() && !serverStatsContext.getResponseStatus().equals(OK)) {
+          nettyStats.recordNonOkResponseLatency(elapsedTime);
+        }
+
+        nettyStats.recordRequestProcessingRate();
         serverStatsContext.setStatCallBackExecuted(true);
       }
     });
