@@ -88,6 +88,8 @@ public class ListenerService extends AbstractVeniceService {
     this.isGrpcEnabled = serverConfig.isGrpcEnabled();
     this.grpcPort = serverConfig.getGrpcPort();
 
+    VeniceServerNettyStats nettyStats = new VeniceServerNettyStats(metricsRepository, "NettyStats");
+
     executor = createThreadPool(
         serverConfig.getRestServiceStorageThreadNum(),
         "StorageExecutionThread",
@@ -121,7 +123,8 @@ public class ListenerService extends AbstractVeniceService {
         serverConfig.isEnableParallelBatchGet(),
         serverConfig.getParallelBatchGetChunkSize(),
         compressorFactory,
-        resourceReadUsageTracker);
+        resourceReadUsageTracker,
+        nettyStats);
 
     storageReadRequestHandler = requestHandler;
 
@@ -134,7 +137,8 @@ public class ListenerService extends AbstractVeniceService {
         serverConfig,
         routerAccessController,
         storeAccessController,
-        requestHandler);
+        requestHandler,
+        nettyStats);
 
     Class<? extends ServerChannel> serverSocketChannelClass = NioServerSocketChannel.class;
     boolean epollEnabled = serverConfig.isRestServiceEpollEnabled();
@@ -186,6 +190,7 @@ public class ListenerService extends AbstractVeniceService {
   public boolean startInner() throws Exception {
     serverFuture = bootstrap.bind(port).sync();
     LOGGER.info("Listener service started on port: {}", port);
+    LOGGER.info("####EXPERIMENT#### -- No flush in quota code path");
 
     if (isGrpcEnabled) {
       grpcServer.start();
@@ -236,7 +241,8 @@ public class ListenerService extends AbstractVeniceService {
       boolean parallelBatchGetEnabled,
       int parallelBatchGetChunkSize,
       StorageEngineBackedCompressorFactory compressorFactory,
-      Optional<ResourceReadUsageTracker> resourceReadUsageTracker) {
+      Optional<ResourceReadUsageTracker> resourceReadUsageTracker,
+      VeniceServerNettyStats nettyStats) {
     return new StorageReadRequestHandler(
         executor,
         computeExecutor,
@@ -251,6 +257,7 @@ public class ListenerService extends AbstractVeniceService {
         parallelBatchGetChunkSize,
         serverConfig,
         compressorFactory,
-        resourceReadUsageTracker);
+        resourceReadUsageTracker,
+        nettyStats);
   }
 }
