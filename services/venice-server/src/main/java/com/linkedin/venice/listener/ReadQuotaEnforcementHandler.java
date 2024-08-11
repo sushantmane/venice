@@ -58,6 +58,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private HelixCustomizedViewOfflinePushRepository customizedViewRepository;
   private volatile boolean initializedVolatile = false;
   private boolean initialized = false;
+  private final VeniceServerNettyStats nettyStats;
 
   public ReadQuotaEnforcementHandler(
       long storageNodeRcuCapacity,
@@ -73,6 +74,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
         nodeId,
         stats,
         metricsRepository,
+        null,
         Clock.systemUTC());
   }
 
@@ -83,7 +85,9 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       String nodeId,
       AggServerQuotaUsageStats stats,
       MetricsRepository metricsRepository,
+      VeniceServerNettyStats nettyStats,
       Clock clock) {
+    this.nettyStats = nettyStats;
     this.clock = clock;
     this.storageNodeBucket = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
     this.storageNodeTokenBucketStats =
@@ -186,45 +190,53 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
 
   @Override
   public void channelRead0(ChannelHandlerContext ctx, RouterRequest request) {
-    String storeName = request.getStoreName();
-    Store store = storeRepository.getStore(storeName);
+    long startTime = System.nanoTime();
+    try {
 
-    if (checkStoreNull(ctx, request, null, false, store)) {
-      return;
-    }
+      String storeName = request.getStoreName();
+      Store store = storeRepository.getStore(storeName);
 
-    if (checkInitAndQuotaEnabledToSkipQuotaEnforcement(ctx, request, store, false)) {
-      return;
-    }
-
-    int rcu = getRcu(request); // read capacity units
-
-    /**
-     * First check store bucket for capacity don't throttle retried request at store version level
-     */
-    TokenBucket tokenBucket = storeVersionBuckets.get(request.getResourceName());
-    if (tokenBucket != null) {
-      if (!request.isRetryRequest() && !tokenBucket.tryConsume(rcu)
-          && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
-        // Enforce store version quota for non-retry requests.
-        // TODO: check if extra node capacity and can still process this request out of quota
+      if (checkStoreNull(ctx, request, null, false, store)) {
         return;
       }
-    } else {
-      // If this happens it is probably due to a short-lived race condition where the resource is being accessed before
-      // the bucket is allocated. The request will be allowed based on node/server capacity so emit metrics accordingly.
-      stats.recordAllowedUnintentionally(storeName, rcu);
-    }
 
-    /**
-     * Once we know store bucket has capacity, check node bucket for capacity;
-     * retried requests need to be throttled at node capacity level
-     */
-    if (!storageNodeBucket.tryConsume(rcu)) {
-      if (handleServerOverCapacity(ctx, null, storeName, rcu, false))
+      if (checkInitAndQuotaEnabledToSkipQuotaEnforcement(ctx, request, store, false)) {
         return;
+      }
+
+      int rcu = getRcu(request); // read capacity units
+
+      /**
+       * First check store bucket for capacity don't throttle retried request at store version level
+       */
+      TokenBucket tokenBucket = storeVersionBuckets.get(request.getResourceName());
+      if (tokenBucket != null) {
+        if (!request.isRetryRequest() && !tokenBucket.tryConsume(rcu)
+            && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
+          // Enforce store version quota for non-retry requests.
+          // TODO: check if extra node capacity and can still process this request out of quota
+          return;
+        }
+      } else {
+        // If this happens it is probably due to a short-lived race condition where the resource is being accessed
+        // before
+        // the bucket is allocated. The request will be allowed based on node/server capacity so emit metrics
+        // accordingly.
+        stats.recordAllowedUnintentionally(storeName, rcu);
+      }
+
+      /**
+       * Once we know store bucket has capacity, check node bucket for capacity;
+       * retried requests need to be throttled at node capacity level
+       */
+      if (!storageNodeBucket.tryConsume(rcu)) {
+        if (handleServerOverCapacity(ctx, null, storeName, rcu, false))
+          return;
+      }
+      handleEpilogue(ctx, request, storeName, rcu, false);
+    } finally {
+      nettyStats.recordTimeSpentInQuotaEnforcement(startTime);
     }
-    handleEpilogue(ctx, request, storeName, rcu, false);
   }
 
   public boolean checkStoreNull(
@@ -238,7 +250,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     }
 
     if (!isGrpc) {
-      ctx.writeAndFlush(
+      writeAndFlushBadRequests(
+          ctx,
           new HttpShortcutResponse(
               "Invalid request resource " + request.getResourceName(),
               HttpResponseStatus.BAD_REQUEST));
@@ -287,7 +300,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
 
     if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+      writeAndFlushBadRequests(ctx, new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
     } else {
       grpcCtx.setError();
       grpcCtx.getVeniceServerResponseBuilder()
@@ -307,7 +320,9 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     stats.recordRejected(storeName, rcu);
 
     if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
+      writeAndFlushBadRequests(
+          ctx,
+          new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
     } else {
       String errorMessage = "Server over capacity";
       grpcCtx.setError();
@@ -317,6 +332,12 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     }
 
     return true;
+  }
+
+  private void writeAndFlushBadRequests(ChannelHandlerContext context, Object message) {
+    long startTime = System.nanoTime();
+    context.writeAndFlush(message);
+    nettyStats.recordWriteAndFlushTimeBadRequests(startTime);
   }
 
   private void handleEpilogue(

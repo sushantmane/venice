@@ -20,7 +20,7 @@ public class AggServerHttpRequestStats extends AbstractVeniceAggStoreStats<Serve
       boolean isDaVinciClient) {
     super(
         metricsRepository,
-        new ServerHttpRequestStatsSupplier(requestType, isKeyValueProfilingEnabled, isDaVinciClient),
+        new ServerHttpRequestStatsSupplier(requestType, true, isDaVinciClient),
         metadataRepository,
         unregisterMetricForDeletedStoreEnabled);
   }
