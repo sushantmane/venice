@@ -310,32 +310,32 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
           if (request.isStreamingRequest()) {
             response.setStreamingResponse();
           }
-          context.write(response);
+          context.writeAndFlush(response);
         } catch (VeniceNoStoreException e) {
           String msg = "No storage exists for store: " + e.getStoreName();
           if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
             LOGGER.error(msg, e);
           }
           HttpResponseStatus status = getHttpResponseStatus(e);
-          context.write(new HttpShortcutResponse("No storage exists for: " + e.getStoreName(), status));
+          context.writeAndFlush(new HttpShortcutResponse("No storage exists for: " + e.getStoreName(), status));
         } catch (VeniceRequestEarlyTerminationException e) {
           String msg = "Request timed out for store: " + e.getStoreName();
           if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
             LOGGER.error(msg, e);
           }
-          context.write(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.REQUEST_TIMEOUT));
+          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.REQUEST_TIMEOUT));
         } catch (OperationNotAllowedException e) {
           String msg = "METHOD_NOT_ALLOWED: " + e.getMessage();
           if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
             LOGGER.error(msg, e);
           }
-          context.write(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.METHOD_NOT_ALLOWED));
+          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.METHOD_NOT_ALLOWED));
         } catch (Exception e) {
           LOGGER.error("Exception thrown for {}", request.getResourceName(), e);
           HttpShortcutResponse shortcutResponse =
               new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
           shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
-          context.write(shortcutResponse);
+          context.writeAndFlush(shortcutResponse);
         }
       });
 
