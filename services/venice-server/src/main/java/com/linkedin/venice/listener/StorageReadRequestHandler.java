@@ -245,9 +245,12 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     this.resourceReadUsageTracker = resourceReadUsageTracker;
   }
 
+  // NettyIO
+  // evt1 | flushEvt |
+
   @Override
   public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
-    final long preSubmissionTimeNs = System.nanoTime();
+    final long preSubmissionTimeNs = System.nanoTime(); // <== netty IO
 
     /**
      * N.B.: This is the only place in the entire class where we submit things into the {@link executor}.
@@ -324,9 +327,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
       executor.execute(() -> {
         long startTime = System.nanoTime();
+        double submissionWaitTime = LatencyUtils.convertNSToMS(startTime - preSubmissionTimeNs); // <==
+                                                                                                 // StorageIoThreadPool
         try {
           nettyStats.incrementActiveReadHandlerThreads();
-          double submissionWaitTime = LatencyUtils.convertNSToMS(startTime - preSubmissionTimeNs);
           try {
             if (request.shouldRequestBeTerminatedEarly()) {
               throw new VeniceRequestEarlyTerminationException(request.getStoreName());

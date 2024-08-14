@@ -10,6 +10,7 @@ import io.tehuti.metrics.stats.Avg;
 import io.tehuti.metrics.stats.Max;
 import io.tehuti.metrics.stats.Min;
 import io.tehuti.metrics.stats.OccurrenceRate;
+import io.tehuti.metrics.stats.Rate;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -28,6 +29,7 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   // time spent in quota enforcement logic
   private final Sensor timeSpentInQuotaEnforcement;
   private final AtomicInteger queuedTasksForReadHandler = new AtomicInteger();
+  private final Sensor nettyFlushCounter;
 
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
@@ -38,6 +40,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
     registerSensorIfAbsent(
         new AsyncGauge((ignored, ignored2) -> queuedTasksForReadHandler.get(), "queued_tasks_for_read_handler"));
+
+    nettyFlushCounter = registerSensor("nettyFlushCounter", new Rate(), new Avg(), new Max());
 
     String writeAndFlushTimeCombinedSensorName = "WriteAndFlushTimeCombined";
     writeAndFlushTimeCombined = registerSensorIfAbsent(
@@ -169,5 +173,9 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void recordTimeSpentInQuotaEnforcement(long startTimeNanos) {
     timeSpentInQuotaEnforcement.record(getElapsedTimeInMicros(startTimeNanos));
+  }
+
+  public void recordNettyFlushCounts() {
+    nettyFlushCounter.record(1);
   }
 }

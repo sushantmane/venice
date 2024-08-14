@@ -34,7 +34,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
@@ -68,6 +67,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
   AggServerQuotaTokenBucketStats quotaTokenBucketStats;
   List<ServerInterceptor> aclInterceptors;
   private final IdentityParser identityParser;
+  private final FlushCounterHandler flushCounterHandler;
 
   private boolean isDaVinciClient;
 
@@ -152,6 +152,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
         ? Optional.of(new ServerAclHandler(routerAccessController.get(), aclHandlerFailOnAccessRejection))
         : Optional.empty();
 
+    this.flushCounterHandler = new FlushCounterHandler(nettyStats);
+
     if (serverConfig.isQuotaEnforcementEnabled()) {
       String nodeId = Utils.getHelixNodeIdentifier(serverConfig.getListenerHostname(), serverConfig.getListenerPort());
       this.quotaUsageStats = new AggServerQuotaUsageStats(metricsRepository);
@@ -204,7 +206,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
   @Override
   public void initChannel(SocketChannel ch) {
-    ch.pipeline().addLast(new FlushConsolidationHandler(16, true));
+    ch.pipeline().addLast(flushCounterHandler);
     if (sslFactory.isPresent()) {
       SslInitializer sslInitializer = new SslInitializer(SslUtils.toAlpiniSSLFactory(sslFactory.get()), false);
       if (sslHandshakeExecutor != null) {
