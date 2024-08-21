@@ -326,11 +326,11 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
 
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
       executor.execute(() -> {
-        long startTime = System.nanoTime();
-        double submissionWaitTime = LatencyUtils.convertNSToMS(startTime - preSubmissionTimeNs); // <==
-                                                                                                 // StorageIoThreadPool
+        long readExecutionStartTime = System.nanoTime();
+        double submissionWaitTime = LatencyUtils.convertNSToMS(readExecutionStartTime - preSubmissionTimeNs);
+        nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(submissionWaitTime);
+
         try {
-          nettyStats.incrementActiveReadHandlerThreads();
           try {
             if (request.shouldRequestBeTerminatedEarly()) {
               throw new VeniceRequestEarlyTerminationException(request.getStoreName());
@@ -350,10 +350,8 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
               default:
                 throw new VeniceException("Unknown request type: " + request.getRequestType());
             }
-            response.setStorageExecutionSubmissionWaitTime(submissionWaitTime);
             response.setStorageExecutionQueueLen(queueLen);
             response.setRCU(ReadQuotaEnforcementHandler.getRcu(request));
-            response.recordResponseWriteAndFlushStartTimeNanos();
             if (request.isStreamingRequest()) {
               response.setStreamingResponse();
             }
@@ -391,16 +389,15 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
             writeAndFlushBadRequests(context, shortcutResponse);
           }
         } finally {
-          nettyStats.decrementActiveReadHandlerThreads();
-          nettyStats.decrementQueuedTasksForReadHandler();
-          nettyStats.recordTimeSpentInReadHandler(startTime);
+          nettyStats
+              .recordIoRequestProcessingRate(LatencyUtils.convertNSToMS(System.nanoTime() - readExecutionStartTime));
         }
       });
+      nettyStats.recordIoRequestArrivalRate();
       Long startTime = context.channel().attr(VeniceServerNettyStats.FIRST_HANDLER_TIMESTAMP_KEY).get();
       if (startTime != null) {
         nettyStats.recordTimeSpentTillHandoffToReadHandler(startTime);
       }
-      nettyStats.incrementQueuedTasksForReadHandler();
     } else if (message instanceof HealthCheckRequest) {
       if (diskHealthCheckService.isDiskHealthy()) {
         writeAndFlush(context, new HttpShortcutResponse("OK", HttpResponseStatus.OK));
@@ -447,15 +444,11 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   }
 
   private void writeAndFlush(ChannelHandlerContext context, Object message) {
-    long startTime = System.nanoTime();
     context.writeAndFlush(message);
-    nettyStats.recordWriteAndFlushTimeOkRequests(startTime);
   }
 
   private void writeAndFlushBadRequests(ChannelHandlerContext context, Object message) {
-    long startTime = System.nanoTime();
     context.writeAndFlush(message);
-    nettyStats.recordWriteAndFlushTimeBadRequests(startTime);
   }
 
   private HttpResponseStatus getHttpResponseStatus(VeniceNoStoreException e) {

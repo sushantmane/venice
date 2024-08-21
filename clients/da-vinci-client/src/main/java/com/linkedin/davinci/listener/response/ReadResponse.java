@@ -13,7 +13,6 @@ public abstract class ReadResponse {
   private double readComputeLatency = -1;
   private double readComputeDeserializationLatency = -1;
   private double readComputeSerializationLatency = -1;
-  private double storageExecutionSubmissionWaitTime;
   private int storageExecutionQueueLen = -1;
   private int multiChunkLargeValueCount = 0;
   private CompressionStrategy compressionStrategy = CompressionStrategy.NO_OP;
@@ -27,7 +26,6 @@ public abstract class ReadResponse {
   private int hadamardProductCount = 0;
   private int countOperatorCount = 0;
   private int rcu = 0;
-  private long responseWriteAndFlushStartTimeNanos = -1;
 
   public void setCompressionStrategy(CompressionStrategy compressionStrategy) {
     this.compressionStrategy = compressionStrategy;
@@ -133,14 +131,6 @@ public abstract class ReadResponse {
     return this.readComputeSerializationLatency;
   }
 
-  public double getStorageExecutionHandlerSubmissionWaitTime() {
-    return storageExecutionSubmissionWaitTime;
-  }
-
-  public void setStorageExecutionSubmissionWaitTime(double storageExecutionSubmissionWaitTime) {
-    this.storageExecutionSubmissionWaitTime = storageExecutionSubmissionWaitTime;
-  }
-
   /**
    * Set the read compute unit (RCU) cost for this response's request
    * @param rcu
@@ -206,16 +196,4 @@ public abstract class ReadResponse {
   public abstract ByteBuf getResponseBody();
 
   public abstract int getResponseSchemaIdHeader();
-
-  public void setResponseWriteAndFlushStartTimeNanos(long responseWriteAndFlushStartTimeNanos) {
-    this.responseWriteAndFlushStartTimeNanos = responseWriteAndFlushStartTimeNanos;
-  }
-
-  public void recordResponseWriteAndFlushStartTimeNanos() {
-    this.responseWriteAndFlushStartTimeNanos = System.nanoTime();
-  }
-
-  public long getResponseWriteAndFlushStartTimeNanos() {
-    return responseWriteAndFlushStartTimeNanos;
-  }
 }

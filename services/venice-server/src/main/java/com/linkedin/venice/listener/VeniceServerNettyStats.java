@@ -20,16 +20,17 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final AtomicInteger activeConnections = new AtomicInteger();
 
   private final AtomicInteger activeReadHandlerThreads = new AtomicInteger();
-  private final Sensor writeAndFlushTimeOkRequests;
-  private final Sensor writeAndFlushTimeBadRequests;
-  private final Sensor writeAndFlushTimeCombined;
-  private final Sensor writeAndFlushCompletionTimeForDataRequest;
-  private final Sensor timeSpentInReadHandler;
   private final Sensor timeSpentTillHandoffToReadHandler;
-  // time spent in quota enforcement logic
   private final Sensor timeSpentInQuotaEnforcement;
-  private final AtomicInteger queuedTasksForReadHandler = new AtomicInteger();
   private final Sensor nettyFlushCounter;
+
+  private final Sensor storageExecutionHandlerSubmissionWaitTime;
+  private final Sensor nonOkResponseLatency;
+  private final Sensor requestArrivalRate;
+  private final Sensor requestProcessingRate;
+
+  private final Sensor ioRequestArrivalRate;
+  private final Sensor ioRequestProcessingRate;
 
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
@@ -38,58 +39,7 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
     registerSensorIfAbsent(
         new AsyncGauge((ignored, ignored2) -> activeReadHandlerThreads.get(), "active_read_handler_threads"));
 
-    registerSensorIfAbsent(
-        new AsyncGauge((ignored, ignored2) -> queuedTasksForReadHandler.get(), "queued_tasks_for_read_handler"));
-
     nettyFlushCounter = registerSensor("nettyFlushCounter", new Rate(), new Avg(), new Max());
-
-    String writeAndFlushTimeCombinedSensorName = "WriteAndFlushTimeCombined";
-    writeAndFlushTimeCombined = registerSensorIfAbsent(
-        writeAndFlushTimeCombinedSensorName,
-        new OccurrenceRate(),
-        new Max(),
-        new Min(),
-        new Avg(),
-        TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + writeAndFlushTimeCombinedSensorName));
-
-    String writeAndFlushTimeOkRequestsSensorName = "WriteAndFlushTimeOkRequests";
-    writeAndFlushTimeOkRequests = registerSensorIfAbsent(
-        writeAndFlushTimeOkRequestsSensorName,
-        new OccurrenceRate(),
-        new Max(),
-        new Min(),
-        new Avg(),
-        TehutiUtils
-            .getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + writeAndFlushTimeOkRequestsSensorName));
-
-    String writeAndFlushTimeBadRequestsSensorName = "WriteAndFlushTimeBadRequests";
-    writeAndFlushTimeBadRequests = registerSensorIfAbsent(
-        writeAndFlushTimeBadRequestsSensorName,
-        new OccurrenceRate(),
-        new Max(),
-        new Min(),
-        new Avg(),
-        TehutiUtils
-            .getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + writeAndFlushTimeBadRequestsSensorName));
-
-    String responseWriteAndFlushStartTimeNanosSensorName = "WriteAndFlushCompletionTimeForDataRequest";
-    writeAndFlushCompletionTimeForDataRequest = registerSensorIfAbsent(
-        responseWriteAndFlushStartTimeNanosSensorName,
-        new OccurrenceRate(),
-        new Max(),
-        new Min(),
-        new Avg(),
-        TehutiUtils.getPercentileStat(
-            getName() + AbstractVeniceStats.DELIMITER + responseWriteAndFlushStartTimeNanosSensorName));
-
-    String timeSpentInReadHandlerSensorName = "TimeSpentInReadHandler";
-    timeSpentInReadHandler = registerSensorIfAbsent(
-        timeSpentInReadHandlerSensorName,
-        new OccurrenceRate(),
-        new Max(),
-        new Min(),
-        new Avg(),
-        TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + timeSpentInReadHandlerSensorName));
 
     String timeSpentTillHandoffToReadHandlerSensorName = "TimeSpentTillHandoffToReadHandler";
     timeSpentTillHandoffToReadHandler = registerSensorIfAbsent(
@@ -110,18 +60,51 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
         new Avg(),
         TehutiUtils
             .getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + timeSpentInQuotaEnforcementSensorName));
+
+    String storageExecutionHandlerSubmissionWaitTimeSensorName = "storage_execution_handler_submission_wait_time";
+
+    storageExecutionHandlerSubmissionWaitTime = registerSensorIfAbsent(
+        storageExecutionHandlerSubmissionWaitTimeSensorName,
+        new OccurrenceRate(),
+        new Max(),
+        new Min(),
+        new Avg(),
+        TehutiUtils.getPercentileStat(
+            getName() + AbstractVeniceStats.DELIMITER + storageExecutionHandlerSubmissionWaitTimeSensorName));
+
+    String nonOkResponseLatencySensorName = "non_ok_response_latency";
+    nonOkResponseLatency = registerSensorIfAbsent(
+        nonOkResponseLatencySensorName,
+        new OccurrenceRate(),
+        new Max(),
+        new Min(),
+        new Avg(),
+        TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + nonOkResponseLatencySensorName));
+
+    String requestArrivalRateSensorName = "request_arrival_rate";
+
+    requestArrivalRate =
+        registerSensorIfAbsent(requestArrivalRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+
+    String requestProcessingRateSensorName = "request_processing_rate";
+    requestProcessingRate =
+        registerSensorIfAbsent(requestProcessingRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+
+    String ioRequestArrivalRateSensorName = "io_request_arrival_rate";
+    ioRequestArrivalRate =
+        registerSensorIfAbsent(ioRequestArrivalRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+
+    String ioRequestProcessingRateSensorName = "io_request_processing_rate";
+    ioRequestProcessingRate = registerSensorIfAbsent(
+        ioRequestProcessingRateSensorName,
+        new OccurrenceRate(),
+        new Max(),
+        new Min(),
+        new Avg(),
+        TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + ioRequestProcessingRateSensorName));
   }
 
-  public static double getElapsedTimeInMicros(long startTimeNanos) {
-    return (System.nanoTime() - startTimeNanos) / 1000.0;
-  }
-
-  public static long getElapsedTimeInNanos(long startTimeNanos) {
-    return System.nanoTime() - startTimeNanos;
-  }
-
-  // (1000.0 * 1000.0)
-  private static final double NANO_TO_MILLIS = 1000.0 * 1000.0;
+  private static final double NANO_TO_MILLIS = 1_000_000;
 
   public static double getElapsedTimeInMillis(long startTimeNanos) {
     return (System.nanoTime() - startTimeNanos) / NANO_TO_MILLIS;
@@ -148,32 +131,6 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
     return activeConnections.decrementAndGet();
   }
 
-  public void recordWriteAndFlushTimeOkRequests(long startTimeNanos) {
-    writeAndFlushTimeOkRequests.record(getElapsedTimeInMillis(startTimeNanos));
-    writeAndFlushTimeCombined.record(getElapsedTimeInMillis(startTimeNanos));
-  }
-
-  public void recordWriteAndFlushTimeBadRequests(long startTimeNanos) {
-    writeAndFlushTimeBadRequests.record(getElapsedTimeInMillis(startTimeNanos));
-    writeAndFlushTimeCombined.record(getElapsedTimeInMillis(startTimeNanos));
-  }
-
-  public void recordWriteAndFlushCompletionTimeForDataRequest(long startTimeNanos) {
-    writeAndFlushCompletionTimeForDataRequest.record(getElapsedTimeInMillis(startTimeNanos));
-  }
-
-  public void incrementQueuedTasksForReadHandler() {
-    queuedTasksForReadHandler.incrementAndGet();
-  }
-
-  public void decrementQueuedTasksForReadHandler() {
-    queuedTasksForReadHandler.decrementAndGet();
-  }
-
-  public void recordTimeSpentInReadHandler(long startTimeNanos) {
-    timeSpentInReadHandler.record(getElapsedTimeInMillis(startTimeNanos));
-  }
-
   public void recordTimeSpentTillHandoffToReadHandler(long startTimeNanos) {
     timeSpentTillHandoffToReadHandler.record(getElapsedTimeInMillis(startTimeNanos));
   }
@@ -184,5 +141,29 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void recordNettyFlushCounts() {
     nettyFlushCounter.record(1);
+  }
+
+  public void recordStorageExecutionHandlerSubmissionWaitTime(double submissionWaitTime) {
+    storageExecutionHandlerSubmissionWaitTime.record(submissionWaitTime);
+  }
+
+  public void recordNonOkResponseLatency(double latency) {
+    nonOkResponseLatency.record(latency);
+  }
+
+  public void recordRequestArrivalRate() {
+    requestArrivalRate.record();
+  }
+
+  public void recordRequestProcessingRate() {
+    requestProcessingRate.record();
+  }
+
+  public void recordIoRequestArrivalRate() {
+    ioRequestArrivalRate.record();
+  }
+
+  public void recordIoRequestProcessingRate(double elapsedTime) {
+    ioRequestProcessingRate.record(elapsedTime);
   }
 }

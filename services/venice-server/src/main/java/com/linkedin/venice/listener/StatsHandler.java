@@ -113,10 +113,6 @@ public class StatsHandler extends ChannelDuplexHandler {
     serverStatsContext.setCountOperatorCount(count);
   }
 
-  public void setStorageExecutionHandlerSubmissionWaitTime(double storageExecutionSubmissionWaitTime) {
-    serverStatsContext.setStorageExecutionHandlerSubmissionWaitTime(storageExecutionSubmissionWaitTime);
-  }
-
   public void setStorageExecutionQueueLen(int storageExecutionQueueLen) {
     serverStatsContext.setStorageExecutionQueueLen(storageExecutionQueueLen);
   }
@@ -159,6 +155,7 @@ public class StatsHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    nettyStats.recordRequestArrivalRate();
     ctx.channel().attr(FIRST_HANDLER_TIMESTAMP_KEY).set(System.nanoTime());
     if (serverStatsContext.isNewRequest()) {
       // Reset for every request
@@ -221,12 +218,13 @@ public class StatsHandler extends ChannelDuplexHandler {
         } else if (!serverStatsContext.getResponseStatus().equals(TOO_MANY_REQUESTS)) {
           serverStatsContext.errorRequest(serverHttpRequestStats, elapsedTime);
         }
-        serverStatsContext.setStatCallBackExecuted(true);
 
-        long responseWriteAndFlushStartTimeNanosStartTime = serverStatsContext.getResponseWriteAndFlushStartTimeNanos();
-        if (responseWriteAndFlushStartTimeNanosStartTime > 0) {
-          nettyStats.recordWriteAndFlushCompletionTimeForDataRequest(responseWriteAndFlushStartTimeNanosStartTime);
+        if (result.isSuccess() && !serverStatsContext.getResponseStatus().equals(OK)) {
+          nettyStats.recordNonOkResponseLatency(elapsedTime);
         }
+
+        nettyStats.recordRequestProcessingRate();
+        serverStatsContext.setStatCallBackExecuted(true);
       }
     });
   }

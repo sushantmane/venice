@@ -57,7 +57,6 @@ public class ServerStatsContext {
    * This is mostly to bypass the issue that stat callback could be triggered multiple times for one single request.
    */
   private boolean statCallbackExecuted = false;
-  private double storageExecutionSubmissionWaitTime;
   private int storageExecutionQueueLen;
 
   /**
@@ -143,7 +142,6 @@ public class ServerStatsContext {
     responseStatus = null;
     statCallbackExecuted = false;
     databaseLookupLatency = -1;
-    storageExecutionSubmissionWaitTime = -1;
     storageExecutionQueueLen = -1;
     requestKeyCount = -1;
     successRequestKeyCount = -1;
@@ -275,10 +273,6 @@ public class ServerStatsContext {
     this.countOperatorCount = count;
   }
 
-  public void setStorageExecutionHandlerSubmissionWaitTime(double storageExecutionSubmissionWaitTime) {
-    this.storageExecutionSubmissionWaitTime = storageExecutionSubmissionWaitTime;
-  }
-
   public void setStorageExecutionQueueLen(int storageExecutionQueueLen) {
     this.storageExecutionQueueLen = storageExecutionQueueLen;
   }
@@ -307,9 +301,6 @@ public class ServerStatsContext {
     if (serverHttpRequestStats != null) {
       if (databaseLookupLatency >= 0) {
         serverHttpRequestStats.recordDatabaseLookupLatency(databaseLookupLatency, isAssembledMultiChunkLargeValue());
-      }
-      if (storageExecutionSubmissionWaitTime >= 0) {
-        currentStats.recordStorageExecutionHandlerSubmissionWaitTime(storageExecutionSubmissionWaitTime);
       }
       if (storageExecutionQueueLen >= 0) {
         currentStats.recordStorageExecutionQueueLen(storageExecutionQueueLen);

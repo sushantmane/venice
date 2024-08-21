@@ -185,8 +185,6 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
 
   public void setStats(ServerStatsContext statsContext, ReadResponse readResponse) {
     statsContext.setDatabaseLookupLatency(readResponse.getDatabaseLookupLatency());
-    statsContext
-        .setStorageExecutionHandlerSubmissionWaitTime(readResponse.getStorageExecutionHandlerSubmissionWaitTime());
     statsContext.setStorageExecutionQueueLen(readResponse.getStorageExecutionQueueLen());
     statsContext.setSuccessRequestKeyCount(readResponse.getRecordCount());
     statsContext.setMultiChunkLargeValueCount(readResponse.getMultiChunkLargeValueCount());
@@ -201,6 +199,5 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
     statsContext.setValueSizeList(readResponse.getValueSizeList());
     statsContext.setValueSize(readResponse.getValueSize());
     statsContext.setReadComputeOutputSize(readResponse.getReadComputeOutputSize());
-    statsContext.setResponseWriteAndFlushStartTimeNanos(readResponse.getResponseWriteAndFlushStartTimeNanos());
   }
 }

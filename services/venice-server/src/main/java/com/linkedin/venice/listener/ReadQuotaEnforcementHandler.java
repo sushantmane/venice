@@ -335,9 +335,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   private void writeAndFlushBadRequests(ChannelHandlerContext context, Object message) {
-    long startTime = System.nanoTime();
     context.writeAndFlush(message);
-    nettyStats.recordWriteAndFlushTimeBadRequests(startTime);
   }
 
   private void handleEpilogue(
