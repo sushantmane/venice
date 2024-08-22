@@ -136,7 +136,6 @@ public class ListenerService extends AbstractVeniceService {
         nettyStats);
 
     storageReadRequestHandler = requestHandler;
-
     HttpChannelInitializer channelInitializer = new HttpChannelInitializer(
         storeMetadataRepository,
         customizedViewRepository,
