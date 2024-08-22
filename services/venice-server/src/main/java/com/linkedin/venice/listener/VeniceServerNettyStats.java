@@ -2,6 +2,7 @@ package com.linkedin.venice.listener;
 
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.TehutiUtils;
+import com.linkedin.venice.utils.LatencyUtils;
 import io.netty.util.AttributeKey;
 import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
@@ -31,6 +32,16 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   private final Sensor ioRequestArrivalRate;
   private final Sensor ioRequestProcessingRate;
+  PriorityBasedResponseScheduler priorityBasedResponseScheduler;
+  // private final Sensor getTimeSpentTillHandoffToReadHandler;
+
+  public void setPriorityBasedResponseScheduler(PriorityBasedResponseScheduler priorityBasedResponseScheduler) {
+    this.priorityBasedResponseScheduler = priorityBasedResponseScheduler;
+  }
+
+  public PriorityBasedResponseScheduler getPriorityBasedResponseScheduler() {
+    return priorityBasedResponseScheduler;
+  }
 
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
@@ -145,6 +156,10 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void recordStorageExecutionHandlerSubmissionWaitTime(double submissionWaitTime) {
     storageExecutionHandlerSubmissionWaitTime.record(submissionWaitTime);
+  }
+
+  public void recordStorageExecutionHandlerSubmissionWaitTime(long startTimeNanos, long endTimeNanos) {
+    storageExecutionHandlerSubmissionWaitTime.record(LatencyUtils.convertNSToMS(endTimeNanos - startTimeNanos));
   }
 
   public void recordNonOkResponseLatency(double latency) {

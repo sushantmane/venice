@@ -59,6 +59,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private volatile boolean initializedVolatile = false;
   private boolean initialized = false;
   private final VeniceServerNettyStats nettyStats;
+  private final PriorityBasedResponseScheduler priorityBasedResponseScheduler;
 
   public ReadQuotaEnforcementHandler(
       long storageNodeRcuCapacity,
@@ -88,6 +89,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       VeniceServerNettyStats nettyStats,
       Clock clock) {
     this.nettyStats = nettyStats;
+    this.priorityBasedResponseScheduler = nettyStats.getPriorityBasedResponseScheduler();
     this.clock = clock;
     this.storageNodeBucket = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
     this.storageNodeTokenBucketStats =
@@ -215,8 +217,11 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
           // Enforce store version quota for non-retry requests.
           // TODO: check if extra node capacity and can still process this request out of quota
-          ReferenceCountUtil.retain(request);
-          ctx.fireChannelRead(request);
+          // ReferenceCountUtil.retain(request);
+          // ctx.fireChannelRead(request);
+
+          priorityBasedResponseScheduler
+              .writeAndFlush(ctx, new HttpShortcutResponse("Too many requests", HttpResponseStatus.TOO_MANY_REQUESTS));
           return;
         }
       } else {

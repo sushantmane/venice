@@ -4,7 +4,9 @@ import com.linkedin.venice.utils.DaemonThreadFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -18,45 +20,63 @@ public class PriorityBasedResponseScheduler {
 
   private final Map<EventLoop, LinkedBlockingQueue<ResponseEvent>> responseEventMap;
   private final ThreadPoolExecutor executor;
-  private static final long HOLD_THRESHOLD = Duration.ofMillis(5).toNanos();
+  private static final long HOLD_THRESHOLD = Duration.ofMillis(300).toNanos();
 
-  public PriorityBasedResponseScheduler(PriorityBasedResponseSchedulerContext context) {
-    responseEventMap = new ConcurrentHashMap<>(context.numQueues);
-    executor = createThreadPool(context.numThreads);
+  public PriorityBasedResponseScheduler(PriorityBasedResponseSchedulerContext priorityBasedResponseSchedulerContext) {
+    responseEventMap = new ConcurrentHashMap<>(priorityBasedResponseSchedulerContext.numQueues);
+    executor = createThreadPool(priorityBasedResponseSchedulerContext.numThreads);
+    final Set<ChannelHandlerContext> contexts = new HashSet<>();
     executor.execute(() -> {
       while (true) {
         long sleepTime = 10_000_000; // 10 ms
         for (Map.Entry<EventLoop, LinkedBlockingQueue<ResponseEvent>> entry: responseEventMap.entrySet()) {
           LinkedBlockingQueue<ResponseEvent> responseEventQueue = entry.getValue();
           ResponseEvent responseEvent = responseEventQueue.peek();
-          if (responseEvent == null) {
-            continue;
-          }
-          long evtArrivalTime = responseEvent.timestampInNanos;
-          long remainingTime = evtArrivalTime + HOLD_THRESHOLD - System.nanoTime();
-          sleepTime = Math.max(0, Math.min(sleepTime, remainingTime));
-          // check if at least 10 ms have passed since the event arrived
-          if (System.nanoTime() - evtArrivalTime < HOLD_THRESHOLD) {
-            continue;
-          }
-
-          responseEvent = responseEventQueue.poll();
-          if (responseEvent == null) {
-            continue;
-          }
-          ResponseEvent finalResponseEvent = responseEvent;
-          executor.execute(() -> {
+          int count = 0;
+          while (responseEvent != null && System.nanoTime() - responseEvent.timestampInNanos >= HOLD_THRESHOLD
+              && count < 256) {
+            responseEvent = responseEventQueue.poll();
+            if (responseEvent == null) {
+              break;
+            }
+            count++;
+            sleepTime =
+                Math.max(0, Math.min(sleepTime, responseEvent.timestampInNanos + HOLD_THRESHOLD - System.nanoTime()));
             try {
-              finalResponseEvent.context.writeAndFlush(finalResponseEvent.message);
+              responseEvent.context.write(responseEvent.message);
+              contexts.add(responseEvent.context);
             } catch (Exception e) {
               LOGGER.error("Failed to write and flush response", e);
             }
-          });
+          }
+
+          for (ChannelHandlerContext context: contexts) {
+            try {
+              context.flush();
+            } catch (Exception e) {
+              LOGGER.error("Failed to flush response", e);
+            }
+          }
+          contexts.clear();
+
+          //
+          // responseEvent = responseEventQueue.poll();
+          // if (responseEvent == null) {
+          // continue;
+          // }
+          // ResponseEvent finalResponseEvent = responseEvent;
+          // executor.execute(() -> {
+          // try {
+          // finalResponseEvent.context.writeAndFlush(finalResponseEvent.message);
+          // } catch (Exception e) {
+          // LOGGER.error("Failed to write and flush response", e);
+          // }
+          // });
         }
 
         // sleep for sleepTime nanos
         try {
-          Thread.sleep(sleepTime / 1_000_000, (int) (sleepTime % 1_000_000));
+          Thread.sleep(1);
         } catch (InterruptedException e) {
           LOGGER.error("Interrupted while sleeping", e);
         }

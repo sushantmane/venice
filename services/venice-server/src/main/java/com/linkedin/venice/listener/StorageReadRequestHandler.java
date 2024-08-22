@@ -329,8 +329,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
       executor.execute(() -> {
         long readExecutionStartTime = System.nanoTime();
-        double submissionWaitTime = LatencyUtils.convertNSToMS(readExecutionStartTime - preSubmissionTimeNs);
-        nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(submissionWaitTime);
+        nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(preSubmissionTimeNs, readExecutionStartTime);
 
         try {
           try {
