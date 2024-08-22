@@ -215,6 +215,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
           // Enforce store version quota for non-retry requests.
           // TODO: check if extra node capacity and can still process this request out of quota
+          ReferenceCountUtil.retain(request);
+          ctx.fireChannelRead(request);
           return;
         }
       } else {
@@ -293,19 +295,19 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       boolean isGrpc) {
     stats.recordRejected(request.getStoreName(), rcu);
 
-    long storeQuota = store.getReadQuotaInCU();
-    float thisNodeRcuPerSecond = storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
-    String errorMessage =
-        "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
-            + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
+    // long storeQuota = store.getReadQuotaInCU();
+    // float thisNodeRcuPerSecond = storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
+    // String errorMessage =
+    // "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
+    // + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
 
     if (!isGrpc) {
-      writeAndFlushBadRequests(ctx, new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+      request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS);
+      // writeAndFlushBadRequests(ctx, new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
     } else {
       grpcCtx.setError();
-      grpcCtx.getVeniceServerResponseBuilder()
-          .setErrorCode(GrpcErrorCodes.TOO_MANY_REQUESTS)
-          .setErrorMessage(errorMessage);
+      grpcCtx.getVeniceServerResponseBuilder().setErrorCode(GrpcErrorCodes.TOO_MANY_REQUESTS);
+      // .setErrorMessage(errorMessage);
     }
 
     return true;

@@ -248,6 +248,8 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   // NettyIO
   // evt1 | flushEvt |
 
+  private static final String QUOTA_REJECTED_RESPONSE = "Quota rejected";
+
   @Override
   public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
     final long preSubmissionTimeNs = System.nanoTime(); // <== netty IO
@@ -275,54 +277,54 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       RouterRequest request = (RouterRequest) message;
       resourceReadUsageTracker.ifPresent(tracker -> tracker.recordReadUsage(request.getResourceName()));
       // Check before putting the request to the intermediate queue
-      if (request.shouldRequestBeTerminatedEarly()) {
-        // Try to make the response short
-        VeniceRequestEarlyTerminationException earlyTerminationException =
-            new VeniceRequestEarlyTerminationException(request.getStoreName());
-        writeAndFlushBadRequests(
-            context,
-            new HttpShortcutResponse(
-                earlyTerminationException.getMessage(),
-                earlyTerminationException.getHttpResponseStatus()));
-        return;
-      }
+      // if (request.shouldRequestBeTerminatedEarly()) {
+      // // Try to make the response short
+      // VeniceRequestEarlyTerminationException earlyTerminationException =
+      // new VeniceRequestEarlyTerminationException(request.getStoreName());
+      // writeAndFlushBadRequests(
+      // context,
+      // new HttpShortcutResponse(
+      // earlyTerminationException.getMessage(),
+      // earlyTerminationException.getHttpResponseStatus()));
+      // return;
+      // }
       /**
       * For now, we are evaluating whether parallel lookup is good overall or not.
       * Eventually, we either pick up the new parallel implementation or keep the original one, so it is fine
       * to have some duplicate code for the time-being.
       */
-      if (parallelBatchGetEnabled && request.getRequestType().equals(RequestType.MULTI_GET)) {
-        handleMultiGetRequestInParallel((MultiGetRouterRequestWrapper) request, parallelBatchGetChunkSize)
-            .whenComplete((v, e) -> {
-              if (e == null) {
-                writeAndFlush(context, v);
-                return;
-              }
-              if (e instanceof VeniceRequestEarlyTerminationException) {
-                VeniceRequestEarlyTerminationException earlyTerminationException =
-                    (VeniceRequestEarlyTerminationException) e;
-                writeAndFlushBadRequests(
-                    context,
-                    new HttpShortcutResponse(
-                        earlyTerminationException.getMessage(),
-                        earlyTerminationException.getHttpResponseStatus()));
-              } else if (e instanceof VeniceNoStoreException) {
-                HttpResponseStatus status = getHttpResponseStatus((VeniceNoStoreException) e);
-                writeAndFlushBadRequests(
-                    context,
-                    new HttpShortcutResponse(
-                        "No storage exists for: " + ((VeniceNoStoreException) e).getStoreName(),
-                        status));
-              } else {
-                LOGGER.error("Exception thrown in parallel batch get for {}", request.getResourceName(), e);
-                HttpShortcutResponse shortcutResponse =
-                    new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
-                writeAndFlushBadRequests(context, shortcutResponse);
-              }
-            });
-        return;
-      }
+      // if (parallelBatchGetEnabled && request.getRequestType().equals(RequestType.MULTI_GET)) {
+      // handleMultiGetRequestInParallel((MultiGetRouterRequestWrapper) request, parallelBatchGetChunkSize)
+      // .whenComplete((v, e) -> {
+      // if (e == null) {
+      // writeAndFlush(context, v);
+      // return;
+      // }
+      // if (e instanceof VeniceRequestEarlyTerminationException) {
+      // VeniceRequestEarlyTerminationException earlyTerminationException =
+      // (VeniceRequestEarlyTerminationException) e;
+      // writeAndFlushBadRequests(
+      // context,
+      // new HttpShortcutResponse(
+      // earlyTerminationException.getMessage(),
+      // earlyTerminationException.getHttpResponseStatus()));
+      // } else if (e instanceof VeniceNoStoreException) {
+      // HttpResponseStatus status = getHttpResponseStatus((VeniceNoStoreException) e);
+      // writeAndFlushBadRequests(
+      // context,
+      // new HttpShortcutResponse(
+      // "No storage exists for: " + ((VeniceNoStoreException) e).getStoreName(),
+      // status));
+      // } else {
+      // LOGGER.error("Exception thrown in parallel batch get for {}", request.getResourceName(), e);
+      // HttpShortcutResponse shortcutResponse =
+      // new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+      // shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
+      // writeAndFlushBadRequests(context, shortcutResponse);
+      // }
+      // });
+      // return;
+      // }
 
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
       executor.execute(() -> {
@@ -332,6 +334,14 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
 
         try {
           try {
+            if (request.isQuotaRejectedRequest()) {
+              HttpResponseStatus rejectedResponseStatus = request.getQuotaRejectedResponseStatus();
+              rejectedResponseStatus =
+                  rejectedResponseStatus == null ? HttpResponseStatus.TOO_MANY_REQUESTS : rejectedResponseStatus;
+              context.writeAndFlush(new HttpShortcutResponse(QUOTA_REJECTED_RESPONSE, rejectedResponseStatus));
+              return;
+            }
+
             if (request.shouldRequestBeTerminatedEarly()) {
               throw new VeniceRequestEarlyTerminationException(request.getStoreName());
             }
