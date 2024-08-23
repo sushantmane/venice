@@ -43,7 +43,8 @@ public class GrpcReadQuotaEnforcementHandler extends VeniceServerGrpcHandler {
       readQuota.getStats().recordAllowedUnintentionally(storeName, rcu);
     }
 
-    if (readQuota.storageConsumeRcu(rcu) && readQuota.handleServerOverCapacity(null, ctx, storeName, rcu, true)) {
+    if (readQuota.storageConsumeRcu(rcu)
+        && readQuota.handleServerOverCapacity(request, null, ctx, storeName, rcu, true)) {
       invokeNextHandler(ctx);
       return;
     }

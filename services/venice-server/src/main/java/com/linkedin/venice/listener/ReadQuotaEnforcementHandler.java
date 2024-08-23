@@ -217,11 +217,11 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
           // Enforce store version quota for non-retry requests.
           // TODO: check if extra node capacity and can still process this request out of quota
-          // ReferenceCountUtil.retain(request);
-          // ctx.fireChannelRead(request);
+          ReferenceCountUtil.retain(request);
+          ctx.fireChannelRead(request);
 
-          priorityBasedResponseScheduler
-              .writeAndFlush(ctx, new HttpShortcutResponse("Too many requests", HttpResponseStatus.TOO_MANY_REQUESTS));
+          // priorityBasedResponseScheduler
+          // .writeAndFlush(ctx, new HttpShortcutResponse("Too many requests", HttpResponseStatus.TOO_MANY_REQUESTS));
           return;
         }
       } else {
@@ -237,8 +237,10 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
        * retried requests need to be throttled at node capacity level
        */
       if (!storageNodeBucket.tryConsume(rcu)) {
-        if (handleServerOverCapacity(ctx, null, storeName, rcu, false))
-          return;
+        if (handleServerOverCapacity(request, ctx, null, storeName, rcu, false))
+          ReferenceCountUtil.retain(request);
+        ctx.fireChannelRead(request);
+        return;
       }
       handleEpilogue(ctx, request, storeName, rcu, false);
     } finally {
@@ -319,6 +321,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   public boolean handleServerOverCapacity(
+      RouterRequest request,
       ChannelHandlerContext ctx,
       GrpcRequestContext grpcCtx,
       String storeName,
@@ -327,9 +330,11 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     stats.recordRejected(storeName, rcu);
 
     if (!isGrpc) {
-      writeAndFlushBadRequests(
-          ctx,
-          new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
+      request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS);
+
+      // writeAndFlushBadRequests(
+      // ctx,
+      // new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
     } else {
       String errorMessage = "Server over capacity";
       grpcCtx.setError();

@@ -226,11 +226,11 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     ChannelPipelineConsumer httpPipelineInitializer = (pipeline, whetherNeedServerCodec) -> {
       ServerConnectionStatsHandler serverConnectionStatsHandler =
           new ServerConnectionStatsHandler(serverConnectionStats, nettyStats, serverConfig.getRouterPrincipalName());
-      pipeline.addLast(serverConnectionStatsHandler);
+      pipeline.addLast(eventExecutorGroup, serverConnectionStatsHandler);
       StatsHandler statsHandler = new StatsHandler(singleGetStats, multiGetStats, computeStats, nettyStats);
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
-        pipeline.addLast(new HttpServerCodec());
+        pipeline.addLast(eventExecutorGroup, new HttpServerCodec());
       } else {
         // Hack!!!
         /**
@@ -246,11 +246,11 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
                 "BasicHttpServerCodec is expected when the pipeline is instrumented by 'Http2PipelineInitializer'");
           }
           pipeline.remove(HTTP_CODEC_HANDLER_NAME);
-          pipeline.addLast(new HttpServerCodec());
+          pipeline.addLast(eventExecutorGroup, new HttpServerCodec());
         }
       }
 
-      pipeline.addLast(new HttpObjectAggregator(serverConfig.getMaxRequestSize()))
+      pipeline.addLast(eventExecutorGroup, new HttpObjectAggregator(serverConfig.getMaxRequestSize()))
           .addLast(eventExecutorGroup, new OutboundHttpWrapperHandler(statsHandler))
           .addLast(eventExecutorGroup, new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
       if (sslFactory.isPresent()) {

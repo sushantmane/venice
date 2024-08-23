@@ -20,7 +20,7 @@ public class PriorityBasedResponseScheduler {
 
   private final Map<EventLoop, LinkedBlockingQueue<ResponseEvent>> responseEventMap;
   private final ThreadPoolExecutor executor;
-  private static final long HOLD_THRESHOLD = Duration.ofMillis(300).toNanos();
+  private static final long HOLD_THRESHOLD = Duration.ofMillis(100).toNanos();
 
   public PriorityBasedResponseScheduler(PriorityBasedResponseSchedulerContext priorityBasedResponseSchedulerContext) {
     responseEventMap = new ConcurrentHashMap<>(priorityBasedResponseSchedulerContext.numQueues);
@@ -28,13 +28,13 @@ public class PriorityBasedResponseScheduler {
     final Set<ChannelHandlerContext> contexts = new HashSet<>();
     executor.execute(() -> {
       while (true) {
-        long sleepTime = 10_000_000; // 10 ms
+        long sleepTime = 5_000_000; // 10 ms
         for (Map.Entry<EventLoop, LinkedBlockingQueue<ResponseEvent>> entry: responseEventMap.entrySet()) {
           LinkedBlockingQueue<ResponseEvent> responseEventQueue = entry.getValue();
           ResponseEvent responseEvent = responseEventQueue.peek();
           int count = 0;
           while (responseEvent != null && System.nanoTime() - responseEvent.timestampInNanos >= HOLD_THRESHOLD
-              && count < 256) {
+              && count < 1024) {
             responseEvent = responseEventQueue.poll();
             if (responseEvent == null) {
               break;
