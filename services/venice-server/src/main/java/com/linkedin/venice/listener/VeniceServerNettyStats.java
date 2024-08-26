@@ -94,16 +94,13 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
     String requestArrivalRateSensorName = "request_arrival_rate";
 
-    requestArrivalRate =
-        registerSensorIfAbsent(requestArrivalRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+    requestArrivalRate = registerSensorIfAbsent(requestArrivalRateSensorName, new OccurrenceRate());
 
     String requestProcessingRateSensorName = "request_processing_rate";
-    requestProcessingRate =
-        registerSensorIfAbsent(requestProcessingRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+    requestProcessingRate = registerSensorIfAbsent(requestProcessingRateSensorName, new OccurrenceRate());
 
     String ioRequestArrivalRateSensorName = "io_request_arrival_rate";
-    ioRequestArrivalRate =
-        registerSensorIfAbsent(ioRequestArrivalRateSensorName, new OccurrenceRate(), new Avg(), new Max());
+    ioRequestArrivalRate = registerSensorIfAbsent(ioRequestArrivalRateSensorName, new OccurrenceRate());
 
     String ioRequestProcessingRateSensorName = "io_request_processing_rate";
     ioRequestProcessingRate = registerSensorIfAbsent(

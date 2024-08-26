@@ -98,9 +98,8 @@ public class ListenerService extends AbstractVeniceService {
     PriorityBasedResponseScheduler responseScheduler =
         new PriorityBasedResponseScheduler(priorityBasedResponseSchedulerContext);
     nettyStats.setPriorityBasedResponseScheduler(responseScheduler);
-
     executor = createThreadPool(
-        Math.max(serverConfig.getRestServiceStorageThreadNum(), Runtime.getRuntime().availableProcessors()),
+        serverConfig.getRestServiceStorageThreadNum(),
         "StorageExecutionThread",
         serverConfig.getDatabaseLookupQueueCapacity());
     new ThreadPoolStats(metricsRepository, executor, "storage_execution_thread_pool");
