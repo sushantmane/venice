@@ -1,7 +1,12 @@
 package com.linkedin.venice.listener;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static com.linkedin.venice.HttpConstants.CONTENT_LENGTH_HEADER;
+import static com.linkedin.venice.HttpConstants.CONTENT_TYPE_HEADER;
+import static com.linkedin.venice.HttpConstants.VENICE_COMPRESSION_STRATEGY_HEADER;
+import static com.linkedin.venice.HttpConstants.VENICE_REQUEST_RCU_HEADER;
+import static com.linkedin.venice.HttpConstants.VENICE_SCHEMA_ID_HEADER;
+import static com.linkedin.venice.HttpConstants.VENICE_STREAMING_RESPONSE_HEADER;
+import static com.linkedin.venice.HttpConstants.VENICE_STREAMING_RESPONSE_HEADER_VALUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -166,13 +171,13 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
     }
 
     FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, responseStatus, body);
-    response.headers().set(CONTENT_TYPE, contentType);
-    response.headers().set(CONTENT_LENGTH, body.readableBytes());
-    response.headers().set(HttpConstants.VENICE_COMPRESSION_STRATEGY, compressionStrategy.getValue());
-    response.headers().set(HttpConstants.VENICE_SCHEMA_ID, schemaIdHeader);
-    response.headers().set(HttpConstants.VENICE_REQUEST_RCU, responseRcu);
+    response.headers().set(CONTENT_TYPE_HEADER, contentType);
+    response.headers().set(CONTENT_LENGTH_HEADER, body.readableBytes());
+    response.headers().set(VENICE_COMPRESSION_STRATEGY_HEADER, compressionStrategy.getValue());
+    response.headers().set(VENICE_SCHEMA_ID_HEADER, schemaIdHeader);
+    response.headers().set(VENICE_REQUEST_RCU_HEADER, responseRcu);
     if (isStreamingResponse) {
-      response.headers().set(HttpConstants.VENICE_STREAMING_RESPONSE, "1");
+      response.headers().set(VENICE_STREAMING_RESPONSE_HEADER, VENICE_STREAMING_RESPONSE_HEADER_VALUE);
     }
 
     /** {@link io.netty.handler.timeout.IdleStateHandler} is in charge of detecting the state

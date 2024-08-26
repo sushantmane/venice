@@ -1,9 +1,12 @@
 package com.linkedin.venice.listener;
 
+import static io.netty.handler.codec.http.HttpObjectDecoder.*;
+
 import com.linkedin.alpini.netty4.handlers.BasicHttpServerCodec;
 import com.linkedin.alpini.netty4.http2.Http2PipelineInitializer;
 import com.linkedin.alpini.netty4.ssl.SslInitializer;
 import com.linkedin.davinci.config.VeniceServerConfig;
+import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.acl.StaticAccessController;
 import com.linkedin.venice.authorization.IdentityParser;
@@ -50,7 +53,6 @@ import org.apache.logging.log4j.Logger;
 
 public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
   private static final Logger LOGGER = LogManager.getLogger(HttpChannelInitializer.class);
-  private static final String HTTP_CODEC_HANDLER_NAME = "http";
 
   private final StorageReadRequestHandler requestHandler;
   private final AggServerHttpRequestStats singleGetStats;
@@ -231,7 +233,12 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       StatsHandler statsHandler = new StatsHandler(singleGetStats, multiGetStats, computeStats, nettyStats);
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
-        pipeline.addLast(new HttpServerCodec());
+        pipeline.addLast(
+            new HttpServerCodec(
+                DEFAULT_MAX_INITIAL_LINE_LENGTH,
+                DEFAULT_MAX_HEADER_SIZE,
+                DEFAULT_MAX_CHUNK_SIZE,
+                false));
       } else {
         // Hack!!!
         /**
@@ -239,15 +246,20 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
          * which is different from the default server codec handler, and we would like to resume the original one for HTTP/1.1.
          * This might not be necessary, but it will change the current behavior of HTTP/1.1 in Venice Server.
          */
-        ChannelHandler codecHandler = pipeline.get(HTTP_CODEC_HANDLER_NAME);
+        ChannelHandler codecHandler = pipeline.get(HttpConstants.HTTP);
         if (codecHandler != null) {
           // For HTTP/1.1 code path
           if (!(codecHandler instanceof BasicHttpServerCodec)) {
             throw new VeniceException(
                 "BasicHttpServerCodec is expected when the pipeline is instrumented by 'Http2PipelineInitializer'");
           }
-          pipeline.remove(HTTP_CODEC_HANDLER_NAME);
-          pipeline.addLast(new HttpServerCodec());
+          pipeline.remove(HttpConstants.HTTP);
+          pipeline.addLast(
+              new HttpServerCodec(
+                  DEFAULT_MAX_INITIAL_LINE_LENGTH,
+                  DEFAULT_MAX_HEADER_SIZE,
+                  DEFAULT_MAX_CHUNK_SIZE,
+                  false));
         }
       }
 
