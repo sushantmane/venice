@@ -126,7 +126,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   private final StorageEngineBackedCompressorFactory compressorFactory;
   private final Optional<ResourceReadUsageTracker> resourceReadUsageTracker;
   private final VeniceServerNettyStats nettyStats;
-  private final NettWriteTask.PriorityBasedThreadPoolExecutor priorityBasedThreadPoolExecutor;
+  private final PriorityBasedResponseScheduler priorityBasedResponseScheduler;
 
   private static class PerStoreVersionState {
     final StoreDeserializerCache<GenericRecord> storeDeserializerCache;
@@ -228,9 +228,9 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       VeniceServerNettyStats nettyStats) {
     this.nettyStats = nettyStats;
     if (nettyStats != null) {
-      this.priorityBasedThreadPoolExecutor = nettyStats.getPriorityBasedThreadPoolExecutor();
+      this.priorityBasedResponseScheduler = nettyStats.getPriorityBasedResponseScheduler();
     } else {
-      this.priorityBasedThreadPoolExecutor = null;
+      this.priorityBasedResponseScheduler = null;
     }
     this.executor = executor;
     this.computeExecutor = computeExecutor;
@@ -382,11 +382,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
               response.setStreamingResponse();
             }
 
-            if (priorityBasedThreadPoolExecutor == null) {
+            if (priorityBasedResponseScheduler == null) {
               writeAndFlush(context, response);
             } else {
-              priorityBasedThreadPoolExecutor
-                  .submit(new NettWriteTask(request.getArrivalTimeInNS(), OK, context, response));
+              priorityBasedResponseScheduler.writeAndFlush(OK, request.getArrivalTimeInNS(), context, response);
             }
           } catch (VeniceNoStoreException e) {
             String msg = "No storage exists for store: " + e.getStoreName();

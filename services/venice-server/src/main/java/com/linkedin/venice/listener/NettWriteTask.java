@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class NettWriteTask implements Runnable {
+  public static final long TIME_DELTA = 10_000_000; // 10ms
   long arrivalTime;
   NettyWriteEventType status;
   ChannelHandlerContext ctx;
@@ -19,6 +20,7 @@ public class NettWriteTask implements Runnable {
 
   @Override
   public void run() {
+    // System.out.println("Running: " + status + " tid: " + Thread.currentThread().getName());
     ctx.writeAndFlush(payload);
   }
 
@@ -67,7 +69,7 @@ public class NettWriteTask implements Runnable {
           && other.nettWriteTask.status == NettyWriteEventType.NOT_OK) {
         // OK event is normally prioritized, unless NOT_OK is within 100ms after OK
         long timeDeltaInNs = this.nettWriteTask.arrivalTime - other.nettWriteTask.arrivalTime;
-        if (timeDeltaInNs >= 10) {
+        if (timeDeltaInNs >= TIME_DELTA) {
           return 1; // prioritized NOT_OK since it has timestamp smaller by 10ms
         } else {
           return -1;
@@ -78,7 +80,7 @@ public class NettWriteTask implements Runnable {
           && other.nettWriteTask.status == NettyWriteEventType.OK) {
         // NOT_OK event is normally deprioritized, unless OK is within 100ms after NOT_OK
         long timeDeltaInNs = other.nettWriteTask.arrivalTime - this.nettWriteTask.arrivalTime;
-        if (timeDeltaInNs >= 10) {
+        if (timeDeltaInNs >= TIME_DELTA) {
           return -1; // prioritized NOT_OK since it has timestamp smaller by 10ms
         } else {
           return 1;

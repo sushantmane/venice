@@ -90,14 +90,14 @@ public class ListenerService extends AbstractVeniceService {
 
     VeniceServerNettyStats nettyStats = new VeniceServerNettyStats(metricsRepository, "NettyStats");
 
-    // PriorityBasedResponseSchedulerContext priorityBasedResponseSchedulerContext =
-    // new PriorityBasedResponseSchedulerContext(
-    // serverConfig.getNettyWorkerThreadCount(),
-    // serverConfig.getNettyWorkerThreadCount());
-    //
-    // PriorityBasedResponseScheduler responseScheduler =
-    // new PriorityBasedResponseScheduler(priorityBasedResponseSchedulerContext);
-    // nettyStats.setPriorityBasedResponseScheduler(responseScheduler);
+    PriorityBasedResponseSchedulerContext priorityBasedResponseSchedulerContext =
+        new PriorityBasedResponseSchedulerContext(
+            serverConfig.getNettyWorkerThreadCount(),
+            serverConfig.getNettyWorkerThreadCount());
+
+    PriorityBasedResponseScheduler responseScheduler =
+        new PriorityBasedResponseScheduler(priorityBasedResponseSchedulerContext);
+    nettyStats.setPriorityBasedResponseScheduler(responseScheduler);
 
     executor = createThreadPool(
         serverConfig.getRestServiceStorageThreadNum(),

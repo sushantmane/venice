@@ -39,8 +39,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   PriorityBasedResponseScheduler priorityBasedResponseScheduler;
   // private final Sensor getTimeSpentTillHandoffToReadHandler;
 
-  NettWriteTask.PriorityBasedThreadPoolExecutor priorityBasedThreadPoolExecutor =
-      new NettWriteTask.PriorityBasedThreadPoolExecutor(4);
+  // NettWriteTask.PriorityBasedThreadPoolExecutor priorityBasedThreadPoolExecutor =
+  // new NettWriteTask.PriorityBasedThreadPoolExecutor(4);
 
   public void setPriorityBasedResponseScheduler(PriorityBasedResponseScheduler priorityBasedResponseScheduler) {
     this.priorityBasedResponseScheduler = priorityBasedResponseScheduler;
@@ -50,9 +50,9 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
     return priorityBasedResponseScheduler;
   }
 
-  public NettWriteTask.PriorityBasedThreadPoolExecutor getPriorityBasedThreadPoolExecutor() {
-    return priorityBasedThreadPoolExecutor;
-  }
+  // public NettWriteTask.PriorityBasedThreadPoolExecutor getPriorityBasedThreadPoolExecutor() {
+  // return priorityBasedThreadPoolExecutor;
+  // }
 
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
