@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class NettWriteTask implements Runnable {
-  public static final long TIME_DELTA = 10_000_000; // 10ms
+  public static final long TIME_DELTA = 100_000_000; // 10ms
   long arrivalTime;
   NettyWriteEventType status;
   ChannelHandlerContext ctx;
