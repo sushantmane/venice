@@ -24,6 +24,7 @@ public abstract class RouterRequest {
   private final boolean isStreamingRequest;
   private boolean isQuotaRejectedRequest;
   private HttpResponseStatus httpResponseStatus;
+  private String errorMessage;
 
   public RouterRequest(String resourceName, HttpRequest request) {
     this.isRetryRequest = containRetryHeader(request);
@@ -71,9 +72,10 @@ public abstract class RouterRequest {
     return requestTimeoutInNS != NO_REQUEST_TIMEOUT && System.nanoTime() > requestTimeoutInNS;
   }
 
-  public void markAsQuotaRejectedRequest(HttpResponseStatus status) {
+  public void markAsQuotaRejectedRequest(HttpResponseStatus status, String errorMessage) {
     isQuotaRejectedRequest = true;
     httpResponseStatus = status;
+    this.errorMessage = errorMessage;
   }
 
   public boolean isQuotaRejectedRequest() {
@@ -82,5 +84,9 @@ public abstract class RouterRequest {
 
   public HttpResponseStatus getQuotaRejectedResponseStatus() {
     return httpResponseStatus;
+  }
+
+  public String getQuotaRejectedErrorMessage() {
+    return errorMessage;
   }
 }

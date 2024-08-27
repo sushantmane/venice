@@ -21,6 +21,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final AtomicInteger activeConnections = new AtomicInteger();
 
   private final AtomicInteger activeReadHandlerThreads = new AtomicInteger();
+  // queued_tasks_for_read_handler
+  private final AtomicInteger queuedTasksForReadHandler = new AtomicInteger();
   private final Sensor timeSpentTillHandoffToReadHandler;
   private final Sensor timeSpentInQuotaEnforcement;
   private final Sensor nettyFlushCounter;
@@ -32,6 +34,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   private final Sensor ioRequestArrivalRate;
   private final Sensor ioRequestProcessingRate;
+  private final Sensor multiGetStorageLayerProcessingRate;
+
   PriorityBasedResponseScheduler priorityBasedResponseScheduler;
   // private final Sensor getTimeSpentTillHandoffToReadHandler;
 
@@ -49,6 +53,9 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
     registerSensorIfAbsent(
         new AsyncGauge((ignored, ignored2) -> activeReadHandlerThreads.get(), "active_read_handler_threads"));
+    // queued_tasks_for_read_handler
+    registerSensorIfAbsent(
+        new AsyncGauge((ignored, ignored2) -> queuedTasksForReadHandler.get(), "queued_tasks_for_read_handler"));
 
     nettyFlushCounter = registerSensor("nettyFlushCounter", new Rate(), new Avg(), new Max());
 
@@ -110,6 +117,16 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
         new Min(),
         new Avg(),
         TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + ioRequestProcessingRateSensorName));
+
+    String multiGetStorageLayerProcessingRateSensorName = "multiget_storage_layer_processing_rate";
+    multiGetStorageLayerProcessingRate = registerSensorIfAbsent(
+        multiGetStorageLayerProcessingRateSensorName,
+        new OccurrenceRate(),
+        new Max(),
+        new Min(),
+        new Avg(),
+        TehutiUtils.getPercentileStat(
+            getName() + AbstractVeniceStats.DELIMITER + multiGetStorageLayerProcessingRateSensorName));
   }
 
   private static final double NANO_TO_MILLIS = 1_000_000;
@@ -124,6 +141,16 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public int decrementActiveReadHandlerThreads() {
     return activeReadHandlerThreads.decrementAndGet();
+  }
+
+  // queued_tasks_for_read_handler
+  public int incrementQueuedTasksForReadHandler() {
+    return queuedTasksForReadHandler.incrementAndGet();
+  }
+
+  // queued_tasks_for_read_handler
+  public int decrementQueuedTasksForReadHandler() {
+    return queuedTasksForReadHandler.decrementAndGet();
   }
 
   public int incrementActiveConnections() {
@@ -177,5 +204,9 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void recordIoRequestProcessingRate(double elapsedTime) {
     ioRequestProcessingRate.record(elapsedTime);
+  }
+
+  public void recordMultiGetStorageLayerProcessingRate(double elapsedTime) {
+    multiGetStorageLayerProcessingRate.record(elapsedTime);
   }
 }

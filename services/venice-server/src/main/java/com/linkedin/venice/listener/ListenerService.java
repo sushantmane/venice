@@ -174,6 +174,7 @@ public class ListenerService extends AbstractVeniceService {
         .option(ChannelOption.SO_BACKLOG, nettyBacklogSize)
         .childOption(ChannelOption.SO_KEEPALIVE, true)
         .option(ChannelOption.SO_REUSEADDR, true)
+        // .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
         .childOption(ChannelOption.TCP_NODELAY, true);
 
     if (isGrpcEnabled && grpcServer == null) {

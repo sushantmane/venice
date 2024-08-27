@@ -223,8 +223,19 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
      */
     TokenBucket tokenBucket = storeVersionBuckets.get(request.getResourceName());
     if (tokenBucket != null) {
-      if (!request.isRetryRequest() && !tokenBucket.tryConsume(rcu)
-          && handleTooManyRequests(ctx, request, null, store, rcu, false)) {
+      if (!request.isRetryRequest() && !tokenBucket.tryConsume(rcu)) {
+        stats.recordRejected(request.getStoreName(), rcu);
+        long storeQuota = store.getReadQuotaInCU();
+        float thisNodeRcuPerSecond = storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
+        String errorMessage =
+            "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
+                + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
+        ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+
+        // request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS, errorMessage);
+        // ReferenceCountUtil.retain(request);
+        // ctx.fireChannelRead(request);
+
         // Enforce store version quota for non-retry requests.
         // TODO: check if extra node capacity and can still process this request out of quota
         return;

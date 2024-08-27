@@ -271,6 +271,8 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
      */
 
     if (message instanceof RouterRequest) {
+      nettyStats.recordIoRequestArrivalRate();
+
       RouterRequest request = (RouterRequest) message;
       resourceReadUsageTracker.ifPresent(tracker -> tracker.recordReadUsage(request.getResourceName()));
       // Check before putting the request to the intermediate queue
@@ -325,8 +327,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
         return;
       }
 
+      nettyStats.incrementQueuedTasksForReadHandler();
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
       executor.execute(() -> {
+        nettyStats.incrementActiveReadHandlerThreads();
         long readExecutionStartTime = System.nanoTime();
         nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(preSubmissionTimeNs, readExecutionStartTime);
 
@@ -336,7 +340,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
               HttpResponseStatus rejectedResponseStatus = request.getQuotaRejectedResponseStatus();
               rejectedResponseStatus =
                   rejectedResponseStatus == null ? HttpResponseStatus.TOO_MANY_REQUESTS : rejectedResponseStatus;
-              context.writeAndFlush(new HttpShortcutResponse(QUOTA_REJECTED_RESPONSE, rejectedResponseStatus));
+              String errorMessage = request.getQuotaRejectedErrorMessage() == null
+                  ? QUOTA_REJECTED_RESPONSE
+                  : request.getQuotaRejectedErrorMessage();
+              context.writeAndFlush(new HttpShortcutResponse(errorMessage, rejectedResponseStatus));
               return;
             }
 
@@ -350,7 +357,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
                 response = handleSingleGetRequest((GetRouterRequest) request);
                 break;
               case MULTI_GET:
+                long multiGetStartTime = System.nanoTime();
                 response = handleMultiGetRequest((MultiGetRouterRequestWrapper) request);
+                nettyStats.recordMultiGetStorageLayerProcessingRate(
+                    LatencyUtils.convertNSToMS(System.nanoTime() - multiGetStartTime));
                 break;
               case COMPUTE:
                 response = handleComputeRequest((ComputeRouterRequestWrapper) message);
@@ -399,9 +409,10 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
         } finally {
           nettyStats
               .recordIoRequestProcessingRate(LatencyUtils.convertNSToMS(System.nanoTime() - readExecutionStartTime));
+          nettyStats.decrementQueuedTasksForReadHandler();
+          nettyStats.decrementActiveReadHandlerThreads();
         }
       });
-      nettyStats.recordIoRequestArrivalRate();
       Long startTime = context.channel().attr(VeniceServerNettyStats.FIRST_HANDLER_TIMESTAMP_KEY).get();
       if (startTime != null) {
         nettyStats.recordTimeSpentTillHandoffToReadHandler(startTime);
