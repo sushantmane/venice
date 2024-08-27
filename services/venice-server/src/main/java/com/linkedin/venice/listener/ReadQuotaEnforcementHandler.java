@@ -1,5 +1,6 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.listener.StatusBasedReorderingQueue.NettyWriteEventType.NOT_OK;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
@@ -60,6 +61,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private boolean initialized = false;
   private final VeniceServerNettyStats nettyStats;
   private PriorityBasedResponseScheduler priorityBasedResponseScheduler;
+  private NettWriteTask.PriorityBasedThreadPoolExecutor priorityBasedThreadPoolExecutor;
 
   public ReadQuotaEnforcementHandler(
       long storageNodeRcuCapacity,
@@ -91,6 +93,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     this.nettyStats = nettyStats;
     if (nettyStats != null) {
       this.priorityBasedResponseScheduler = nettyStats.getPriorityBasedResponseScheduler();
+      this.priorityBasedThreadPoolExecutor = nettyStats.getPriorityBasedThreadPoolExecutor();
     }
     this.clock = clock;
     this.storageNodeBucket = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
@@ -230,7 +233,17 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
         String errorMessage =
             "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
                 + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
-        ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+
+        if (priorityBasedThreadPoolExecutor == null) {
+          ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+        } else {
+          priorityBasedThreadPoolExecutor.submit(
+              new NettWriteTask(
+                  request.getArrivalTimeInNS(),
+                  NOT_OK,
+                  ctx,
+                  new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS)));
+        }
 
         // request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS, errorMessage);
         // ReferenceCountUtil.retain(request);

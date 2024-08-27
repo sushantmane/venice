@@ -1,5 +1,7 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.listener.StatusBasedReorderingQueue.NettyWriteEventType.OK;
+
 import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.compression.StorageEngineBackedCompressorFactory;
 import com.linkedin.davinci.config.VeniceServerConfig;
@@ -124,6 +126,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   private final StorageEngineBackedCompressorFactory compressorFactory;
   private final Optional<ResourceReadUsageTracker> resourceReadUsageTracker;
   private final VeniceServerNettyStats nettyStats;
+  private final NettWriteTask.PriorityBasedThreadPoolExecutor priorityBasedThreadPoolExecutor;
 
   private static class PerStoreVersionState {
     final StoreDeserializerCache<GenericRecord> storeDeserializerCache;
@@ -224,6 +227,11 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
       Optional<ResourceReadUsageTracker> resourceReadUsageTracker,
       VeniceServerNettyStats nettyStats) {
     this.nettyStats = nettyStats;
+    if (nettyStats != null) {
+      this.priorityBasedThreadPoolExecutor = nettyStats.getPriorityBasedThreadPoolExecutor();
+    } else {
+      this.priorityBasedThreadPoolExecutor = null;
+    }
     this.executor = executor;
     this.computeExecutor = computeExecutor;
     this.storageEngineRepository = storageEngineRepository;
@@ -373,7 +381,13 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
             if (request.isStreamingRequest()) {
               response.setStreamingResponse();
             }
-            writeAndFlush(context, response);
+
+            if (priorityBasedThreadPoolExecutor == null) {
+              writeAndFlush(context, response);
+            } else {
+              priorityBasedThreadPoolExecutor
+                  .submit(new NettWriteTask(request.getArrivalTimeInNS(), OK, context, response));
+            }
           } catch (VeniceNoStoreException e) {
             String msg = "No storage exists for store: " + e.getStoreName();
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {

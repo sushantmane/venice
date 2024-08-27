@@ -25,6 +25,7 @@ public abstract class RouterRequest {
   private boolean isQuotaRejectedRequest;
   private HttpResponseStatus httpResponseStatus;
   private String errorMessage;
+  private long arrivalTimeInNS;
 
   public RouterRequest(String resourceName, HttpRequest request) {
     this.isRetryRequest = containRetryHeader(request);
@@ -88,5 +89,13 @@ public abstract class RouterRequest {
 
   public String getQuotaRejectedErrorMessage() {
     return errorMessage;
+  }
+
+  public long getArrivalTimeInNS() {
+    return arrivalTimeInNS;
+  }
+
+  public void setArrivalTimeInNS(long arrivalTimeInNS) {
+    this.arrivalTimeInNS = arrivalTimeInNS;
   }
 }
