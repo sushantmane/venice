@@ -184,8 +184,13 @@ public class StatsHandler extends ChannelDuplexHandler {
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws VeniceException {
+    long startTimeInNS = System.nanoTime();
     ChannelFuture future = ctx.writeAndFlush(msg);
     future.addListener((result) -> {
+      if (result.isSuccess()) {
+        nettyStats.recordWriteAndFlushTime(startTimeInNS);
+      }
+
       // reset the StatsHandler for the new request. This is necessary since instances are channel-based
       // and channels are ready for the future requests as soon as the current has been handled.
       nettyStats.decrementAllInflightRequests();

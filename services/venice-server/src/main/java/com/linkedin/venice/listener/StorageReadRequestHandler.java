@@ -1,7 +1,5 @@
 package com.linkedin.venice.listener;
 
-import static com.linkedin.venice.listener.StatusBasedReorderingQueue.NettyWriteEventType.OK;
-
 import com.linkedin.avroutil1.compatibility.AvroCompatibilityHelper;
 import com.linkedin.davinci.compression.StorageEngineBackedCompressorFactory;
 import com.linkedin.davinci.config.VeniceServerConfig;
@@ -352,7 +350,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
               String errorMessage = request.getQuotaRejectedErrorMessage() == null
                   ? QUOTA_REJECTED_RESPONSE
                   : request.getQuotaRejectedErrorMessage();
-              context.writeAndFlush(new HttpShortcutResponse(errorMessage, rejectedResponseStatus));
+              writeAndFlush(context, new HttpShortcutResponse(errorMessage, rejectedResponseStatus));
               return;
             }
 
@@ -382,12 +380,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
             if (request.isStreamingRequest()) {
               response.setStreamingResponse();
             }
-
-            if (priorityBasedResponseScheduler == null) {
-              writeAndFlush(context, response);
-            } else {
-              priorityBasedResponseScheduler.writeAndFlush(OK, request.getArrivalTimeInNS(), context, response);
-            }
+            writeAndFlush(context, response);
           } catch (VeniceNoStoreException e) {
             String msg = "No storage exists for store: " + e.getStoreName();
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {

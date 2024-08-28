@@ -47,6 +47,7 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final Sensor ioInflightRequestsSensor;
 
   private final Sensor nettyIoThreadsPendingTasks;
+  private final Sensor writeAndFlushTimeSensor;
 
   private EventLoopGroup eventLoopGroup;
 
@@ -158,6 +159,15 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
         new Avg(),
         TehutiUtils.getPercentileStat(
             getName() + AbstractVeniceStats.DELIMITER + multiGetStorageLayerProcessingRateSensorName));
+
+    String writeAndFlushTimeSensorName = "write_and_flush_time";
+    writeAndFlushTimeSensor = registerSensorIfAbsent(
+        writeAndFlushTimeSensorName,
+        new OccurrenceRate(),
+        new Max(),
+        new Min(),
+        new Avg(),
+        TehutiUtils.getPercentileStat(getName() + AbstractVeniceStats.DELIMITER + writeAndFlushTimeSensorName));
   }
 
   private static final double NANO_TO_MILLIS = 1_000_000;
@@ -242,6 +252,10 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void decrementIoInflightRequests() {
     ioInflightRequestsSensor.record(ioInflightRequests.decrementAndGet());
+  }
+
+  public void recordWriteAndFlushTime(long startTimeNanos) {
+    writeAndFlushTimeSensor.record(getElapsedTimeInMillis(startTimeNanos));
   }
 
   public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {

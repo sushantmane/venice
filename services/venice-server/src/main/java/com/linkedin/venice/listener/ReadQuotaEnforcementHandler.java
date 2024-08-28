@@ -1,6 +1,5 @@
 package com.linkedin.venice.listener;
 
-import static com.linkedin.venice.listener.StatusBasedReorderingQueue.NettyWriteEventType.NOT_OK;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
@@ -232,15 +231,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
                 + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
 
-        if (priorityBasedResponseScheduler == null) {
-          ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
-        } else {
-          priorityBasedResponseScheduler.writeAndFlush(
-              NOT_OK,
-              request.getArrivalTimeInNS(),
-              ctx,
-              new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
-        }
+        writeAndFlush(ctx, new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
 
         // request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS, errorMessage);
         // ReferenceCountUtil.retain(request);
@@ -278,7 +269,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     }
 
     if (!isGrpc) {
-      ctx.writeAndFlush(
+      writeAndFlush(
+          ctx,
           new HttpShortcutResponse(
               "Invalid request resource " + request.getResourceName(),
               HttpResponseStatus.BAD_REQUEST));
@@ -289,6 +281,10 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     }
 
     return true;
+  }
+
+  private void writeAndFlush(ChannelHandlerContext context, Object message) {
+    context.writeAndFlush(message);
   }
 
   public boolean checkInitAndQuotaEnabledToSkipQuotaEnforcement(
@@ -327,7 +323,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
             + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
 
     if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
+      writeAndFlush(ctx, new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
     } else {
       grpcCtx.setError();
       grpcCtx.getVeniceServerResponseBuilder()
@@ -347,7 +343,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     stats.recordRejected(storeName, rcu);
 
     if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
+      writeAndFlush(ctx, new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
     } else {
       String errorMessage = "Server over capacity";
       grpcCtx.setError();
