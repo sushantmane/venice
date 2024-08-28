@@ -3,7 +3,10 @@ package com.linkedin.venice.listener;
 import com.linkedin.venice.stats.AbstractVeniceStats;
 import com.linkedin.venice.stats.TehutiUtils;
 import com.linkedin.venice.utils.LatencyUtils;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.tehuti.metrics.MetricsRepository;
 import io.tehuti.metrics.Sensor;
 import io.tehuti.metrics.stats.AsyncGauge;
@@ -43,6 +46,10 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final Sensor ioInflightRequestsSensorGauge;
   private final Sensor ioInflightRequestsSensor;
 
+  private final Sensor nettyIoThreadsPendingTasks;
+
+  private EventLoopGroup eventLoopGroup;
+
   PriorityBasedResponseScheduler priorityBasedResponseScheduler;
   // private final Sensor getTimeSpentTillHandoffToReadHandler;
 
@@ -64,6 +71,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
 
+    nettyIoThreadsPendingTasks = registerSensorIfAbsent(
+        new AsyncGauge((ignored, ignored2) -> getPendingNettyIoTasks(), "netty_io_threads_pending_tasks"));
     allInflightRequestsSensorGauge = registerSensorIfAbsent(
         new AsyncGauge((ignored, ignored2) -> allInflightRequests.get(), "all_inflight_requests_gauge"));
     allInflightRequestsSensor = registerSensorIfAbsent("all_inflight_requests", new Avg(), new Max());
@@ -233,5 +242,24 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void decrementIoInflightRequests() {
     ioInflightRequestsSensor.record(ioInflightRequests.decrementAndGet());
+  }
+
+  public void setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+    this.eventLoopGroup = eventLoopGroup;
+  }
+
+  public long getPendingNettyIoTasks() {
+    if (eventLoopGroup == null) {
+      return -1;
+    }
+
+    long totalPendingTasks = 0;
+    for (final EventExecutor eventExecutor: eventLoopGroup) {
+      if (eventExecutor instanceof SingleThreadEventExecutor) {
+        int pendingTasks = ((SingleThreadEventExecutor) eventExecutor).pendingTasks();
+        totalPendingTasks += pendingTasks;
+      }
+    }
+    return totalPendingTasks;
   }
 }

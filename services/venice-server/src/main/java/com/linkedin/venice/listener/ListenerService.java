@@ -171,6 +171,9 @@ public class ListenerService extends AbstractVeniceService {
       workerGroup = new NioEventLoopGroup(workerThreadCount); // if 0, defaults to 2*cpu count
       serverSocketChannelClass = NioServerSocketChannel.class;
     }
+
+    nettyStats.setEventLoopGroup(workerGroup);
+
     bootstrap = new ServerBootstrap();
     bootstrap.group(bossGroup, workerGroup)
         .channel(serverSocketChannelClass)
