@@ -27,6 +27,7 @@ import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.AggServerQuotaTokenBucketStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.stats.ServerConnectionStats;
+import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.ReflectUtils;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.Utils;
@@ -38,6 +39,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -71,6 +73,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
   List<ServerInterceptor> aclInterceptors;
   private final IdentityParser identityParser;
   private final FlushCounterHandler flushCounterHandler;
+  private DefaultEventExecutorGroup eventExecutorGroup;
 
   private boolean isDaVinciClient;
 
@@ -194,6 +197,9 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     Class<IdentityParser> identityParserClass = ReflectUtils.loadClass(serverConfig.getIdentityParserClassName());
     this.identityParser = ReflectUtils.callConstructor(identityParserClass, new Class[0], new Object[0]);
+
+    int nThreads = Runtime.getRuntime().availableProcessors();
+    eventExecutorGroup = new DefaultEventExecutorGroup(nThreads, new DaemonThreadFactory("ioRequestCustomExecutor"));
   }
 
   /*
@@ -209,6 +215,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
   @Override
   public void initChannel(SocketChannel ch) {
+    serverConnectionStats.incrementClientChannelCount();
+
     ch.pipeline().addLast(flushCounterHandler);
     if (sslFactory.isPresent()) {
       SslInitializer sslInitializer = new SslInitializer(SslUtils.toAlpiniSSLFactory(sslFactory.get()), false);
@@ -227,6 +235,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
         pipeline.addLast(
+            eventExecutorGroup,
             new HttpServerCodec(
                 DEFAULT_MAX_INITIAL_LINE_LENGTH,
                 DEFAULT_MAX_HEADER_SIZE,
@@ -260,18 +269,18 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
           .addLast(new OutboundHttpWrapperHandler(statsHandler))
           .addLast(new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
 
-      // if (sslFactory.isPresent()) {
-      // pipeline.addLast(verifySsl);
-      // if (aclHandler.isPresent()) {
-      // pipeline.addLast(aclHandler.get());
-      // }
-      // /**
-      // * {@link #storeAclHandler} if present must come after {@link #aclHandler}
-      // */
-      // if (storeAclHandler.isPresent()) {
-      // pipeline.addLast(storeAclHandler.get());
-      // }
-      // }
+      if (sslFactory.isPresent()) {
+        pipeline.addLast(verifySsl);
+        if (aclHandler.isPresent()) {
+          pipeline.addLast(aclHandler.get());
+        }
+        /**
+        * {@link #storeAclHandler} if present must come after {@link #aclHandler}
+        */
+        if (storeAclHandler.isPresent()) {
+          pipeline.addLast(storeAclHandler.get());
+        }
+      }
 
       pipeline
           .addLast(new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
@@ -288,6 +297,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     } else {
       httpPipelineInitializer.accept(ch.pipeline(), true);
     }
+
+    ch.closeFuture().addListener(future -> serverConnectionStats.decrementClientChannelCount());
   }
 
   public VeniceServerGrpcRequestProcessor initGrpcRequestProcessor() {

@@ -18,11 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class VeniceServerNettyStats extends AbstractVeniceStats {
   public static final AttributeKey<Long> FIRST_HANDLER_TIMESTAMP_KEY = AttributeKey.valueOf("FirstHandlerTimestamp");
 
-  private final AtomicInteger activeConnections = new AtomicInteger();
-
   private final AtomicInteger activeReadHandlerThreads = new AtomicInteger();
   // queued_tasks_for_read_handler
   private final AtomicInteger queuedTasksForReadHandler = new AtomicInteger();
+
+  private final AtomicInteger allInflightRequests = new AtomicInteger();
+  private final AtomicInteger ioInflightRequests = new AtomicInteger();
+
   private final Sensor timeSpentTillHandoffToReadHandler;
   private final Sensor timeSpentInQuotaEnforcement;
   private final Sensor nettyFlushCounter;
@@ -35,6 +37,11 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final Sensor ioRequestArrivalRate;
   private final Sensor ioRequestProcessingRate;
   private final Sensor multiGetStorageLayerProcessingRate;
+
+  private final Sensor allInflightRequestsSensorGauge;
+  private final Sensor allInflightRequestsSensor;
+  private final Sensor ioInflightRequestsSensorGauge;
+  private final Sensor ioInflightRequestsSensor;
 
   PriorityBasedResponseScheduler priorityBasedResponseScheduler;
   // private final Sensor getTimeSpentTillHandoffToReadHandler;
@@ -56,7 +63,15 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public VeniceServerNettyStats(MetricsRepository metricsRepository, String name) {
     super(metricsRepository, name);
-    registerSensorIfAbsent(new AsyncGauge((ignored, ignored2) -> activeConnections.get(), "active_connections"));
+
+    allInflightRequestsSensorGauge = registerSensorIfAbsent(
+        new AsyncGauge((ignored, ignored2) -> allInflightRequests.get(), "all_inflight_requests_gauge"));
+    allInflightRequestsSensor = registerSensorIfAbsent("all_inflight_requests", new Avg(), new Max());
+
+    ioInflightRequestsSensorGauge = registerSensorIfAbsent(
+        new AsyncGauge((ignored, ignored2) -> ioInflightRequests.get(), "io_inflight_requests_gauge"));
+
+    ioInflightRequestsSensor = registerSensorIfAbsent("io_inflight_requests", new Avg(), new Max());
 
     registerSensorIfAbsent(
         new AsyncGauge((ignored, ignored2) -> activeReadHandlerThreads.get(), "active_read_handler_threads"));
@@ -160,19 +175,6 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
     return queuedTasksForReadHandler.decrementAndGet();
   }
 
-  public int incrementActiveConnections() {
-    return activeConnections.incrementAndGet();
-  }
-
-  // get activeConnections
-  public int getActiveConnections() {
-    return activeConnections.get();
-  }
-
-  public int decrementActiveConnections() {
-    return activeConnections.decrementAndGet();
-  }
-
   public void recordTimeSpentTillHandoffToReadHandler(long startTimeNanos) {
     timeSpentTillHandoffToReadHandler.record(getElapsedTimeInMillis(startTimeNanos));
   }
@@ -215,5 +217,21 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
 
   public void recordMultiGetStorageLayerProcessingRate(double elapsedTime) {
     multiGetStorageLayerProcessingRate.record(elapsedTime);
+  }
+
+  public void incrementAllInflightRequests() {
+    allInflightRequestsSensor.record(allInflightRequests.incrementAndGet());
+  }
+
+  public void decrementAllInflightRequests() {
+    allInflightRequestsSensor.record(allInflightRequests.decrementAndGet());
+  }
+
+  public void incrementIoInflightRequests() {
+    ioInflightRequestsSensor.record(ioInflightRequests.incrementAndGet());
+  }
+
+  public void decrementIoInflightRequests() {
+    ioInflightRequestsSensor.record(ioInflightRequests.decrementAndGet());
   }
 }

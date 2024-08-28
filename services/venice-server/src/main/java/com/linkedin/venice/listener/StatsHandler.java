@@ -155,11 +155,12 @@ public class StatsHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
-    nettyStats.recordRequestArrivalRate();
-    ctx.channel().attr(FIRST_HANDLER_TIMESTAMP_KEY).set(System.nanoTime());
     if (serverStatsContext.isNewRequest()) {
+      nettyStats.recordRequestArrivalRate();
       // Reset for every request
       serverStatsContext.resetContext();
+      nettyStats.incrementAllInflightRequests();
+      ctx.channel().attr(FIRST_HANDLER_TIMESTAMP_KEY).set(System.nanoTime());
       /**
        * For a single 'channelRead' invocation, Netty will guarantee all the following 'channelRead' functions
        * registered by the pipeline to be executed in the same thread.
@@ -187,6 +188,7 @@ public class StatsHandler extends ChannelDuplexHandler {
     future.addListener((result) -> {
       // reset the StatsHandler for the new request. This is necessary since instances are channel-based
       // and channels are ready for the future requests as soon as the current has been handled.
+      nettyStats.decrementAllInflightRequests();
       serverStatsContext.setNewRequest();
 
       if (serverStatsContext.getResponseStatus() == null) {
@@ -214,6 +216,7 @@ public class StatsHandler extends ChannelDuplexHandler {
         // wrong interpretation of latency, recording error would give out impression that server failed to serve
         if (result.isSuccess() && (serverStatsContext.getResponseStatus().equals(OK)
             || serverStatsContext.getResponseStatus().equals(NOT_FOUND))) {
+          nettyStats.decrementIoInflightRequests();
           serverStatsContext.successRequest(serverHttpRequestStats, elapsedTime);
         } else if (!serverStatsContext.getResponseStatus().equals(TOO_MANY_REQUESTS)) {
           serverStatsContext.errorRequest(serverHttpRequestStats, elapsedTime);

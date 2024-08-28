@@ -97,7 +97,8 @@ public class ListenerService extends AbstractVeniceService {
 
     PriorityBasedResponseScheduler responseScheduler =
         new PriorityBasedResponseScheduler(priorityBasedResponseSchedulerContext);
-    nettyStats.setPriorityBasedResponseScheduler(responseScheduler);
+    // nettyStats.setPriorityBasedResponseScheduler(responseScheduler);
+    nettyStats.setPriorityBasedResponseScheduler(null);
 
     executor = createThreadPool(
         serverConfig.getRestServiceStorageThreadNum(),
@@ -150,11 +151,14 @@ public class ListenerService extends AbstractVeniceService {
 
     Class<? extends ServerChannel> serverSocketChannelClass = NioServerSocketChannel.class;
     boolean epollEnabled = serverConfig.isRestServiceEpollEnabled();
+    int workerThreadCount = serverConfig.getNettyWorkerThreadCount();
+    // workerThreadCount = Runtime.getRuntime().availableProcessors();
+
     if (epollEnabled) {
       try {
         bossGroup = new EpollEventLoopGroup(1);
-        workerGroup = new EpollEventLoopGroup(serverConfig.getNettyWorkerThreadCount()); // if 0, defaults to 2*cpu
-                                                                                         // count
+        workerGroup = new EpollEventLoopGroup(workerThreadCount); // if 0, defaults to 2*cpu
+                                                                  // count
         serverSocketChannelClass = EpollServerSocketChannel.class;
         LOGGER.info("Epoll is enabled in Server Rest Service");
       } catch (LinkageError error) {
@@ -164,7 +168,7 @@ public class ListenerService extends AbstractVeniceService {
     }
     if (!epollEnabled) {
       bossGroup = new NioEventLoopGroup(1);
-      workerGroup = new NioEventLoopGroup(serverConfig.getNettyWorkerThreadCount()); // if 0, defaults to 2*cpu count
+      workerGroup = new NioEventLoopGroup(workerThreadCount); // if 0, defaults to 2*cpu count
       serverSocketChannelClass = NioServerSocketChannel.class;
     }
     bootstrap = new ServerBootstrap();

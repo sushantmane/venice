@@ -279,6 +279,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
      */
 
     if (message instanceof RouterRequest) {
+      nettyStats.incrementIoInflightRequests();
       nettyStats.recordIoRequestArrivalRate();
 
       RouterRequest request = (RouterRequest) message;
