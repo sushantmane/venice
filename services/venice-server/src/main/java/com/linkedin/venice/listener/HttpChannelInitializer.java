@@ -39,6 +39,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
@@ -198,7 +199,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     Class<IdentityParser> identityParserClass = ReflectUtils.loadClass(serverConfig.getIdentityParserClassName());
     this.identityParser = ReflectUtils.callConstructor(identityParserClass, new Class[0], new Object[0]);
 
-    int nThreads = Runtime.getRuntime().availableProcessors();
+    // int nThreads = Runtime.getRuntime().availableProcessors() * 2;
+    int nThreads = NettyRuntime.availableProcessors() * 2;
     eventExecutorGroup = new DefaultEventExecutorGroup(nThreads, new DaemonThreadFactory("ioRequestCustomExecutor"));
   }
 
@@ -266,28 +268,29 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       }
 
       pipeline.addLast(new HttpObjectAggregator(serverConfig.getMaxRequestSize()))
-          .addLast(new OutboundHttpWrapperHandler(statsHandler))
-          .addLast(new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
+          .addLast(eventExecutorGroup, new OutboundHttpWrapperHandler(statsHandler))
+          .addLast(eventExecutorGroup, new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
 
       if (sslFactory.isPresent()) {
-        pipeline.addLast(verifySsl);
+        pipeline.addLast(eventExecutorGroup, verifySsl);
         if (aclHandler.isPresent()) {
-          pipeline.addLast(aclHandler.get());
+          pipeline.addLast(eventExecutorGroup, aclHandler.get());
         }
         /**
         * {@link #storeAclHandler} if present must come after {@link #aclHandler}
         */
         if (storeAclHandler.isPresent()) {
-          pipeline.addLast(storeAclHandler.get());
+          pipeline.addLast(eventExecutorGroup, storeAclHandler.get());
         }
       }
 
-      pipeline
-          .addLast(new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
+      pipeline.addLast(
+          eventExecutorGroup,
+          new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
       if (quotaEnforcer != null) {
-        pipeline.addLast(quotaEnforcer);
+        pipeline.addLast(eventExecutorGroup, quotaEnforcer);
       }
-      pipeline.addLast(requestHandler).addLast(new ErrorCatchingHandler());
+      pipeline.addLast(eventExecutorGroup, requestHandler).addLast(new ErrorCatchingHandler());
     };
 
     if (serverConfig.isHttp2InboundEnabled()) {
