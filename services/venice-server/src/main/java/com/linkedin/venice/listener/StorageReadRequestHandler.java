@@ -336,7 +336,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
 
       nettyStats.incrementQueuedTasksForReadHandler();
       final ThreadPoolExecutor executor = getExecutor(request.getRequestType());
-      CompletableFuture<ReadResponse> future = CompletableFuture.supplyAsync(() -> {
+      executor.execute(() -> {
         nettyStats.incrementActiveReadHandlerThreads();
         long readExecutionStartTime = System.nanoTime();
         nettyStats.recordStorageExecutionHandlerSubmissionWaitTime(preSubmissionTimeNs, readExecutionStartTime);
@@ -351,7 +351,6 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
                   ? QUOTA_REJECTED_RESPONSE
                   : request.getQuotaRejectedErrorMessage();
               writeAndFlush(context, new HttpShortcutResponse(errorMessage, rejectedResponseStatus));
-              return null;
             }
 
             if (request.shouldRequestBeTerminatedEarly()) {
@@ -380,8 +379,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
             if (request.isStreamingRequest()) {
               response.setStreamingResponse();
             }
-            // writeAndFlush(context, response);
-            return response;
+            writeAndFlush(context, response);
           } catch (VeniceNoStoreException e) {
             String msg = "No storage exists for store: " + e.getStoreName();
             if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
@@ -420,12 +418,11 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
           nettyStats.decrementQueuedTasksForReadHandler();
           nettyStats.decrementActiveReadHandlerThreads();
         }
-        return null;
-      }, executor);
-      ReadResponse response = future.get();
-      if (response != null) {
-        writeAndFlush(context, response);
-      }
+      });
+      // ReadResponse response = future.get();
+      // if (response != null) {
+      // writeAndFlush(context, response);
+      // }
       Long startTime = context.channel().attr(VeniceServerNettyStats.FIRST_HANDLER_TIMESTAMP_KEY).get();
       if (startTime != null) {
         nettyStats.recordTimeSpentTillHandoffToReadHandler(startTime);

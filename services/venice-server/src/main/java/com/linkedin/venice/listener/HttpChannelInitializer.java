@@ -27,7 +27,6 @@ import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.AggServerQuotaTokenBucketStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.stats.ServerConnectionStats;
-import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.ReflectUtils;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.Utils;
@@ -40,7 +39,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.NettyRuntime;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -74,7 +72,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
   List<ServerInterceptor> aclInterceptors;
   private final IdentityParser identityParser;
   private final FlushCounterHandler flushCounterHandler;
-  private DefaultEventExecutorGroup eventExecutorGroup;
+  // private DefaultEventExecutorGroup eventExecutorGroup;
 
   private boolean isDaVinciClient;
 
@@ -201,7 +199,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     // int nThreads = Runtime.getRuntime().availableProcessors() * 2;
     int nThreads = NettyRuntime.availableProcessors() * 2;
-    eventExecutorGroup = new DefaultEventExecutorGroup(nThreads, new DaemonThreadFactory("ioRequestCustomExecutor"));
+    // eventExecutorGroup = new DefaultEventExecutorGroup(nThreads, new DaemonThreadFactory("ioRequestCustomExecutor"));
   }
 
   /*
@@ -237,7 +235,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
         pipeline.addLast(
-            eventExecutorGroup,
             new HttpServerCodec(
                 DEFAULT_MAX_INITIAL_LINE_LENGTH,
                 DEFAULT_MAX_HEADER_SIZE,
@@ -268,29 +265,28 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       }
 
       pipeline.addLast(new HttpObjectAggregator(serverConfig.getMaxRequestSize()))
-          .addLast(eventExecutorGroup, new OutboundHttpWrapperHandler(statsHandler))
-          .addLast(eventExecutorGroup, new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
+          .addLast(new OutboundHttpWrapperHandler(statsHandler))
+          .addLast(new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
 
       if (sslFactory.isPresent()) {
-        pipeline.addLast(eventExecutorGroup, verifySsl);
+        pipeline.addLast(verifySsl);
         if (aclHandler.isPresent()) {
-          pipeline.addLast(eventExecutorGroup, aclHandler.get());
+          pipeline.addLast(aclHandler.get());
         }
         /**
         * {@link #storeAclHandler} if present must come after {@link #aclHandler}
         */
         if (storeAclHandler.isPresent()) {
-          pipeline.addLast(eventExecutorGroup, storeAclHandler.get());
+          pipeline.addLast(storeAclHandler.get());
         }
       }
 
-      pipeline.addLast(
-          eventExecutorGroup,
-          new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
+      pipeline
+          .addLast(new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
       if (quotaEnforcer != null) {
-        pipeline.addLast(eventExecutorGroup, quotaEnforcer);
+        pipeline.addLast(quotaEnforcer);
       }
-      pipeline.addLast(eventExecutorGroup, requestHandler).addLast(new ErrorCatchingHandler());
+      pipeline.addLast(requestHandler).addLast(new ErrorCatchingHandler());
     };
 
     if (serverConfig.isHttp2InboundEnabled()) {
