@@ -2,6 +2,7 @@ package com.linkedin.venice.listener;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceNoHelixResourceException;
 import com.linkedin.venice.grpc.GrpcErrorCodes;
@@ -45,7 +46,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     implements RoutingDataRepository.RoutingDataChangedListener, StoreDataChangedListener {
   private static final Logger LOGGER = LogManager.getLogger(ReadQuotaEnforcementHandler.class);
   private static final String SERVER_BUCKET_STATS_NAME = "venice-storage-node-token-bucket";
-  private final ConcurrentMap<String, TokenBucket> storeVersionBuckets = new VeniceConcurrentHashMap<>();
+  private final ConcurrentMap<String, RateLimiter> storeVersionBuckets = new VeniceConcurrentHashMap<>();
   private final TokenBucket storageNodeBucket;
   private final ServerQuotaTokenBucketStats storageNodeTokenBucketStats;
   private final ReadOnlyStoreRepository storeRepository;
@@ -221,12 +222,14 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     /**
      * First check store bucket for capacity don't throttle retried request at store version level
      */
-    TokenBucket tokenBucket = storeVersionBuckets.get(request.getResourceName());
+    RateLimiter tokenBucket = storeVersionBuckets.get(request.getResourceName());
     if (tokenBucket != null) {
-      if (!request.isRetryRequest() && !tokenBucket.tryConsume(rcu)) {
+      if (!request.isRetryRequest() && !tokenBucket.tryAcquire(rcu)) {
         stats.recordRejected(request.getStoreName(), rcu);
         long storeQuota = store.getReadQuotaInCU();
-        float thisNodeRcuPerSecond = storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
+        // float thisNodeRcuPerSecond =
+        // storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
+        float thisNodeRcuPerSecond = 0;
         String errorMessage =
             "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
                 + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
@@ -317,7 +320,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     stats.recordRejected(request.getStoreName(), rcu);
 
     long storeQuota = store.getReadQuotaInCU();
-    float thisNodeRcuPerSecond = storeVersionBuckets.get(request.getResourceName()).getAmortizedRefillPerSecond();
+    float thisNodeRcuPerSecond = 0;
     String errorMessage =
         "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second. Storage Node "
             + thisNodeId + " is allocated " + thisNodeRcuPerSecond + " RCU per second which has been exceeded.";
@@ -435,16 +438,17 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     long quotaInRcu = storeRepository.getStore(Version.parseStoreFromKafkaTopicName(partitionAssignment.getTopic()))
         .getReadQuotaInCU();
     storeVersionBuckets.compute(topic, (k, v) -> {
-      long newRefillAmount = calculateRefillAmount(quotaInRcu, thisNodeQuotaResponsibility);
-      if (v == null || v.getAmortizedRefillPerSecond() * enforcementIntervalSeconds != newRefillAmount) {
-        // only replace the existing bucket if the difference is greater than 1
-        return tokenBucketfromRcuPerSecond(quotaInRcu, thisNodeQuotaResponsibility);
-      } else {
-        return v;
-      }
+      // long newRefillAmount = calculateRefillAmount(quotaInRcu, thisNodeQuotaResponsibility);
+      // if (v == null || v.getAmortizedRefillPerSecond() * enforcementIntervalSeconds != newRefillAmount) {
+      // // only replace the existing bucket if the difference is greater than 1
+      // return tokenBucketfromRcuPerSecond(quotaInRcu, thisNodeQuotaResponsibility);
+      // } else {
+      // return v;
+      // }
+      return RateLimiter.create(quotaInRcu * thisNodeQuotaResponsibility);
     });
-    String storeName = Version.parseStoreFromVersionTopic(topic);
-    stats.setStoreTokenBucket(storeName, getBucketForStore(storeName));
+    // String storeName = Version.parseStoreFromVersionTopic(topic);
+    // stats.setStoreTokenBucket(storeName, getBucketForStore(storeName));
   }
 
   private long calculateRefillAmount(long totalRcuPerSecond, double thisBucketProportionOfTotalRcu) {
@@ -588,7 +592,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
 
       int currentVersion = store.getCurrentVersion();
       String topic = Version.composeKafkaTopic(storeName, currentVersion);
-      return storeVersionBuckets.get(topic);
+      // return storeVersionBuckets.get(topic);
+      return null;
     }
   }
 
@@ -597,7 +602,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   public ConcurrentMap<String, TokenBucket> getStoreVersionBuckets() {
-    return storeVersionBuckets;
+    return null;
   }
 
   public boolean storageConsumeRcu(int rcu) {
