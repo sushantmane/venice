@@ -11,6 +11,7 @@ import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import com.linkedin.venice.utils.LatencyUtils;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -187,6 +188,11 @@ public class StatsHandler extends ChannelDuplexHandler {
     long startTimeInNS = System.nanoTime();
     ChannelFuture future = ctx.writeAndFlush(msg);
     future.addListener((result) -> {
+      Channel channel = ctx.channel();
+      if (channel != null && !channel.isWritable()) {
+        nettyStats.recordChannelNotWritable();
+      }
+
       if (result.isSuccess()) {
         nettyStats.recordWriteAndFlushTime(startTimeInNS);
       }

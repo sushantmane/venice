@@ -50,6 +50,7 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
   private final Sensor writeAndFlushTimeSensor;
 
   private EventLoopGroup eventLoopGroup;
+  private Sensor channelNotWritable;
 
   PriorityBasedResponseScheduler priorityBasedResponseScheduler;
   // private final Sensor getTimeSpentTillHandoffToReadHandler;
@@ -90,6 +91,8 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
         new AsyncGauge((ignored, ignored2) -> queuedTasksForReadHandler.get(), "queued_tasks_for_read_handler"));
 
     nettyFlushCounter = registerSensor("nettyFlushCounter", new Rate(), new Avg(), new Max());
+
+    channelNotWritable = registerSensorIfAbsent("channel_not_writable", new OccurrenceRate());
 
     String timeSpentTillHandoffToReadHandlerSensorName = "TimeSpentTillHandoffToReadHandler";
     timeSpentTillHandoffToReadHandler = registerSensorIfAbsent(
@@ -275,5 +278,9 @@ public class VeniceServerNettyStats extends AbstractVeniceStats {
       }
     }
     return totalPendingTasks;
+  }
+
+  public void recordChannelNotWritable() {
+    channelNotWritable.record();
   }
 }
