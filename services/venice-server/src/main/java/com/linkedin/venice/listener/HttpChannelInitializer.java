@@ -27,7 +27,6 @@ import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.AggServerQuotaTokenBucketStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.stats.ServerConnectionStats;
-import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.ReflectUtils;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.Utils;
@@ -39,7 +38,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -73,7 +71,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
   List<ServerInterceptor> aclInterceptors;
   private final IdentityParser identityParser;
   private final FlushCounterHandler flushCounterHandler;
-  private DefaultEventExecutorGroup eventExecutorGroup;
 
   private boolean isDaVinciClient;
 
@@ -197,9 +194,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     Class<IdentityParser> identityParserClass = ReflectUtils.loadClass(serverConfig.getIdentityParserClassName());
     this.identityParser = ReflectUtils.callConstructor(identityParserClass, new Class[0], new Object[0]);
-
-    int nThreads = Runtime.getRuntime().availableProcessors();
-    eventExecutorGroup = new DefaultEventExecutorGroup(nThreads, new DaemonThreadFactory("ioRequestCustomExecutor"));
   }
 
   /*
@@ -235,7 +229,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
         pipeline.addLast(
-            eventExecutorGroup,
             new HttpServerCodec(
                 DEFAULT_MAX_INITIAL_LINE_LENGTH,
                 DEFAULT_MAX_HEADER_SIZE,
