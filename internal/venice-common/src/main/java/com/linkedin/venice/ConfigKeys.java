@@ -417,9 +417,6 @@ public class ConfigKeys {
   public static final String SERVER_REST_SERVICE_STORAGE_THREAD_NUM = "server.rest.service.storage.thread.num";
   public static final String SERVER_NETTY_IDLE_TIME_SECONDS = "server.netty.idle.time.seconds";
   public static final String SERVER_MAX_REQUEST_SIZE = "server.max.request.size";
-  public static final String SERVER_STORE_VERSION_QPS_RATE_LIMITER = "server.store.version.qps.rate.limiter";
-  public static final String SERVER_STORAGE_NODE_RATE_LIMITER = "server.storage.node.rate.limiter";
-
   public static final String SERVER_SOURCE_TOPIC_OFFSET_CHECK_INTERVAL_MS =
       "server.source.topic.offset.check.interval.ms";
   public static final String SERVER_NETTY_GRACEFUL_SHUTDOWN_PERIOD_SECONDS =
@@ -530,6 +527,16 @@ public class ConfigKeys {
    * Number of Read Capacity Units per second that the node can handle across all stores.
    */
   public static final String SERVER_NODE_CAPACITY_RCU = "server.node.capacity.rcu.per.second";
+
+  /**
+   * Rate limiter for store version level read quota enforcement.
+   */
+  public static final String SERVER_STORE_VERSION_QPS_RATE_LIMITER = "server.store.version.qps.rate.limiter";
+
+  /**
+   * Rate limiter for storage node level read quota enforcement.
+   */
+  public static final String SERVER_STORAGE_NODE_RATE_LIMITER = "server.storage.node.rate.limiter";
 
   /**
    * This config is used to control the maximum records returned by every poll request.

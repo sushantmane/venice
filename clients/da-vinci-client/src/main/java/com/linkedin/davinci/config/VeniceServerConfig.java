@@ -168,12 +168,14 @@ import com.linkedin.davinci.kafka.consumer.KafkaConsumerServiceDelegator;
 import com.linkedin.davinci.kafka.consumer.RemoteIngestionRepairService;
 import com.linkedin.davinci.store.rocksdb.RocksDBServerConfig;
 import com.linkedin.davinci.validation.KafkaDataIntegrityValidator;
+import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.authorization.DefaultIdentityParser;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.IngestionMode;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.admin.ApacheKafkaAdminAdapter;
+import com.linkedin.venice.throttle.VeniceRateLimiter;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -295,8 +297,15 @@ public class VeniceServerConfig extends VeniceClusterConfig {
    */
   private final int maxRequestSize;
 
-  // public static final String SERVER_STORE_VERSION_QPS_RATE_LIMITER = "server.store.version.qps.rate.limiter";
-  // public static final String SERVER_STORAGE_NODE_RATE_LIMITER = "server.storage.node.rate.limiter";
+  /**
+   * Rate limiter type for store version QPS rate limiter.
+   */
+  private VeniceRateLimiter.RateLimiterType storeVersionQpsRateLimiterType;
+
+  /**
+   * Rate limiter type for storage node.
+   */
+  private VeniceRateLimiter.RateLimiterType storageNodeRateLimiterType;
 
   /**
    * Time interval for offset check of topic in Hybrid Store lag measurement.
@@ -573,6 +582,14 @@ public class VeniceServerConfig extends VeniceClusterConfig {
     serverComputeThreadNum = serverProperties.getInt(SERVER_COMPUTE_THREAD_NUM, 16);
     nettyIdleTimeInSeconds = serverProperties.getInt(SERVER_NETTY_IDLE_TIME_SECONDS, (int) TimeUnit.HOURS.toSeconds(3));
     maxRequestSize = (int) serverProperties.getSizeInBytes(SERVER_MAX_REQUEST_SIZE, 256 * 1024);
+    storeVersionQpsRateLimiterType = extractRateLimiterType(
+        serverProperties.getString(
+            ConfigKeys.SERVER_STORE_VERSION_QPS_RATE_LIMITER,
+            VeniceRateLimiter.RateLimiterType.EVENT_THROTTLER.name()));
+    storageNodeRateLimiterType = extractRateLimiterType(
+        serverProperties.getString(
+            ConfigKeys.SERVER_STORAGE_NODE_RATE_LIMITER,
+            VeniceRateLimiter.RateLimiterType.EVENT_THROTTLER.name()));
     topicOffsetCheckIntervalMs =
         serverProperties.getInt(SERVER_SOURCE_TOPIC_OFFSET_CHECK_INTERVAL_MS, (int) TimeUnit.SECONDS.toMillis(60));
     this.topicManagerMetadataFetcherConsumerPoolSize = serverProperties.getInt(
@@ -940,6 +957,14 @@ public class VeniceServerConfig extends VeniceClusterConfig {
     }
 
     return extractedMemoryLimit;
+  }
+
+  private VeniceRateLimiter.RateLimiterType extractRateLimiterType(String rateLimiterTypeStr) {
+    try {
+      return VeniceRateLimiter.RateLimiterType.valueOf(rateLimiterTypeStr);
+    } catch (IllegalArgumentException e) {
+      throw new VeniceException("Invalid rate limiter type: " + rateLimiterTypeStr);
+    }
   }
 
   public int getListenerPort() {
@@ -1549,5 +1574,13 @@ public class VeniceServerConfig extends VeniceClusterConfig {
 
   public int getChannelOptionWriteBufferHighBytes() {
     return channelOptionWriteBufferHighBytes;
+  }
+
+  public VeniceRateLimiter.RateLimiterType getStoreVersionQpsRateLimiterType() {
+    return storeVersionQpsRateLimiterType;
+  }
+
+  public VeniceRateLimiter.RateLimiterType getStorageNodeRateLimiterType() {
+    return storageNodeRateLimiterType;
   }
 }
