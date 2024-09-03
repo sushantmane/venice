@@ -295,6 +295,9 @@ public class VeniceServerConfig extends VeniceClusterConfig {
    */
   private final int maxRequestSize;
 
+  // public static final String SERVER_STORE_VERSION_QPS_RATE_LIMITER = "server.store.version.qps.rate.limiter";
+  // public static final String SERVER_STORAGE_NODE_RATE_LIMITER = "server.storage.node.rate.limiter";
+
   /**
    * Time interval for offset check of topic in Hybrid Store lag measurement.
    */
