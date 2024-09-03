@@ -1,7 +1,8 @@
 package com.linkedin.venice.listener;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static com.linkedin.venice.throttle.EventThrottler.SILENT_REJECTION_POLICY;
 
+import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceNoHelixResourceException;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
@@ -17,10 +18,12 @@ import com.linkedin.venice.meta.StoreDataChangedListener;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.pushmonitor.ReadOnlyPartitionStatus;
-import com.linkedin.venice.stats.AbstractVeniceAggStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
-import com.linkedin.venice.stats.ServerQuotaTokenBucketStats;
+import com.linkedin.venice.throttle.EventThrottler;
+import com.linkedin.venice.throttle.GuavaRateLimiter;
 import com.linkedin.venice.throttle.TokenBucket;
+import com.linkedin.venice.throttle.VeniceRateLimiter;
+import com.linkedin.venice.throttle.VeniceRateLimiter.RateLimiterType;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,56 +45,55 @@ import org.apache.logging.log4j.Logger;
 public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<RouterRequest>
     implements RoutingDataRepository.RoutingDataChangedListener, StoreDataChangedListener {
   private static final Logger LOGGER = LogManager.getLogger(ReadQuotaEnforcementHandler.class);
-  private static final String SERVER_BUCKET_STATS_NAME = "venice-storage-node-token-bucket";
   public static final String SERVER_OVER_CAPACITY_MSG = "Server over capacity";
   public static final String INVALID_REQUEST_RESOURCE_MSG = "Invalid request resource: ";
 
-  private final ConcurrentMap<String, TokenBucket> storeVersionBuckets = new VeniceConcurrentHashMap<>();
-  private final TokenBucket storageNodeBucket;
-  private final ServerQuotaTokenBucketStats storageNodeTokenBucketStats;
+  private final ConcurrentMap<String, VeniceRateLimiter> storeVersionRateLimiters = new VeniceConcurrentHashMap<>();
+  private final VeniceRateLimiter storageNodeRateLimiter;
   private final ReadOnlyStoreRepository storeRepository;
   private final String thisNodeId;
   private final AggServerQuotaUsageStats stats;
   private final Clock clock;
-  // TODO make these configurable
-  private final int enforcementIntervalSeconds = 10; // TokenBucket refill interval
+  private final int enforcementIntervalSeconds; // TokenBucket refill interval
   private final int enforcementCapacityMultiple = 5; // Token bucket capacity is refill amount times this multiplier
+  private final RateLimiterType storeVersionRateLimiterType;
 
   private HelixCustomizedViewOfflinePushRepository customizedViewRepository;
   private volatile boolean initializedVolatile = false;
   private boolean initialized = false;
 
   public ReadQuotaEnforcementHandler(
-      long storageNodeRcuCapacity,
+      VeniceServerConfig serverConfig,
       ReadOnlyStoreRepository storeRepository,
       CompletableFuture<HelixCustomizedViewOfflinePushRepository> customizedViewRepository,
       String nodeId,
       AggServerQuotaUsageStats stats,
       MetricsRepository metricsRepository) {
-    this(
-        storageNodeRcuCapacity,
-        storeRepository,
-        customizedViewRepository,
-        nodeId,
-        stats,
-        metricsRepository,
-        Clock.systemUTC());
+    this(serverConfig, storeRepository, customizedViewRepository, nodeId, stats, metricsRepository, Clock.systemUTC());
   }
 
   public ReadQuotaEnforcementHandler(
-      long storageNodeRcuCapacity,
+      VeniceServerConfig serverConfig,
       ReadOnlyStoreRepository storeRepository,
       CompletableFuture<HelixCustomizedViewOfflinePushRepository> customizedViewRepository,
       String nodeId,
       AggServerQuotaUsageStats stats,
       MetricsRepository metricsRepository,
       Clock clock) {
+    this.enforcementIntervalSeconds = Math.max(1, serverConfig.getServerQuotaEnforcementIntervalInSeconds());
+    this.storeVersionRateLimiterType = serverConfig.getStoreVersionQpsRateLimiterType();
     this.clock = clock;
-    this.storageNodeBucket = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
-    this.storageNodeTokenBucketStats =
-        new ServerQuotaTokenBucketStats(metricsRepository, SERVER_BUCKET_STATS_NAME, () -> storageNodeBucket);
-    this.storeRepository = storeRepository;
     this.thisNodeId = nodeId;
+    this.storageNodeRateLimiter = getRateLimiter(
+        "StorageNodeQuota_" + nodeId,
+        serverConfig.getNodeCapacityInRcu(),
+        1,
+        null,
+        serverConfig.getStorageNodeRateLimiterType(),
+        enforcementIntervalSeconds,
+        enforcementCapacityMultiple,
+        clock);
+    this.storeRepository = storeRepository;
     this.stats = stats;
     customizedViewRepository.thenAccept(cv -> {
       LOGGER.info("Initializing ReadQuotaEnforcementHandler with completed RoutingDataRepository");
@@ -218,9 +220,9 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     /*
      * First check per store version bucket for capacity; don't throttle retried request at store version level
      */
-    TokenBucket veniceRateLimiter = storeVersionBuckets.get(request.getResourceName());
+    VeniceRateLimiter veniceRateLimiter = storeVersionRateLimiters.get(request.getResourceName());
     if (veniceRateLimiter != null) {
-      if (!request.isRetryRequest() && !veniceRateLimiter.tryConsume(readCapacityUnits)) {
+      if (!request.isRetryRequest() && !veniceRateLimiter.tryAcquirePermit(readCapacityUnits)) {
         stats.recordRejected(request.getStoreName(), readCapacityUnits);
         return QuotaEnforcementResult.REJECTED;
       }
@@ -234,7 +236,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
      * Once we know store bucket has capacity, check node bucket for capacity;
      * retried requests need to be throttled at node capacity level
      */
-    if (!storageNodeBucket.tryConsume(readCapacityUnits)) {
+    if (!storageNodeRateLimiter.tryAcquirePermit(readCapacityUnits)) {
       return QuotaEnforcementResult.OVER_CAPACITY;
     }
 
@@ -267,32 +269,6 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     // If we reach here, the request is allowed; retain the request and pass it to the next handler
     ReferenceCountUtil.retain(request);
     ctx.fireChannelRead(request);
-  }
-
-  /**
-   * @see TokenBucket for an explanation of TokenBucket capacity, refill amount, and refill interval
-   *
-   * This method takes a rate in units per second, and scales it according to the desired refill interval, and the
-   * multiple of refill we wish to use for capacity.  Since the resulting token bucket must have a whole number of
-   * tokens in it's refill amount and capacity, if we only accept one parameter in this method (localRcuPerSecond) then
-   * we might have suboptimal results given integer division.  For example, with a global rate of 1 Rcu per second, and
-   * a proportion of 0.1, along with an enforcement interval of 10 seconds we would be forced to pass 1 localRcuPerSecond
-   * which is 10x the desired quota.  By passing both the global rate of 1 Rcu per second and a desired proportion, this
-   * method can multiply by the enforcement interval first before shrinking by the proportion, allowing the Bucket to
-   * be configured with the correct 1 refill every 10 seconds.
-   *
-   * @param totalRcuPerSecond  Number of units per second to allow
-   * @param thisBucketProportionOfTotalRcu For maximum fidelity of calculations. If you need a smaller portion of the
-   *                                       RCU to be applied then set this to an appropriate multiplier.  Otherwise set
-   *                                       this to 1.
-   * @return
-   */
-  private TokenBucket tokenBucketfromRcuPerSecond(long totalRcuPerSecond, double thisBucketProportionOfTotalRcu) {
-    long totalRefillAmount = totalRcuPerSecond * enforcementIntervalSeconds;
-    long totalCapacity = totalRefillAmount * enforcementCapacityMultiple;
-    long thisRefillAmount = calculateRefillAmount(totalRcuPerSecond, thisBucketProportionOfTotalRcu);
-    long thisCapacity = (long) Math.ceil(totalCapacity * thisBucketProportionOfTotalRcu);
-    return new TokenBucket(thisCapacity, thisRefillAmount, enforcementIntervalSeconds, SECONDS, clock);
   }
 
   @Override
@@ -330,27 +306,66 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       LOGGER.warn(
           "Routing data changed on quota enforcement handler with 0 replicas assigned to this node, removing quota for resource: {}",
           topic);
-      storeVersionBuckets.remove(topic);
+      storeVersionRateLimiters.remove(topic);
       return;
     }
     long quotaInRcu = storeRepository.getStore(Version.parseStoreFromKafkaTopicName(partitionAssignment.getTopic()))
         .getReadQuotaInCU();
-    storeVersionBuckets.compute(topic, (k, v) -> {
-      long newRefillAmount = calculateRefillAmount(quotaInRcu, thisNodeQuotaResponsibility);
-      if (v == null || v.getAmortizedRefillPerSecond() * enforcementIntervalSeconds != newRefillAmount) {
-        // only replace the existing bucket if the difference is greater than 1
-        return tokenBucketfromRcuPerSecond(quotaInRcu, thisNodeQuotaResponsibility);
-      } else {
-        return v;
-      }
-    });
-    String storeName = Version.parseStoreFromVersionTopic(topic);
-    stats.setStoreTokenBucket(storeName, getBucketForStore(storeName));
+    storeVersionRateLimiters.compute(
+        topic,
+        (k, v) -> getRateLimiter(
+            topic,
+            quotaInRcu,
+            thisNodeQuotaResponsibility,
+            v,
+            storeVersionRateLimiterType,
+            enforcementIntervalSeconds,
+            enforcementCapacityMultiple,
+            clock));
   }
 
-  private long calculateRefillAmount(long totalRcuPerSecond, double thisBucketProportionOfTotalRcu) {
-    long totalRefillAmount = totalRcuPerSecond * enforcementIntervalSeconds;
-    return (long) Math.ceil(totalRefillAmount * thisBucketProportionOfTotalRcu);
+  /**
+   * Get the rate limiter for the store version. If the rate limiter is already created and the quota is the same,
+   * return the existing rate limiter.
+   */
+  static VeniceRateLimiter getRateLimiter(
+      String storeVersionName,
+      long quotaInRcu,
+      double thisNodeQuotaResponsibility,
+      VeniceRateLimiter currentRateLimiter,
+      RateLimiterType rateLimiterType,
+      int enforcementIntervalSeconds,
+      int enforcementCapacityMultiple,
+      Clock clock) {
+    // If the rate limiter is already created and the quota is the same, return the existing rate limiter
+    long newQuota = (long) Math.ceil(quotaInRcu * thisNodeQuotaResponsibility);
+    if (currentRateLimiter != null && currentRateLimiter.getPermitsPerSecond() == newQuota) {
+      return currentRateLimiter;
+    }
+
+    if (rateLimiterType == RateLimiterType.EVENT_THROTTLER_WITH_SILENT_REJECTION) {
+      LOGGER.info(
+          "Creating EventThrottler rate limiter for store version: {} with quota: {}",
+          storeVersionName,
+          newQuota);
+      return new EventThrottler(newQuota, enforcementIntervalSeconds, storeVersionName, true, SILENT_REJECTION_POLICY);
+    }
+
+    if (rateLimiterType == RateLimiterType.GUAVA_RATE_LIMITER) {
+      LOGGER.info(
+          "Creating GuavaRateLimiter rate limiter for store version: {} with quota: {}",
+          storeVersionName,
+          newQuota);
+      return new GuavaRateLimiter(newQuota);
+    }
+
+    LOGGER.info("Creating TokenBucket rate limiter for store version: {} with quota: {}", storeVersionName, newQuota);
+    return TokenBucket.tokenBucketFromRcuPerSecond(
+        quotaInRcu,
+        thisNodeQuotaResponsibility,
+        enforcementIntervalSeconds,
+        enforcementCapacityMultiple,
+        clock);
   }
 
   @Override
@@ -360,7 +375,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
 
   @Override
   public void onRoutingDataDeleted(String kafkaTopic) {
-    storeVersionBuckets.remove(kafkaTopic);
+    storeVersionRateLimiters.remove(kafkaTopic);
   }
 
   @Override
@@ -437,7 +452,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   private Set<String> getStoreTopics(String storeName) {
-    return storeVersionBuckets.keySet()
+    return storeVersionRateLimiters.keySet()
         .stream()
         .filter((topic) -> Version.parseStoreFromKafkaTopicName(topic).equals(storeName))
         .collect(Collectors.toSet());
@@ -446,7 +461,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private void removeTopics(Set<String> topicsToRemove) {
     for (String topic: topicsToRemove) {
       customizedViewRepository.unSubscribeRoutingDataChange(topic, this);
-      storeVersionBuckets.remove(topic);
+      storeVersionRateLimiters.remove(topic);
     }
   }
 
@@ -471,38 +486,14 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   /**
-   * For tests
-   * @return
+   * Methods visible for testing
    */
-  protected Set<String> listTopics() {
-    return storeVersionBuckets.keySet();
-  }
-
-  public TokenBucket getBucketForStore(String storeName) {
-    if (storeName.equals(AbstractVeniceAggStats.STORE_NAME_FOR_TOTAL_STAT)) {
-      return storageNodeBucket;
-    } else {
-      Store store = storeRepository.getStore(storeName);
-      if (store == null) {
-        return null;
-      }
-
-      int currentVersion = store.getCurrentVersion();
-      String topic = Version.composeKafkaTopic(storeName, currentVersion);
-      return storeVersionBuckets.get(topic);
-    }
+  protected Set<String> getActiveStoreVersions() {
+    return storeVersionRateLimiters.keySet();
   }
 
   public ReadOnlyStoreRepository getStoreRepository() {
     return storeRepository;
-  }
-
-  public ConcurrentMap<String, TokenBucket> getStoreVersionBuckets() {
-    return storeVersionBuckets;
-  }
-
-  public boolean storageConsumeRcu(int rcu) {
-    return !storageNodeBucket.tryConsume(rcu);
   }
 
   public AggServerQuotaUsageStats getStats() {
