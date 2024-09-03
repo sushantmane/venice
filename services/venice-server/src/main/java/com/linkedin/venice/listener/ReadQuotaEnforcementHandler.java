@@ -228,7 +228,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
      * Once we know store bucket has capacity, check node bucket for capacity;
      * retried requests need to be throttled at node capacity level
      */
-    if (!storageNodeRateLimiter.tryConsume(rcu)) {
+    if (!storageNodeRateLimiter.tryAcquirePermit(rcu)) {
       if (handleServerOverCapacity(ctx, null, storeName, rcu, false))
         return;
     }
@@ -554,7 +554,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     return storeVersionRateLimiters.keySet();
   }
 
-  public TokenBucket getBucketForStore(String storeName) {
+  public VeniceRateLimiter getBucketForStore(String storeName) {
     if (storeName.equals(AbstractVeniceAggStats.STORE_NAME_FOR_TOTAL_STAT)) {
       return storageNodeRateLimiter;
     } else {
@@ -578,7 +578,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   public boolean storageConsumeRcu(int rcu) {
-    return !storageNodeRateLimiter.tryConsume(rcu);
+    return !storageNodeRateLimiter.tryAcquirePermit(rcu);
   }
 
   public AggServerQuotaUsageStats getStats() {
