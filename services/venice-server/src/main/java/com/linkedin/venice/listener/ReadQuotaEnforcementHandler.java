@@ -189,6 +189,12 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     BAD_REQUEST, // bad request
   }
 
+  /**
+   * Enforce quota for a given request.  This is common to both HTTP and GRPC handlers. Respective handlers will
+   * take actions such as retaining the request and passing it to the next handler, or sending an error response.
+   * @param request RouterRequest
+   * @return QuotaEnforcementResult
+   */
   public QuotaEnforcementResult enforceQuota(RouterRequest request) {
     String storeName = request.getStoreName();
     Store store = storeRepository.getStore(storeName);

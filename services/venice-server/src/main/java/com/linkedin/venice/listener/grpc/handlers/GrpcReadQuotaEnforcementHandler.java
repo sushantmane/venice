@@ -3,10 +3,10 @@ package com.linkedin.venice.listener.grpc.handlers;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.INVALID_REQUEST_RESOURCE_MSG;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.SERVER_OVER_CAPACITY_MSG;
 
-import com.linkedin.venice.grpc.GrpcErrorCodes;
 import com.linkedin.venice.listener.ReadQuotaEnforcementHandler;
 import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.listener.request.RouterRequest;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import java.util.Objects;
 
 
@@ -30,13 +30,15 @@ public class GrpcReadQuotaEnforcementHandler extends VeniceServerGrpcHandler {
     context.setError();
     if (result == ReadQuotaEnforcementHandler.QuotaEnforcementResult.BAD_REQUEST) {
       context.getVeniceServerResponseBuilder()
-          .setErrorCode(GrpcErrorCodes.BAD_REQUEST)
+          .setErrorCode(VeniceReadResponseStatus.BAD_REQUEST)
           .setErrorMessage(INVALID_REQUEST_RESOURCE_MSG + request.getResourceName());
     } else if (result == ReadQuotaEnforcementHandler.QuotaEnforcementResult.REJECTED) {
-      context.getVeniceServerResponseBuilder().setErrorCode(GrpcErrorCodes.TOO_MANY_REQUESTS).setErrorMessage("");
+      context.getVeniceServerResponseBuilder()
+          .setErrorCode(VeniceReadResponseStatus.TOO_MANY_REQUESTS)
+          .setErrorMessage("");
     } else if (result == ReadQuotaEnforcementHandler.QuotaEnforcementResult.OVER_CAPACITY) {
       context.getVeniceServerResponseBuilder()
-          .setErrorCode(GrpcErrorCodes.SERVICE_UNAVAILABLE)
+          .setErrorCode(VeniceReadResponseStatus.SERVICE_UNAVAILABLE)
           .setErrorMessage(SERVER_OVER_CAPACITY_MSG);
     }
 

@@ -18,7 +18,6 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.venice.grpc.GrpcErrorCodes;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
 import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.listener.grpc.handlers.GrpcReadQuotaEnforcementHandler;
@@ -33,6 +32,7 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.read.RequestType;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.routerapi.ReplicaState;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.utils.Utils;
@@ -242,7 +242,7 @@ public class ReadQuotaEnforcementHandlerTest {
     doReturn(builder).when(ctx).getVeniceServerResponseBuilder();
 
     grpcQuotaEnforcer.processRequest(ctx);
-    assertEquals(builder.getErrorCode(), GrpcErrorCodes.BAD_REQUEST);
+    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.BAD_REQUEST);
     assertNotNull(builder.getErrorMessage());
   }
 
