@@ -1,13 +1,12 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.BAD_REQUEST;
 import static com.linkedin.venice.throttle.EventThrottler.SILENT_REJECTION_POLICY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceNoHelixResourceException;
-import com.linkedin.venice.grpc.GrpcErrorCodes;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.meta.Instance;
@@ -20,7 +19,6 @@ import com.linkedin.venice.meta.StoreDataChangedListener;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.pushmonitor.ReadOnlyPartitionStatus;
-import com.linkedin.venice.stats.AbstractVeniceAggStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.throttle.EventThrottler;
 import com.linkedin.venice.throttle.TokenBucket;
@@ -58,6 +56,8 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   private HelixCustomizedViewOfflinePushRepository customizedViewRepository;
   private volatile boolean initializedVolatile = false;
   private boolean initialized = false;
+  public static final String SERVER_OVER_CAPACITY_MSG = "Server over capacity";
+  public static final String INVALID_REQUEST_RESOURCE_MSG = "Invalid request resource: ";
 
   public ReadQuotaEnforcementHandler(
       long storageNodeRcuCapacity,
@@ -182,159 +182,81 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     return false;
   }
 
-  @Override
-  public void channelRead0(ChannelHandlerContext ctx, RouterRequest request) {
+  public enum QuotaEnforcementResult {
+    ALLOWED, // request is allowed
+    REJECTED, // too many requests (store level quota enforcement)
+    OVER_CAPACITY, // server over capacity (server level quota enforcement)
+    BAD_REQUEST, // bad request
+  }
+
+  public QuotaEnforcementResult enforceQuota(RouterRequest request) {
     String storeName = request.getStoreName();
     Store store = storeRepository.getStore(storeName);
-
-    if (checkStoreNull(ctx, request, null, false, store)) {
-      return;
+    if (store == null) {
+      return BAD_REQUEST;
     }
 
-    if (checkInitAndQuotaEnabledToSkipQuotaEnforcement(ctx, request, store, false)) {
-      return;
+    /*
+     * If we haven't completed initialization or store does not have SN read quota enabled, allow all requests
+     */
+    if (!isInitialized() || !store.isStorageNodeReadQuotaEnabled()) {
+      return QuotaEnforcementResult.ALLOWED;
     }
 
-    int rcu = getRcu(request); // read capacity units
+    int readCapacityUnits = getRcu(request);
 
-    /**
-     * First check store bucket for capacity don't throttle retried request at store version level
+    /*
+     * First check per store version bucket for capacity; don't throttle retried request at store version level
      */
     VeniceRateLimiter veniceRateLimiter = storeVersionRateLimiters.get(request.getResourceName());
     if (veniceRateLimiter != null) {
-      if (!request.isRetryRequest() && !veniceRateLimiter.tryAcquirePermit(rcu)) {
-        stats.recordRejected(request.getStoreName(), rcu);
-        long storeQuota = store.getReadQuotaInCU();
-        String errorMessage =
-            "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second.";
-
-        ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
-
-        // request.markAsQuotaRejectedRequest(HttpResponseStatus.TOO_MANY_REQUESTS, errorMessage);
-        // ReferenceCountUtil.retain(request);
-        // ctx.fireChannelRead(request);
-
-        // Enforce store version quota for non-retry requests.
-        // TODO: check if extra node capacity and can still process this request out of quota
-        return;
+      if (!request.isRetryRequest() && !veniceRateLimiter.tryAcquirePermit(readCapacityUnits)) {
+        stats.recordRejected(request.getStoreName(), readCapacityUnits);
+        return QuotaEnforcementResult.REJECTED;
       }
     } else {
       // If this happens it is probably due to a short-lived race condition where the resource is being accessed before
       // the bucket is allocated. The request will be allowed based on node/server capacity so emit metrics accordingly.
-      stats.recordAllowedUnintentionally(storeName, rcu);
+      stats.recordAllowedUnintentionally(storeName, readCapacityUnits);
     }
 
-    /**
+    /*
      * Once we know store bucket has capacity, check node bucket for capacity;
      * retried requests need to be throttled at node capacity level
      */
-    if (!storageNodeRateLimiter.tryAcquirePermit(rcu)) {
-      if (handleServerOverCapacity(ctx, null, storeName, rcu, false))
-        return;
+    if (!storageNodeRateLimiter.tryAcquirePermit(readCapacityUnits)) {
+      return QuotaEnforcementResult.OVER_CAPACITY;
     }
-    handleEpilogue(ctx, request, storeName, rcu, false);
+
+    stats.recordAllowed(storeName, readCapacityUnits);
+    return QuotaEnforcementResult.ALLOWED;
   }
 
-  public boolean checkStoreNull(
-      ChannelHandlerContext ctx,
-      RouterRequest request,
-      GrpcRequestContext grpcCtx,
-      boolean isGrpc,
-      Store store) {
-    if (store != null) {
-      return false;
-    }
+  @Override
+  public void channelRead0(ChannelHandlerContext ctx, RouterRequest request) {
+    QuotaEnforcementResult result = enforceQuota(request);
 
-    if (!isGrpc) {
+    if (result == QuotaEnforcementResult.BAD_REQUEST) {
       ctx.writeAndFlush(
           new HttpShortcutResponse(
-              "Invalid request resource " + request.getResourceName(),
+              INVALID_REQUEST_RESOURCE_MSG + request.getResourceName(),
               HttpResponseStatus.BAD_REQUEST));
-    } else {
-      String error = "Invalid request resource " + request.getResourceName();
-      grpcCtx.setError();
-      grpcCtx.getVeniceServerResponseBuilder().setErrorCode(GrpcErrorCodes.BAD_REQUEST).setErrorMessage(error);
+      return;
     }
 
-    return true;
-  }
-
-  public boolean checkInitAndQuotaEnabledToSkipQuotaEnforcement(
-      ChannelHandlerContext ctx,
-      RouterRequest request,
-      Store store,
-      boolean isGrpc) {
-    if (!isInitialized() || !store.isStorageNodeReadQuotaEnabled()) {
-      // If we haven't completed initialization or store does not have SN read quota enabled, allow all requests
-      // Note: not recording any metrics. Lack of metrics indicates an issue with initialization
-      ReferenceCountUtil.retain(request);
-
-      if (!isGrpc) {
-        ctx.fireChannelRead(request);
-      }
-
-      return true;
+    if (result == QuotaEnforcementResult.REJECTED) {
+      ctx.writeAndFlush(new HttpShortcutResponse(HttpResponseStatus.TOO_MANY_REQUESTS));
+      return;
     }
 
-    return false;
-  }
-
-  public boolean handleTooManyRequests(
-      ChannelHandlerContext ctx,
-      RouterRequest request,
-      GrpcRequestContext grpcCtx,
-      Store store,
-      int rcu,
-      boolean isGrpc) {
-    stats.recordRejected(request.getStoreName(), rcu);
-
-    long storeQuota = store.getReadQuotaInCU();
-    String errorMessage = "Total quota for store " + request.getStoreName() + " is " + storeQuota + " RCU per second.";
-
-    if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse(errorMessage, HttpResponseStatus.TOO_MANY_REQUESTS));
-    } else {
-      grpcCtx.setError();
-      grpcCtx.getVeniceServerResponseBuilder()
-          .setErrorCode(GrpcErrorCodes.TOO_MANY_REQUESTS)
-          .setErrorMessage(errorMessage);
+    if (result == QuotaEnforcementResult.OVER_CAPACITY) {
+      ctx.writeAndFlush(new HttpShortcutResponse(SERVER_OVER_CAPACITY_MSG, HttpResponseStatus.SERVICE_UNAVAILABLE));
+      return;
     }
 
-    return true;
-  }
-
-  public boolean handleServerOverCapacity(
-      ChannelHandlerContext ctx,
-      GrpcRequestContext grpcCtx,
-      String storeName,
-      int rcu,
-      boolean isGrpc) {
-    stats.recordRejected(storeName, rcu);
-
-    if (!isGrpc) {
-      ctx.writeAndFlush(new HttpShortcutResponse("Server over capacity", HttpResponseStatus.SERVICE_UNAVAILABLE));
-    } else {
-      String errorMessage = "Server over capacity";
-      grpcCtx.setError();
-      grpcCtx.getVeniceServerResponseBuilder()
-          .setErrorCode(GrpcErrorCodes.SERVICE_UNAVAILABLE)
-          .setErrorMessage(errorMessage);
-    }
-
-    return true;
-  }
-
-  private void handleEpilogue(
-      ChannelHandlerContext ctx,
-      RouterRequest request,
-      String storeName,
-      int rcu,
-      boolean isGrpc) {
+    // If we reach here, the request is allowed; retain the request and pass it to the next handler
     ReferenceCountUtil.retain(request);
-    if (!isGrpc) {
-      ctx.fireChannelRead(request);
-    }
-    stats.recordAllowed(storeName, rcu);
+    ctx.fireChannelRead(request);
   }
 
   /**
@@ -547,38 +469,14 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
   }
 
   /**
-   * For tests
-   * @return
+   * Methods visible for testing
    */
-  protected Set<String> listTopics() {
+  protected Set<String> getActiveStoreVersions() {
     return storeVersionRateLimiters.keySet();
-  }
-
-  public VeniceRateLimiter getBucketForStore(String storeName) {
-    if (storeName.equals(AbstractVeniceAggStats.STORE_NAME_FOR_TOTAL_STAT)) {
-      return storageNodeRateLimiter;
-    } else {
-      Store store = storeRepository.getStore(storeName);
-      if (store == null) {
-        return null;
-      }
-
-      int currentVersion = store.getCurrentVersion();
-      String topic = Version.composeKafkaTopic(storeName, currentVersion);
-      return null;
-    }
   }
 
   public ReadOnlyStoreRepository getStoreRepository() {
     return storeRepository;
-  }
-
-  public ConcurrentMap<String, TokenBucket> getStoreVersionRateLimiters() {
-    return null;
-  }
-
-  public boolean storageConsumeRcu(int rcu) {
-    return !storageNodeRateLimiter.tryAcquirePermit(rcu);
   }
 
   public AggServerQuotaUsageStats getStats() {

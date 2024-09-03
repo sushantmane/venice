@@ -280,12 +280,12 @@ public class ReadQuotaEnforcementHandlerTest {
         .thenReturn(store, store, store, storeAfterVersionBump, storeAfterVersionBump, storeAfterQuotaBump);
 
     quotaEnforcer.handleStoreChanged(store);
-    Assert.assertTrue(quotaEnforcer.listTopics().contains(topic));
-    Assert.assertTrue(quotaEnforcer.listTopics().contains(nextTopic));
+    Assert.assertTrue(quotaEnforcer.getActiveStoreVersions().contains(topic));
+    Assert.assertTrue(quotaEnforcer.getActiveStoreVersions().contains(nextTopic));
 
     quotaEnforcer.handleStoreChanged(storeAfterVersionBump);
-    Assert.assertFalse(quotaEnforcer.listTopics().contains(topic));
-    Assert.assertTrue(quotaEnforcer.listTopics().contains(nextTopic));
+    Assert.assertFalse(quotaEnforcer.getActiveStoreVersions().contains(topic));
+    Assert.assertTrue(quotaEnforcer.getActiveStoreVersions().contains(nextTopic));
 
     AtomicInteger allowed = new AtomicInteger(0);
     AtomicInteger blocked = new AtomicInteger(0);
