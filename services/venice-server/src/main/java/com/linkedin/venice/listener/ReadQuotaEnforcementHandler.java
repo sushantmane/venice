@@ -22,7 +22,6 @@ import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.pushmonitor.ReadOnlyPartitionStatus;
 import com.linkedin.venice.stats.AbstractVeniceAggStats;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
-import com.linkedin.venice.stats.ServerQuotaTokenBucketStats;
 import com.linkedin.venice.throttle.EventThrottler;
 import com.linkedin.venice.throttle.TokenBucket;
 import com.linkedin.venice.throttle.VeniceRateLimiter;
@@ -47,10 +46,8 @@ import org.apache.logging.log4j.Logger;
 public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<RouterRequest>
     implements RoutingDataRepository.RoutingDataChangedListener, StoreDataChangedListener {
   private static final Logger LOGGER = LogManager.getLogger(ReadQuotaEnforcementHandler.class);
-  private static final String SERVER_BUCKET_STATS_NAME = "venice-storage-node-token-bucket";
   private final ConcurrentMap<String, VeniceRateLimiter> storeVersionRateLimiters = new VeniceConcurrentHashMap<>();
   private final VeniceRateLimiter storageNodeRateLimiter;
-  private final ServerQuotaTokenBucketStats storageNodeTokenBucketStats;
   private final ReadOnlyStoreRepository storeRepository;
   private final String thisNodeId;
   private final AggServerQuotaUsageStats stats;
@@ -89,8 +86,6 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       Clock clock) {
     this.clock = clock;
     this.storageNodeRateLimiter = tokenBucketfromRcuPerSecond(storageNodeRcuCapacity, 1);
-    this.storageNodeTokenBucketStats =
-        new ServerQuotaTokenBucketStats(metricsRepository, SERVER_BUCKET_STATS_NAME, () -> storageNodeRateLimiter);
     this.storeRepository = storeRepository;
     this.thisNodeId = nodeId;
     this.stats = stats;
