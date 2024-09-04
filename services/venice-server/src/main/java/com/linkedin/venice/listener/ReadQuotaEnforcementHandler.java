@@ -344,20 +344,29 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       return currentRateLimiter;
     }
 
-    if (rateLimiterType == RateLimiterType.TOKEN_BUCKET_INCREMENTAL_REFILL) {
-      return TokenBucket.tokenBucketFromRcuPerSecond(
-          quotaInRcu,
-          thisNodeQuotaResponsibility,
-          enforcementIntervalSeconds,
-          enforcementCapacityMultiple,
-          clock);
+    if (rateLimiterType == RateLimiterType.EVENT_THROTTLER_WITH_SILENT_REJECTION) {
+      LOGGER.info(
+          "Creating EventThrottler rate limiter for store version: {} with quota: {}",
+          storeVersionName,
+          newQuota);
+      return new EventThrottler(newQuota, enforcementIntervalSeconds, storeVersionName, true, SILENT_REJECTION_POLICY);
     }
 
     if (rateLimiterType == RateLimiterType.GUAVA_RATE_LIMITER) {
+      LOGGER.info(
+          "Creating GuavaRateLimiter rate limiter for store version: {} with quota: {}",
+          storeVersionName,
+          newQuota);
       return new GuavaRateLimiter(newQuota);
     }
 
-    return new EventThrottler(newQuota, enforcementIntervalSeconds, storeVersionName, true, SILENT_REJECTION_POLICY);
+    LOGGER.info("Creating TokenBucket rate limiter for store version: {} with quota: {}", storeVersionName, newQuota);
+    return TokenBucket.tokenBucketFromRcuPerSecond(
+        quotaInRcu,
+        thisNodeQuotaResponsibility,
+        enforcementIntervalSeconds,
+        enforcementCapacityMultiple,
+        clock);
   }
 
   @Override

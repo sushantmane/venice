@@ -591,11 +591,11 @@ public class VeniceServerConfig extends VeniceClusterConfig {
     storeVersionQpsRateLimiterType = extractRateLimiterType(
         serverProperties.getString(
             ConfigKeys.SERVER_STORE_VERSION_QPS_RATE_LIMITER,
-            VeniceRateLimiter.RateLimiterType.EVENT_THROTTLER_WITH_SILENT_REJECTION.name()));
+            VeniceRateLimiter.RateLimiterType.TOKEN_BUCKET_INCREMENTAL_REFILL.name()));
     storageNodeRateLimiterType = extractRateLimiterType(
         serverProperties.getString(
             ConfigKeys.SERVER_STORAGE_NODE_RATE_LIMITER,
-            VeniceRateLimiter.RateLimiterType.EVENT_THROTTLER_WITH_SILENT_REJECTION.name()));
+            VeniceRateLimiter.RateLimiterType.TOKEN_BUCKET_INCREMENTAL_REFILL.name()));
     serverQuotaEnforcementIntervalInSeconds = serverProperties.getInt(SERVER_QUOTA_ENFORCEMENT_INTERVAL_IN_SECONDS, 10);
     topicOffsetCheckIntervalMs =
         serverProperties.getInt(SERVER_SOURCE_TOPIC_OFFSET_CHECK_INTERVAL_MS, (int) TimeUnit.SECONDS.toMillis(60));
