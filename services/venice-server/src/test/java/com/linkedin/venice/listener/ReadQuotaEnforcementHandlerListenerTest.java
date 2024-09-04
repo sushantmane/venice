@@ -5,11 +5,9 @@ import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
 import com.linkedin.venice.meta.Instance;
 import com.linkedin.venice.meta.OfflinePushStrategy;
@@ -34,7 +32,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 
@@ -44,16 +41,10 @@ import org.testng.annotations.Test;
  */
 public class ReadQuotaEnforcementHandlerListenerTest {
   private String nodeId = "thisNodeId";
-  private VeniceServerConfig serverConfig;
-
-  @BeforeMethod
-  public void setUp() {
-    serverConfig = mock(VeniceServerConfig.class);
-    when(serverConfig.getNodeCapacityInRcu()).thenReturn(100L);
-  }
 
   @Test
   public void quotaEnforcementHandlerRegistersAsStoreChangeListener() {
+    long storageNodeRcuCapacity = 100; // RCU per second
     HelixCustomizedViewOfflinePushRepository customizedViewRepository =
         mock(HelixCustomizedViewOfflinePushRepository.class);
     ReadOnlyStoreRepository storeRepository = mock(ReadOnlyStoreRepository.class);
@@ -66,8 +57,9 @@ public class ReadQuotaEnforcementHandlerListenerTest {
       listeners.add(listener);
       return null;
     }).when(storeRepository).registerStoreDataChangedListener(any());
+
     ReadQuotaEnforcementHandler quotaEnforcer = new ReadQuotaEnforcementHandler(
-        serverConfig,
+        storageNodeRcuCapacity,
         storeRepository,
         CompletableFuture.completedFuture(customizedViewRepository),
         nodeId,
@@ -80,6 +72,8 @@ public class ReadQuotaEnforcementHandlerListenerTest {
   @Test
   public void quotaEnforcementHandlerStaysUpToDateWithStoreChanges() {
     Set<String> registeredTopics = new HashSet<>();
+
+    long storageNodeRcuCapacity = 100; // RCU per second
     ReadOnlyStoreRepository storeRepository = mock(ReadOnlyStoreRepository.class);
     doAnswer((invocation) -> {
       String storeName = invocation.getArgument(0);
@@ -108,9 +102,10 @@ public class ReadQuotaEnforcementHandlerListenerTest {
 
     AggServerQuotaUsageStats stats = mock(AggServerQuotaUsageStats.class);
     MetricsRepository metricsRepository = new MetricsRepository();
+
     // Object under test
     ReadQuotaEnforcementHandler quotaEnforcer = new ReadQuotaEnforcementHandler(
-        serverConfig,
+        storageNodeRcuCapacity,
         storeRepository,
         CompletableFuture.completedFuture(customizedViewRepository),
         nodeId,
@@ -125,7 +120,7 @@ public class ReadQuotaEnforcementHandlerListenerTest {
         registeredTopics.contains(Version.composeKafkaTopic(store1.getName(), 1)),
         "After adding a store with version 1, the throttler should be subscribed to updates for that topic");
     assertTrue(
-        quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store1.getName(), 1)),
+        quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store1.getName(), 1)),
         "After adding a store with version 1, the throttler should have a bucket for that topic");
 
     // Add another store (call store created) verify all versions in buckets and in subscriptions
@@ -138,7 +133,7 @@ public class ReadQuotaEnforcementHandlerListenerTest {
         registeredTopics.contains(Version.composeKafkaTopic(store2.getName(), 3)),
         "After adding a store with version " + 3 + ", the throttler should be subscribed to updates for that topic");
     assertTrue(
-        quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store2.getName(), 3)),
+        quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store2.getName(), 3)),
         "After adding a store with version " + 3 + ", the throttler should have a bucket for that topic");
 
     // Modify store (call store data changed) verify new versions in buckets and subscriptions, old versions are not
@@ -150,13 +145,13 @@ public class ReadQuotaEnforcementHandlerListenerTest {
         registeredTopics.contains(Version.composeKafkaTopic(store2.getName(), 4)),
         "After adding a store with version " + 4 + ", the throttler should be subscribed to updates for that topic");
     assertTrue(
-        quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store2.getName(), 4)),
+        quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store2.getName(), 4)),
         "After adding a store with version " + 4 + ", the throttler should have a bucket for that topic");
     assertFalse(
         registeredTopics.contains(Version.composeKafkaTopic(store2.getName(), 2)),
         "After updating a store, the throttler should no longer be subscribed to retired topics");
     assertFalse(
-        quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store2.getName(), 2)),
+        quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store2.getName(), 2)),
         "After updating a store, the throttler should no longer have a bucket for that topic");
 
     // Delete a store (call store data deleted) verify nothing in buckets or subscriptions
@@ -166,7 +161,7 @@ public class ReadQuotaEnforcementHandlerListenerTest {
           registeredTopics.contains(Version.composeKafkaTopic(store2.getName(), v)),
           "After deleting a store, the throttler should no longer be subscribed to retired topics");
       assertFalse(
-          quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store2.getName(), v)),
+          quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store2.getName(), v)),
           "After deleting a store, the throttler should no longer have a bucket for retired topics");
     }
 
@@ -175,7 +170,7 @@ public class ReadQuotaEnforcementHandlerListenerTest {
         registeredTopics.contains(Version.composeKafkaTopic(store1.getName(), 1)),
         "After deleting a store, the throttler should still be subscribed to unrelated topics");
     assertTrue(
-        quotaEnforcer.getActiveStoreVersions().contains(Version.composeKafkaTopic(store1.getName(), 1)),
+        quotaEnforcer.listTopics().contains(Version.composeKafkaTopic(store1.getName(), 1)),
         "After deleting a store, the throttler should still have buckets for unrelated topics");
   }
 

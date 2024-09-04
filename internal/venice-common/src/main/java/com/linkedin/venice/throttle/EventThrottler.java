@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
  * This is a generalized IoThrottler as it existed before, which can be used to
  * throttle Bytes read or written, number of entries scanned, etc.
  */
-public class EventThrottler implements VeniceRateLimiter {
+public class EventThrottler {
   private static final Logger LOGGER = LogManager.getLogger(EventThrottler.class);
   private static final long DEFAULT_CHECK_INTERVAL_MS = TimeUnit.SECONDS.toMillis(30);
   private static final String THROTTLER_NAME = "event-throttler";
@@ -38,7 +38,6 @@ public class EventThrottler implements VeniceRateLimiter {
 
   public static final EventThrottlingStrategy BLOCK_STRATEGY = new BlockEventThrottlingStrategy();
   public static final EventThrottlingStrategy REJECT_STRATEGY = new RejectEventThrottlingStrategy();
-  public static final EventThrottlingStrategy SILENT_REJECTION_POLICY = new SilentRejectionThrottlingStrategy();
 
   private final LongSupplier maxRatePerSecondProvider;
   private final long enforcementIntervalMs;
@@ -194,34 +193,6 @@ public class EventThrottler implements VeniceRateLimiter {
     }
   }
 
-  @Override
-  public boolean tryAcquirePermit(int units) {
-    if (throttlingStrategy == BLOCK_STRATEGY) {
-      throw new UnsupportedOperationException("Unsupported operation. Use maybeThrottle instead.");
-    }
-    if (getMaxRatePerSecond() < 0) {
-      return true;
-    }
-    long now = time.milliseconds();
-    try {
-      rateSensor.record(units, now);
-      return true;
-    } catch (QuotaViolationException e) {
-      throttlingStrategy.onExceedQuota(
-          time,
-          rateSensor.name(),
-          (long) e.getValue(),
-          getMaxRatePerSecond(),
-          rateConfig.timeWindowMs());
-      return false;
-    }
-  }
-
-  @Override
-  public long getPermitsPerSecond() {
-    return maxRatePerSecondProvider.getAsLong();
-  }
-
   private static class BlockEventThrottlingStrategy implements EventThrottlingStrategy {
     @Override
     public void onExceedQuota(Time time, String throttlerName, long currentRate, long quota, long timeWindowMS) {
@@ -262,16 +233,6 @@ public class EventThrottler implements VeniceRateLimiter {
     @Override
     public void onExceedQuota(Time time, String throttlerName, long currentRate, long quota, long timeWindowMS) {
       throw new QuotaExceededException(throttlerName, currentRate + UNIT_POSTFIX, quota + UNIT_POSTFIX);
-    }
-  }
-
-  /**
-   * The strategy used by event throttler which will not thrown an exception to reject the event request.
-   */
-  private static class SilentRejectionThrottlingStrategy implements EventThrottlingStrategy {
-    @Override
-    public void onExceedQuota(Time time, String throttlerName, long currentRate, long quota, long timeWindowMS) {
-      // Do nothing
     }
   }
 

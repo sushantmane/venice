@@ -1,7 +1,5 @@
 package com.linkedin.venice.throttle;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This implementation aims to be very high performance with the goal of supporting a very large number of
  * TokenBuckets in an application; thus avoiding an auxilliary thread to refill the bucket.
  */
-public class TokenBucket implements VeniceRateLimiter {
+public class TokenBucket {
   private final long capacity;
   private final long refillAmount;
   private final long refillIntervalMs;
@@ -143,54 +141,5 @@ public class TokenBucket implements VeniceRateLimiter {
     } else {
       return 0d;
     }
-  }
-
-  @Override
-  public boolean tryAcquirePermit(int units) {
-    return tryConsume(units);
-  }
-
-  @Override
-  public long getPermitsPerSecond() {
-    return (long) getAmortizedRefillPerSecond();
-  }
-
-  /**
-   * @see TokenBucket for an explanation of TokenBucket capacity, refill amount, and refill interval
-   *
-   * This method takes a rate in units per second, and scales it according to the desired refill interval, and the
-   * multiple of refill we wish to use for capacity.  Since the resulting token bucket must have a whole number of
-   * tokens in it's refill amount and capacity, if we only accept one parameter in this method (localRcuPerSecond) then
-   * we might have suboptimal results given integer division.  For example, with a global rate of 1 Rcu per second, and
-   * a proportion of 0.1, along with an enforcement interval of 10 seconds we would be forced to pass 1 localRcuPerSecond
-   * which is 10x the desired quota.  By passing both the global rate of 1 Rcu per second and a desired proportion, this
-   * method can multiply by the enforcement interval first before shrinking by the proportion, allowing the Bucket to
-   * be configured with the correct 1 refill every 10 seconds.
-   *
-   * @param totalRcuPerSecond  Number of units per second to allow
-   * @param thisBucketProportionOfTotalRcu For maximum fidelity of calculations. If you need a smaller portion of the
-   *                                       RCU to be applied then set this to an appropriate multiplier.  Otherwise set
-   *                                       this to 1.
-   * @return
-   */
-  public static TokenBucket tokenBucketFromRcuPerSecond(
-      long totalRcuPerSecond,
-      double thisBucketProportionOfTotalRcu,
-      int enforcementIntervalSeconds,
-      int enforcementCapacityMultiple,
-      Clock clock) {
-    long totalRefillAmount = totalRcuPerSecond * enforcementIntervalSeconds;
-    long totalCapacity = totalRefillAmount * enforcementCapacityMultiple;
-    long thisRefillAmount =
-        (long) Math.ceil(totalRcuPerSecond * enforcementIntervalSeconds * thisBucketProportionOfTotalRcu);
-    long thisCapacity = (long) Math.ceil(totalCapacity * thisBucketProportionOfTotalRcu);
-    return new TokenBucket(thisCapacity, thisRefillAmount, enforcementIntervalSeconds, SECONDS, clock);
-  }
-
-  public static long calculateRefillAmount(
-      long totalRcuPerSecond,
-      double thisBucketProportionOfTotalRcu,
-      int enforcementIntervalSeconds) {
-    return (long) Math.ceil(totalRcuPerSecond * enforcementIntervalSeconds * thisBucketProportionOfTotalRcu);
   }
 }

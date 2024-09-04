@@ -12,11 +12,11 @@ import com.linkedin.venice.client.store.transport.TransportClient;
 import com.linkedin.venice.client.store.transport.TransportClientResponse;
 import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.fastclient.GrpcClientConfig;
+import com.linkedin.venice.grpc.GrpcErrorCodes;
 import com.linkedin.venice.grpc.GrpcUtils;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.protocols.VeniceReadServiceGrpc;
 import com.linkedin.venice.protocols.VeniceServerResponse;
-import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.security.SSLFactory;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.grpc.ChannelCredentials;
@@ -267,7 +267,7 @@ public class GrpcTransportClient extends InternalTransportClient {
 
     @Override
     public void onNext(VeniceServerResponse value) {
-      if (value.getErrorCode() != VeniceReadResponseStatus.OK) {
+      if (value.getErrorCode() != GrpcErrorCodes.OK) {
         handleResponseError(value);
         return;
       }
@@ -310,13 +310,13 @@ public class GrpcTransportClient extends InternalTransportClient {
       Exception exception;
 
       switch (statusCode) {
-        case VeniceReadResponseStatus.BAD_REQUEST:
+        case GrpcErrorCodes.BAD_REQUEST:
           exception = new VeniceClientHttpException(errorMessage, statusCode);
           break;
-        case VeniceReadResponseStatus.TOO_MANY_REQUESTS:
+        case GrpcErrorCodes.TOO_MANY_REQUESTS:
           exception = new VeniceClientRateExceededException(errorMessage);
           break;
-        case VeniceReadResponseStatus.KEY_NOT_FOUND:
+        case GrpcErrorCodes.KEY_NOT_FOUND:
           exception = null;
           break;
         default:
