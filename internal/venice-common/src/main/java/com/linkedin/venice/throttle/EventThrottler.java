@@ -207,13 +207,6 @@ public class EventThrottler implements VeniceRateLimiter {
       rateSensor.record(units, now);
       return true;
     } catch (QuotaViolationException e) {
-      LOGGER.info(
-          "###Quota exceeded for throttler: {}. Current rate: {}{}, maxRatePerSecond: {}{}",
-          rateSensor.name(),
-          (long) e.getValue(),
-          UNIT_POSTFIX,
-          getMaxRatePerSecond(),
-          UNIT_POSTFIX);
       throttlingStrategy.onExceedQuota(
           time,
           rateSensor.name(),

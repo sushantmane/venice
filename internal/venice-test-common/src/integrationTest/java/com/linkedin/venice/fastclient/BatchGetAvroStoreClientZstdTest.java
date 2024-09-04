@@ -50,15 +50,15 @@ public class BatchGetAvroStoreClientZstdTest extends BatchGetAvroStoreClientTest
           byte[] compressionDictionaryBytes = trainer.trainSamples();
           return ByteBuffer.wrap(compressionDictionaryBytes);
         });
-    veniceCluster.useControllerClient(
-        client -> assertFalse(
-            client
-                .updateStore(
-                    storeName,
-                    new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)
-                        .setReadQuotaInCU(100_000)
-                        .setReadComputationEnabled(true))
-                .isError()));
+    veniceCluster
+        .useControllerClient(
+            client -> assertFalse(
+                client
+                    .updateStore(
+                        storeName,
+                        new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)
+                            .setReadComputationEnabled(true))
+                    .isError()));
     valueSchemaId = HelixReadOnlySchemaRepository.VALUE_SCHEMA_STARTING_ID;
   }
 }

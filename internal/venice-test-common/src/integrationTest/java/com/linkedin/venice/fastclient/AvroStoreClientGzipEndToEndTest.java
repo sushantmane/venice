@@ -77,15 +77,15 @@ public class AvroStoreClientGzipEndToEndTest extends AvroStoreClientEndToEndTest
           storeVersionName = topic;
           return null;
         });
-    veniceCluster.useControllerClient(
-        client -> assertFalse(
-            client
-                .updateStore(
-                    storeName,
-                    new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)
-                        .setReadQuotaInCU(100_000)
-                        .setReadComputationEnabled(true))
-                .isError()));
+    veniceCluster
+        .useControllerClient(
+            client -> assertFalse(
+                client
+                    .updateStore(
+                        storeName,
+                        new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)
+                            .setReadComputationEnabled(true))
+                    .isError()));
     valueSchemaId = HelixReadOnlySchemaRepository.VALUE_SCHEMA_STARTING_ID;
   }
 

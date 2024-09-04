@@ -61,13 +61,11 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
   public void enableStoreReadQuota() {
     veniceCluster.useControllerClient(controllerClient -> {
       TestUtils.assertCommand(
-          controllerClient.updateStore(
-              storeName,
-              new UpdateStoreQueryParams().setReadQuotaInCU(100000).setStorageNodeReadQuotaEnabled(true)));
+          controllerClient.updateStore(storeName, new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)));
     });
   }
 
-  @Test
+  @Test(timeOut = TIME_OUT)
   public void testServerReadQuota() throws Exception {
     ClientConfig.ClientConfigBuilder clientConfigBuilder =
         new ClientConfig.ClientConfigBuilder<>().setStoreName(storeName)
@@ -77,12 +75,12 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
         clientConfigBuilder,
         new MetricsRepository(),
         StoreMetadataFetchMode.SERVER_BASED_METADATA);
-    // Update the read quota to 1000000 and make 500 requests, all requests should be allowed.
+    // Update the read quota to 1000 and make 500 requests, all requests should be allowed.
     veniceCluster.useControllerClient(controllerClient -> {
       TestUtils.assertCommand(
           controllerClient.updateStore(
               storeName,
-              new UpdateStoreQueryParams().setReadQuotaInCU(1000000).setStorageNodeReadQuotaEnabled(true)));
+              new UpdateStoreQueryParams().setReadQuotaInCU(1000).setStorageNodeReadQuotaEnabled(true)));
     });
     for (int j = 0; j < 5; j++) {
       for (int i = 0; i < recordCnt; i++) {
@@ -95,6 +93,8 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
     for (int i = 0; i < veniceCluster.getVeniceServers().size(); i++) {
       serverMetrics.add(veniceCluster.getVeniceServers().get(i).getMetricsRepository());
     }
+    String readQuotaStorageNodeTokenBucketRemaining =
+        ".venice-storage-node-token-bucket--QuotaRcuTokensRemaining.Gauge";
     String readQuotaRequestedQPSString = "." + storeName + "--quota_request.Rate";
     String readQuotaRejectedQPSString = "." + storeName + "--quota_rejected_request.Rate";
     String readQuotaRequestedKPSString = "." + storeName + "--quota_request_key_count.Rate";
@@ -107,6 +107,7 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
     String routerConnectionCountRateString = ".server_connection_stats--router_connection_request.OccurrenceRate";
     TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, () -> {
       for (MetricsRepository serverMetric: serverMetrics) {
+        assertNotNull(serverMetric.getMetric(readQuotaStorageNodeTokenBucketRemaining));
         assertNotNull(serverMetric.getMetric(readQuotaRequestedQPSString));
         assertNotNull(serverMetric.getMetric(readQuotaRejectedQPSString));
         assertNotNull(serverMetric.getMetric(readQuotaRequestedKPSString));
@@ -131,6 +132,7 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
       assertEquals(serverMetric.getMetric(readQuotaRejectedQPSString).value(), 0d);
       assertEquals(serverMetric.getMetric(readQuotaRejectedKPSString).value(), 0d);
       assertEquals(serverMetric.getMetric(readQuotaAllowedUnintentionally).value(), 0d);
+      assertTrue(serverMetric.getMetric(readQuotaStorageNodeTokenBucketRemaining).value() > 0d);
     }
     assertTrue(quotaRequestedQPSSum >= 0, "Quota request sum: " + quotaRequestedQPSSum);
     assertTrue(quotaRequestedKPSSum >= 0, "Quota request key count sum: " + quotaRequestedKPSSum);
@@ -170,13 +172,6 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
     }
     assertFalse(errorRequest);
     assertTrue(readQuotaRejected);
-
-    // Update the read quota to 50 and make as many requests needed to trigger quota rejected exception.
-    veniceCluster.useControllerClient(controllerClient -> {
-      TestUtils.assertCommand(
-          controllerClient.updateStore(storeName, new UpdateStoreQueryParams().setReadQuotaInCU(100000)));
-    });
-
     // Restart the servers and quota should still be working
     for (VeniceServerWrapper veniceServerWrapper: veniceCluster.getVeniceServers()) {
       LOGGER.info("RESTARTING servers");
@@ -184,7 +179,6 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
     }
     for (int j = 0; j < 5; j++) {
       for (int i = 0; i < recordCnt; i++) {
-        System.out.println("j = " + j + ", i = " + i);
         String key = keyPrefix + i;
         GenericRecord value = genericFastClient.get(key).get();
         assertEquals((int) value.get(VALUE_FIELD_NAME), i);
@@ -194,6 +188,7 @@ public class FastClientIndividualFeatureConfigurationTest extends AbstractClient
     for (MetricsRepository serverMetric: serverMetrics) {
       quotaRequestedQPSSum += serverMetric.getMetric(readQuotaRequestedQPSString).value();
       assertEquals(serverMetric.getMetric(readQuotaAllowedUnintentionally).value(), 0d);
+      assertTrue(serverMetric.getMetric(readQuotaStorageNodeTokenBucketRemaining).value() > 0d);
     }
     assertTrue(quotaRequestedQPSSum >= 0, "Quota request sum: " + quotaRequestedQPSSum);
   }
