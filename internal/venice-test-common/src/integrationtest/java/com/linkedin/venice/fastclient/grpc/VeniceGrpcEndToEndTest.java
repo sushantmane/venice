@@ -95,6 +95,7 @@ public class VeniceGrpcEndToEndTest {
     // 1. Create a new store in Venice
     cluster.getNewStore(storeName);
     UpdateStoreQueryParams params = new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
+        .setReadQuotaInCU(100000)
         .setStorageNodeReadQuotaEnabled(true);
 
     ControllerResponse updateStoreResponse = cluster.updateStore(storeName, params);

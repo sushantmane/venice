@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -217,6 +218,7 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
     }
 
     int readCapacityUnits = getRcu(request);
+    LOGGER.info("### enforceQuota: storeName={}, readCapacityUnits={}", storeName, readCapacityUnits);
 
     /*
      * First check per store version bucket for capacity; don't throttle retried request at store version level
@@ -340,6 +342,13 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       Clock clock) {
     // If the rate limiter is already created and the quota is the same, return the existing rate limiter
     long newQuota = (long) Math.ceil(quotaInRcu * thisNodeQuotaResponsibility);
+
+    LOGGER.info(
+        "### getRateLimiter: storeVersionName={}, quotaInRcu={}, thisNodeQuotaResponsibility={}, newQuota={}",
+        storeVersionName,
+        quotaInRcu,
+        thisNodeQuotaResponsibility,
+        newQuota);
     if (currentRateLimiter != null && currentRateLimiter.getPermitsPerSecond() == newQuota) {
       return currentRateLimiter;
     }
@@ -357,7 +366,12 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       return new GuavaRateLimiter(newQuota);
     }
 
-    return new EventThrottler(newQuota, enforcementIntervalSeconds, storeVersionName, true, SILENT_REJECTION_POLICY);
+    return new EventThrottler(
+        newQuota,
+        Duration.ofSeconds(enforcementIntervalSeconds).toMillis(),
+        "SNQuota_" + storeVersionName,
+        true,
+        SILENT_REJECTION_POLICY);
   }
 
   @Override

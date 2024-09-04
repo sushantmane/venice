@@ -67,7 +67,10 @@ public class RequestBasedMetadataIntegrationTest {
     storeName = veniceCluster.createStore(KEY_COUNT);
     veniceCluster.useControllerClient(
         client -> assertFalse(
-            client.updateStore(storeName, new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true))
+            client
+                .updateStore(
+                    storeName,
+                    new UpdateStoreQueryParams().setReadQuotaInCU(100000).setStorageNodeReadQuotaEnabled(true))
                 .isError()));
     keySerializer =
         SerializerDeserializerFactory.getAvroGenericSerializer(Schema.parse(VeniceClusterWrapper.DEFAULT_KEY_SCHEMA));
@@ -133,7 +136,10 @@ public class RequestBasedMetadataIntegrationTest {
     String zstdStoreName = veniceCluster.createStoreWithZstdDictionary(KEY_COUNT);
     veniceCluster.useControllerClient(
         client -> assertFalse(
-            client.updateStore(zstdStoreName, new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true))
+            client
+                .updateStore(
+                    zstdStoreName,
+                    new UpdateStoreQueryParams().setReadQuotaInCU(100000).setStorageNodeReadQuotaEnabled(true))
                 .isError()));
 
     ClientConfig.ClientConfigBuilder clientConfigBuilder = new ClientConfig.ClientConfigBuilder();

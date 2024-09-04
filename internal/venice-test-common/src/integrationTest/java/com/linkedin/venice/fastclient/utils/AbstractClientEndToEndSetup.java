@@ -245,7 +245,7 @@ public abstract class AbstractClientEndToEndSetup {
                 .updateStore(
                     storeName,
                     new UpdateStoreQueryParams().setStorageNodeReadQuotaEnabled(true)
-                        .setReadQuotaInCU(1000000)
+                        .setReadQuotaInCU(100_000)
                         .setReadComputationEnabled(true))
                 .isError()));
     valueSchemaId = HelixReadOnlySchemaRepository.VALUE_SCHEMA_STARTING_ID;
