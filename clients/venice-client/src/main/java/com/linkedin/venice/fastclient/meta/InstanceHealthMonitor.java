@@ -9,7 +9,6 @@ import static org.apache.hc.core5.http.HttpStatus.SC_TOO_MANY_REQUESTS;
 
 import com.linkedin.alpini.base.concurrency.TimeoutProcessor;
 import com.linkedin.venice.client.exceptions.VeniceClientHttpException;
-import com.linkedin.venice.client.store.transport.TransportClientResponse;
 import com.linkedin.venice.fastclient.ClientConfig;
 import com.linkedin.venice.utils.concurrent.ChainedCompletableFuture;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
@@ -90,9 +89,9 @@ public class InstanceHealthMonitor implements Closeable {
    *
    * Using this we can track the number of pending requests for each server instance.
    */
-  public ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
+  public <T> ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
       String instance,
-      CompletableFuture<TransportClientResponse> transportFuture) {
+      CompletableFuture<T> transportFuture) {
     CompletableFuture<Integer> requestFuture = new CompletableFuture<>();
     pendingRequestCounterMap.compute(instance, (k, v) -> {
       // currently tracking the number of requests as 1 for single get

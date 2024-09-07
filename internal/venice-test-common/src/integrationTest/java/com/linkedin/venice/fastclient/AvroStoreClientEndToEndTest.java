@@ -292,6 +292,7 @@ public class AvroStoreClientEndToEndTest extends AbstractClientEndToEndSetup {
       int batchGetKeySize,
       RequestType requestType,
       StoreMetadataFetchMode storeMetadataFetchMode) throws Exception {
+    // enableGrpc = false; // remove this line once grpc is enabled
     boolean batchGet = requestType == RequestType.MULTI_GET || requestType == RequestType.MULTI_GET_STREAMING;
     boolean compute = requestType == RequestType.COMPUTE || requestType == RequestType.COMPUTE_STREAMING;
 

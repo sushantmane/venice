@@ -1,6 +1,12 @@
 package com.linkedin.venice.fastclient;
 
+import static com.linkedin.venice.fastclient.GetRequestContext.STORAGE_QUERY_ACTION;
+import static com.linkedin.venice.fastclient.GetRequestContext.URI_SEPARATOR;
+import static com.linkedin.venice.meta.QueryAction.STORAGE;
+
+import com.linkedin.venice.meta.QueryAction;
 import com.linkedin.venice.read.RequestType;
+import java.util.Objects;
 
 
 /**
@@ -17,5 +23,25 @@ public class BatchGetRequestContext<K, V> extends MultiKeyRequestContext<K, V> {
   @Override
   public RequestType getRequestType() {
     return RequestType.MULTI_GET_STREAMING;
+  }
+
+  /**
+   * Compute the request URI for the batch get request. Result is cached so that it is computed only once.
+   * Call this method only after setting the resourceName.
+   * @return the request URI
+   */
+  @Override
+  public String computeRequestUri() {
+    if (requestUri != null) {
+      return requestUri;
+    }
+    Objects.requireNonNull(resourceName, "Resource name must be set before calling this method");
+    requestUri = URI_SEPARATOR + STORAGE_QUERY_ACTION + URI_SEPARATOR + resourceName;
+    return requestUri;
+  }
+
+  @Override
+  public QueryAction getQueryAction() {
+    return STORAGE;
   }
 }

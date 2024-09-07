@@ -2,6 +2,7 @@ package com.linkedin.venice.fastclient;
 
 import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.fastclient.transport.TransportClientResponseForRoute;
+import com.linkedin.venice.meta.QueryAction;
 import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import java.util.ArrayList;
@@ -38,6 +39,9 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   private Map<Integer, Set<String>> routesForPartition;
 
+  protected String requestUri;
+  protected String resourceName;
+
   final int numKeysInRequest;
   AtomicInteger numKeysCompleted;
   RetryContext retryContext;
@@ -69,7 +73,7 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
     return routeRequests.keySet();
   }
 
-  List<KeyInfo<K>> keysForRoutes(String route) {
+  public List<KeyInfo<K>> keysForRoutes(String route) {
     Validate.notNull(route);
     return routeRequests.get(route).keysRequested;
   }
@@ -80,6 +84,11 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   void markCompleteExceptionally(TransportClientResponseForRoute response, Throwable exception) {
     validateResponseRoute(response);
+    Validate.notNull(exception);
+    partialResponseException.compareAndSet(null, exception);
+  }
+
+  void markCompleteExceptionally(Throwable exception) {
     Validate.notNull(exception);
     partialResponseException.compareAndSet(null, exception);
   }
@@ -110,22 +119,22 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
     }
   }
 
-  void recordDecompressionTime(String routeId, long latencyInNS) {
+  public void recordDecompressionTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).decompressionTime.addAndGet(latencyInNS);
   }
 
-  void recordRequestDeserializationTime(String routeId, long latencyInNS) {
+  public void recordRequestDeserializationTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).responseDeserializationTime.addAndGet(latencyInNS);
   }
 
-  void recordRecordDeserializationTime(String routeId, long latencyInNS) {
+  public void recordRecordDeserializationTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).recordDeserializationTime.addAndGet(latencyInNS);
   }
 
-  void recordRequestSerializationTime(String routeId, long latencyInNS) {
+  public void recordRequestSerializationTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).requestSerializationTime.addAndGet(latencyInNS);
   }
@@ -183,6 +192,14 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
   public int getFanoutSize() {
     return fanoutSize;
   }
+
+  public String getResourceName() {
+    return resourceName;
+  }
+
+  public abstract String computeRequestUri();
+
+  public abstract QueryAction getQueryAction();
 
   /**
    * Utility class to keep track of a single request to a route

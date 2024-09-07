@@ -5,11 +5,14 @@ import com.linkedin.venice.listener.response.stats.ReadResponseStatsRecorder;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.IntFunction;
 
 
 public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> extends AbstractReadResponse {
   private final T[] chunks;
+  private int maxKeyCount;
 
   private ParallelMultiKeyResponseWrapper(
       int chunkCount,
@@ -20,6 +23,7 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
     for (int i = 0; i < chunkCount; i++) {
       this.chunks[i] = multiGetResponseProvider.apply(chunkSize);
     }
+    this.maxKeyCount = chunkCount * chunkSize;
   }
 
   public static ParallelMultiKeyResponseWrapper<MultiGetResponseWrapper> multiGet(
@@ -58,7 +62,7 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
   }
 
   @Override
-  public ReadResponseStatsRecorder getStatsRecorder() {
+  public ReadResponseStatsRecorder getReadResponseStatsRecorder() {
     return new CompositeReadResponseStatsRecorder(this.chunks);
   }
 
@@ -69,6 +73,15 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
       byteBufChunks[i] = this.chunks[i].getResponseBody();
     }
     return Unpooled.wrappedBuffer(byteBufChunks);
+  }
+
+  @Override
+  public <K> List<K> getRecords() {
+    List<K> records = new ArrayList<>(this.maxKeyCount);
+    for (int i = 0; i < chunks.length; i++) {
+      records.addAll(this.chunks[i].getRecords());
+    }
+    return records;
   }
 
   @Override
@@ -93,7 +106,7 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
     private final ReadResponseStatsRecorder[] statsRecorders;
 
     CompositeReadResponseStatsRecorder(MultiKeyResponseWrapper[] responseChunks) {
-      this.mergedStats = responseChunks[0].getStatsRecorder();
+      this.mergedStats = responseChunks[0].getReadResponseStatsRecorder();
 
       /**
        * This array can be one element shorter than {@param responseChunks} because the first chunk's storage exec sub
@@ -102,7 +115,7 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
       this.statsRecorders = new ReadResponseStatsRecorder[responseChunks.length - 1];
       ReadResponseStatsRecorder statsRecorder;
       for (int i = 1; i < responseChunks.length; i++) {
-        statsRecorder = responseChunks[i].getStatsRecorder();
+        statsRecorder = responseChunks[i].getReadResponseStatsRecorder();
         // We merge the stats of all chunks from the 2nd one to the last one into the stats of the 1st chunk.
         this.mergedStats.merge(statsRecorder);
 

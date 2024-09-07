@@ -1,6 +1,11 @@
 package com.linkedin.venice.fastclient;
 
+import static com.linkedin.venice.fastclient.GetRequestContext.URI_SEPARATOR;
+import static com.linkedin.venice.meta.QueryAction.COMPUTE;
+
+import com.linkedin.venice.meta.QueryAction;
 import com.linkedin.venice.read.RequestType;
+import java.util.Objects;
 
 
 /**
@@ -10,6 +15,8 @@ import com.linkedin.venice.read.RequestType;
  * @param <V> Value type
  */
 public class ComputeRequestContext<K, V> extends MultiKeyRequestContext<K, V> {
+  private static final String COMPUTE_QUERY_ACTION = COMPUTE.toString().toLowerCase();
+
   public ComputeRequestContext(int numKeysInRequest, boolean isPartialSuccessAllowed) {
     super(numKeysInRequest, isPartialSuccessAllowed);
   }
@@ -17,5 +24,25 @@ public class ComputeRequestContext<K, V> extends MultiKeyRequestContext<K, V> {
   @Override
   public RequestType getRequestType() {
     return RequestType.COMPUTE_STREAMING;
+  }
+
+  /**
+   * Compute the request URI for the compute request. Result is cached so that it is computed only once.
+   * Call this method only after setting the resourceName.
+   * @return the request URI
+   */
+  @Override
+  public String computeRequestUri() {
+    if (requestUri != null) {
+      return requestUri;
+    }
+    Objects.requireNonNull(resourceName, "Resource name must be set before calling this method");
+    requestUri = URI_SEPARATOR + COMPUTE_QUERY_ACTION + URI_SEPARATOR + resourceName;
+    return requestUri;
+  }
+
+  @Override
+  public QueryAction getQueryAction() {
+    return COMPUTE;
   }
 }
