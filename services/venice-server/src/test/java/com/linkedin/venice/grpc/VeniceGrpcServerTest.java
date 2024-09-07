@@ -6,8 +6,6 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.listener.grpc.VeniceReadServiceImpl;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcRequestProcessor;
 import com.linkedin.venice.security.SSLFactory;
 import com.linkedin.venice.utils.SslUtils;
 import com.linkedin.venice.utils.TestUtils;
@@ -21,14 +19,15 @@ import org.testng.annotations.Test;
 public class VeniceGrpcServerTest {
   private VeniceGrpcServer grpcServer;
   private VeniceGrpcServerConfig.Builder serverConfig;
-  private VeniceServerGrpcRequestProcessor grpcRequestProcessor;
+  private GrpcIoRequestProcessor grpcRequestProcessor;
 
   @BeforeMethod
   void setUp() {
-    grpcRequestProcessor = mock(VeniceServerGrpcRequestProcessor.class);
+    grpcRequestProcessor = mock(GrpcIoRequestProcessor.class);
+    GrpcServiceDependencies grpcServiceDependencies = new GrpcServiceDependencies.Builder().build();
     serverConfig = new VeniceGrpcServerConfig.Builder().setPort(TestUtils.getFreePort())
         .setNumThreads(10)
-        .setService(new VeniceReadServiceImpl(grpcRequestProcessor));
+        .setService(new VeniceGrpcReadServiceImpl(grpcServiceDependencies, grpcRequestProcessor));
   }
 
   @Test

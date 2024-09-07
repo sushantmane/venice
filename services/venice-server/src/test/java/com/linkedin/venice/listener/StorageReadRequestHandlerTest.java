@@ -8,14 +8,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.intThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,9 +48,6 @@ import com.linkedin.venice.exceptions.PersistenceFailureException;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.guid.JavaUtilGuidV4Generator;
 import com.linkedin.venice.kafka.protocol.GUID;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcStorageReadRequestHandler;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcHandler;
 import com.linkedin.venice.listener.request.AdminRequest;
 import com.linkedin.venice.listener.request.ComputeRouterRequestWrapper;
 import com.linkedin.venice.listener.request.GetRouterRequest;
@@ -79,13 +74,10 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.metadata.response.VersionProperties;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.VenicePartitioner;
-import com.linkedin.venice.protocols.VeniceClientRequest;
-import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.read.protocol.request.router.MultiGetRouterRequestKeyV1;
 import com.linkedin.venice.read.protocol.response.MultiGetResponseRecordV1;
 import com.linkedin.venice.request.RequestHelper;
-import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.schema.AvroSchemaParseUtils;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.schema.SchemaReader;
@@ -281,8 +273,8 @@ public class StorageReadRequestHandlerTest {
     // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
     String uri = "/" + TYPE_STORAGE + "/test-topic_v1/" + partition + "/" + keyString;
     HttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
-    GetRouterRequest request =
-        GetRouterRequest.parseGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
+    GetRouterRequest request = GetRouterRequest
+        .parseSingleGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
 
     StorageReadRequestHandler requestHandler = createStorageReadRequestHandler();
     requestHandler.channelRead(context, request);
@@ -497,8 +489,8 @@ public class StorageReadRequestHandlerTest {
     // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
     String uri = "/" + TYPE_STORAGE + "/" + topic + "/" + partition + "/" + keyString;
     HttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
-    GetRouterRequest request =
-        GetRouterRequest.parseGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
+    GetRouterRequest request = GetRouterRequest
+        .parseSingleGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
 
     byte[] valueBytes = ValueRecord.create(schemaId, valueString.getBytes()).serialize();
     doReturn(valueBytes).when(storageEngine).get(partition, ByteBuffer.wrap(keyString.getBytes()));
@@ -647,7 +639,7 @@ public class StorageReadRequestHandlerTest {
     verify(context, times(1)).writeAndFlush(argumentCaptor.capture());
     HttpShortcutResponse shortcutResponse = (HttpShortcutResponse) argumentCaptor.getValue();
     assertEquals(shortcutResponse.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-    assertEquals(shortcutResponse.getMessage(), "Unrecognized object in StorageExecutionHandler");
+    assertEquals(shortcutResponse.getMessage(), "Unrecognized request type");
   }
 
   @Test(dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
@@ -799,23 +791,6 @@ public class StorageReadRequestHandlerTest {
     responseObject = (SingleGetResponseWrapper) argumentCaptor.getValue();
     assertTrue(responseObject.isFound());
     assertEquals(responseObject.getValueRecord().getDataInBytes(), valueString.getBytes());
-  }
-
-  @Test
-  public void testGrpcReadReturnsInternalErrorWhenRouterRequestIsNull() {
-    VeniceClientRequest clientRequest =
-        VeniceClientRequest.newBuilder().setIsBatchRequest(true).setResourceName("testStore_v1").build();
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    GrpcRequestContext ctx = new GrpcRequestContext(clientRequest, builder, null);
-    StorageReadRequestHandler requestHandler = createStorageReadRequestHandler();
-    GrpcStorageReadRequestHandler grpcReadRequestHandler = spy(new GrpcStorageReadRequestHandler(requestHandler));
-    VeniceServerGrpcHandler mockNextHandler = mock(VeniceServerGrpcHandler.class);
-    grpcReadRequestHandler.addNextHandler(mockNextHandler);
-    doNothing().when(mockNextHandler).processRequest(any());
-    grpcReadRequestHandler.processRequest(ctx); // will cause np exception
-
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.INTERNAL_ERROR);
-    assertTrue(builder.getErrorMessage().contains("Internal Error"));
   }
 
   @Test
