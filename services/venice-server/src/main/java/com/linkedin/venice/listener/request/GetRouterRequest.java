@@ -3,8 +3,10 @@ package com.linkedin.venice.listener.request;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.RequestConstants;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.protocols.SingleGetRequest;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.read.RequestType;
+import com.linkedin.venice.streaming.StreamingUtils;
 import com.linkedin.venice.utils.EncodingUtils;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -19,16 +21,13 @@ public class GetRouterRequest extends RouterRequest {
   private final int partition;
   private final byte[] keyBytes;
 
-  private GetRouterRequest(String resourceName, int partition, byte[] keyBytes, HttpRequest request) {
-    super(resourceName, request);
-
-    this.partition = partition;
-    this.keyBytes = keyBytes;
-  }
-
-  private GetRouterRequest(String resourceName, int partition, byte[] keyBytes) {
-    super(resourceName, false, false);
-
+  private GetRouterRequest(
+      String resourceName,
+      int partition,
+      byte[] keyBytes,
+      boolean isRetryRequest,
+      boolean isStreamingRequest) {
+    super(resourceName, isRetryRequest, isStreamingRequest);
     this.partition = partition;
     this.keyBytes = keyBytes;
   }
@@ -51,24 +50,34 @@ public class GetRouterRequest extends RouterRequest {
     return 1;
   }
 
-  public static GetRouterRequest parseGetHttpRequest(HttpRequest request, String[] requestParts) {
-    if (requestParts.length == 5) {
-      // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
-      String topicName = requestParts[2];
-      int partition = Integer.parseInt(requestParts[3]);
-      byte[] keyBytes = getKeyBytesFromUrlKeyString(requestParts[4]);
-      return new GetRouterRequest(topicName, partition, keyBytes, request);
-    } else {
+  public static GetRouterRequest parseSingleGetHttpRequest(HttpRequest request, String[] requestParts) {
+    if (requestParts.length != 5) {
       throw new VeniceException("Not a valid request for a STORAGE action: " + request.uri());
     }
+    // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
+    String topicName = requestParts[2];
+    int partition = Integer.parseInt(requestParts[3]);
+    byte[] keyBytes = getKeyBytesFromUrlKeyString(requestParts[4]);
+    boolean isRetryRequest = containRetryHeader(request);
+    boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(request);
+    return new GetRouterRequest(topicName, partition, keyBytes, isRetryRequest, isStreamingRequest);
   }
 
-  public static GetRouterRequest grpcGetRouterRequest(VeniceClientRequest request) {
+  public static GetRouterRequest parseSingleGetGrpcRequest(VeniceClientRequest request) {
     String resourceName = request.getResourceName();
     int partition = request.getPartition();
     byte[] keyBytes = getKeyBytesFromUrlKeyString(request.getKeyString());
+    boolean isRetryRequest = request.getIsRetryRequest();
+    boolean isStreamingRequest = request.getIsStreamingRequest();
+    return new GetRouterRequest(resourceName, partition, keyBytes, isRetryRequest, isStreamingRequest);
+  }
 
-    return new GetRouterRequest(resourceName, partition, keyBytes);
+  public static GetRouterRequest parseSingleGetGrpcRequest(SingleGetRequest singleGetRequest) {
+    String resourceName = singleGetRequest.getResourceName();
+    int partition = singleGetRequest.getPartition();
+    byte[] keyBytes = getKeyBytesFromUrlKeyString(singleGetRequest.getKey());
+    boolean isRetryRequest = singleGetRequest.getIsRetryRequest();
+    return new GetRouterRequest(resourceName, partition, keyBytes, isRetryRequest, false);
   }
 
   public static byte[] getKeyBytesFromUrlKeyString(String keyString) {

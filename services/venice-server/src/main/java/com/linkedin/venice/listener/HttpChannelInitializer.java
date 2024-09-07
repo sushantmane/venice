@@ -9,13 +9,6 @@ import com.linkedin.venice.acl.StaticAccessController;
 import com.linkedin.venice.authorization.IdentityParser;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
-import com.linkedin.venice.listener.grpc.handlers.GrpcOutboundResponseHandler;
-import com.linkedin.venice.listener.grpc.handlers.GrpcOutboundStatsHandler;
-import com.linkedin.venice.listener.grpc.handlers.GrpcReadQuotaEnforcementHandler;
-import com.linkedin.venice.listener.grpc.handlers.GrpcRouterRequestHandler;
-import com.linkedin.venice.listener.grpc.handlers.GrpcStatsHandler;
-import com.linkedin.venice.listener.grpc.handlers.GrpcStorageReadRequestHandler;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcRequestProcessor;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.security.SSLFactory;
@@ -152,9 +145,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     serverConnectionStats = new ServerConnectionStats(metricsRepository, "server_connection_stats");
   }
 
-  /*
-    Test only
-   */
   protected ReadQuotaEnforcementHandler getQuotaEnforcer() {
     return quotaEnforcer;
   }
@@ -177,7 +167,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       ServerConnectionStatsHandler serverConnectionStatsHandler =
           new ServerConnectionStatsHandler(serverConnectionStats, serverConfig.getRouterPrincipalName());
       pipeline.addLast(serverConnectionStatsHandler);
-      StatsHandler statsHandler = new StatsHandler(singleGetStats, multiGetStats, computeStats);
+      StatsHandler statsHandler = createStatsHandler();
       pipeline.addLast(statsHandler);
       if (whetherNeedServerCodec) {
         pipeline.addLast(new HttpServerCodec());
@@ -233,32 +223,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     }
   }
 
-  public VeniceServerGrpcRequestProcessor initGrpcRequestProcessor() {
-    VeniceServerGrpcRequestProcessor grpcServerRequestProcessor = new VeniceServerGrpcRequestProcessor();
-
-    StatsHandler statsHandler = new StatsHandler(singleGetStats, multiGetStats, computeStats);
-    GrpcStatsHandler grpcStatsHandler = new GrpcStatsHandler(statsHandler);
-    grpcServerRequestProcessor.addHandler(grpcStatsHandler);
-
-    GrpcRouterRequestHandler grpcRouterRequestHandler = new GrpcRouterRequestHandler();
-    grpcServerRequestProcessor.addHandler(grpcRouterRequestHandler);
-
-    if (quotaEnforcer != null) {
-      GrpcReadQuotaEnforcementHandler grpcReadQuotaEnforcementHandler =
-          new GrpcReadQuotaEnforcementHandler(quotaEnforcer);
-      grpcServerRequestProcessor.addHandler(grpcReadQuotaEnforcementHandler);
-    }
-
-    GrpcStorageReadRequestHandler storageReadRequestHandler = new GrpcStorageReadRequestHandler(requestHandler);
-    grpcServerRequestProcessor.addHandler(storageReadRequestHandler);
-
-    GrpcOutboundResponseHandler grpcOutboundResponseHandler = new GrpcOutboundResponseHandler();
-    grpcServerRequestProcessor.addHandler(grpcOutboundResponseHandler);
-
-    GrpcOutboundStatsHandler grpcOutboundStatsHandler = new GrpcOutboundStatsHandler();
-    grpcServerRequestProcessor.addHandler(grpcOutboundStatsHandler);
-
-    return grpcServerRequestProcessor;
+  StatsHandler createStatsHandler() {
+    return new StatsHandler(singleGetStats, multiGetStats, computeStats);
   }
 
   /**

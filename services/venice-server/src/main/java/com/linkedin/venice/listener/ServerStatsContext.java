@@ -22,11 +22,11 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * direct copy of StatsHandler, without Netty Channel Read/Write logic.
  */
 public class ServerStatsContext {
-  private ReadResponseStatsRecorder responseStatsRecorder;
-  private long startTimeInNS;
-  private HttpResponseStatus responseStatus;
+  private ReadResponseStatsRecorder responseStatsRecorder = null;
+  private long startTimeInNS = System.nanoTime();
+  private HttpResponseStatus responseStatus = null;
   private String storeName = null;
-  private boolean isMetadataRequest;
+  private boolean isMetadataRequest = false;
   private int requestKeyCount = -1;
   private int requestSizeInBytes = -1;
   private boolean isRequestTerminatedEarly = false;
@@ -69,7 +69,7 @@ public class ServerStatsContext {
   private double firstPartLatency = -1;
   private double secondPartLatency = -1;
   private double partsInvokeDelayLatency = -1;
-  private int requestPartCount = -1;
+  private int requestPartCount = 1;
   private boolean isMisroutedStoreVersion = false;
   private double flushLatency = -1;
   private int responseSize = -1;
@@ -117,8 +117,7 @@ public class ServerStatsContext {
     isMisroutedStoreVersion = false;
     flushLatency = -1;
     responseSize = -1;
-
-    newRequest = false;
+    newRequest = false; // set to false after the first package of a HttpRequest
   }
 
   public void setReadResponseStats(ReadResponseStatsRecorder responseStatsRecorder) {
@@ -215,30 +214,29 @@ public class ServerStatsContext {
   }
 
   public void recordBasicMetrics(ServerHttpRequestStats serverHttpRequestStats) {
-    if (serverHttpRequestStats != null) {
-      if (this.responseStatsRecorder != null) {
-        this.responseStatsRecorder.recordMetrics(serverHttpRequestStats);
-      }
+    if (serverHttpRequestStats == null) {
+      return;
+    }
 
-      consumeIntIfAbove(serverHttpRequestStats::recordRequestKeyCount, this.requestKeyCount, 0);
-      consumeIntIfAbove(serverHttpRequestStats::recordRequestSizeInBytes, this.requestSizeInBytes, 0);
-      consumeDoubleIfAbove(serverHttpRequestStats::recordRequestFirstPartLatency, this.firstPartLatency, 0);
-      consumeDoubleIfAbove(
-          serverHttpRequestStats::recordRequestPartsInvokeDelayLatency,
-          this.partsInvokeDelayLatency,
-          0);
-      consumeDoubleIfAbove(serverHttpRequestStats::recordRequestSecondPartLatency, this.secondPartLatency, 0);
-      consumeIntIfAbove(serverHttpRequestStats::recordRequestPartCount, this.requestPartCount, 0);
+    if (this.responseStatsRecorder != null) {
+      this.responseStatsRecorder.recordMetrics(serverHttpRequestStats);
+    }
 
-      if (this.isRequestTerminatedEarly) {
-        serverHttpRequestStats.recordEarlyTerminatedEarlyRequest();
-      }
-      if (flushLatency >= 0) {
-        serverHttpRequestStats.recordFlushLatency(flushLatency);
-      }
-      if (responseSize >= 0) {
-        serverHttpRequestStats.recordResponseSize(responseSize);
-      }
+    consumeIntIfAbove(serverHttpRequestStats::recordRequestKeyCount, this.requestKeyCount, 0);
+    consumeIntIfAbove(serverHttpRequestStats::recordRequestSizeInBytes, this.requestSizeInBytes, 0);
+    consumeDoubleIfAbove(serverHttpRequestStats::recordRequestFirstPartLatency, this.firstPartLatency, 0);
+    consumeDoubleIfAbove(serverHttpRequestStats::recordRequestPartsInvokeDelayLatency, this.partsInvokeDelayLatency, 0);
+    consumeDoubleIfAbove(serverHttpRequestStats::recordRequestSecondPartLatency, this.secondPartLatency, 0);
+    consumeIntIfAbove(serverHttpRequestStats::recordRequestPartCount, this.requestPartCount, 0);
+
+    if (this.isRequestTerminatedEarly) {
+      serverHttpRequestStats.recordEarlyTerminatedEarlyRequest();
+    }
+    if (flushLatency >= 0) {
+      serverHttpRequestStats.recordFlushLatency(flushLatency);
+    }
+    if (responseSize >= 0) {
+      serverHttpRequestStats.recordResponseSize(responseSize);
     }
   }
 
