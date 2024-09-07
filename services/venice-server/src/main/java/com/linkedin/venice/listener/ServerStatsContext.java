@@ -22,11 +22,11 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * direct copy of StatsHandler, without Netty Channel Read/Write logic.
  */
 public class ServerStatsContext {
-  private ReadResponseStatsRecorder responseStatsRecorder;
-  private long startTimeInNS;
-  private HttpResponseStatus responseStatus;
+  private ReadResponseStatsRecorder responseStatsRecorder = null;
+  private long startTimeInNS = System.nanoTime();
+  private HttpResponseStatus responseStatus = null;
   private String storeName = null;
-  private boolean isMetadataRequest;
+  private boolean isMetadataRequest = false;
   private int requestKeyCount = -1;
   private int requestSizeInBytes = -1;
   private boolean isRequestTerminatedEarly = false;
@@ -69,7 +69,7 @@ public class ServerStatsContext {
   private double firstPartLatency = -1;
   private double secondPartLatency = -1;
   private double partsInvokeDelayLatency = -1;
-  private int requestPartCount = -1;
+  private int requestPartCount = 1;
   private boolean isMisroutedStoreVersion = false;
   private double flushLatency = -1;
   private int responseSize = -1;
@@ -117,8 +117,7 @@ public class ServerStatsContext {
     isMisroutedStoreVersion = false;
     flushLatency = -1;
     responseSize = -1;
-
-    newRequest = false;
+    newRequest = false; // set to false after the first package of a HttpRequest
   }
 
   public void setReadResponseStats(ReadResponseStatsRecorder responseStatsRecorder) {

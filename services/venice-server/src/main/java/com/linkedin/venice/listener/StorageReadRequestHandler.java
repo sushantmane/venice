@@ -43,7 +43,6 @@ import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.request.TopicPartitionIngestionContextRequest;
 import com.linkedin.venice.listener.response.BinaryResponse;
 import com.linkedin.venice.listener.response.ComputeResponseWrapper;
-import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.listener.response.MultiGetResponseWrapper;
 import com.linkedin.venice.listener.response.MultiKeyResponseWrapper;
 import com.linkedin.venice.listener.response.ParallelMultiKeyResponseWrapper;
@@ -56,6 +55,7 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.read.protocol.request.router.MultiGetRouterRequestKeyV1;
 import com.linkedin.venice.read.protocol.response.MultiGetResponseRecordV1;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.schema.SchemaData;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.serialization.AvroStoreDeserializerCache;
@@ -74,7 +74,6 @@ import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -240,133 +239,167 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
+  public void channelRead(ChannelHandlerContext context, Object request) throws Exception {
+    processRequest(request, HttpStorageResponseHandlerCallback.create(context));
+  }
+
+  void processRequest(Object message, HttpStorageResponseHandlerCallback responseCallback) {
     if (message instanceof RouterRequest) {
-      RouterRequest request = (RouterRequest) message;
-      this.resourceReadUsageTracker.accept(request.getResourceName());
-      // Check before putting the request to the intermediate queue
-      if (request.shouldRequestBeTerminatedEarly()) {
-        // Try to make the response short
-        context.writeAndFlush(
-            new HttpShortcutResponse(
-                VeniceRequestEarlyTerminationException.getMessage(request.getStoreName()),
-                VeniceRequestEarlyTerminationException.getHttpResponseStatus()));
-        return;
-      }
+      processIoRequest((RouterRequest) message, responseCallback);
+      return;
+    }
 
-      CompletableFuture<ReadResponse> responseFuture;
-      switch (request.getRequestType()) {
-        case SINGLE_GET:
-          responseFuture = handleSingleGetRequest((GetRouterRequest) request);
-          break;
-        case MULTI_GET:
-          responseFuture = this.multiGetHandler.apply((MultiGetRouterRequestWrapper) request);
-          break;
-        case COMPUTE:
-          responseFuture = this.computeHandler.apply((ComputeRouterRequestWrapper) request);
-          break;
-        default:
-          throw new VeniceException("Unknown request type: " + request.getRequestType());
-      }
-
-      responseFuture.whenComplete((response, throwable) -> {
-        if (throwable == null) {
-          response.setRCU(ReadQuotaEnforcementHandler.getRcu(request));
-          if (request.isStreamingRequest()) {
-            response.setStreamingResponse();
-          }
-          context.writeAndFlush(response);
-          return;
-        }
-        if (throwable instanceof CompletionException && throwable.getCause() != null) {
-          throwable = throwable.getCause();
-        }
-        if (throwable instanceof VeniceNoStoreException) {
-          VeniceNoStoreException e = (VeniceNoStoreException) throwable;
-          String msg = "No storage exists for store: " + e.getStoreName();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          HttpResponseStatus status = getHttpResponseStatus(e);
-          context.writeAndFlush(new HttpShortcutResponse("No storage exists for: " + e.getStoreName(), status));
-        } else if (throwable instanceof VeniceRequestEarlyTerminationException) {
-          VeniceRequestEarlyTerminationException e = (VeniceRequestEarlyTerminationException) throwable;
-          String msg = "Request timed out for store: " + e.getStoreName();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.REQUEST_TIMEOUT));
-        } else if (throwable instanceof OperationNotAllowedException) {
-          OperationNotAllowedException e = (OperationNotAllowedException) throwable;
-          String msg = "METHOD_NOT_ALLOWED: " + e.getMessage();
-          if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
-            LOGGER.error(msg, e);
-          }
-          context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.METHOD_NOT_ALLOWED));
-        } else {
-          LOGGER.error("Exception thrown for {}", request.getResourceName(), throwable);
-          HttpShortcutResponse shortcutResponse =
-              new HttpShortcutResponse(throwable.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-          shortcutResponse.setMisroutedStoreVersion(checkMisroutedStoreVersionRequest(request));
-          context.writeAndFlush(shortcutResponse);
-        }
-      });
-
-    } else if (message instanceof HealthCheckRequest) {
+    if (message instanceof HealthCheckRequest) {
       if (diskHealthCheckService.isDiskHealthy()) {
-        context.writeAndFlush(new HttpShortcutResponse("OK", HttpResponseStatus.OK));
+        responseCallback.onResponse(VeniceReadResponseStatus.OK, "OK");
       } else {
-        context.writeAndFlush(
-            new HttpShortcutResponse(
-                "Venice storage node hardware is not healthy!",
-                HttpResponseStatus.INTERNAL_SERVER_ERROR));
+        responseCallback
+            .onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, "Venice storage node hardware is not healthy!");
         LOGGER.error(
             "Disk is not healthy according to the disk health check service: {}",
             diskHealthCheckService.getErrorMessage());
       }
-    } else if (message instanceof DictionaryFetchRequest) {
+      return;
+    }
+
+    if (message instanceof DictionaryFetchRequest) {
       BinaryResponse response = handleDictionaryFetchRequest((DictionaryFetchRequest) message);
-      context.writeAndFlush(response);
-    } else if (message instanceof AdminRequest) {
+      responseCallback.onBinaryResponse(response);
+      return;
+    }
+
+    if (message instanceof AdminRequest) {
       AdminResponse response = handleServerAdminRequest((AdminRequest) message);
-      context.writeAndFlush(response);
-    } else if (message instanceof MetadataFetchRequest) {
+      responseCallback.onAdminResponse(response);
+      return;
+    }
+
+    if (message instanceof MetadataFetchRequest) {
       try {
         MetadataResponse response = handleMetadataFetchRequest((MetadataFetchRequest) message);
-        context.writeAndFlush(response);
+        responseCallback.onMetadataResponse(response);
       } catch (UnsupportedOperationException e) {
         LOGGER.warn(
             "Metadata requested by a storage node read quota not enabled store: {}",
             ((MetadataFetchRequest) message).getStoreName());
-        context.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.FORBIDDEN));
+        responseCallback.onError(VeniceReadResponseStatus.FORBIDDEN, e.getMessage());
       }
-    } else if (message instanceof CurrentVersionRequest) {
+      return;
+    }
+
+    if (message instanceof CurrentVersionRequest) {
       ServerCurrentVersionResponse response = handleCurrentVersionRequest((CurrentVersionRequest) message);
-      context.writeAndFlush(response);
-    } else if (message instanceof TopicPartitionIngestionContextRequest) {
+      responseCallback.onServerCurrentVersionResponse(response);
+      return;
+    }
+
+    if (message instanceof TopicPartitionIngestionContextRequest) {
       TopicPartitionIngestionContextResponse response =
           handleTopicPartitionIngestionContextRequest((TopicPartitionIngestionContextRequest) message);
-      context.writeAndFlush(response);
-    } else {
-      context.writeAndFlush(
-          new HttpShortcutResponse(
-              "Unrecognized object in StorageExecutionHandler",
-              HttpResponseStatus.INTERNAL_SERVER_ERROR));
+      responseCallback.onTopicPartitionIngestionContextResponse(response);
+      return;
     }
+
+    responseCallback.onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, "Unrecognized request type");
   }
 
-  private HttpResponseStatus getHttpResponseStatus(VeniceNoStoreException e) {
+  /**
+   * Handles requests that require a storage engine lookup.
+   */
+  private void processIoRequest(RouterRequest request, HttpStorageResponseHandlerCallback responseCallback) {
+    this.resourceReadUsageTracker.accept(request.getResourceName());
+
+    // Check if timeout has occurred before processing the request; if so, return early with an error response
+    if (request.shouldRequestBeTerminatedEarly()) {
+      responseCallback.onError(
+          VeniceRequestEarlyTerminationException.getResponseStatusCode(),
+          VeniceRequestEarlyTerminationException.getMessage(request.getStoreName()));
+      return;
+    }
+
+    CompletableFuture<ReadResponse> responseFuture;
+    switch (request.getRequestType()) {
+      case SINGLE_GET:
+        responseFuture = handleSingleGetRequest((GetRouterRequest) request);
+        break;
+      case MULTI_GET:
+        responseFuture = this.multiGetHandler.apply((MultiGetRouterRequestWrapper) request);
+        break;
+      case COMPUTE:
+        responseFuture = this.computeHandler.apply((ComputeRouterRequestWrapper) request);
+        break;
+      default:
+        throw new VeniceException("Unknown request type: " + request.getRequestType());
+    }
+
+    responseFuture.whenComplete((response, throwable) -> {
+      // If the throwable is null, it indicates that the storage engine lookup was successful
+      // (regardless of whether the value was found or not), and we have a response ready to send.
+      if (throwable == null) {
+        response.setRCU(ReadQuotaEnforcementHandler.getRcu(request));
+        if (request.isStreamingRequest()) {
+          response.setStreamingResponse();
+        }
+        responseCallback.onReadResponse(response);
+        return;
+      }
+
+      if (throwable instanceof CompletionException && throwable.getCause() != null) {
+        throwable = throwable.getCause();
+      }
+
+      if (throwable instanceof VeniceNoStoreException) {
+        VeniceNoStoreException e = (VeniceNoStoreException) throwable;
+        String msg = "No storage exists for store: " + e.getStoreName();
+        if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+          LOGGER.error(msg, e);
+        }
+        VeniceReadResponseStatus status = getVeniceReadResponseStatus(e);
+        responseCallback.onError(status, "No storage exists for: " + e.getStoreName());
+        return;
+      }
+
+      if (throwable instanceof VeniceRequestEarlyTerminationException) {
+        VeniceRequestEarlyTerminationException e = (VeniceRequestEarlyTerminationException) throwable;
+        String msg = "Request timed out for store: " + e.getStoreName();
+        if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+          LOGGER.error(msg, e);
+        }
+        responseCallback.onError(VeniceReadResponseStatus.REQUEST_TIMEOUT, e.getMessage());
+        return;
+      }
+
+      if (throwable instanceof OperationNotAllowedException) {
+        OperationNotAllowedException e = (OperationNotAllowedException) throwable;
+        String msg = "METHOD_NOT_ALLOWED: " + e.getMessage();
+        if (!REDUNDANT_LOGGING_FILTER.isRedundantException(msg)) {
+          LOGGER.error(msg, e);
+        }
+        responseCallback.onError(VeniceReadResponseStatus.METHOD_NOT_ALLOWED, e.getMessage());
+        return;
+      }
+
+      LOGGER.error("Exception thrown for {}", request.getResourceName(), throwable);
+      if (checkMisroutedStoreVersionRequest(request)) {
+        responseCallback.onError(VeniceReadResponseStatus.MISROUTED_STORE_VERSION, throwable.getMessage());
+        return;
+      }
+      responseCallback.onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+    });
+  }
+
+  private VeniceReadResponseStatus getVeniceReadResponseStatus(VeniceNoStoreException e) {
     String topic = e.getStoreName();
     String storeName = Version.parseStoreFromKafkaTopicName(topic);
     int version = Version.parseVersionFromKafkaTopicName(topic);
     Store store = metadataRepository.getStore(storeName);
 
     if (store == null || store.getCurrentVersion() != version) {
-      return HttpResponseStatus.BAD_REQUEST;
+      return VeniceReadResponseStatus.BAD_REQUEST;
     }
 
     // return SERVICE_UNAVAILABLE to kick off error retry in router when store version resource exists
-    return HttpResponseStatus.SERVICE_UNAVAILABLE;
+    return VeniceReadResponseStatus.SERVICE_UNAVAILABLE;
   }
 
   /**

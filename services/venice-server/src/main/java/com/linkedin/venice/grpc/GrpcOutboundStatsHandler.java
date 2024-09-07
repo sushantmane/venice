@@ -1,10 +1,9 @@
-package com.linkedin.venice.listener.grpc.handlers;
+package com.linkedin.venice.grpc;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.ServerStatsContext;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import com.linkedin.venice.utils.LatencyUtils;
 import io.netty.handler.codec.http.HttpResponseStatus;

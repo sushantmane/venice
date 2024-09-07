@@ -1,11 +1,10 @@
-package com.linkedin.venice.listener.grpc.handlers;
+package com.linkedin.venice.grpc;
 
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.exceptions.VeniceNoStoreException;
 import com.linkedin.venice.listener.ReadQuotaEnforcementHandler;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 import com.linkedin.venice.listener.VeniceRequestEarlyTerminationException;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.listener.request.GetRouterRequest;
 import com.linkedin.venice.listener.request.MultiGetRouterRequestWrapper;
 import com.linkedin.venice.listener.request.RouterRequest;
@@ -52,18 +51,18 @@ public class GrpcStorageReadRequestHandler extends VeniceServerGrpcHandler {
         default:
           ctx.setError();
           ctx.getVeniceServerResponseBuilder()
-              .setErrorCode(VeniceReadResponseStatus.BAD_REQUEST)
+              .setErrorCode(VeniceReadResponseStatus.BAD_REQUEST.getCode())
               .setErrorMessage("Unknown request type: " + request.getRequestType());
       }
     } catch (VeniceNoStoreException e) {
       ctx.setError();
       ctx.getVeniceServerResponseBuilder()
-          .setErrorCode(VeniceReadResponseStatus.BAD_REQUEST)
+          .setErrorCode(VeniceReadResponseStatus.BAD_REQUEST.getCode())
           .setErrorMessage("No storage exists for: " + e.getStoreName());
     } catch (Exception e) {
       ctx.setError();
       ctx.getVeniceServerResponseBuilder()
-          .setErrorCode(VeniceReadResponseStatus.INTERNAL_ERROR)
+          .setErrorCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
           .setErrorMessage(String.format("Internal Error: %s", e.getMessage()));
     }
 

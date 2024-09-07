@@ -9,11 +9,11 @@ import com.linkedin.davinci.storage.StorageEngineRepository;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.acl.StaticAccessController;
 import com.linkedin.venice.cleaner.ResourceReadUsageTracker;
+import com.linkedin.venice.grpc.VeniceGrpcReadServiceImpl;
 import com.linkedin.venice.grpc.VeniceGrpcServer;
 import com.linkedin.venice.grpc.VeniceGrpcServerConfig;
+import com.linkedin.venice.grpc.VeniceServerGrpcRequestProcessor;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
-import com.linkedin.venice.listener.grpc.VeniceReadServiceImpl;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcRequestProcessor;
 import com.linkedin.venice.meta.ReadOnlySchemaRepository;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
 import com.linkedin.venice.security.SSLFactory;
@@ -173,12 +173,14 @@ public class ListenerService extends AbstractVeniceService {
                 serverConfig.getChannelOptionWriteBufferHighBytes()));
 
     if (isGrpcEnabled && grpcServer == null) {
+      StatsHandler statsHandler = channelInitializer.createStatsHandler();
       List<ServerInterceptor> interceptors = channelInitializer.initGrpcInterceptors();
       VeniceServerGrpcRequestProcessor requestProcessor = channelInitializer.initGrpcRequestProcessor();
       grpcExecutor = createThreadPool(serverConfig.getGrpcWorkerThreadCount(), "GrpcWorkerThread", nettyBacklogSize);
 
       VeniceGrpcServerConfig.Builder grpcServerBuilder = new VeniceGrpcServerConfig.Builder().setPort(grpcPort)
-          .setService(new VeniceReadServiceImpl(requestProcessor))
+          // TODO(sushantmane): Remove null and create new context obj that holds all the required objects
+          .setService(new VeniceGrpcReadServiceImpl(requestProcessor, statsHandler))
           .setExecutor(grpcExecutor)
           .setInterceptors(interceptors);
 

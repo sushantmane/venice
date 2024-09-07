@@ -17,8 +17,8 @@ import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.compression.CompressionStrategy;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcOutboundResponseHandler;
+import com.linkedin.venice.grpc.GrpcOutboundResponseHandler;
+import com.linkedin.venice.grpc.GrpcRequestContext;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import io.grpc.stub.StreamObserver;
@@ -177,7 +177,7 @@ public class OutboundHttpWrapperHandlerTest {
     when(readResponse.getCompressionStrategy()).thenReturn(CompressionStrategy.NO_OP);
     when(readResponse.isStreamingResponse()).thenReturn(false);
 
-    GrpcRequestContext context = new GrpcRequestContext(null, VeniceServerResponse.newBuilder(), getStreamObserver());
+    GrpcRequestContext context = new GrpcRequestContext(null, getStreamObserver());
     context.setReadResponse(readResponse);
 
     VeniceServerResponse.Builder responseBuilder = VeniceServerResponse.newBuilder();

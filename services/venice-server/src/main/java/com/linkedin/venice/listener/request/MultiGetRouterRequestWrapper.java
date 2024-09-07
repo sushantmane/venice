@@ -8,8 +8,8 @@ import com.linkedin.venice.read.protocol.request.router.MultiGetRouterRequestKey
 import com.linkedin.venice.schema.avro.ReadAvroProtocolDefinition;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
+import com.linkedin.venice.streaming.StreamingUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpRequest;
 import java.util.List;
 import org.apache.avro.io.OptimizedBinaryDecoderFactory;
 
@@ -20,13 +20,6 @@ import org.apache.avro.io.OptimizedBinaryDecoderFactory;
 public class MultiGetRouterRequestWrapper extends MultiKeyRouterRequestWrapper<MultiGetRouterRequestKeyV1> {
   private static final RecordDeserializer<MultiGetRouterRequestKeyV1> DESERIALIZER = FastSerializerDeserializerFactory
       .getFastAvroSpecificDeserializer(MultiGetRouterRequestKeyV1.SCHEMA$, MultiGetRouterRequestKeyV1.class);
-
-  private MultiGetRouterRequestWrapper(
-      String resourceName,
-      List<MultiGetRouterRequestKeyV1> keys,
-      HttpRequest request) {
-    super(resourceName, keys, request);
-  }
 
   private MultiGetRouterRequestWrapper(
       String resourceName,
@@ -57,16 +50,18 @@ public class MultiGetRouterRequestWrapper extends MultiKeyRouterRequestWrapper<M
     byte[] content = new byte[httpRequest.content().readableBytes()];
     httpRequest.content().readBytes(content);
     keys = parseKeys(content);
+    boolean isRetryRequest = RouterRequest.containRetryHeader(httpRequest);
+    boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(httpRequest);
 
-    return new MultiGetRouterRequestWrapper(requestParts[2], keys, httpRequest);
+    return new MultiGetRouterRequestWrapper(requestParts[2], keys, isRetryRequest, isStreamingRequest);
   }
 
   public static MultiGetRouterRequestWrapper parseMultiGetGrpcRequest(VeniceClientRequest grpcRequest) {
     String resourceName = grpcRequest.getResourceName();
     List<MultiGetRouterRequestKeyV1> keys = parseKeys(grpcRequest.getKeyBytes().toByteArray());
-
-    // isRetryRequest set to false for now, retry functionality is a later milestone
-    return new MultiGetRouterRequestWrapper(resourceName, keys, false, grpcRequest.getIsStreamingRequest());
+    boolean isRetryRequest = grpcRequest.getIsRetryRequest();
+    boolean isStreamingRequest = grpcRequest.getIsStreamingRequest();
+    return new MultiGetRouterRequestWrapper(resourceName, keys, isRetryRequest, isStreamingRequest);
   }
 
   private static List<MultiGetRouterRequestKeyV1> parseKeys(byte[] content) {
