@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -27,9 +26,6 @@ import static org.testng.Assert.assertTrue;
 import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
 import com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcReadQuotaEnforcementHandler;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcHandler;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.meta.Instance;
@@ -38,9 +34,7 @@ import com.linkedin.venice.meta.PartitionAssignment;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
-import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.read.RequestType;
-import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.routerapi.ReplicaState;
 import com.linkedin.venice.stats.AggServerQuotaUsageStats;
 import com.linkedin.venice.throttle.GuavaRateLimiter;
@@ -75,12 +69,10 @@ public class ReadQuotaEnforcementHandlerTest {
   private ReadOnlyStoreRepository storeRepository;
   private HelixCustomizedViewOfflinePushRepository customizedViewRepository;
   private ReadQuotaEnforcementHandler quotaEnforcementHandler;
-  private GrpcReadQuotaEnforcementHandler grpcQuotaEnforcementHandler;
   private AggServerQuotaUsageStats stats;
 
   private MetricsRepository metricsRepository;
   private RouterRequest routerRequest;
-  private VeniceServerGrpcHandler mockNextHandler;
 
   @BeforeMethod
   public void setUp() {
@@ -105,10 +97,6 @@ public class ReadQuotaEnforcementHandlerTest {
         stats,
         metricsRepository,
         clock);
-    grpcQuotaEnforcementHandler = new GrpcReadQuotaEnforcementHandler(quotaEnforcementHandler);
-    mockNextHandler = mock(VeniceServerGrpcHandler.class);
-    grpcQuotaEnforcementHandler.addNextHandler(mockNextHandler);
-    doNothing().when(mockNextHandler).processRequest(any());
     routerRequest = mock(RouterRequest.class);
   }
 
@@ -137,15 +125,6 @@ public class ReadQuotaEnforcementHandlerTest {
     HttpShortcutResponse shortcutResponse = (HttpShortcutResponse) response;
     assertEquals(shortcutResponse.getStatus(), HttpResponseStatus.BAD_REQUEST);
     assertNotNull(shortcutResponse.getMessage());
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), BAD_REQUEST);
-    assertNotNull(builder.getErrorMessage());
   }
 
   @Test
@@ -170,15 +149,6 @@ public class ReadQuotaEnforcementHandlerTest {
     Object receivedRequest = responseCaptor.getValue();
     assertTrue(receivedRequest instanceof RouterRequest);
     assertEquals(receivedRequest, routerRequest);
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), 0);
-    verify(mockNextHandler).processRequest(grpcCtx);
   }
 
   @Test
@@ -202,15 +172,6 @@ public class ReadQuotaEnforcementHandlerTest {
     Object receivedRequest = responseCaptor.getValue();
     assertTrue(receivedRequest instanceof RouterRequest);
     assertEquals(receivedRequest, routerRequest);
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), 0);
-    verify(mockNextHandler).processRequest(grpcCtx);
   }
 
   @Test
@@ -242,15 +203,6 @@ public class ReadQuotaEnforcementHandlerTest {
     Object response = responseCaptor.getValue();
     assertTrue(response instanceof HttpShortcutResponse);
     assertEquals(((HttpShortcutResponse) response).getStatus(), HttpResponseStatus.TOO_MANY_REQUESTS);
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.TOO_MANY_REQUESTS);
-    assertNotNull(builder.getErrorMessage());
 
     // Case 2: If request is a retry request, it should be allowed
     when(routerRequest.isRetryRequest()).thenReturn(true);
@@ -287,15 +239,6 @@ public class ReadQuotaEnforcementHandlerTest {
     Object response = responseCaptor.getValue();
     assertTrue(response instanceof HttpShortcutResponse);
     assertSame(((HttpShortcutResponse) response).getStatus(), HttpResponseStatus.SERVICE_UNAVAILABLE);
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.SERVICE_UNAVAILABLE);
-    assertNotNull(builder.getErrorMessage());
   }
 
   // both storeVersion quota and server capacity are sufficient to allow the request
@@ -329,15 +272,6 @@ public class ReadQuotaEnforcementHandlerTest {
     verify(ctx).fireChannelRead(responseCaptor.capture());
     Object receivedRequest = responseCaptor.getValue();
     assertTrue(receivedRequest instanceof RouterRequest);
-
-    // for gRPC handler
-    GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
-    grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), 0);
-    verify(mockNextHandler).processRequest(grpcCtx);
   }
 
   @Test

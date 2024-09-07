@@ -5,21 +5,15 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.ByteString;
 import com.linkedin.davinci.listener.response.MetadataResponse;
-import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.compression.CompressionStrategy;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcOutboundResponseHandler;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import io.grpc.stub.StreamObserver;
@@ -167,30 +161,6 @@ public class OutboundHttpWrapperHandlerTest {
     });
 
     outboundHttpWrapperHandler.write(mockCtx, msg, null);
-  }
-
-  @Test
-  public void testGrpcWrite() {
-    ByteBuf mockBody = mock(ByteBuf.class);
-
-    ReadResponse readResponse = mock(ReadResponse.class);
-    when(readResponse.getResponseBody()).thenReturn(mockBody);
-    when(readResponse.getCompressionStrategy()).thenReturn(CompressionStrategy.NO_OP);
-    when(readResponse.isStreamingResponse()).thenReturn(false);
-
-    GrpcRequestContext context = new GrpcRequestContext(null, VeniceServerResponse.newBuilder(), getStreamObserver());
-    context.setReadResponse(readResponse);
-
-    VeniceServerResponse.Builder responseBuilder = VeniceServerResponse.newBuilder();
-    ServerStatsContext statsContext = mock(ServerStatsContext.class);
-    context.setGrpcStatsContext(statsContext);
-    GrpcOutboundResponseHandler grpcHandler = spy(new GrpcOutboundResponseHandler());
-
-    grpcHandler.processRequest(context);
-
-    Assert.assertEquals(ByteString.empty(), responseBuilder.getData());
-
-    verify(grpcHandler).processRequest(context);
   }
 
   @Test
