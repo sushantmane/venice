@@ -2,6 +2,7 @@ package com.linkedin.venice.listener.request;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.protocols.GetCompressionDictionaryRequest;
 import java.net.URI;
 
 
@@ -28,6 +29,11 @@ public class DictionaryFetchRequest {
     } else {
       throw new VeniceException("Not a valid request for a DICTIONARY action: " + uri.getPath());
     }
+  }
+
+  public static DictionaryFetchRequest parseGetGrpcRequest(GetCompressionDictionaryRequest request) {
+    String topicName = Version.composeKafkaTopic(request.getStoreName(), request.getStoreVersion());
+    return new DictionaryFetchRequest(request.getStoreName(), topicName);
   }
 
   public String getResourceName() {

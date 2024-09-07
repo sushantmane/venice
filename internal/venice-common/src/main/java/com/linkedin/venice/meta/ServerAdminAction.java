@@ -12,4 +12,14 @@ public enum ServerAdminAction {
   public int getValue() {
     return this.value;
   }
+
+  // get the enum value from the integer value
+  public static ServerAdminAction fromValue(int value) {
+    for (ServerAdminAction action: ServerAdminAction.values()) {
+      if (action.getValue() == value) {
+        return action;
+      }
+    }
+    throw new IllegalArgumentException("Invalid value for ServerAdminAction: " + value);
+  }
 }

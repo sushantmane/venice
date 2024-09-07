@@ -81,7 +81,8 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
           body = Unpooled.wrappedBuffer(message.getBytes(StandardCharsets.UTF_8));
         }
         contentType = HttpConstants.TEXT_PLAIN;
-        if (shortcutResponse.getStatus().equals(VeniceRequestEarlyTerminationException.getHttpResponseStatus())) {
+        if (shortcutResponse.getStatus()
+            .equals(VeniceRequestEarlyTerminationException.getResponseStatusCode().getHttpResponseStatus())) {
           statsHandler.setRequestTerminatedEarly();
         }
         statsHandler.setMisroutedStoreVersionRequest(shortcutResponse.isMisroutedStoreVersion());
