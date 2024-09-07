@@ -7,7 +7,6 @@ import static org.testng.Assert.assertTrue;
 
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.listener.ServerStatsContext;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.protocols.VeniceServerResponse;
@@ -19,7 +18,7 @@ public class GrpcRequestContextTest {
   @Test
   public void testSetAndGetGrpcStatsContext() {
     ServerStatsContext context = new ServerStatsContext(null, null, null);
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setGrpcStatsContext(context);
 
     assertEquals(context, handlerContext.getGrpcStatsContext());
@@ -28,7 +27,7 @@ public class GrpcRequestContextTest {
   @Test
   public void testSetAndGetVeniceClientRequest() {
     VeniceClientRequest request = VeniceClientRequest.newBuilder().build();
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setVeniceClientRequest(request);
 
     assertEquals(request, handlerContext.getVeniceClientRequest());
@@ -37,7 +36,7 @@ public class GrpcRequestContextTest {
   @Test
   public void testSetAndGetVeniceServerResponseBuilder() {
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setVeniceServerResponseBuilder(builder);
 
     assertEquals(builder, handlerContext.getVeniceServerResponseBuilder());
@@ -59,7 +58,7 @@ public class GrpcRequestContextTest {
       }
     };
 
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setResponseObserver(observer);
 
     assertEquals(observer, handlerContext.getResponseObserver());
@@ -68,7 +67,7 @@ public class GrpcRequestContextTest {
   @Test
   public void testSetAndGetRouterRequest() {
     RouterRequest request = mock(RouterRequest.class);
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setRouterRequest(request);
 
     assertEquals(request, handlerContext.getRouterRequest());
@@ -77,7 +76,7 @@ public class GrpcRequestContextTest {
   @Test
   public void testSetAndGetReadResponse() {
     ReadResponse response = mock(ReadResponse.class);
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setReadResponse(response);
 
     assertEquals(response, handlerContext.getReadResponse());
@@ -85,7 +84,7 @@ public class GrpcRequestContextTest {
 
   @Test
   public void testIsCompleted() {
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
 
     assertFalse(handlerContext.isCompleted());
 
@@ -96,7 +95,7 @@ public class GrpcRequestContextTest {
 
   @Test
   public void testHasError() {
-    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null, null);
+    GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
 
     assertFalse(handlerContext.hasError());
 

@@ -1,10 +1,11 @@
-package com.linkedin.venice.listener.grpc;
+package com.linkedin.venice.grpc;
 
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.listener.ServerStatsContext;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.protocols.VeniceServerResponse;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import io.grpc.stub.StreamObserver;
 
 
@@ -26,11 +27,11 @@ public class GrpcRequestContext {
 
   public GrpcRequestContext(
       VeniceClientRequest veniceClientRequest,
-      VeniceServerResponse.Builder veniceServerResponseBuilder,
       StreamObserver<VeniceServerResponse> responseObserver) {
     this.veniceClientRequest = veniceClientRequest;
-    this.veniceServerResponseBuilder = veniceServerResponseBuilder;
+    this.veniceServerResponseBuilder = VeniceServerResponse.newBuilder();
     this.responseObserver = responseObserver;
+    this.veniceServerResponseBuilder.setErrorCode(VeniceReadResponseStatus.OK.getCode());
   }
 
   public void setGrpcStatsContext(ServerStatsContext serverStatsContext) {

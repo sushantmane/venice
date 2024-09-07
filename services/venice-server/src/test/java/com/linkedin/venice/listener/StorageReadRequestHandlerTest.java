@@ -47,11 +47,11 @@ import com.linkedin.venice.compute.protocol.request.router.ComputeRouterRequestK
 import com.linkedin.venice.compute.protocol.response.ComputeResponseRecordV1;
 import com.linkedin.venice.exceptions.PersistenceFailureException;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.grpc.GrpcRequestContext;
+import com.linkedin.venice.grpc.GrpcStorageReadRequestHandler;
+import com.linkedin.venice.grpc.VeniceServerGrpcHandler;
 import com.linkedin.venice.guid.JavaUtilGuidV4Generator;
 import com.linkedin.venice.kafka.protocol.GUID;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcStorageReadRequestHandler;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcHandler;
 import com.linkedin.venice.listener.request.AdminRequest;
 import com.linkedin.venice.listener.request.ComputeRouterRequestWrapper;
 import com.linkedin.venice.listener.request.GetRouterRequest;
@@ -280,8 +280,8 @@ public class StorageReadRequestHandlerTest {
     // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
     String uri = "/" + TYPE_STORAGE + "/test-topic_v1/" + partition + "/" + keyString;
     HttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
-    GetRouterRequest request =
-        GetRouterRequest.parseGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
+    GetRouterRequest request = GetRouterRequest
+        .parseSingleGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
 
     StorageReadRequestHandler requestHandler = createStorageReadRequestHandler();
     requestHandler.channelRead(context, request);
@@ -444,8 +444,8 @@ public class StorageReadRequestHandlerTest {
     // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
     String uri = "/" + TYPE_STORAGE + "/" + topic + "/" + partition + "/" + keyString;
     HttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
-    GetRouterRequest request =
-        GetRouterRequest.parseGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
+    GetRouterRequest request = GetRouterRequest
+        .parseSingleGetHttpRequest(httpRequest, RequestHelper.getRequestParts(URI.create(httpRequest.uri())));
 
     byte[] valueBytes = ValueRecord.create(schemaId, valueString.getBytes()).serialize();
     doReturn(valueBytes).when(storageEngine).get(partition, ByteBuffer.wrap(keyString.getBytes()));
@@ -598,7 +598,7 @@ public class StorageReadRequestHandlerTest {
     verify(context, times(1)).writeAndFlush(argumentCaptor.capture());
     HttpShortcutResponse shortcutResponse = (HttpShortcutResponse) argumentCaptor.getValue();
     assertEquals(shortcutResponse.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
-    assertEquals(shortcutResponse.getMessage(), "Unrecognized object in StorageExecutionHandler");
+    assertEquals(shortcutResponse.getMessage(), "Unrecognized request type");
   }
 
   @Test(dataProvider = "True-and-False", dataProviderClass = DataProviderUtils.class)
@@ -762,8 +762,7 @@ public class StorageReadRequestHandlerTest {
   public void testGrpcReadReturnsInternalErrorWhenRouterRequestIsNull() {
     VeniceClientRequest clientRequest =
         VeniceClientRequest.newBuilder().setIsBatchRequest(true).setResourceName("testStore_v1").build();
-    VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    GrpcRequestContext ctx = new GrpcRequestContext(clientRequest, builder, null);
+    GrpcRequestContext ctx = new GrpcRequestContext(clientRequest, null);
     StorageReadRequestHandler requestHandler = createStorageReadRequestHandler();
     GrpcStorageReadRequestHandler grpcReadRequestHandler = spy(new GrpcStorageReadRequestHandler(requestHandler));
     VeniceServerGrpcHandler mockNextHandler = mock(VeniceServerGrpcHandler.class);
@@ -771,7 +770,8 @@ public class StorageReadRequestHandlerTest {
     doNothing().when(mockNextHandler).processRequest(any());
     grpcReadRequestHandler.processRequest(ctx); // will cause np exception
 
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.INTERNAL_ERROR);
+    VeniceServerResponse.Builder builder = ctx.getVeniceServerResponseBuilder();
+    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
     assertTrue(builder.getErrorMessage().contains("Internal Error"));
   }
 

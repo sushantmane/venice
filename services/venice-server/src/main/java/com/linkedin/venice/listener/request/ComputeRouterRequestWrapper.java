@@ -10,8 +10,8 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
+import com.linkedin.venice.streaming.StreamingUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpRequest;
 import java.util.List;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.OptimizedBinaryDecoderFactory;
@@ -31,9 +31,10 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
       String resourceName,
       ComputeRequest computeRequest,
       List<ComputeRouterRequestKeyV1> keys,
-      HttpRequest request,
-      String schemaId) {
-    super(resourceName, keys, request);
+      String schemaId,
+      boolean isRetryRequest,
+      boolean isStreamingRequest) {
+    super(resourceName, keys, isRetryRequest, isStreamingRequest);
     this.computeRequest = computeRequest;
     if (schemaId != null) {
       this.valueSchemaId = Integer.parseInt(schemaId);
@@ -66,10 +67,18 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
     BinaryDecoder decoder = OptimizedBinaryDecoderFactory.defaultFactory()
         .createOptimizedBinaryDecoder(requestContent, 0, requestContent.length);
     ComputeRequest computeRequest = ComputeUtils.deserializeComputeRequest(decoder, null);
-
     List<ComputeRouterRequestKeyV1> keys = DESERIALIZER.deserializeObjects(decoder);
     String schemaId = httpRequest.headers().get(HttpConstants.VENICE_COMPUTE_VALUE_SCHEMA_ID);
-    return new ComputeRouterRequestWrapper(resourceName, computeRequest, keys, httpRequest, schemaId);
+    boolean isRetryRequest = GetRouterRequest.containRetryHeader(httpRequest);
+    boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(httpRequest);
+
+    return new ComputeRouterRequestWrapper(
+        resourceName,
+        computeRequest,
+        keys,
+        schemaId,
+        isRetryRequest,
+        isStreamingRequest);
   }
 
   public ComputeRequest getComputeRequest() {

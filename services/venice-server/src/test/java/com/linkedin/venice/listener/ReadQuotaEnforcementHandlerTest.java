@@ -1,6 +1,5 @@
 package com.linkedin.venice.listener;
 
-import static com.linkedin.venice.response.VeniceReadResponseStatus.BAD_REQUEST;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -17,11 +16,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.*;
 
+import com.linkedin.venice.grpc.GrpcReadQuotaEnforcementHandler;
+import com.linkedin.venice.grpc.GrpcRequestContext;
+import com.linkedin.venice.grpc.VeniceServerGrpcHandler;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
 import com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult;
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-import com.linkedin.venice.listener.grpc.handlers.GrpcReadQuotaEnforcementHandler;
-import com.linkedin.venice.listener.grpc.handlers.VeniceServerGrpcHandler;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.meta.Instance;
@@ -131,7 +130,7 @@ public class ReadQuotaEnforcementHandlerTest {
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
     when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), BAD_REQUEST);
+    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.BAD_REQUEST.getCode());
     assertNotNull(builder.getErrorMessage());
   }
 
@@ -236,7 +235,7 @@ public class ReadQuotaEnforcementHandlerTest {
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
     when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.TOO_MANY_REQUESTS);
+    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.TOO_MANY_REQUESTS.getCode());
     assertNotNull(builder.getErrorMessage());
 
     // Case 2: If request is a retry request, it should be allowed
@@ -281,7 +280,7 @@ public class ReadQuotaEnforcementHandlerTest {
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
     when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
-    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.SERVICE_UNAVAILABLE);
+    assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.SERVICE_UNAVAILABLE.getCode());
     assertNotNull(builder.getErrorMessage());
   }
 

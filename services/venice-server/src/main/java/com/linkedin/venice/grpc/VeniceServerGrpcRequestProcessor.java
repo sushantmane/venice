@@ -1,7 +1,4 @@
-package com.linkedin.venice.listener.grpc.handlers;
-
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
-
+package com.linkedin.venice.grpc;
 
 public class VeniceServerGrpcRequestProcessor {
   private VeniceServerGrpcHandler head = null;

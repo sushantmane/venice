@@ -83,7 +83,7 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
           HttpMethod requestMethod = req.method();
           if (requestMethod.equals(HttpMethod.GET)) {
             // TODO: evaluate whether we can replace single-get by multi-get
-            GetRouterRequest getRouterRequest = GetRouterRequest.parseGetHttpRequest(req, requestParts);
+            GetRouterRequest getRouterRequest = GetRouterRequest.parseSingleGetHttpRequest(req, requestParts);
             setupRequestTimeout(getRouterRequest);
             statsHandler.setRequestInfo(getRouterRequest);
             ctx.fireChannelRead(getRouterRequest);

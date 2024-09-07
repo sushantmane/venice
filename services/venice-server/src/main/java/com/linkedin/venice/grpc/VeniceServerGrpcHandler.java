@@ -1,6 +1,5 @@
-package com.linkedin.venice.listener.grpc.handlers;
+package com.linkedin.venice.grpc;
 
-import com.linkedin.venice.listener.grpc.GrpcRequestContext;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import io.grpc.stub.StreamObserver;
 
