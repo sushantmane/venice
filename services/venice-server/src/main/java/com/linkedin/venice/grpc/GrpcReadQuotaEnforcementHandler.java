@@ -32,7 +32,7 @@ public class GrpcReadQuotaEnforcementHandler extends VeniceServerGrpcHandler {
 
     // Otherwise, set an error response based on the quota enforcement result
     context.setError();
-    VeniceServerResponse.Builder responseBuilder = context.getVeniceServerResponseBuilder();
+    VeniceServerResponse.Builder responseBuilder = context.responseBuilder();
 
     switch (result) {
       case BAD_REQUEST:

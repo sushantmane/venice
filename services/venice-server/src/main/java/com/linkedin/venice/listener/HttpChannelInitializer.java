@@ -8,7 +8,6 @@ import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.acl.StaticAccessController;
 import com.linkedin.venice.authorization.IdentityParser;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.grpc.GrpcOutboundResponseHandler;
 import com.linkedin.venice.grpc.GrpcOutboundStatsHandler;
 import com.linkedin.venice.grpc.GrpcReadQuotaEnforcementHandler;
 import com.linkedin.venice.grpc.GrpcStorageReadRequestHandler;
@@ -250,7 +249,6 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       grpcServerRequestProcessor.addHandler(new GrpcReadQuotaEnforcementHandler(quotaEnforcer));
     }
     grpcServerRequestProcessor.addHandler(new GrpcStorageReadRequestHandler(requestHandler));
-    grpcServerRequestProcessor.addHandler(new GrpcOutboundResponseHandler());
     grpcServerRequestProcessor.addHandler(new GrpcOutboundStatsHandler());
     return grpcServerRequestProcessor;
   }

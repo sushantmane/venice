@@ -128,7 +128,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.BAD_REQUEST.getCode());
     assertNotNull(builder.getErrorMessage());
@@ -161,7 +161,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), 0);
     verify(mockNextHandler).processRequest(grpcCtx);
@@ -193,7 +193,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), 0);
     verify(mockNextHandler).processRequest(grpcCtx);
@@ -233,7 +233,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.TOO_MANY_REQUESTS.getCode());
     assertNotNull(builder.getErrorMessage());
@@ -278,7 +278,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), VeniceReadResponseStatus.SERVICE_UNAVAILABLE.getCode());
     assertNotNull(builder.getErrorMessage());
@@ -320,7 +320,7 @@ public class ReadQuotaEnforcementHandlerTest {
     GrpcRequestContext grpcCtx = mock(GrpcRequestContext.class);
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     when(grpcCtx.getRouterRequest()).thenReturn(routerRequest);
-    when(grpcCtx.getVeniceServerResponseBuilder()).thenReturn(builder);
+    when(grpcCtx.responseBuilder()).thenReturn(builder);
     grpcQuotaEnforcementHandler.processRequest(grpcCtx);
     assertEquals(builder.getErrorCode(), 0);
     verify(mockNextHandler).processRequest(grpcCtx);
@@ -780,7 +780,7 @@ public class ReadQuotaEnforcementHandlerTest {
       AtomicInteger blocked,
       RouterRequest request) {
     doReturn(request).when(grpcCtx).getRouterRequest();
-    doReturn(builder).when(grpcCtx).getVeniceServerResponseBuilder();
+    doReturn(builder).when(grpcCtx).responseBuilder();
     doAnswer((a) -> {
       allowed.incrementAndGet();
       return null;

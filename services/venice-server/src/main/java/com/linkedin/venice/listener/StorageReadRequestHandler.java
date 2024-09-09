@@ -243,7 +243,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     processRequest(request, HttpStorageResponseHandlerCallback.create(context));
   }
 
-  void processRequest(Object message, HttpStorageResponseHandlerCallback responseCallback) {
+  public void processRequest(Object message, StorageResponseHandlerCallback responseCallback) {
     if (message instanceof RouterRequest) {
       processIoRequest((RouterRequest) message, responseCallback);
       return;
@@ -306,7 +306,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   /**
    * Handles requests that require a storage engine lookup.
    */
-  private void processIoRequest(RouterRequest request, HttpStorageResponseHandlerCallback responseCallback) {
+  private void processIoRequest(RouterRequest request, StorageResponseHandlerCallback responseCallback) {
     this.resourceReadUsageTracker.accept(request.getResourceName());
 
     // Check if timeout has occurred before processing the request; if so, return early with an error response

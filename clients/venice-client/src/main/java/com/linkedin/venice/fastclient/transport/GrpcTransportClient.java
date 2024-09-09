@@ -267,17 +267,24 @@ public class GrpcTransportClient extends InternalTransportClient {
 
     @Override
     public void onNext(VeniceServerResponse value) {
-      if (value.getErrorCode() != VeniceReadResponseStatus.OK.getCode()) {
-        handleResponseError(value);
+      int statusCode = value.getErrorCode();
+      // Successful response
+      if (statusCode == VeniceReadResponseStatus.OK.getCode()) {
+        complete(
+            new TransportClientResponse(
+                value.getSchemaId(),
+                CompressionStrategy.valueOf(value.getCompressionStrategy()),
+                value.getData().toByteArray()),
+            null);
         return;
       }
-
-      complete(
-          new TransportClientResponse(
-              value.getSchemaId(),
-              CompressionStrategy.valueOf(value.getCompressionStrategy()),
-              value.getData().toByteArray()),
-          null);
+      // Key not found is a valid response
+      if (statusCode == VeniceReadResponseStatus.KEY_NOT_FOUND.getCode()) {
+        complete(null, null);
+        return;
+      }
+      // Handle the cases where the status code doesn't match healthy response codes
+      handleResponseError(value);
     }
 
     @Override
@@ -316,10 +323,6 @@ public class GrpcTransportClient extends InternalTransportClient {
           case TOO_MANY_REQUESTS:
             exception = new VeniceClientRateExceededException(errorMessage);
             break;
-          case KEY_NOT_FOUND:
-            // No exception for KEY_NOT_FOUND, we treat it as a successful response
-            exception = null;
-            break;
           default:
             exception = new VeniceClientException(
                 String.format(
@@ -334,11 +337,7 @@ public class GrpcTransportClient extends InternalTransportClient {
             String.format("Unknown status code: %d, message: %s", statusCode, errorMessage),
             e);
       }
-
-      if (exception != null) {
-        LOGGER.error("Error in response: ", exception);
-      }
-
+      LOGGER.error("Received error response with status code: {}, message: {}", statusCode, errorMessage);
       complete(null, exception);
     }
 

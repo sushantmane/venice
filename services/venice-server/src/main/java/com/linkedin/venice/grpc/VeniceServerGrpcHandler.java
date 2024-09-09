@@ -31,7 +31,7 @@ public abstract class VeniceServerGrpcHandler {
 
   public void writeResponse(GrpcRequestContext ctx) {
     StreamObserver<VeniceServerResponse> responseObserver = ctx.getResponseObserver();
-    VeniceServerResponse response = ctx.getVeniceServerResponseBuilder().build();
+    VeniceServerResponse response = ctx.responseBuilder().build();
 
     responseObserver.onNext(response);
     responseObserver.onCompleted();

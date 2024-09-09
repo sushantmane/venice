@@ -34,12 +34,12 @@ public class GrpcRequestContextTest {
   }
 
   @Test
-  public void testSetAndGetVeniceServerResponseBuilder() {
+  public void testSetAndResponseBuilder() {
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
     GrpcRequestContext handlerContext = new GrpcRequestContext(null, null);
     handlerContext.setVeniceServerResponseBuilder(builder);
 
-    assertEquals(builder, handlerContext.getVeniceServerResponseBuilder());
+    assertEquals(builder, handlerContext.responseBuilder());
   }
 
   @Test

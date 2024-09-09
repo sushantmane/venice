@@ -3,6 +3,7 @@ package com.linkedin.venice.listener.request;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.RequestConstants;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.protocols.SingleGetRequest;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.streaming.StreamingUtils;
@@ -69,6 +70,14 @@ public class GetRouterRequest extends RouterRequest {
     boolean isRetryRequest = request.getIsRetryRequest();
     boolean isStreamingRequest = request.getIsStreamingRequest();
     return new GetRouterRequest(resourceName, partition, keyBytes, isRetryRequest, isStreamingRequest);
+  }
+
+  public static GetRouterRequest parseSingleGetGrpcRequest(SingleGetRequest singleGetRequest) {
+    String resourceName = singleGetRequest.getResourceName();
+    int partition = singleGetRequest.getPartition();
+    byte[] keyBytes = getKeyBytesFromUrlKeyString(singleGetRequest.getKey());
+    boolean isRetryRequest = singleGetRequest.getIsRetryRequest();
+    return new GetRouterRequest(resourceName, partition, keyBytes, isRetryRequest, false);
   }
 
   public static byte[] getKeyBytesFromUrlKeyString(String keyString) {

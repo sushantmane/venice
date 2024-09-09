@@ -1,12 +1,20 @@
 package com.linkedin.venice.grpc;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+
+import com.google.protobuf.ByteString;
 import com.linkedin.davinci.listener.response.AdminResponse;
 import com.linkedin.davinci.listener.response.MetadataResponse;
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
+import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.listener.StorageResponseHandlerCallback;
 import com.linkedin.venice.listener.response.BinaryResponse;
+import com.linkedin.venice.listener.response.SingleGetResponseWrapper;
+import com.linkedin.venice.protocols.MultiGetResponse;
+import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
 
@@ -37,13 +45,64 @@ public class GrpcStorageResponseHandlerCallback implements StorageResponseHandle
 
   @Override
   public void onReadResponse(ReadResponse readResponse) {
-    VeniceServerResponse.Builder responseBuilder = requestContext.getVeniceServerResponseBuilder();
-    responseBuilder.setResponseRCU(readResponse.getRCU());
-    // TODO: Figure out why this is needed.
-    if (requestContext.getRouterRequest().isStreamingRequest()) {
-      responseBuilder.setIsStreamingResponse(true);
+    if (requestContext.isOldApi()) {
+      VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
+      builder.setResponseRCU(readResponse.getRCU());
+      builder.setCompressionStrategy(readResponse.getCompressionStrategy().getValue());
+      builder.setIsStreamingResponse(readResponse.isStreamingResponse());
+      if (!readResponse.isFound()) {
+        requestContext.setError();
+        requestContext.getGrpcStatsContext().setResponseStatus(NOT_FOUND);
+        builder.setErrorCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
+        builder.setErrorMessage("Key not found");
+        builder.setData(ByteString.EMPTY);
+      } else {
+        builder.setData(GrpcUtils.toByteString(readResponse.getResponseBody()));
+        builder.setSchemaId(readResponse.getResponseSchemaIdHeader());
+        requestContext.getGrpcStatsContext().setResponseStatus(OK);
+      }
+
+      readRequestHandler.invokeNextHandler(requestContext);
+      return;
     }
-    requestContext.setReadResponse(readResponse);
+
+    if (readResponse instanceof SingleGetResponseWrapper) {
+      SingleGetResponseWrapper singleGetResponseWrapper = (SingleGetResponseWrapper) readResponse;
+      SingleGetResponse.Builder builder = SingleGetResponse.newBuilder();
+      builder.setRcu(singleGetResponseWrapper.getRCU());
+      builder.setSchemaId(singleGetResponseWrapper.getResponseSchemaIdHeader());
+      builder.setCompressionStrategy(singleGetResponseWrapper.getCompressionStrategy().getValue());
+      if (!singleGetResponseWrapper.isFound()) {
+        requestContext.setError();
+        requestContext.getGrpcStatsContext().setResponseStatus(NOT_FOUND);
+        builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
+        builder.setErrorMessage("Key not found");
+        builder.setContentLength(0);
+      } else {
+        builder.setContentLength(singleGetResponseWrapper.getResponseBody().readableBytes());
+        builder.setContentType(HttpConstants.AVRO_BINARY);
+        builder.setValue(GrpcUtils.toByteString(singleGetResponseWrapper.getResponseBody()));
+        requestContext.getGrpcStatsContext().setResponseStatus(OK);
+      }
+      readRequestHandler.invokeNextHandler(requestContext);
+      return;
+    }
+
+    MultiGetResponse.Builder multiGetResponseBuilder = MultiGetResponse.newBuilder();
+    multiGetResponseBuilder.setRcu(readResponse.getRCU());
+    multiGetResponseBuilder.setCompressionStrategy(readResponse.getCompressionStrategy().getValue());
+    if (!readResponse.isFound()) {
+      requestContext.setError();
+      requestContext.getGrpcStatsContext().setResponseStatus(NOT_FOUND);
+      multiGetResponseBuilder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
+      multiGetResponseBuilder.setErrorMessage("Key not found");
+      multiGetResponseBuilder.setContentLength(0);
+    } else {
+      multiGetResponseBuilder.setContentLength(readResponse.getResponseBody().readableBytes());
+      multiGetResponseBuilder.setContentType(HttpConstants.AVRO_BINARY);
+      multiGetResponseBuilder.setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
+      requestContext.getGrpcStatsContext().setResponseStatus(OK);
+    }
     readRequestHandler.invokeNextHandler(requestContext);
   }
 
@@ -81,7 +140,7 @@ public class GrpcStorageResponseHandlerCallback implements StorageResponseHandle
   @Override
   public void onError(VeniceReadResponseStatus readResponseStatus, String message) {
     requestContext.setError();
-    requestContext.getVeniceServerResponseBuilder().setErrorCode(readResponseStatus.getCode()).setErrorMessage(message);
+    requestContext.responseBuilder().setErrorCode(readResponseStatus.getCode()).setErrorMessage(message);
     readRequestHandler.invokeNextHandler(requestContext);
   }
 }

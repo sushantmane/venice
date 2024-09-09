@@ -3,9 +3,6 @@ package com.linkedin.venice.grpc;
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.listener.ServerStatsContext;
 import com.linkedin.venice.listener.request.RouterRequest;
-import com.linkedin.venice.protocols.VeniceClientRequest;
-import com.linkedin.venice.protocols.VeniceServerResponse;
-import com.linkedin.venice.response.VeniceReadResponseStatus;
 import io.grpc.stub.StreamObserver;
 
 
@@ -14,24 +11,19 @@ import io.grpc.stub.StreamObserver;
  * and separate different parts of the logic for the response. If a specific handler raises an error, we set
  * the hasError flag to true and stop executing the rest of the pipeline excluding the stats collection.
  */
-public class GrpcRequestContext {
-  private VeniceClientRequest veniceClientRequest;
-  private VeniceServerResponse.Builder veniceServerResponseBuilder;
-  private StreamObserver<VeniceServerResponse> responseObserver;
+public class GrpcRequestContext<T> {
+  private StreamObserver<T> responseObserver;
 
   private boolean isCompleted = false;
   private boolean hasError = false;
   private RouterRequest routerRequest;
   private ReadResponse readResponse;
   private ServerStatsContext serverStatsContext;
+  boolean isOldApi = true;
 
-  public GrpcRequestContext(
-      VeniceClientRequest veniceClientRequest,
-      StreamObserver<VeniceServerResponse> responseObserver) {
-    this.veniceClientRequest = veniceClientRequest;
-    this.veniceServerResponseBuilder = VeniceServerResponse.newBuilder();
+  public GrpcRequestContext(StreamObserver<T> responseObserver) {
     this.responseObserver = responseObserver;
-    this.veniceServerResponseBuilder.setErrorCode(VeniceReadResponseStatus.OK.getCode());
+    // this.veniceServerResponseBuilder.setErrorCode(VeniceReadResponseStatus.OK.getCode());
   }
 
   public void setGrpcStatsContext(ServerStatsContext serverStatsContext) {
@@ -42,27 +34,11 @@ public class GrpcRequestContext {
     return serverStatsContext;
   }
 
-  public VeniceClientRequest getVeniceClientRequest() {
-    return veniceClientRequest;
-  }
-
-  public void setVeniceClientRequest(VeniceClientRequest veniceClientRequest) {
-    this.veniceClientRequest = veniceClientRequest;
-  }
-
-  public VeniceServerResponse.Builder getVeniceServerResponseBuilder() {
-    return veniceServerResponseBuilder;
-  }
-
-  public void setVeniceServerResponseBuilder(VeniceServerResponse.Builder veniceServerResponseBuilder) {
-    this.veniceServerResponseBuilder = veniceServerResponseBuilder;
-  }
-
-  public StreamObserver<VeniceServerResponse> getResponseObserver() {
+  public StreamObserver<T> getResponseObserver() {
     return responseObserver;
   }
 
-  public void setResponseObserver(StreamObserver<VeniceServerResponse> responseObserver) {
+  public void setResponseObserver(StreamObserver<T> responseObserver) {
     this.responseObserver = responseObserver;
   }
 
@@ -96,5 +72,13 @@ public class GrpcRequestContext {
 
   public void setError() {
     hasError = true;
+  }
+
+  boolean isOldApi() {
+    return isOldApi;
+  }
+
+  public void setOldApi(boolean isOldApi) {
+    this.isOldApi = isOldApi;
   }
 }
