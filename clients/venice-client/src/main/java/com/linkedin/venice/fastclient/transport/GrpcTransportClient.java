@@ -308,24 +308,37 @@ public class GrpcTransportClient extends InternalTransportClient {
       int statusCode = response.getErrorCode();
       String errorMessage = response.getErrorMessage();
       Exception exception;
-
-      if (statusCode == VeniceReadResponseStatus.BAD_REQUEST.getCode()) {
-        exception = new VeniceClientHttpException(errorMessage, statusCode);
-      } else if (statusCode == VeniceReadResponseStatus.TOO_MANY_REQUESTS.getCode()) {
-        exception = new VeniceClientRateExceededException(errorMessage);
-      } else if (statusCode == VeniceReadResponseStatus.KEY_NOT_FOUND.getCode()) {
-        exception = null;
-      } else {
+      try {
+        switch (VeniceReadResponseStatus.fromCode(statusCode)) {
+          case BAD_REQUEST:
+            exception = new VeniceClientHttpException(errorMessage, statusCode);
+            break;
+          case TOO_MANY_REQUESTS:
+            exception = new VeniceClientRateExceededException(errorMessage);
+            break;
+          case KEY_NOT_FOUND:
+            // No exception for KEY_NOT_FOUND, we treat it as a successful response
+            exception = null;
+            break;
+          default:
+            exception = new VeniceClientException(
+                String.format(
+                    "An unexpected error occurred with status code: %d, message: %s",
+                    statusCode,
+                    errorMessage));
+            break;
+        }
+      } catch (IllegalArgumentException e) {
+        // Handle the case where the status code doesn't match any known values
         exception = new VeniceClientException(
-            String.format("An unexpected error occurred with status code: %d, message: %s", statusCode, errorMessage));
+            String.format("Unknown status code: %d, message: %s", statusCode, errorMessage),
+            e);
       }
 
       if (exception != null) {
-        LOGGER.error("Got error in response due to", exception);
+        LOGGER.error("Error in response: ", exception);
       }
 
-      // In the event of record not found, we treat that as a successful response and complete the future with a null
-      // value and the exception is set to null as well.
       complete(null, exception);
     }
 
