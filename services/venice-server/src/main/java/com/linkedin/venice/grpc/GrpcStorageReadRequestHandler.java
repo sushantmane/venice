@@ -23,15 +23,17 @@ import io.netty.channel.ChannelHandlerContext;
  * TODO: Refactor with better abstractions so that gRPC and legacy endpoints have better code reuse and behavior parity.
  */
 public class GrpcStorageReadRequestHandler extends VeniceServerGrpcHandler {
-  private final StorageReadRequestHandler storage;
+  private final StorageReadRequestHandler readRequestHandler;
 
-  public GrpcStorageReadRequestHandler(StorageReadRequestHandler storage) {
-    this.storage = storage;
+  public GrpcStorageReadRequestHandler(StorageReadRequestHandler _readRequestHandler) {
+    this.readRequestHandler = _readRequestHandler;
   }
 
   @Override
   public void processRequest(GrpcRequestContext ctx) {
+    GrpcStorageResponseHandlerCallback responseHandler = GrpcStorageResponseHandlerCallback.create(ctx, this);
     RouterRequest request = ctx.getRouterRequest();
+
     ReadResponse response = null;
 
     try {
@@ -42,11 +44,11 @@ public class GrpcStorageReadRequestHandler extends VeniceServerGrpcHandler {
       switch (request.getRequestType()) {
         case SINGLE_GET:
           // TODO: get rid of blocking here
-          response = storage.handleSingleGetRequest((GetRouterRequest) request).get();
+          response = readRequestHandler.handleSingleGetRequest((GetRouterRequest) request).get();
           break;
         case MULTI_GET:
           // TODO: get rid of blocking here
-          response = storage.handleMultiGetRequest((MultiGetRouterRequestWrapper) request).get();
+          response = readRequestHandler.handleMultiGetRequest((MultiGetRouterRequestWrapper) request).get();
           break;
         default:
           ctx.setError();
