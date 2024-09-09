@@ -47,6 +47,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
+/**
+ * This class implements the Venice Read Service gRPC service.
+ */
 public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadServiceImplBase {
   private static final Logger LOGGER = LogManager.getLogger(VeniceGrpcReadServiceImpl.class);
 
