@@ -109,7 +109,7 @@ public class ListenerService extends AbstractVeniceService {
       new ThreadPoolStats(metricsRepository, this.sslHandshakeExecutor, "ssl_handshake_thread_pool");
     }
 
-    StorageReadRequestHandler requestHandler = createRequestHandler(
+    StorageReadRequestHandler storageReadRequestHandler = createRequestHandler(
         executor,
         computeExecutor,
         storageEngineRepository,
@@ -124,7 +124,7 @@ public class ListenerService extends AbstractVeniceService {
         compressorFactory,
         resourceReadUsageTracker);
 
-    storageReadRequestHandler = requestHandler;
+    this.storageReadRequestHandler = storageReadRequestHandler;
 
     HttpChannelInitializer channelInitializer = new HttpChannelInitializer(
         storeMetadataRepository,
@@ -135,7 +135,7 @@ public class ListenerService extends AbstractVeniceService {
         serverConfig,
         routerAccessController,
         storeAccessController,
-        requestHandler);
+        storageReadRequestHandler);
 
     Class<? extends ServerChannel> serverSocketChannelClass = NioServerSocketChannel.class;
     boolean epollEnabled = serverConfig.isRestServiceEpollEnabled();
@@ -179,8 +179,12 @@ public class ListenerService extends AbstractVeniceService {
       grpcExecutor = createThreadPool(serverConfig.getGrpcWorkerThreadCount(), "GrpcWorkerThread", nettyBacklogSize);
 
       VeniceGrpcServerConfig.Builder grpcServerBuilder = new VeniceGrpcServerConfig.Builder().setPort(grpcPort)
-          // TODO(sushantmane): Remove null and create new context obj that holds all the required objects
-          .setService(new VeniceGrpcReadServiceImpl(requestProcessor, statsHandler))
+          .setService(
+              new VeniceGrpcReadServiceImpl(
+                  requestProcessor,
+                  statsHandler,
+                  diskHealthService,
+                  storageReadRequestHandler))
           .setExecutor(grpcExecutor)
           .setInterceptors(interceptors);
 

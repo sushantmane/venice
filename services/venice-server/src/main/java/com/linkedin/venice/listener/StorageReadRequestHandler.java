@@ -43,6 +43,7 @@ import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.request.TopicPartitionIngestionContextRequest;
 import com.linkedin.venice.listener.response.BinaryResponse;
 import com.linkedin.venice.listener.response.ComputeResponseWrapper;
+import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.listener.response.MultiGetResponseWrapper;
 import com.linkedin.venice.listener.response.MultiKeyResponseWrapper;
 import com.linkedin.venice.listener.response.ParallelMultiKeyResponseWrapper;
@@ -105,6 +106,8 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   private static final Logger LOGGER = LogManager.getLogger(StorageReadRequestHandler.class);
   private static final RedundantExceptionFilter REDUNDANT_LOGGING_FILTER =
       RedundantExceptionFilter.getRedundantExceptionFilter();
+  public static final String VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG =
+      "Venice storage node hardware is not healthy!";
   private final DiskHealthCheckService diskHealthCheckService;
   private final ThreadPoolExecutor executor;
   private final ThreadPoolExecutor computeExecutor;
@@ -239,22 +242,21 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext context, Object request) throws Exception {
-    processRequest(request, HttpStorageResponseHandlerCallback.create(context));
-  }
-
-  public void processRequest(Object message, StorageResponseHandlerCallback responseCallback) {
+  public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
     if (message instanceof RouterRequest) {
-      processIoRequest((RouterRequest) message, responseCallback);
+      // IO requests are processed in a separate thread pool
+      processIoRequestAsync((RouterRequest) message, HttpStorageResponseHandlerCallback.create(context));
       return;
     }
 
     if (message instanceof HealthCheckRequest) {
       if (diskHealthCheckService.isDiskHealthy()) {
-        responseCallback.onResponse(VeniceReadResponseStatus.OK, "OK");
+        context.writeAndFlush(new HttpShortcutResponse("OK", VeniceReadResponseStatus.OK.getHttpResponseStatus()));
       } else {
-        responseCallback
-            .onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, "Venice storage node hardware is not healthy!");
+        context.writeAndFlush(
+            new HttpShortcutResponse(
+                VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG,
+                VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getHttpResponseStatus()));
         LOGGER.error(
             "Disk is not healthy according to the disk health check service: {}",
             diskHealthCheckService.getErrorMessage());
@@ -264,49 +266,53 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
 
     if (message instanceof DictionaryFetchRequest) {
       BinaryResponse response = handleDictionaryFetchRequest((DictionaryFetchRequest) message);
-      responseCallback.onBinaryResponse(response);
+      context.writeAndFlush(response);
       return;
     }
 
     if (message instanceof AdminRequest) {
       AdminResponse response = handleServerAdminRequest((AdminRequest) message);
-      responseCallback.onAdminResponse(response);
+      context.writeAndFlush(response);
       return;
     }
 
     if (message instanceof MetadataFetchRequest) {
       try {
         MetadataResponse response = handleMetadataFetchRequest((MetadataFetchRequest) message);
-        responseCallback.onMetadataResponse(response);
+        context.writeAndFlush(response);
       } catch (UnsupportedOperationException e) {
         LOGGER.warn(
             "Metadata requested by a storage node read quota not enabled store: {}",
             ((MetadataFetchRequest) message).getStoreName());
-        responseCallback.onError(VeniceReadResponseStatus.FORBIDDEN, e.getMessage());
+        context.writeAndFlush(
+            new HttpShortcutResponse(e.getMessage(), VeniceReadResponseStatus.FORBIDDEN.getHttpResponseStatus()));
       }
       return;
     }
 
     if (message instanceof CurrentVersionRequest) {
       ServerCurrentVersionResponse response = handleCurrentVersionRequest((CurrentVersionRequest) message);
-      responseCallback.onServerCurrentVersionResponse(response);
+      context.writeAndFlush(response);
       return;
     }
 
     if (message instanceof TopicPartitionIngestionContextRequest) {
       TopicPartitionIngestionContextResponse response =
           handleTopicPartitionIngestionContextRequest((TopicPartitionIngestionContextRequest) message);
-      responseCallback.onTopicPartitionIngestionContextResponse(response);
+      context.writeAndFlush(response);
       return;
     }
 
-    responseCallback.onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, "Unrecognized request type");
+    context.writeAndFlush(
+        new HttpShortcutResponse(
+            "Unrecognized request type",
+            VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getHttpResponseStatus()));
   }
 
   /**
    * Handles requests that require a storage engine lookup.
    */
-  private void processIoRequest(RouterRequest request, StorageResponseHandlerCallback responseCallback) {
+  private void processIoRequestAsync(RouterRequest request, StorageResponseHandlerCallback responseCallback) {
     this.resourceReadUsageTracker.accept(request.getResourceName());
 
     // Check if timeout has occurred before processing the request; if so, return early with an error response
@@ -774,16 +780,16 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     incrementOperatorCounters(response.getStats(), requestContext.operations, hits);
   }
 
-  private BinaryResponse handleDictionaryFetchRequest(DictionaryFetchRequest request) {
+  public BinaryResponse handleDictionaryFetchRequest(DictionaryFetchRequest request) {
     ByteBuffer dictionary = ingestionMetadataRetriever.getStoreVersionCompressionDictionary(request.getResourceName());
     return new BinaryResponse(dictionary);
   }
 
-  private MetadataResponse handleMetadataFetchRequest(MetadataFetchRequest request) {
+  public MetadataResponse handleMetadataFetchRequest(MetadataFetchRequest request) {
     return readMetadataRetriever.getMetadata(request.getStoreName());
   }
 
-  private ServerCurrentVersionResponse handleCurrentVersionRequest(CurrentVersionRequest request) {
+  public ServerCurrentVersionResponse handleCurrentVersionRequest(CurrentVersionRequest request) {
     return readMetadataRetriever.getCurrentVersionResponse(request.getStoreName());
   }
 
@@ -828,7 +834,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     }
   }
 
-  private AdminResponse handleServerAdminRequest(AdminRequest adminRequest) {
+  public AdminResponse handleServerAdminRequest(AdminRequest adminRequest) {
     switch (adminRequest.getServerAdminAction()) {
       case DUMP_INGESTION_STATE:
         String topicName = adminRequest.getStoreVersion();
@@ -850,7 +856,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     }
   }
 
-  private TopicPartitionIngestionContextResponse handleTopicPartitionIngestionContextRequest(
+  public TopicPartitionIngestionContextResponse handleTopicPartitionIngestionContextRequest(
       TopicPartitionIngestionContextRequest topicPartitionIngestionContextRequest) {
     Integer partition = topicPartitionIngestionContextRequest.getPartition();
     String versionTopic = topicPartitionIngestionContextRequest.getVersionTopic();

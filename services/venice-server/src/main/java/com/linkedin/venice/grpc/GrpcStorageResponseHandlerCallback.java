@@ -4,14 +4,9 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
 import com.google.protobuf.ByteString;
-import com.linkedin.davinci.listener.response.AdminResponse;
-import com.linkedin.davinci.listener.response.MetadataResponse;
 import com.linkedin.davinci.listener.response.ReadResponse;
-import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
-import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.listener.StorageResponseHandlerCallback;
-import com.linkedin.venice.listener.response.BinaryResponse;
 import com.linkedin.venice.listener.response.SingleGetResponseWrapper;
 import com.linkedin.venice.protocols.MultiGetResponse;
 import com.linkedin.venice.protocols.SingleGetResponse;
@@ -104,37 +99,6 @@ public class GrpcStorageResponseHandlerCallback implements StorageResponseHandle
       requestContext.getGrpcStatsContext().setResponseStatus(OK);
     }
     readRequestHandler.invokeNextHandler(requestContext);
-  }
-
-  @Override
-  public void onBinaryResponse(BinaryResponse binaryResponse) {
-    throw new UnsupportedOperationException("Not implemented yet");
-  }
-
-  @Override
-  public void onAdminResponse(AdminResponse adminResponse) {
-    throw new UnsupportedOperationException("Not implemented yet");
-  }
-
-  @Override
-  public void onMetadataResponse(MetadataResponse metadataResponse) {
-    throw new UnsupportedOperationException("Not implemented yet");
-  }
-
-  @Override
-  public void onServerCurrentVersionResponse(ServerCurrentVersionResponse serverCurrentVersionResponse) {
-    throw new UnsupportedOperationException("Not implemented yet");
-  }
-
-  @Override
-  public void onTopicPartitionIngestionContextResponse(
-      TopicPartitionIngestionContextResponse topicPartitionIngestionContextResponse) {
-    throw new UnsupportedOperationException("Not implemented yet");
-  }
-
-  @Override
-  public void onResponse(VeniceReadResponseStatus readResponseStatus, String message) {
-
   }
 
   @Override

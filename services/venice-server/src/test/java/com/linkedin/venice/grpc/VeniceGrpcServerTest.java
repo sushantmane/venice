@@ -26,7 +26,7 @@ public class VeniceGrpcServerTest {
     grpcRequestProcessor = mock(VeniceServerGrpcRequestProcessor.class);
     serverConfig = new VeniceGrpcServerConfig.Builder().setPort(TestUtils.getFreePort())
         .setNumThreads(10)
-        .setService(new VeniceGrpcReadServiceImpl(grpcRequestProcessor, null));
+        .setService(new VeniceGrpcReadServiceImpl(grpcRequestProcessor, null, null, null));
   }
 
   @Test
