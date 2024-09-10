@@ -1,6 +1,5 @@
 package com.linkedin.venice.listener;
 
-import static com.linkedin.venice.response.VeniceReadResponseStatus.BAD_REQUEST;
 import static com.linkedin.venice.throttle.VeniceRateLimiter.RateLimiterType;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
