@@ -7,7 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 
 
 /**
- * This is used in REST/HTTP Netty handlers to handle the response from the {@link StorageReadRequestHandler#processIoRequestAsync} method.
+ * This is used in REST/HTTP Netty handlers to handle the response from the {@link StorageReadRequestHandler#queueIoRequestForAsyncProcessing} method.
  */
 public class HttpStorageResponseHandlerCallback implements StorageResponseHandlerCallback {
   private final ChannelHandlerContext context;

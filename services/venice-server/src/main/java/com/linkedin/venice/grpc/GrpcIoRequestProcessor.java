@@ -2,9 +2,6 @@ package com.linkedin.venice.grpc;
 
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.INVALID_REQUEST_RESOURCE_MSG;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED;
-import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.BAD_REQUEST;
-import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.OVER_CAPACITY;
-import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.REJECTED;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.SERVER_OVER_CAPACITY_MSG;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -47,7 +44,7 @@ public class GrpcIoRequestProcessor {
     // If the request is allowed, hand it off to the storage read request handler
     if (result == null || result == ALLOWED) {
       GrpcStorageResponseHandlerCallback callback = GrpcStorageResponseHandlerCallback.create(requestContext);
-      storageReadRequestHandler.processIoRequestAsync(request, callback);
+      storageReadRequestHandler.queueIoRequestForAsyncProcessing(request, callback);
       return;
     }
 
@@ -92,29 +89,33 @@ public class GrpcIoRequestProcessor {
 
   public static void sendSingleGetResponse(GrpcRequestContext<SingleGetResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
-    SingleGetResponse.Builder builder = SingleGetResponse.newBuilder()
-        .setRcu(readResponse.getRCU())
-        .setSchemaId(readResponse.getResponseSchemaIdHeader())
-        .setCompressionStrategy(readResponse.getCompressionStrategy().getValue());
+    SingleGetResponse.Builder builder = SingleGetResponse.newBuilder();
     if (readResponse == null) {
       builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
     } else if (readResponse.isFound()) {
-      builder.setContentLength(readResponse.getResponseBody().readableBytes());
-      builder.setContentType(HttpConstants.AVRO_BINARY);
-      builder.setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
+      builder.setRcu(readResponse.getRCU())
+          .setStatusCode(VeniceReadResponseStatus.OK.getCode())
+          .setSchemaId(readResponse.getResponseSchemaIdHeader())
+          .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+          .setContentLength(readResponse.getResponseBody().readableBytes())
+          .setContentType(HttpConstants.AVRO_BINARY)
+          .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
       requestContext.getStatsContext().setResponseStatus(OK);
     } else {
       requestContext.setError();
       requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
-      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
-      builder.setErrorMessage("Key not found");
-      builder.setContentLength(0);
+      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
+          .setRcu(readResponse.getRCU())
+          .setErrorMessage("Key not found")
+          .setContentLength(0);
     }
     StreamObserver<SingleGetResponse> responseObserver = requestContext.getResponseObserver();
 
-    responseObserver.onNext(builder.build());
-    responseObserver.onCompleted();
+    synchronized (responseObserver) {
+      responseObserver.onNext(builder.build());
+      responseObserver.onCompleted();
+    }
 
     reportRequestStats(requestContext);
   }
@@ -122,55 +123,62 @@ public class GrpcIoRequestProcessor {
   public static void sendMultiGetResponse(GrpcRequestContext<MultiGetResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
-    builder.setRcu(readResponse.getRCU());
-    builder.setCompressionStrategy(readResponse.getCompressionStrategy().getValue());
     if (readResponse == null) {
       builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
     } else if (readResponse.isFound()) {
-      builder.setContentLength(readResponse.getResponseBody().readableBytes());
-      builder.setContentType(HttpConstants.AVRO_BINARY);
-      builder.setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
+      builder.setStatusCode(VeniceReadResponseStatus.OK.getCode())
+          .setRcu(readResponse.getRCU())
+          .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+          .setContentLength(readResponse.getResponseBody().readableBytes())
+          .setContentType(HttpConstants.AVRO_BINARY)
+          .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
       requestContext.getStatsContext().setResponseStatus(OK);
     } else {
       requestContext.setError();
       requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
-      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
-      builder.setErrorMessage("Key not found");
-      builder.setContentLength(0);
+      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
+          .setRcu(readResponse.getRCU())
+          .setErrorMessage("Key not found")
+          .setContentLength(0);
     }
 
     StreamObserver<MultiGetResponse> responseObserver = requestContext.getResponseObserver();
-    responseObserver.onNext(builder.build());
-    responseObserver.onCompleted();
-
+    synchronized (responseObserver) {
+      responseObserver.onNext(builder.build());
+      responseObserver.onCompleted();
+    }
     reportRequestStats(requestContext);
   }
 
   public static void sendVeniceServerResponse(GrpcRequestContext<VeniceServerResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-    builder.setResponseRCU(readResponse.getRCU());
-    builder.setCompressionStrategy(readResponse.getCompressionStrategy().getValue());
-    builder.setIsStreamingResponse(readResponse.isStreamingResponse());
+
     if (readResponse == null) {
       builder.setErrorCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
-    } else if (!readResponse.isFound()) {
+    } else if (readResponse.isFound()) {
+      builder.setErrorCode(VeniceReadResponseStatus.OK.getCode())
+          .setResponseRCU(readResponse.getRCU())
+          .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+          .setIsStreamingResponse(readResponse.isStreamingResponse())
+          .setSchemaId(readResponse.getResponseSchemaIdHeader())
+          .setData(GrpcUtils.toByteString(readResponse.getResponseBody()));
+      requestContext.getStatsContext().setResponseStatus(OK);
+    } else {
+      builder.setErrorCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
+          .setErrorMessage("Key not found")
+          .setData(ByteString.EMPTY);
       requestContext.setError();
       requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
-      builder.setErrorCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode());
-      builder.setErrorMessage("Key not found");
-      builder.setData(ByteString.EMPTY);
-    } else {
-      builder.setData(GrpcUtils.toByteString(readResponse.getResponseBody()));
-      builder.setSchemaId(readResponse.getResponseSchemaIdHeader());
-      requestContext.getStatsContext().setResponseStatus(OK);
     }
 
     StreamObserver<VeniceServerResponse> responseObserver = requestContext.getResponseObserver();
-    responseObserver.onNext(builder.build());
-    responseObserver.onCompleted();
+    synchronized (responseObserver) {
+      responseObserver.onNext(builder.build());
+      responseObserver.onCompleted();
+    }
 
     reportRequestStats(requestContext);
   }

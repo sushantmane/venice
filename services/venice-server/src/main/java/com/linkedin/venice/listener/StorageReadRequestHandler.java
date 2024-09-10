@@ -272,7 +272,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
     if (message instanceof RouterRequest) {
       // IO requests are processed in a separate thread pool
-      processIoRequestAsync((RouterRequest) message, HttpStorageResponseHandlerCallback.create(context));
+      queueIoRequestForAsyncProcessing((RouterRequest) message, HttpStorageResponseHandlerCallback.create(context));
       return;
     }
 
@@ -339,7 +339,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   /**
    * Handles requests that require a storage engine lookup.
    */
-  public void processIoRequestAsync(RouterRequest request, StorageResponseHandlerCallback responseCallback) {
+  public void queueIoRequestForAsyncProcessing(RouterRequest request, StorageResponseHandlerCallback responseCallback) {
     this.resourceReadUsageTracker.accept(request.getResourceName());
 
     // Check if timeout has occurred before processing the request; if so, return early with an error response
