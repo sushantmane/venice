@@ -1,6 +1,8 @@
 package com.linkedin.venice.response;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -14,6 +16,14 @@ public enum VeniceReadResponseStatus {
   INTERNAL_SERVER_ERROR(HttpResponseStatus.INTERNAL_SERVER_ERROR),
   SERVICE_UNAVAILABLE(HttpResponseStatus.SERVICE_UNAVAILABLE),
   MISROUTED_STORE_VERSION(new HttpResponseStatus(570, "Misrouted request"));
+
+  private static final Map<Integer, VeniceReadResponseStatus> STATUS_MAP = new HashMap<>(16);
+
+  static {
+    for (VeniceReadResponseStatus status: values()) {
+      STATUS_MAP.put(status.getCode(), status);
+    }
+  }
 
   private final HttpResponseStatus httpResponseStatus;
 
@@ -30,11 +40,10 @@ public enum VeniceReadResponseStatus {
   }
 
   public static VeniceReadResponseStatus fromCode(int code) {
-    for (VeniceReadResponseStatus status: values()) {
-      if (status.getCode() == code) {
-        return status;
-      }
+    VeniceReadResponseStatus status = STATUS_MAP.get(code);
+    if (status == null) {
+      throw new IllegalArgumentException("Unknown status venice read response status code: " + code);
     }
-    throw new IllegalArgumentException("Unknown status venice read response status code: " + code);
+    return status;
   }
 }

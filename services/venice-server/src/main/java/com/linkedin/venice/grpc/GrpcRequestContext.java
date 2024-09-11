@@ -14,7 +14,7 @@ import io.grpc.stub.StreamObserver;
  */
 public class GrpcRequestContext<T> {
   private final StreamObserver<T> responseObserver;
-  private final Class<?> responseType;
+  private final GrpcRequestType grpcRequestType;
   private final ServerStatsContext serverStatsContext;
 
   private RouterRequest routerRequest;
@@ -22,21 +22,24 @@ public class GrpcRequestContext<T> {
   private VeniceReadResponseStatus readResponseStatus;
   private String errorMessage;
 
+  enum GrpcRequestType {
+    LEGACY, SINGLE_GET, MULTI_GET, COMPUTE
+  }
+
   private GrpcRequestContext(
       ServerStatsContext serverStatsContext,
       StreamObserver<T> responseObserver,
-      Class<?> responseType) {
+      GrpcRequestType grpcRequestType) {
     this.serverStatsContext = serverStatsContext;
     this.responseObserver = responseObserver;
-    this.responseType = responseType;
-    // this.veniceServerResponseBuilder.setErrorCode(VeniceReadResponseStatus.OK.getCode());
+    this.grpcRequestType = grpcRequestType;
   }
 
   public static <T> GrpcRequestContext<T> create(
       GrpcServiceDependencies services,
       StreamObserver<T> responseObserver,
-      Class<?> responseType) {
-    return new GrpcRequestContext<>(services.getStatsHandler().getNewStatsContext(), responseObserver, responseType);
+      GrpcRequestType grpcRequestType) {
+    return new GrpcRequestContext<>(services.getStatsHandler().getNewStatsContext(), responseObserver, grpcRequestType);
   }
 
   public ServerStatsContext getStatsContext() {
@@ -87,7 +90,7 @@ public class GrpcRequestContext<T> {
     this.errorMessage = errorMessage;
   }
 
-  public Class<?> getResponseType() {
-    return responseType;
+  public GrpcRequestType getGrpcRequestType() {
+    return grpcRequestType;
   }
 }
