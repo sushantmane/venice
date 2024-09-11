@@ -487,6 +487,12 @@ subprojects {
       doLast {
         parseJacocoXml("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
       }
+
+      afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: [
+            '**/com/linkedin/venice/protocols/**',
+        ])}))
+      }
     }
 
     afterEvaluate {
@@ -501,6 +507,12 @@ subprojects {
               counter = 'BRANCH'
               value = 'COVEREDRATIO'
               minimum = threshold
+            }
+
+            afterEvaluate {
+              classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: [
+                  '**/com/linkedin/venice/protocols/**',
+              ])}))
             }
           }
         }
