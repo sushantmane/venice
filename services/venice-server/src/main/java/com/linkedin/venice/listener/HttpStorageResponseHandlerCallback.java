@@ -29,9 +29,6 @@ public class HttpStorageResponseHandlerCallback implements StorageResponseHandle
   @Override
   public void onError(VeniceReadResponseStatus readResponseStatus, String message) {
     HttpShortcutResponse response = new HttpShortcutResponse(message, readResponseStatus.getHttpResponseStatus());
-    if (readResponseStatus == VeniceReadResponseStatus.MISROUTED_STORE_VERSION) {
-      response.setMisroutedStoreVersion(true);
-    }
     context.writeAndFlush(response);
   }
 }

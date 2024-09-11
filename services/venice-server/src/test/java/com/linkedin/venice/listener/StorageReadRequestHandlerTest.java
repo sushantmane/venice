@@ -78,6 +78,7 @@ import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.read.protocol.request.router.MultiGetRouterRequestKeyV1;
 import com.linkedin.venice.read.protocol.response.MultiGetResponseRecordV1;
 import com.linkedin.venice.request.RequestHelper;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.schema.AvroSchemaParseUtils;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.schema.SchemaReader;
@@ -810,7 +811,8 @@ public class StorageReadRequestHandlerTest {
     ArgumentCaptor<HttpShortcutResponse> shortcutResponseArgumentCaptor =
         ArgumentCaptor.forClass(HttpShortcutResponse.class);
     verify(context).writeAndFlush(shortcutResponseArgumentCaptor.capture());
-    Assert.assertTrue(shortcutResponseArgumentCaptor.getValue().isMisroutedStoreVersion());
+    HttpResponseStatus response = shortcutResponseArgumentCaptor.getValue().getStatus();
+    assertEquals(response, VeniceReadResponseStatus.MISROUTED_STORE_VERSION.getHttpResponseStatus());
   }
 
   @Test

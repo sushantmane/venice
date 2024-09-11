@@ -83,7 +83,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      clientRequestCtx.getStatsContext().setRequestInfo(routerRequest);
+      clientRequestCtx.getRequestStatsRecorder().setRequestInfo(routerRequest);
       clientRequestCtx.setRouterRequest(routerRequest);
       requestProcessor.processRequest(clientRequestCtx);
     } catch (Exception e) {
@@ -108,7 +108,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(batchGetRequest);
-      requestContext.getStatsContext().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -129,7 +129,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, SINGLE_GET);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      requestContext.getStatsContext().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -150,7 +150,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, MULTI_GET);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(request);
-      requestContext.getStatsContext().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -171,7 +171,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, responseObserver, COMPUTE);
     try {
       RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(request);
-      requestContext.getStatsContext().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
