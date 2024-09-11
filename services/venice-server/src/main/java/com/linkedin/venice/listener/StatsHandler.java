@@ -1,10 +1,11 @@
 package com.linkedin.venice.listener;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.KEY_NOT_FOUND;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.OK;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.TOO_MANY_REQUESTS;
 
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import com.linkedin.venice.utils.LatencyUtils;
 import io.netty.channel.ChannelDuplexHandler;
@@ -59,7 +60,9 @@ public class StatsHandler extends ChannelDuplexHandler {
       // and channels are ready for the future requests as soon as the current has been handled.
       requestStatsRecorder.setNewRequest();
 
-      if (requestStatsRecorder.getResponseStatus() == null) {
+      VeniceReadResponseStatus responseStatus = requestStatsRecorder.getVeniceReadResponseStatus();
+
+      if (responseStatus == null) {
         throw new VeniceException("request status could not be null");
       }
 
@@ -83,10 +86,9 @@ public class StatsHandler extends ChannelDuplexHandler {
         // records a successRequest in stats. Otherwise, records a errorRequest in stats
         // For TOO_MANY_REQUESTS do not record either success or error. Recording as success would give out
         // wrong interpretation of latency, recording error would give out impression that server failed to serve
-        if (result.isSuccess() && (requestStatsRecorder.getResponseStatus().equals(OK)
-            || requestStatsRecorder.getResponseStatus().equals(NOT_FOUND))) {
+        if (result.isSuccess() && (responseStatus == OK || responseStatus == KEY_NOT_FOUND)) {
           requestStatsRecorder.successRequest(serverHttpRequestStats, elapsedTime);
-        } else if (!requestStatsRecorder.getResponseStatus().equals(TOO_MANY_REQUESTS)) {
+        } else if (responseStatus != TOO_MANY_REQUESTS) {
           requestStatsRecorder.errorRequest(serverHttpRequestStats, elapsedTime);
         }
         requestStatsRecorder.setStatCallBackExecuted(true);

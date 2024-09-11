@@ -3,8 +3,6 @@ package com.linkedin.venice.grpc;
 import static com.linkedin.venice.listener.QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.INVALID_REQUEST_RESOURCE_MSG;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.SERVER_OVER_CAPACITY_MSG;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
 import com.google.protobuf.ByteString;
 import com.linkedin.davinci.listener.response.ReadResponse;
@@ -22,7 +20,6 @@ import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import com.linkedin.venice.utils.LatencyUtils;
 import io.grpc.stub.StreamObserver;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -93,28 +90,31 @@ public class GrpcIoRequestProcessor {
   public static void sendSingleGetResponse(GrpcRequestContext<SingleGetResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     SingleGetResponse.Builder builder = SingleGetResponse.newBuilder();
+    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
+    requestStatsRecorder.setResponseStatus(responseStatus);
+
     if (readResponse == null) {
       builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
+      requestStatsRecorder.setResponseStatus(requestContext.getReadResponseStatus());
     } else if (readResponse.isFound()) {
       builder.setRcu(readResponse.getRCU())
-          .setStatusCode(VeniceReadResponseStatus.OK.getCode())
+          .setStatusCode(responseStatus.getCode())
           .setSchemaId(readResponse.getResponseSchemaIdHeader())
           .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
           .setContentLength(readResponse.getResponseBody().readableBytes())
           .setContentType(HttpConstants.AVRO_BINARY)
           .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
-      requestContext.getStatsContext().setResponseStatus(OK);
     } else {
       requestContext.setError();
-      requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
-      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
+      builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
           .setContentLength(0);
     }
-    StreamObserver<SingleGetResponse> responseObserver = requestContext.getResponseObserver();
 
+    StreamObserver<SingleGetResponse> responseObserver = requestContext.getResponseObserver();
     synchronized (responseObserver) {
       responseObserver.onNext(builder.build());
       responseObserver.onCompleted();
@@ -126,21 +126,24 @@ public class GrpcIoRequestProcessor {
   public static void sendMultiKeyResponse(GrpcRequestContext<MultiKeyResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
+
+    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
+    requestStatsRecorder.setResponseStatus(responseStatus);
+
     if (readResponse == null) {
-      builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
+      builder.setStatusCode(responseStatus.getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
     } else if (readResponse.isFound()) {
-      builder.setStatusCode(VeniceReadResponseStatus.OK.getCode())
+      builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
           .setContentLength(readResponse.getResponseBody().readableBytes())
           .setContentType(HttpConstants.AVRO_BINARY)
           .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
-      requestContext.getStatsContext().setResponseStatus(OK);
     } else {
       requestContext.setError();
-      requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
-      builder.setStatusCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
+      builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
           .setContentLength(0);
@@ -158,23 +161,23 @@ public class GrpcIoRequestProcessor {
     ReadResponse readResponse = requestContext.getReadResponse();
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
 
+    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
+    requestStatsRecorder.setResponseStatus(responseStatus);
+
     if (readResponse == null) {
-      builder.setErrorCode(requestContext.getReadResponseStatus().getCode());
+      builder.setErrorCode(responseStatus.getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
     } else if (readResponse.isFound()) {
-      builder.setErrorCode(VeniceReadResponseStatus.OK.getCode())
+      builder.setErrorCode(responseStatus.getCode())
           .setResponseRCU(readResponse.getRCU())
           .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
           .setIsStreamingResponse(readResponse.isStreamingResponse())
           .setSchemaId(readResponse.getResponseSchemaIdHeader())
           .setData(GrpcUtils.toByteString(readResponse.getResponseBody()));
-      requestContext.getStatsContext().setResponseStatus(OK);
     } else {
-      builder.setErrorCode(VeniceReadResponseStatus.KEY_NOT_FOUND.getCode())
-          .setErrorMessage("Key not found")
-          .setData(ByteString.EMPTY);
       requestContext.setError();
-      requestContext.getStatsContext().setResponseStatus(NOT_FOUND);
+      builder.setErrorCode(responseStatus.getCode()).setErrorMessage("Key not found").setData(ByteString.EMPTY);
     }
 
     StreamObserver<VeniceServerResponse> responseObserver = requestContext.getResponseObserver();
@@ -186,30 +189,33 @@ public class GrpcIoRequestProcessor {
     reportRequestStats(requestContext);
   }
 
+  /**
+   * TODO: Fix stats recording as this is incomplete and broken
+   */
   public static void reportRequestStats(GrpcRequestContext requestContext) {
-    RequestStatsRecorder statsContext = requestContext.getStatsContext();
-    HttpResponseStatus responseStatus = statsContext.getResponseStatus();
-    if (statsContext.getResponseStatus() == null) {
+    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
+
+    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    if (responseStatus == null) {
       LOGGER.error("Received error in outbound gRPC Stats Handler: response status could not be null");
       return;
     }
 
-    String storeName = statsContext.getStoreName();
+    String storeName = requestStatsRecorder.getStoreName();
     ServerHttpRequestStats serverHttpRequestStats;
-
-    if (statsContext.getStoreName() == null) {
+    if (requestStatsRecorder.getStoreName() == null) {
       LOGGER.error("Received error in outbound gRPC Stats Handler: store name could not be null");
       return;
-    } else {
-      serverHttpRequestStats = statsContext.getCurrentStats().getStoreStats(storeName);
-      statsContext.recordBasicMetrics(serverHttpRequestStats);
     }
 
-    double elapsedTime = LatencyUtils.getElapsedTimeFromNSToMS(statsContext.getRequestStartTimeInNS());
-    if (!requestContext.hasError() && !responseStatus.equals(OK) || responseStatus.equals(NOT_FOUND)) {
-      statsContext.successRequest(serverHttpRequestStats, elapsedTime);
-    } else {
-      statsContext.errorRequest(serverHttpRequestStats, elapsedTime);
+    serverHttpRequestStats = requestStatsRecorder.getCurrentStats().getStoreStats(storeName);
+    requestStatsRecorder.recordBasicMetrics(serverHttpRequestStats);
+    double elapsedTime = LatencyUtils.getElapsedTimeFromNSToMS(requestStatsRecorder.getRequestStartTimeInNS());
+    if (responseStatus == VeniceReadResponseStatus.OK || responseStatus == VeniceReadResponseStatus.KEY_NOT_FOUND) {
+      requestStatsRecorder.successRequest(serverHttpRequestStats, elapsedTime);
+      return;
     }
+
+    requestStatsRecorder.errorRequest(serverHttpRequestStats, elapsedTime);
   }
 }

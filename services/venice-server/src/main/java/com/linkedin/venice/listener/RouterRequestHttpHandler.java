@@ -1,5 +1,8 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.response.VeniceReadResponseStatus.BAD_REQUEST;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.INTERNAL_SERVER_ERROR;
+
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.request.AdminRequest;
 import com.linkedin.venice.listener.request.ComputeRouterRequestWrapper;
@@ -20,7 +23,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import java.net.URI;
@@ -55,7 +57,7 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    ctx.writeAndFlush(new HttpShortcutResponse(cause.getMessage(), HttpResponseStatus.INTERNAL_SERVER_ERROR));
+    ctx.writeAndFlush(new HttpShortcutResponse(cause.getMessage(), INTERNAL_SERVER_ERROR.getHttpResponseStatus()));
     ctx.close();
   }
 
@@ -149,7 +151,7 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
           throw new VeniceException("Unrecognized query action");
       }
     } catch (VeniceException e) {
-      ctx.writeAndFlush(new HttpShortcutResponse(e.getMessage(), HttpResponseStatus.BAD_REQUEST));
+      ctx.writeAndFlush(new HttpShortcutResponse(e.getMessage(), BAD_REQUEST.getHttpResponseStatus()));
     }
   }
 

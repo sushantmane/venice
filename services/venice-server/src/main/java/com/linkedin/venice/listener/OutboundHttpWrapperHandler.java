@@ -1,10 +1,11 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.response.VeniceReadResponseStatus.INTERNAL_SERVER_ERROR;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.KEY_NOT_FOUND;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.MISROUTED_STORE_VERSION;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +18,7 @@ import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.listener.response.AbstractReadResponse;
 import com.linkedin.venice.listener.response.BinaryResponse;
 import com.linkedin.venice.listener.response.HttpShortcutResponse;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.utils.ExceptionUtils;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import io.netty.buffer.ByteBuf;
@@ -26,7 +28,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import java.nio.charset.StandardCharsets;
 
 
@@ -47,7 +48,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     ByteBuf body;
     String contentType = HttpConstants.AVRO_BINARY;
-    HttpResponseStatus responseStatus = OK;
+    VeniceReadResponseStatus responseStatus = OK;
     int schemaIdHeader = -1;
     int responseRcu = 1;
     CompressionStrategy compressionStrategy = CompressionStrategy.NO_OP;
@@ -63,7 +64,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
           requestStatsRecorder.setResponseSize(body.readableBytes());
         } else {
           body = Unpooled.EMPTY_BUFFER;
-          responseStatus = NOT_FOUND;
+          responseStatus = KEY_NOT_FOUND;
           requestStatsRecorder.setResponseSize(0);
         }
         isStreamingResponse = obj.isStreamingResponse();
@@ -71,7 +72,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
       } else if (msg instanceof HttpShortcutResponse) {
         // For Early terminated requests
         HttpShortcutResponse shortcutResponse = (HttpShortcutResponse) msg;
-        responseStatus = shortcutResponse.getStatus();
+        responseStatus = VeniceReadResponseStatus.fromCode(shortcutResponse.getStatus().code());
         String message = shortcutResponse.getMessage();
         if (message == null) {
           body = Unpooled.EMPTY_BUFFER;
@@ -83,7 +84,9 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
             .equals(VeniceRequestEarlyTerminationException.getResponseStatusCode().getHttpResponseStatus())) {
           requestStatsRecorder.setRequestTerminatedEarly();
         }
-        requestStatsRecorder.setMisroutedStoreVersion(shortcutResponse.isMisroutedStoreVersion());
+        if (shortcutResponse.getStatus() == MISROUTED_STORE_VERSION.getHttpResponseStatus()) {
+          requestStatsRecorder.setMisroutedStoreVersion(true);
+        }
       } else if (msg instanceof BinaryResponse) {
         // For dictionary Fetch requests
         body = ((BinaryResponse) msg).getBody();
@@ -167,7 +170,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
       requestStatsRecorder.setResponseStatus(responseStatus);
     }
 
-    FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, responseStatus, body);
+    FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, responseStatus.getHttpResponseStatus(), body);
     response.headers().set(CONTENT_TYPE, contentType);
     response.headers().set(CONTENT_LENGTH, body.readableBytes());
     response.headers().set(HttpConstants.VENICE_COMPRESSION_STRATEGY, compressionStrategy.getValue());
