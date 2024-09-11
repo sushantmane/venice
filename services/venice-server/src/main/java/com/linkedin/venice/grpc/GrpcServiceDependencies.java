@@ -1,7 +1,8 @@
 package com.linkedin.venice.grpc;
 
 import com.linkedin.davinci.storage.DiskHealthCheckService;
-import com.linkedin.venice.listener.ReadQuotaEnforcementHandler;
+import com.linkedin.venice.listener.NoOpReadQuotaEnforcementHandler;
+import com.linkedin.venice.listener.QuotaEnforcementHandler;
 import com.linkedin.venice.listener.StatsHandler;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 
@@ -9,13 +10,13 @@ import com.linkedin.venice.listener.StorageReadRequestHandler;
 public class GrpcServiceDependencies {
   private final DiskHealthCheckService diskHealthCheckService;
   private final StorageReadRequestHandler storageReadRequestHandler;
-  private final ReadQuotaEnforcementHandler readQuotaEnforcementHandler;
+  private final QuotaEnforcementHandler quotaEnforcementHandler;
   private final StatsHandler statsHandler;
 
   private GrpcServiceDependencies(Builder builder) {
     this.diskHealthCheckService = builder.diskHealthCheckService;
     this.storageReadRequestHandler = builder.storageReadRequestHandler;
-    this.readQuotaEnforcementHandler = builder.readQuotaEnforcementHandler;
+    this.quotaEnforcementHandler = builder.quotaEnforcementHandler;
     this.statsHandler = builder.statsHandler;
   }
 
@@ -27,8 +28,8 @@ public class GrpcServiceDependencies {
     return storageReadRequestHandler;
   }
 
-  public ReadQuotaEnforcementHandler getReadQuotaEnforcementHandler() {
-    return readQuotaEnforcementHandler;
+  public QuotaEnforcementHandler getQuotaEnforcementHandler() {
+    return quotaEnforcementHandler;
   }
 
   public StatsHandler getStatsHandler() {
@@ -38,7 +39,7 @@ public class GrpcServiceDependencies {
   public static class Builder {
     private DiskHealthCheckService diskHealthCheckService;
     private StorageReadRequestHandler storageReadRequestHandler;
-    private ReadQuotaEnforcementHandler readQuotaEnforcementHandler;
+    private QuotaEnforcementHandler quotaEnforcementHandler;
     private StatsHandler statsHandler;
 
     public Builder setDiskHealthCheckService(DiskHealthCheckService diskHealthCheckService) {
@@ -51,8 +52,8 @@ public class GrpcServiceDependencies {
       return this;
     }
 
-    public Builder setReadQuotaEnforcementHandler(ReadQuotaEnforcementHandler readQuotaEnforcementHandler) {
-      this.readQuotaEnforcementHandler = readQuotaEnforcementHandler;
+    public Builder setQuotaEnforcementHandler(QuotaEnforcementHandler quotaEnforcementHandler) {
+      this.quotaEnforcementHandler = quotaEnforcementHandler;
       return this;
     }
 
@@ -62,6 +63,10 @@ public class GrpcServiceDependencies {
     }
 
     public GrpcServiceDependencies build() {
+      if (quotaEnforcementHandler == null) {
+        quotaEnforcementHandler = new NoOpReadQuotaEnforcementHandler();
+      }
+
       return new GrpcServiceDependencies(this);
     }
   }

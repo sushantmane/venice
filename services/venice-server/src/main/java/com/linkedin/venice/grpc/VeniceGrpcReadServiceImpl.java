@@ -1,5 +1,9 @@
 package com.linkedin.venice.grpc;
 
+import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.COMPUTE;
+import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.LEGACY;
+import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.MULTI_GET;
+import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.SINGLE_GET;
 import static com.linkedin.venice.listener.StorageReadRequestHandler.VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,7 +11,6 @@ import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.davinci.storage.DiskHealthCheckService;
 import com.linkedin.venice.HttpConstants;
-import com.linkedin.venice.listener.ReadQuotaEnforcementHandler;
 import com.linkedin.venice.listener.StatsHandler;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 import com.linkedin.venice.listener.request.ComputeRouterRequestWrapper;
@@ -33,7 +36,7 @@ import com.linkedin.venice.protocols.IngestionContextResponse;
 import com.linkedin.venice.protocols.MetadataRequest;
 import com.linkedin.venice.protocols.MetadataResponse;
 import com.linkedin.venice.protocols.MultiGetRequest;
-import com.linkedin.venice.protocols.MultiGetResponse;
+import com.linkedin.venice.protocols.MultiKeyResponse;
 import com.linkedin.venice.protocols.SingleGetRequest;
 import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceClientRequest;
@@ -57,7 +60,6 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
 
   private final DiskHealthCheckService diskHealthCheckService;
   private final StorageReadRequestHandler storageReadRequestHandler;
-  private final ReadQuotaEnforcementHandler readQuotaEnforcementHandler;
   private final StatsHandler statsHandler;
   private final GrpcServiceDependencies dependencies;
   private final GrpcIoRequestProcessor requestProcessor;
@@ -72,13 +74,16 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
     this.statsHandler = dependencies.getStatsHandler();
     this.diskHealthCheckService = dependencies.getDiskHealthCheckService();
     this.storageReadRequestHandler = dependencies.getStorageReadRequestHandler();
-    this.readQuotaEnforcementHandler = dependencies.getReadQuotaEnforcementHandler();
   }
 
+  /**
+   * @deprecated This method is deprecated and will be removed in the future. Use the {@link #singleGet(SingleGetRequest, StreamObserver)} method instead.
+   */
+  @Deprecated
   @Override
   public void get(VeniceClientRequest singleGetRequest, StreamObserver<VeniceServerResponse> streamObserver) {
     GrpcRequestContext<VeniceServerResponse> clientRequestCtx =
-        GrpcRequestContext.create(dependencies, streamObserver, VeniceServerResponse.class);
+        GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
       clientRequestCtx.getStatsContext().setRequestInfo(routerRequest);
@@ -96,10 +101,14 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
     }
   }
 
+  /**
+   * @deprecated This method is deprecated and will be removed in the future. Use the {@link #multiGet(MultiGetRequest, StreamObserver)} method instead.
+   */
+  @Deprecated
   @Override
   public void batchGet(VeniceClientRequest batchGetRequest, StreamObserver<VeniceServerResponse> streamObserver) {
     GrpcRequestContext<VeniceServerResponse> requestContext =
-        GrpcRequestContext.create(dependencies, streamObserver, VeniceServerResponse.class);
+        GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(batchGetRequest);
       requestContext.getStatsContext().setRequestInfo(routerRequest);
@@ -120,7 +129,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   @Override
   public void singleGet(SingleGetRequest singleGetRequest, StreamObserver<SingleGetResponse> streamObserver) {
     GrpcRequestContext<SingleGetResponse> requestContext =
-        GrpcRequestContext.create(dependencies, streamObserver, SingleGetResponse.class);
+        GrpcRequestContext.create(dependencies, streamObserver, SINGLE_GET);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
       requestContext.getStatsContext().setRequestInfo(routerRequest);
@@ -139,9 +148,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void multiGet(MultiGetRequest request, StreamObserver<MultiGetResponse> streamObserver) {
-    GrpcRequestContext<MultiGetResponse> requestContext =
-        GrpcRequestContext.create(dependencies, streamObserver, MultiGetResponse.class);
+  public void multiGet(MultiGetRequest request, StreamObserver<MultiKeyResponse> streamObserver) {
+    GrpcRequestContext<MultiKeyResponse> requestContext =
+        GrpcRequestContext.create(dependencies, streamObserver, MULTI_GET);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(request);
       requestContext.getStatsContext().setRequestInfo(routerRequest);
@@ -149,7 +158,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
       LOGGER.debug("Error while processing multi get request", e);
-      MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
+      MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
       builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
       if (e.getMessage() != null) {
         builder.setErrorMessage(e.getMessage());
@@ -160,9 +169,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void compute(ComputeRequest request, StreamObserver<MultiGetResponse> responseObserver) {
-    GrpcRequestContext<MultiGetResponse> requestContext =
-        GrpcRequestContext.create(dependencies, responseObserver, MultiGetResponse.class);
+  public void compute(ComputeRequest request, StreamObserver<MultiKeyResponse> responseObserver) {
+    GrpcRequestContext<MultiKeyResponse> requestContext =
+        GrpcRequestContext.create(dependencies, responseObserver, COMPUTE);
     try {
       RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(request);
       requestContext.getStatsContext().setRequestInfo(routerRequest);
@@ -170,7 +179,7 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
       LOGGER.debug("Error while processing compute request", e);
-      MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
+      MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
       builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
       if (e.getMessage() != null) {
         builder.setErrorMessage(e.getMessage());

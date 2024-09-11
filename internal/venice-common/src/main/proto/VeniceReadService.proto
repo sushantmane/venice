@@ -16,9 +16,9 @@ service VeniceReadService {
 
   rpc singleGet(SingleGetRequest) returns (SingleGetResponse) {}
 
-  rpc multiGet(MultiGetRequest) returns (MultiGetResponse) {}
+  rpc multiGet(MultiGetRequest) returns (MultiKeyResponse) {}
 
-  rpc compute(ComputeRequest) returns (MultiGetResponse) {}
+  rpc compute(ComputeRequest) returns (MultiKeyResponse) {}
 
   rpc isServerHealthy(HealthCheckRequest) returns (HealthCheckResponse) {}
 
@@ -82,7 +82,7 @@ message MultiGetRequest {
   bool isRetryRequest = 5;
 }
 
-message MultiGetResponse {
+message MultiKeyResponse {
   int32 statusCode = 1;
   bytes value = 2;
   sint32 schemaId = 3;

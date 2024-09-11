@@ -1,7 +1,7 @@
 package com.linkedin.venice.grpc;
 
+import static com.linkedin.venice.listener.QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.INVALID_REQUEST_RESOURCE_MSG;
-import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED;
 import static com.linkedin.venice.listener.ReadQuotaEnforcementHandler.SERVER_OVER_CAPACITY_MSG;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -10,12 +10,12 @@ import com.google.protobuf.ByteString;
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.listener.ReadQuotaEnforcementHandler;
-import com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult;
+import com.linkedin.venice.listener.QuotaEnforcementHandler;
+import com.linkedin.venice.listener.QuotaEnforcementHandler.QuotaEnforcementResult;
 import com.linkedin.venice.listener.ServerStatsContext;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 import com.linkedin.venice.listener.request.RouterRequest;
-import com.linkedin.venice.protocols.MultiGetResponse;
+import com.linkedin.venice.protocols.MultiKeyResponse;
 import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
@@ -29,20 +29,20 @@ import org.apache.logging.log4j.Logger;
 
 public class GrpcIoRequestProcessor {
   private static final Logger LOGGER = LogManager.getLogger(GrpcIoRequestProcessor.class);
-  private final ReadQuotaEnforcementHandler readQuotaEnforcementHandler;
+  private final QuotaEnforcementHandler quotaEnforcementHandler;
   private final StorageReadRequestHandler storageReadRequestHandler;
 
   public GrpcIoRequestProcessor(GrpcServiceDependencies services) {
-    this.readQuotaEnforcementHandler = services.getReadQuotaEnforcementHandler();
+    this.quotaEnforcementHandler = services.getQuotaEnforcementHandler();
     this.storageReadRequestHandler = services.getStorageReadRequestHandler();
   }
 
   public void processRequest(GrpcRequestContext requestContext) {
     RouterRequest request = requestContext.getRouterRequest();
-    QuotaEnforcementResult result =
-        readQuotaEnforcementHandler != null ? readQuotaEnforcementHandler.enforceQuota(request) : null;
+
+    QuotaEnforcementResult result = quotaEnforcementHandler.enforceQuota(request);
     // If the request is allowed, hand it off to the storage read request handler
-    if (result == null || result == ALLOWED) {
+    if (result == ALLOWED) {
       GrpcStorageResponseHandlerCallback callback = GrpcStorageResponseHandlerCallback.create(requestContext);
       storageReadRequestHandler.queueIoRequestForAsyncProcessing(request, callback);
       return;
@@ -71,19 +71,22 @@ public class GrpcIoRequestProcessor {
   }
 
   public static <T> void sendResponse(GrpcRequestContext<T> requestContext) {
-    Class<?> responseType = requestContext.getResponseType();
-
-    if (responseType == SingleGetResponse.class) {
-      sendSingleGetResponse((GrpcRequestContext<SingleGetResponse>) requestContext);
-    } else if (responseType == MultiGetResponse.class) {
-      sendMultiGetResponse((GrpcRequestContext<MultiGetResponse>) requestContext);
-    } else if (responseType == VeniceServerResponse.class) {
-      sendVeniceServerResponse((GrpcRequestContext<VeniceServerResponse>) requestContext);
-    } else {
-      // log stack trace and throw exception
-      VeniceException veniceException = new VeniceException("Unknown response type: " + responseType);
-      LOGGER.error("Unknown response type: {}", responseType, veniceException);
-      throw veniceException;
+    GrpcRequestContext.GrpcRequestType grpcRequestType = requestContext.getGrpcRequestType();
+    switch (grpcRequestType) {
+      case SINGLE_GET:
+        sendSingleGetResponse((GrpcRequestContext<SingleGetResponse>) requestContext);
+        break;
+      case MULTI_GET:
+      case COMPUTE:
+        sendMultiKeyResponse((GrpcRequestContext<MultiKeyResponse>) requestContext);
+        break;
+      case LEGACY:
+        sendVeniceServerResponse((GrpcRequestContext<VeniceServerResponse>) requestContext);
+        break;
+      default:
+        VeniceException veniceException = new VeniceException("Unknown response type: " + grpcRequestType);
+        LOGGER.error("Unknown response type: {}", grpcRequestType, veniceException);
+        throw veniceException;
     }
   }
 
@@ -120,9 +123,9 @@ public class GrpcIoRequestProcessor {
     reportRequestStats(requestContext);
   }
 
-  public static void sendMultiGetResponse(GrpcRequestContext<MultiGetResponse> requestContext) {
+  public static void sendMultiKeyResponse(GrpcRequestContext<MultiKeyResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
-    MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
+    MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
     if (readResponse == null) {
       builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
@@ -143,7 +146,7 @@ public class GrpcIoRequestProcessor {
           .setContentLength(0);
     }
 
-    StreamObserver<MultiGetResponse> responseObserver = requestContext.getResponseObserver();
+    StreamObserver<MultiKeyResponse> responseObserver = requestContext.getResponseObserver();
     synchronized (responseObserver) {
       responseObserver.onNext(builder.build());
       responseObserver.onCompleted();
