@@ -19,7 +19,7 @@ public class GrpcRequestContext<T> {
 
   private RouterRequest routerRequest;
   private ReadResponse readResponse = null;
-  private VeniceReadResponseStatus readResponseStatus;
+  private VeniceReadResponseStatus readResponseStatus = null;
   private String errorMessage;
 
   enum GrpcRequestType {
@@ -45,7 +45,7 @@ public class GrpcRequestContext<T> {
         grpcRequestType);
   }
 
-  public RequestStatsRecorder getStatsContext() {
+  public RequestStatsRecorder getRequestStatsRecorder() {
     return requestStatsRecorder;
   }
 
@@ -78,7 +78,23 @@ public class GrpcRequestContext<T> {
   }
 
   public VeniceReadResponseStatus getReadResponseStatus() {
-    return readResponseStatus;
+    // If the readResponseStatus is set, return it.
+    if (readResponseStatus != null) {
+      return readResponseStatus;
+    }
+
+    // If the readResponse is set, return the appropriate status based on the response.
+    if (readResponse != null && readResponse.isFound()) {
+      return VeniceReadResponseStatus.OK;
+    }
+
+    // If the readResponse is set and the key is not found, return the appropriate status.
+    if (readResponse != null && !readResponse.isFound()) {
+      return VeniceReadResponseStatus.KEY_NOT_FOUND;
+    }
+
+    // If the readResponse is not set, return an internal server error.
+    return VeniceReadResponseStatus.INTERNAL_SERVER_ERROR;
   }
 
   public void setReadResponseStatus(VeniceReadResponseStatus readResponseStatus) {

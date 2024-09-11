@@ -1,5 +1,8 @@
 package com.linkedin.venice.listener;
 
+import static com.linkedin.venice.response.VeniceReadResponseStatus.BAD_REQUEST;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.SERVICE_UNAVAILABLE;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.TOO_MANY_REQUESTS;
 import static com.linkedin.venice.throttle.EventThrottler.REJECT_STRATEGY;
 
 import com.linkedin.davinci.config.VeniceServerConfig;
@@ -28,7 +31,6 @@ import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import io.tehuti.metrics.MetricsRepository;
 import java.time.Clock;
@@ -250,17 +252,18 @@ public class ReadQuotaEnforcementHandler extends SimpleChannelInboundHandler<Rou
       ctx.writeAndFlush(
           new HttpShortcutResponse(
               INVALID_REQUEST_RESOURCE_MSG + request.getResourceName(),
-              HttpResponseStatus.BAD_REQUEST));
+              BAD_REQUEST.getHttpResponseStatus()));
       return;
     }
 
     if (result == QuotaEnforcementHandler.QuotaEnforcementResult.REJECTED) {
-      ctx.writeAndFlush(new HttpShortcutResponse(HttpResponseStatus.TOO_MANY_REQUESTS));
+      ctx.writeAndFlush(new HttpShortcutResponse(TOO_MANY_REQUESTS.getHttpResponseStatus()));
       return;
     }
 
     if (result == QuotaEnforcementHandler.QuotaEnforcementResult.OVER_CAPACITY) {
-      ctx.writeAndFlush(new HttpShortcutResponse(SERVER_OVER_CAPACITY_MSG, HttpResponseStatus.SERVICE_UNAVAILABLE));
+      ctx.writeAndFlush(
+          new HttpShortcutResponse(SERVER_OVER_CAPACITY_MSG, SERVICE_UNAVAILABLE.getHttpResponseStatus()));
       return;
     }
 

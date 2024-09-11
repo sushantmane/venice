@@ -7,10 +7,10 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.response.stats.ReadResponseStatsRecorder;
 import com.linkedin.venice.read.RequestType;
+import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpResponseStatus;
 
 
 /**
@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 public class RequestStatsRecorder {
   private ReadResponseStatsRecorder responseStatsRecorder = null;
   private long startTimeInNS = System.nanoTime();
-  private HttpResponseStatus responseStatus = null;
+  private VeniceReadResponseStatus responseStatus = null;
   private String storeName = null;
   private boolean isMetadataRequest = false;
   private int requestKeyCount = -1;
@@ -78,16 +78,19 @@ public class RequestStatsRecorder {
     return newRequest;
   }
 
-  public void setSecondPartLatency(double secondPartLatency) {
+  public RequestStatsRecorder setSecondPartLatency(double secondPartLatency) {
     this.secondPartLatency = secondPartLatency;
+    return this;
   }
 
-  public void setPartsInvokeDelayLatency(double partsInvokeDelayLatency) {
+  public RequestStatsRecorder setPartsInvokeDelayLatency(double partsInvokeDelayLatency) {
     this.partsInvokeDelayLatency = partsInvokeDelayLatency;
+    return this;
   }
 
-  public void incrementRequestPartCount() {
+  public RequestStatsRecorder incrementRequestPartCount() {
     this.requestPartCount++;
+    return this;
   }
 
   public RequestStatsRecorder(
@@ -120,16 +123,19 @@ public class RequestStatsRecorder {
     newRequest = false; // set to false after the first package of a HttpRequest
   }
 
-  public void setReadResponseStats(ReadResponseStatsRecorder responseStatsRecorder) {
+  public RequestStatsRecorder setReadResponseStats(ReadResponseStatsRecorder responseStatsRecorder) {
     this.responseStatsRecorder = responseStatsRecorder;
+    return this;
   }
 
-  public void setFirstPartLatency(double firstPartLatency) {
+  public RequestStatsRecorder setFirstPartLatency(double firstPartLatency) {
     this.firstPartLatency = firstPartLatency;
+    return this;
   }
 
-  public void setNewRequest() {
+  public RequestStatsRecorder setNewRequest() {
     this.newRequest = true;
+    return this;
   }
 
   public boolean isMetadataRequest() {
@@ -144,31 +150,35 @@ public class RequestStatsRecorder {
     this.statCallbackExecuted = statCallbackExecuted;
   }
 
-  public void setResponseStatus(HttpResponseStatus status) {
+  public RequestStatsRecorder setResponseStatus(VeniceReadResponseStatus status) {
     this.responseStatus = status;
+    return this;
   }
 
   public String getStoreName() {
     return storeName;
   }
 
-  public void setStoreName(String name) {
+  public RequestStatsRecorder setStoreName(String name) {
     this.storeName = name;
+    return this;
   }
 
-  public void setMetadataRequest(boolean metadataRequest) {
+  public RequestStatsRecorder setMetadataRequest(boolean metadataRequest) {
     this.isMetadataRequest = metadataRequest;
+    return this;
   }
 
-  public void setRequestTerminatedEarly() {
+  public RequestStatsRecorder setRequestTerminatedEarly() {
     this.isRequestTerminatedEarly = true;
+    return this;
   }
 
-  public HttpResponseStatus getResponseStatus() {
+  public VeniceReadResponseStatus getVeniceReadResponseStatus() {
     return responseStatus;
   }
 
-  public void setRequestType(RequestType requestType) {
+  public RequestStatsRecorder setRequestType(RequestType requestType) {
     switch (requestType) {
       case MULTI_GET:
       case MULTI_GET_STREAMING:
@@ -181,41 +191,46 @@ public class RequestStatsRecorder {
       default:
         currentStats = singleGetStats;
     }
+    return this;
   }
 
-  public void setRequestKeyCount(int keyCount) {
+  public RequestStatsRecorder setRequestKeyCount(int keyCount) {
     this.requestKeyCount = keyCount;
+    return this;
   }
 
   public AggServerHttpRequestStats getCurrentStats() {
     return currentStats;
   }
 
-  public void setRequestInfo(RouterRequest request) {
+  public RequestStatsRecorder setRequestInfo(RouterRequest request) {
     setStoreName(request.getStoreName());
     setRequestType(request.getRequestType());
     setRequestKeyCount(request.getKeyCount());
+    return this;
   }
 
-  public void setRequestSize(int requestSizeInBytes) {
+  public RequestStatsRecorder setRequestSize(int requestSizeInBytes) {
     this.requestSizeInBytes = requestSizeInBytes;
+    return this;
   }
 
   public long getRequestStartTimeInNS() {
     return this.startTimeInNS;
   }
 
-  public void setFlushLatency(double latency) {
+  public RequestStatsRecorder setFlushLatency(double latency) {
     this.flushLatency = latency;
+    return this;
   }
 
   public void setResponseSize(int size) {
     this.responseSize = size;
   }
 
-  public void recordBasicMetrics(ServerHttpRequestStats serverHttpRequestStats) {
+  public RequestStatsRecorder recordBasicMetrics(ServerHttpRequestStats serverHttpRequestStats) {
     if (serverHttpRequestStats == null) {
-      return;
+      return this;
     }
 
     if (this.responseStatsRecorder != null) {
@@ -238,20 +253,24 @@ public class RequestStatsRecorder {
     if (responseSize >= 0) {
       serverHttpRequestStats.recordResponseSize(responseSize);
     }
+
+    return this;
   }
 
   // This method does not have to be synchronized since operations in Tehuti are already synchronized.
   // Please re-consider the race condition if new logic is added.
-  public void successRequest(ServerHttpRequestStats stats, double elapsedTime) {
+  public RequestStatsRecorder successRequest(ServerHttpRequestStats stats, double elapsedTime) {
     if (stats != null) {
       stats.recordSuccessRequest();
       stats.recordSuccessRequestLatency(elapsedTime);
     } else {
       throw new VeniceException("store name could not be null if request succeeded");
     }
+
+    return this;
   }
 
-  public void errorRequest(ServerHttpRequestStats stats, double elapsedTime) {
+  public RequestStatsRecorder errorRequest(ServerHttpRequestStats stats, double elapsedTime) {
     if (stats == null) {
       currentStats.recordErrorRequest();
       currentStats.recordErrorRequestLatency(elapsedTime);
@@ -265,6 +284,8 @@ public class RequestStatsRecorder {
         stats.recordMisroutedStoreVersionRequest();
       }
     }
+
+    return this;
   }
 
   public int getRequestKeyCount() {
