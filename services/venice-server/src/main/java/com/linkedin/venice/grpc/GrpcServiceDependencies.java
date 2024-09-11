@@ -3,21 +3,26 @@ package com.linkedin.venice.grpc;
 import com.linkedin.davinci.storage.DiskHealthCheckService;
 import com.linkedin.venice.listener.NoOpReadQuotaEnforcementHandler;
 import com.linkedin.venice.listener.QuotaEnforcementHandler;
-import com.linkedin.venice.listener.StatsHandler;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
+import com.linkedin.venice.stats.AggServerHttpRequestStats;
+import java.util.Objects;
 
 
 public class GrpcServiceDependencies {
   private final DiskHealthCheckService diskHealthCheckService;
   private final StorageReadRequestHandler storageReadRequestHandler;
   private final QuotaEnforcementHandler quotaEnforcementHandler;
-  private final StatsHandler statsHandler;
+  private final AggServerHttpRequestStats singleGetStats;
+  private final AggServerHttpRequestStats multiGetStats;
+  private final AggServerHttpRequestStats computeStats;
 
   private GrpcServiceDependencies(Builder builder) {
     this.diskHealthCheckService = builder.diskHealthCheckService;
     this.storageReadRequestHandler = builder.storageReadRequestHandler;
     this.quotaEnforcementHandler = builder.quotaEnforcementHandler;
-    this.statsHandler = builder.statsHandler;
+    this.singleGetStats = builder.singleGetStats;
+    this.multiGetStats = builder.multiGetStats;
+    this.computeStats = builder.computeStats;
   }
 
   public DiskHealthCheckService getDiskHealthCheckService() {
@@ -32,15 +37,25 @@ public class GrpcServiceDependencies {
     return quotaEnforcementHandler;
   }
 
-  public StatsHandler getStatsHandler() {
-    return statsHandler;
+  public AggServerHttpRequestStats getSingleGetStats() {
+    return singleGetStats;
+  }
+
+  public AggServerHttpRequestStats getMultiGetStats() {
+    return multiGetStats;
+  }
+
+  public AggServerHttpRequestStats getComputeStats() {
+    return computeStats;
   }
 
   public static class Builder {
     private DiskHealthCheckService diskHealthCheckService;
     private StorageReadRequestHandler storageReadRequestHandler;
     private QuotaEnforcementHandler quotaEnforcementHandler;
-    private StatsHandler statsHandler;
+    private AggServerHttpRequestStats singleGetStats;
+    private AggServerHttpRequestStats multiGetStats;
+    private AggServerHttpRequestStats computeStats;
 
     public Builder setDiskHealthCheckService(DiskHealthCheckService diskHealthCheckService) {
       this.diskHealthCheckService = diskHealthCheckService;
@@ -57,15 +72,32 @@ public class GrpcServiceDependencies {
       return this;
     }
 
-    public Builder setStatsHandler(StatsHandler statsHandler) {
-      this.statsHandler = statsHandler;
+    public Builder setSingleGetStats(AggServerHttpRequestStats singleGetStats) {
+      this.singleGetStats = singleGetStats;
+      return this;
+    }
+
+    public Builder setMultiGetStats(AggServerHttpRequestStats multiGetStats) {
+      this.multiGetStats = multiGetStats;
+      return this;
+    }
+
+    public Builder setComputeStats(AggServerHttpRequestStats computeStats) {
+      this.computeStats = computeStats;
       return this;
     }
 
     public GrpcServiceDependencies build() {
+      // Validate that all required fields are set
       if (quotaEnforcementHandler == null) {
         quotaEnforcementHandler = new NoOpReadQuotaEnforcementHandler();
       }
+      singleGetStats = Objects.requireNonNull(singleGetStats, "singleGetStats cannot be null");
+      multiGetStats = Objects.requireNonNull(multiGetStats, "multiGetStats cannot be null");
+      computeStats = Objects.requireNonNull(computeStats, "computeStats cannot be null");
+      storageReadRequestHandler =
+          Objects.requireNonNull(storageReadRequestHandler, "storageReadRequestHandler cannot be null");
+      diskHealthCheckService = Objects.requireNonNull(diskHealthCheckService, "diskHealthCheckService cannot be null");
 
       return new GrpcServiceDependencies(this);
     }
