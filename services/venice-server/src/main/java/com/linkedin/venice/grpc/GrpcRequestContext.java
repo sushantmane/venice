@@ -1,7 +1,7 @@
 package com.linkedin.venice.grpc;
 
 import com.linkedin.davinci.listener.response.ReadResponse;
-import com.linkedin.venice.listener.ServerStatsContext;
+import com.linkedin.venice.listener.RequestStatsRecorder;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
 import io.grpc.stub.StreamObserver;
@@ -15,7 +15,7 @@ import io.grpc.stub.StreamObserver;
 public class GrpcRequestContext<T> {
   private final StreamObserver<T> responseObserver;
   private final GrpcRequestType grpcRequestType;
-  private final ServerStatsContext serverStatsContext;
+  private final RequestStatsRecorder requestStatsRecorder;
 
   private RouterRequest routerRequest;
   private ReadResponse readResponse = null;
@@ -27,10 +27,10 @@ public class GrpcRequestContext<T> {
   }
 
   private GrpcRequestContext(
-      ServerStatsContext serverStatsContext,
+      RequestStatsRecorder requestStatsRecorder,
       StreamObserver<T> responseObserver,
       GrpcRequestType grpcRequestType) {
-    this.serverStatsContext = serverStatsContext;
+    this.requestStatsRecorder = requestStatsRecorder;
     this.responseObserver = responseObserver;
     this.grpcRequestType = grpcRequestType;
   }
@@ -39,11 +39,14 @@ public class GrpcRequestContext<T> {
       GrpcServiceDependencies services,
       StreamObserver<T> responseObserver,
       GrpcRequestType grpcRequestType) {
-    return new GrpcRequestContext<>(services.getStatsHandler().getNewStatsContext(), responseObserver, grpcRequestType);
+    return new GrpcRequestContext<>(
+        new RequestStatsRecorder(services.getSingleGetStats(), services.getMultiGetStats(), services.getComputeStats()),
+        responseObserver,
+        grpcRequestType);
   }
 
-  public ServerStatsContext getStatsContext() {
-    return serverStatsContext;
+  public RequestStatsRecorder getStatsContext() {
+    return requestStatsRecorder;
   }
 
   public StreamObserver<T> getResponseObserver() {

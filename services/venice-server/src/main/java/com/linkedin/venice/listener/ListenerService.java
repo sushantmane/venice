@@ -163,14 +163,26 @@ public class ListenerService extends AbstractVeniceService {
                 serverConfig.getChannelOptionWriteBufferHighBytes()));
 
     if (isGrpcEnabled && grpcServer == null) {
-      StatsHandler statsHandler = channelInitializer.createStatsHandler();
       List<ServerInterceptor> interceptors = channelInitializer.initGrpcInterceptors();
-      grpcExecutor = createThreadPool(serverConfig.getGrpcWorkerThreadCount(), "GrpcWorkerThread", nettyBacklogSize);
+      grpcExecutor = createThreadPool(
+          serverConfig.getGrpcWorkerThreadCount(),
+          "GrpcWorkerThread",
+          serverConfig.getDatabaseLookupQueueCapacity());
+
+      /**
+       * Ideally, we would not pass the NettyHandlers to the gRPC service, but since the common code resides within
+       * these handlers, we are passing it for now. This should be refactored in the future so that the common code is
+       * shared between both services, and the handlers are only used for their respective services.
+       * For example, common functionality should be extracted from {@link StorageReadRequestHandler} and shared between
+       * {@link HttpChannelInitializer} and {@link VeniceGrpcReadServiceImpl}.
+       */
       GrpcServiceDependencies dependencies =
           new GrpcServiceDependencies.Builder().setDiskHealthCheckService(diskHealthService)
               .setQuotaEnforcementHandler(channelInitializer.getQuotaEnforcer())
               .setStorageReadRequestHandler(storageReadRequestHandler)
-              .setStatsHandler(statsHandler)
+              .setSingleGetStats(channelInitializer.getSingleGetStats())
+              .setMultiGetStats(channelInitializer.getMultiGetStats())
+              .setComputeStats(channelInitializer.getComputeStats())
               .build();
 
       VeniceGrpcServerConfig.Builder grpcServerBuilder = new VeniceGrpcServerConfig.Builder().setPort(grpcPort)

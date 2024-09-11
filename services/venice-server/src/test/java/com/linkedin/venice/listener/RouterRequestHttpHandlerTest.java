@@ -24,10 +24,18 @@ import java.util.Base64;
 import java.util.Collections;
 import org.mockito.ArgumentCaptor;
 import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 
 public class RouterRequestHttpHandlerTest {
+  private RequestStatsRecorder requestStatsRecorder;
+
+  @BeforeMethod
+  public void setUp() {
+    requestStatsRecorder = mock(RequestStatsRecorder.class);
+  }
+
   @Test
   public void parsesRequests() throws Exception {
     testRequestParsing("/storage/store_v1/1/key1", "store_v1", 1, "key1".getBytes(StandardCharsets.UTF_8));
@@ -40,8 +48,7 @@ public class RouterRequestHttpHandlerTest {
 
   @Test
   public void respondsToHealthCheck() throws Exception {
-    RouterRequestHttpHandler testHandler =
-        new RouterRequestHttpHandler(mock(StatsHandler.class), Collections.emptyMap());
+    RouterRequestHttpHandler testHandler = new RouterRequestHttpHandler(requestStatsRecorder, Collections.emptyMap());
     ChannelHandlerContext mockContext = mock(ChannelHandlerContext.class);
     ArgumentCaptor<HealthCheckRequest> argumentCaptor = ArgumentCaptor.forClass(HealthCheckRequest.class);
     HttpRequest healthMsg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/health");
@@ -55,8 +62,7 @@ public class RouterRequestHttpHandlerTest {
       throws Exception {
 
     // Test handler
-    RouterRequestHttpHandler testHandler =
-        new RouterRequestHttpHandler(mock(StatsHandler.class), Collections.emptyMap());
+    RouterRequestHttpHandler testHandler = new RouterRequestHttpHandler(requestStatsRecorder, Collections.emptyMap());
     ChannelHandlerContext mockContext = mock(ChannelHandlerContext.class);
     ArgumentCaptor<GetRouterRequest> argumentCaptor = ArgumentCaptor.forClass(GetRouterRequest.class);
     HttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
@@ -91,8 +97,7 @@ public class RouterRequestHttpHandlerTest {
   }
 
   public void testBadRequest(String path, HttpMethod method) throws Exception {
-    RouterRequestHttpHandler testHandler =
-        new RouterRequestHttpHandler(mock(StatsHandler.class), Collections.emptyMap());
+    RouterRequestHttpHandler testHandler = new RouterRequestHttpHandler(requestStatsRecorder, Collections.emptyMap());
     ChannelHandlerContext mockContext = mock(ChannelHandlerContext.class);
     ArgumentCaptor<HttpShortcutResponse> argumentCaptor = ArgumentCaptor.forClass(HttpShortcutResponse.class);
     HttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path);

@@ -11,7 +11,6 @@ import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.davinci.storage.DiskHealthCheckService;
 import com.linkedin.venice.HttpConstants;
-import com.linkedin.venice.listener.StatsHandler;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 import com.linkedin.venice.listener.request.ComputeRouterRequestWrapper;
 import com.linkedin.venice.listener.request.CurrentVersionRequest;
@@ -60,7 +59,6 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
 
   private final DiskHealthCheckService diskHealthCheckService;
   private final StorageReadRequestHandler storageReadRequestHandler;
-  private final StatsHandler statsHandler;
   private final GrpcServiceDependencies dependencies;
   private final GrpcIoRequestProcessor requestProcessor;
 
@@ -71,7 +69,6 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   VeniceGrpcReadServiceImpl(GrpcServiceDependencies dependencies, GrpcIoRequestProcessor requestProcessor) {
     this.dependencies = dependencies;
     this.requestProcessor = requestProcessor;
-    this.statsHandler = dependencies.getStatsHandler();
     this.diskHealthCheckService = dependencies.getDiskHealthCheckService();
     this.storageReadRequestHandler = dependencies.getStorageReadRequestHandler();
   }

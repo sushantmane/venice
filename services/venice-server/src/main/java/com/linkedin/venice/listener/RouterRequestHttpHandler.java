@@ -42,12 +42,14 @@ import org.apache.logging.log4j.Logger;
  */
 public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
   private static final Logger LOGGER = LogManager.getLogger(RouterRequestHttpHandler.class);
-  private final StatsHandler statsHandler;
+  private final RequestStatsRecorder requestStatsRecorder;
   private final Map<String, Integer> storeToEarlyTerminationThresholdMSMap;
 
-  public RouterRequestHttpHandler(StatsHandler handler, Map<String, Integer> storeToEarlyTerminationThresholdMSMap) {
+  public RouterRequestHttpHandler(
+      RequestStatsRecorder requestStatsRecorder,
+      Map<String, Integer> storeToEarlyTerminationThresholdMSMap) {
     super();
-    this.statsHandler = handler;
+    this.requestStatsRecorder = requestStatsRecorder;
     this.storeToEarlyTerminationThresholdMSMap = storeToEarlyTerminationThresholdMSMap;
   }
 
@@ -67,7 +69,7 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
     Integer timeoutThresholdInMS = storeToEarlyTerminationThresholdMSMap.get(storeName);
     if (timeoutThresholdInMS != null) {
       routerRequest.setRequestTimeoutInNS(
-          statsHandler.getRequestStartTimeInNS() + TimeUnit.MILLISECONDS.toNanos(timeoutThresholdInMS));
+          requestStatsRecorder.getRequestStartTimeInNS() + TimeUnit.MILLISECONDS.toNanos(timeoutThresholdInMS));
     }
   }
 
@@ -77,7 +79,7 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
       URI uri = URI.create(req.uri());
       String[] requestParts = RequestHelper.getRequestParts(uri);
       QueryAction action = getQueryActionFromRequest(req, requestParts);
-      statsHandler.setRequestSize(req.content().readableBytes());
+      requestStatsRecorder.setRequestSize(req.content().readableBytes());
       switch (action) {
         case STORAGE: // GET /storage/store/partition/key
           HttpMethod requestMethod = req.method();
@@ -85,14 +87,14 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
             // TODO: evaluate whether we can replace single-get by multi-get
             GetRouterRequest getRouterRequest = GetRouterRequest.parseGetHttpRequest(req, requestParts);
             setupRequestTimeout(getRouterRequest);
-            statsHandler.setRequestInfo(getRouterRequest);
+            requestStatsRecorder.setRequestInfo(getRouterRequest);
             ctx.fireChannelRead(getRouterRequest);
           } else if (requestMethod.equals(HttpMethod.POST)) {
             // Multi-get
             MultiGetRouterRequestWrapper multiGetRouterReq =
                 MultiGetRouterRequestWrapper.parseMultiGetHttpRequest(req, requestParts);
             setupRequestTimeout(multiGetRouterReq);
-            statsHandler.setRequestInfo(multiGetRouterReq);
+            requestStatsRecorder.setRequestInfo(multiGetRouterReq);
             ctx.fireChannelRead(multiGetRouterReq);
           } else {
             throw new VeniceException("Unknown request method: " + requestMethod + " for " + QueryAction.STORAGE);
@@ -103,44 +105,44 @@ public class RouterRequestHttpHandler extends SimpleChannelInboundHandler<FullHt
             ComputeRouterRequestWrapper computeRouterReq =
                 ComputeRouterRequestWrapper.parseComputeHttpRequest(req, requestParts);
             setupRequestTimeout(computeRouterReq);
-            statsHandler.setRequestInfo(computeRouterReq);
+            requestStatsRecorder.setRequestInfo(computeRouterReq);
             ctx.fireChannelRead(computeRouterReq);
           } else {
             throw new VeniceException("Only support POST method for " + QueryAction.COMPUTE);
           }
           break;
         case HEALTH:
-          statsHandler.setMetadataRequest(true);
+          requestStatsRecorder.setMetadataRequest(true);
           HealthCheckRequest healthCheckRequest = new HealthCheckRequest();
           ctx.fireChannelRead(healthCheckRequest);
           break;
         case DICTIONARY:
           DictionaryFetchRequest dictionaryFetchRequest = DictionaryFetchRequest.parseGetHttpRequest(uri, requestParts);
-          statsHandler.setStoreName(dictionaryFetchRequest.getStoreName());
+          requestStatsRecorder.setStoreName(dictionaryFetchRequest.getStoreName());
           ctx.fireChannelRead(dictionaryFetchRequest);
           break;
         case ADMIN:
           AdminRequest adminRequest = AdminRequest.parseAdminHttpRequest(req, uri);
-          statsHandler.setStoreName(adminRequest.getStoreName());
+          requestStatsRecorder.setStoreName(adminRequest.getStoreName());
           ctx.fireChannelRead(adminRequest);
           break;
         case METADATA:
-          statsHandler.setMetadataRequest(true);
+          requestStatsRecorder.setMetadataRequest(true);
           MetadataFetchRequest metadataFetchRequest =
               MetadataFetchRequest.parseGetHttpRequest(uri.getPath(), requestParts);
-          statsHandler.setStoreName(metadataFetchRequest.getStoreName());
+          requestStatsRecorder.setStoreName(metadataFetchRequest.getStoreName());
           ctx.fireChannelRead(metadataFetchRequest);
           break;
         case CURRENT_VERSION:
-          statsHandler.setMetadataRequest(true);
+          requestStatsRecorder.setMetadataRequest(true);
           CurrentVersionRequest currentVersionRequest = CurrentVersionRequest.parseGetHttpRequest(uri, requestParts);
-          statsHandler.setStoreName(currentVersionRequest.getStoreName());
+          requestStatsRecorder.setStoreName(currentVersionRequest.getStoreName());
           ctx.fireChannelRead(currentVersionRequest);
           break;
         case TOPIC_PARTITION_INGESTION_CONTEXT:
           TopicPartitionIngestionContextRequest topicPartitionIngestionContextRequest =
               TopicPartitionIngestionContextRequest.parseGetHttpRequest(uri.getPath(), requestParts);
-          statsHandler.setStoreName(
+          requestStatsRecorder.setStoreName(
               Version.parseStoreFromVersionTopic(topicPartitionIngestionContextRequest.getVersionTopic()));
           ctx.fireChannelRead(topicPartitionIngestionContextRequest);
         default:

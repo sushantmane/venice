@@ -35,12 +35,12 @@ import java.nio.charset.StandardCharsets;
  */
 
 public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
-  private final StatsHandler statsHandler;
+  private final RequestStatsRecorder requestStatsRecorder;
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperFactory.getInstance();
 
-  public OutboundHttpWrapperHandler(StatsHandler handler) {
+  public OutboundHttpWrapperHandler(RequestStatsRecorder requestStatsRecorder) {
     super();
-    statsHandler = handler;
+    this.requestStatsRecorder = requestStatsRecorder;
   }
 
   @Override
@@ -55,18 +55,16 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
     try {
       if (msg instanceof AbstractReadResponse) {
         AbstractReadResponse obj = (AbstractReadResponse) msg;
-        ServerStatsContext statsContext = statsHandler.getServerStatsContext();
-        setStats(statsContext, obj);
-
+        requestStatsRecorder.setReadResponseStats(obj.getStatsRecorder());
         compressionStrategy = obj.getCompressionStrategy();
         if (obj.isFound()) {
           body = obj.getResponseBody();
           schemaIdHeader = obj.getResponseSchemaIdHeader();
-          statsContext.setResponseSize(body.readableBytes());
+          requestStatsRecorder.setResponseSize(body.readableBytes());
         } else {
           body = Unpooled.EMPTY_BUFFER;
           responseStatus = NOT_FOUND;
-          statsContext.setResponseSize(0);
+          requestStatsRecorder.setResponseSize(0);
         }
         isStreamingResponse = obj.isStreamingResponse();
         responseRcu = obj.getRCU();
@@ -83,9 +81,9 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
         contentType = HttpConstants.TEXT_PLAIN;
         if (shortcutResponse.getStatus()
             .equals(VeniceRequestEarlyTerminationException.getResponseStatusCode().getHttpResponseStatus())) {
-          statsHandler.setRequestTerminatedEarly();
+          requestStatsRecorder.setRequestTerminatedEarly();
         }
-        statsHandler.setMisroutedStoreVersionRequest(shortcutResponse.isMisroutedStoreVersion());
+        requestStatsRecorder.setMisroutedStoreVersion(shortcutResponse.isMisroutedStoreVersion());
       } else if (msg instanceof BinaryResponse) {
         // For dictionary Fetch requests
         body = ((BinaryResponse) msg).getBody();
@@ -166,7 +164,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
               .getBytes(StandardCharsets.UTF_8));
       contentType = HttpConstants.TEXT_PLAIN;
     } finally {
-      statsHandler.setResponseStatus(responseStatus);
+      requestStatsRecorder.setResponseStatus(responseStatus);
     }
 
     FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, responseStatus, body);
@@ -185,9 +183,5 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
      *  writeAndFlush may have some performance issue since it will call the actual send every time.
      */
     ctx.writeAndFlush(response);
-  }
-
-  public void setStats(ServerStatsContext statsContext, AbstractReadResponse obj) {
-    statsContext.setReadResponseStats(obj.getStatsRecorder());
   }
 }
