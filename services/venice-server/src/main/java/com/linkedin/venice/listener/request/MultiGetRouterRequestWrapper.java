@@ -10,6 +10,7 @@ import com.linkedin.venice.schema.avro.ReadAvroProtocolDefinition;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.streaming.StreamingUtils;
+import com.linkedin.venice.utils.NettyUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
 import java.util.List;
 import org.apache.avro.io.OptimizedBinaryDecoderFactory;
@@ -51,12 +52,16 @@ public class MultiGetRouterRequestWrapper extends MultiKeyRouterRequestWrapper<M
     byte[] content = new byte[httpRequest.content().readableBytes()];
     httpRequest.content().readBytes(content);
     keys = parseKeys(content);
-    boolean isRetryRequest = RouterRequest.containRetryHeader(httpRequest);
+    boolean isRetryRequest = NettyUtils.containRetryHeader(httpRequest);
     boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(httpRequest);
 
     return new MultiGetRouterRequestWrapper(requestParts[2], keys, isRetryRequest, isStreamingRequest);
   }
 
+  /**
+   * @deprecated This method has been deprecated and will be removed once the corresponding legacy gRPC code is removed.
+   */
+  @Deprecated
   public static MultiGetRouterRequestWrapper parseMultiGetGrpcRequest(VeniceClientRequest grpcRequest) {
     String resourceName = grpcRequest.getResourceName();
     List<MultiGetRouterRequestKeyV1> keys = parseKeys(grpcRequest.getKeyBytes().toByteArray());

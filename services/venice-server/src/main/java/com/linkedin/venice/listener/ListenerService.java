@@ -168,7 +168,7 @@ public class ListenerService extends AbstractVeniceService {
       grpcExecutor = createThreadPool(serverConfig.getGrpcWorkerThreadCount(), "GrpcWorkerThread", nettyBacklogSize);
       GrpcServiceDependencies dependencies =
           new GrpcServiceDependencies.Builder().setDiskHealthCheckService(diskHealthService)
-              .setReadQuotaEnforcementHandler(channelInitializer.getQuotaEnforcer())
+              .setQuotaEnforcementHandler(channelInitializer.getQuotaEnforcer())
               .setStorageReadRequestHandler(storageReadRequestHandler)
               .setStatsHandler(statsHandler)
               .build();
