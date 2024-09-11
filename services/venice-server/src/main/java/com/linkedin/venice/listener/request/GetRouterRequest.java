@@ -8,6 +8,7 @@ import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.streaming.StreamingUtils;
 import com.linkedin.venice.utils.EncodingUtils;
+import com.linkedin.venice.utils.NettyUtils;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -50,19 +51,27 @@ public class GetRouterRequest extends RouterRequest {
     return 1;
   }
 
-  public static GetRouterRequest parseSingleGetHttpRequest(HttpRequest request, String[] requestParts) {
-    if (requestParts.length != 5) {
+  public static GetRouterRequest parseGetHttpRequest(HttpRequest request, String[] requestParts) {
+    if (requestParts.length == 5) {
+      // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
+      String topicName = requestParts[2];
+      int partition = Integer.parseInt(requestParts[3]);
+      byte[] keyBytes = getKeyBytesFromUrlKeyString(requestParts[4]);
+      return new GetRouterRequest(
+          topicName,
+          partition,
+          keyBytes,
+          NettyUtils.containRetryHeader(request),
+          StreamingUtils.isStreamingEnabled(request));
+    } else {
       throw new VeniceException("Not a valid request for a STORAGE action: " + request.uri());
     }
-    // [0]""/[1]"action"/[2]"store"/[3]"partition"/[4]"key"
-    String topicName = requestParts[2];
-    int partition = Integer.parseInt(requestParts[3]);
-    byte[] keyBytes = getKeyBytesFromUrlKeyString(requestParts[4]);
-    boolean isRetryRequest = containRetryHeader(request);
-    boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(request);
-    return new GetRouterRequest(topicName, partition, keyBytes, isRetryRequest, isStreamingRequest);
   }
 
+  /**
+   * @deprecated This method has been deprecated and will be removed once the corresponding legacy gRPC code is removed.
+   */
+  @Deprecated
   public static GetRouterRequest parseSingleGetGrpcRequest(VeniceClientRequest request) {
     String resourceName = request.getResourceName();
     int partition = request.getPartition();

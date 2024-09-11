@@ -11,6 +11,7 @@ import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.streaming.StreamingUtils;
+import com.linkedin.venice.utils.NettyUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
 import java.util.List;
 import org.apache.avro.io.BinaryDecoder;
@@ -57,7 +58,7 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
         apiVersion,
         requestContent,
         httpRequest.headers().get(HttpConstants.VENICE_COMPUTE_VALUE_SCHEMA_ID),
-        GetRouterRequest.containRetryHeader(httpRequest),
+        NettyUtils.containRetryHeader(httpRequest),
         StreamingUtils.isStreamingEnabled(httpRequest));
   }
 

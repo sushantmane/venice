@@ -12,7 +12,7 @@ import io.netty.channel.ChannelHandlerContext;
 public class HttpStorageResponseHandlerCallback implements StorageResponseHandlerCallback {
   private final ChannelHandlerContext context;
 
-  public HttpStorageResponseHandlerCallback(ChannelHandlerContext context) {
+  private HttpStorageResponseHandlerCallback(ChannelHandlerContext context) {
     this.context = context;
   }
 

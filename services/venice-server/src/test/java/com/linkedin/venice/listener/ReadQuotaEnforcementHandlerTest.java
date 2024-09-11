@@ -24,7 +24,6 @@ import static org.testng.Assert.assertTrue;
 
 import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.venice.helix.HelixCustomizedViewOfflinePushRepository;
-import com.linkedin.venice.listener.ReadQuotaEnforcementHandler.QuotaEnforcementResult;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.response.HttpShortcutResponse;
 import com.linkedin.venice.meta.Instance;
@@ -109,7 +108,9 @@ public class ReadQuotaEnforcementHandlerTest {
     String storeName = "test_store";
     when(routerRequest.getStoreName()).thenReturn(storeName);
     when(storeRepository.getStore(storeName)).thenReturn(null);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.BAD_REQUEST);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.BAD_REQUEST);
 
     verify(stats, never()).recordAllowed(eq(storeName), eq(1L));
     verify(stats, never()).recordRejected(eq(storeName), eq(1L));
@@ -135,7 +136,9 @@ public class ReadQuotaEnforcementHandlerTest {
     Store store = mock(Store.class);
     when(routerRequest.getStoreName()).thenReturn(storeName);
     when(storeRepository.getStore(storeName)).thenReturn(store);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.ALLOWED);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED);
 
     verify(stats, never()).recordAllowed(eq(storeName), eq(1L));
     verify(stats, never()).recordRejected(eq(storeName), eq(1L));
@@ -158,7 +161,9 @@ public class ReadQuotaEnforcementHandlerTest {
     when(routerRequest.getStoreName()).thenReturn(storeName);
     when(storeRepository.getStore(storeName)).thenReturn(store);
     when(store.isStorageNodeReadQuotaEnabled()).thenReturn(false);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.ALLOWED);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED);
 
     verify(stats, never()).recordAllowed(eq(storeName), eq(1L));
     verify(stats, never()).recordRejected(eq(storeName), eq(1L));
@@ -189,7 +194,9 @@ public class ReadQuotaEnforcementHandlerTest {
     VeniceRateLimiter veniceRateLimiter = mock(VeniceRateLimiter.class);
     quotaEnforcementHandler.setStoreVersionRateLimiter(resourceName, veniceRateLimiter);
     when(veniceRateLimiter.tryAcquirePermit(1)).thenReturn(false);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.REJECTED);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.REJECTED);
 
     verify(stats).recordRejected(eq(storeName), eq(1L));
     verify(stats, never()).recordAllowed(eq(storeName), eq(1L));
@@ -205,7 +212,9 @@ public class ReadQuotaEnforcementHandlerTest {
 
     // Case 2: If request is a retry request, it should be allowed
     when(routerRequest.isRetryRequest()).thenReturn(true);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.ALLOWED);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED);
     verify(stats).recordAllowed(eq(storeName), eq(1L));
   }
 
@@ -225,7 +234,9 @@ public class ReadQuotaEnforcementHandlerTest {
     VeniceRateLimiter storageNodeRateLimiter = mock(VeniceRateLimiter.class);
     quotaEnforcementHandler.setStorageNodeRateLimiter(storageNodeRateLimiter);
     when(storageNodeRateLimiter.tryAcquirePermit(1)).thenReturn(false);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.OVER_CAPACITY);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.OVER_CAPACITY);
 
     verify(stats, never()).recordAllowed(eq(storeName), eq(1L));
     verify(stats, never()).recordRejected(eq(storeName), eq(1L));
@@ -259,7 +270,9 @@ public class ReadQuotaEnforcementHandlerTest {
     VeniceRateLimiter storageNodeRateLimiter = mock(VeniceRateLimiter.class);
     when(storageNodeRateLimiter.tryAcquirePermit(1)).thenReturn(true);
     quotaEnforcementHandler.setStorageNodeRateLimiter(storageNodeRateLimiter);
-    assertEquals(quotaEnforcementHandler.enforceQuota(routerRequest), QuotaEnforcementResult.ALLOWED);
+    assertEquals(
+        quotaEnforcementHandler.enforceQuota(routerRequest),
+        QuotaEnforcementHandler.QuotaEnforcementResult.ALLOWED);
 
     verify(stats).recordAllowed(eq(storeName), eq(1L));
     verify(stats, never()).recordRejected(eq(storeName), eq(1L));

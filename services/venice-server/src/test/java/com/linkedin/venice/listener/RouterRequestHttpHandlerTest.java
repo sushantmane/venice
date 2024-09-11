@@ -75,7 +75,7 @@ public class RouterRequestHttpHandlerTest {
 
     // Test parse method
     GetRouterRequest getRouterRequest =
-        GetRouterRequest.parseSingleGetHttpRequest(msg, RequestHelper.getRequestParts(URI.create(msg.uri())));
+        GetRouterRequest.parseGetHttpRequest(msg, RequestHelper.getRequestParts(URI.create(msg.uri())));
     Assert.assertEquals(
         getRouterRequest.getResourceName(),
         expectedStore,
