@@ -167,8 +167,14 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       ServerConnectionStatsHandler serverConnectionStatsHandler =
           new ServerConnectionStatsHandler(serverConnectionStats, serverConfig.getRouterPrincipalName());
       pipeline.addLast(serverConnectionStatsHandler);
-      StatsHandler statsHandler = createStatsHandler();
-      pipeline.addLast(statsHandler);
+      /**
+       * In the Netty pipeline, we create one {@link RequestStatsRecorder} per channel. Since only one request is processed at a time
+       * per channel (with each HTTP/2 stream having its own child channel, see {@link io.netty.handler.codec.http2.Http2MultiplexHandler}),
+       * the same instance of {@link RequestStatsRecorder} can be reused for all requests processed within that channel.
+       * The {@link RequestStatsRecorder} is reset before processing each new request.
+       */
+      RequestStatsRecorder requestStatsRecorder = new RequestStatsRecorder(singleGetStats, multiGetStats, computeStats);
+      pipeline.addLast(new StatsHandler(requestStatsRecorder));
       if (whetherNeedServerCodec) {
         pipeline.addLast(new HttpServerCodec());
       } else {
@@ -192,7 +198,7 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
       }
 
       pipeline.addLast(new HttpObjectAggregator(serverConfig.getMaxRequestSize()))
-          .addLast(new OutboundHttpWrapperHandler(statsHandler))
+          .addLast(new OutboundHttpWrapperHandler(requestStatsRecorder))
           .addLast(new IdleStateHandler(0, 0, serverConfig.getNettyIdleTimeInSeconds()));
       if (sslFactory.isPresent()) {
         pipeline.addLast(verifySsl);
@@ -206,8 +212,8 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
           pipeline.addLast(storeAclHandler.get());
         }
       }
-      pipeline
-          .addLast(new RouterRequestHttpHandler(statsHandler, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
+      pipeline.addLast(
+          new RouterRequestHttpHandler(requestStatsRecorder, serverConfig.getStoreToEarlyTerminationThresholdMSMap()));
       if (quotaEnforcer != null) {
         pipeline.addLast(quotaEnforcer);
       }
@@ -223,8 +229,16 @@ public class HttpChannelInitializer extends ChannelInitializer<SocketChannel> {
     }
   }
 
-  StatsHandler createStatsHandler() {
-    return new StatsHandler(singleGetStats, multiGetStats, computeStats);
+  public AggServerHttpRequestStats getSingleGetStats() {
+    return singleGetStats;
+  }
+
+  public AggServerHttpRequestStats getMultiGetStats() {
+    return multiGetStats;
+  }
+
+  public AggServerHttpRequestStats getComputeStats() {
+    return computeStats;
   }
 
   /**

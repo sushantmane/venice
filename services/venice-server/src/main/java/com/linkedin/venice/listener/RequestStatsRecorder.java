@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * completion using references to the proper Metrics Repository in AggServerHttpRequestStats. This class is almost a
  * direct copy of StatsHandler, without Netty Channel Read/Write logic.
  */
-public class ServerStatsContext {
+public class RequestStatsRecorder {
   private ReadResponseStatsRecorder responseStatsRecorder = null;
   private long startTimeInNS = System.nanoTime();
   private HttpResponseStatus responseStatus = null;
@@ -90,7 +90,7 @@ public class ServerStatsContext {
     this.requestPartCount++;
   }
 
-  public ServerStatsContext(
+  public RequestStatsRecorder(
       AggServerHttpRequestStats singleGetStats,
       AggServerHttpRequestStats multiGetStats,
       AggServerHttpRequestStats computeStats) {

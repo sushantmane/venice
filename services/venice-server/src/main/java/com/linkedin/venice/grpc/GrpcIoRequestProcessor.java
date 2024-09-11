@@ -12,7 +12,7 @@ import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.QuotaEnforcementHandler;
 import com.linkedin.venice.listener.QuotaEnforcementHandler.QuotaEnforcementResult;
-import com.linkedin.venice.listener.ServerStatsContext;
+import com.linkedin.venice.listener.RequestStatsRecorder;
 import com.linkedin.venice.listener.StorageReadRequestHandler;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.protocols.MultiKeyResponse;
@@ -187,7 +187,7 @@ public class GrpcIoRequestProcessor {
   }
 
   public static void reportRequestStats(GrpcRequestContext requestContext) {
-    ServerStatsContext statsContext = requestContext.getStatsContext();
+    RequestStatsRecorder statsContext = requestContext.getStatsContext();
     HttpResponseStatus responseStatus = statsContext.getResponseStatus();
     if (statsContext.getResponseStatus() == null) {
       LOGGER.error("Received error in outbound gRPC Stats Handler: response status could not be null");
