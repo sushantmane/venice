@@ -111,6 +111,7 @@ public class GrpcIoRequestProcessor {
         requestContext.setReadResponseStatus(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR);
         requestContext.setErrorMessage("Unknown quota enforcement result: " + result);
     }
+
     sendResponse(requestContext);
   }
 
@@ -152,13 +153,10 @@ public class GrpcIoRequestProcessor {
     ReadResponse readResponse = requestContext.getReadResponse();
     SingleGetResponse.Builder builder = SingleGetResponse.newBuilder();
     VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
-    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
-    requestStatsRecorder.setResponseStatus(responseStatus);
 
     if (readResponse == null) {
       builder.setStatusCode(requestContext.getReadResponseStatus().getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
-      requestStatsRecorder.setResponseStatus(requestContext.getReadResponseStatus());
     } else if (readResponse.isFound()) {
       builder.setRcu(readResponse.getRCU())
           .setStatusCode(responseStatus.getCode())
@@ -193,10 +191,7 @@ public class GrpcIoRequestProcessor {
   public static void sendMultiKeyResponse(GrpcRequestContext<MultiKeyResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
-
     VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
-    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
-    requestStatsRecorder.setResponseStatus(responseStatus);
 
     if (readResponse == null) {
       builder.setStatusCode(responseStatus.getCode());
@@ -233,10 +228,7 @@ public class GrpcIoRequestProcessor {
   public static void sendVeniceServerResponse(GrpcRequestContext<VeniceServerResponse> requestContext) {
     ReadResponse readResponse = requestContext.getReadResponse();
     VeniceServerResponse.Builder builder = VeniceServerResponse.newBuilder();
-
     VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
-    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
-    requestStatsRecorder.setResponseStatus(responseStatus);
 
     if (readResponse == null) {
       builder.setErrorCode(responseStatus.getCode());
