@@ -89,6 +89,9 @@ public class GrpcRequestContext<T> {
 
   public void setReadResponseStatus(VeniceReadResponseStatus readResponseStatus) {
     this.readResponseStatus = readResponseStatus;
+    if (requestStatsRecorder != null) {
+      requestStatsRecorder.setResponseStatus(readResponseStatus);
+    }
   }
 
   public String getErrorMessage() {

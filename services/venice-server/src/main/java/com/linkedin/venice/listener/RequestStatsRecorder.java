@@ -2,6 +2,7 @@ package com.linkedin.venice.listener;
 
 import static com.linkedin.venice.listener.response.stats.ResponseStatsUtil.consumeDoubleIfAbove;
 import static com.linkedin.venice.listener.response.stats.ResponseStatsUtil.consumeIntIfAbove;
+import static com.linkedin.venice.response.VeniceReadResponseStatus.MISROUTED_STORE_VERSION;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.request.RouterRequest;
@@ -322,8 +323,8 @@ public class RequestStatsRecorder {
       RequestStatsRecorder requestStatsRecorder,
       boolean isSuccess,
       long flushLatencyNs) {
-    VeniceReadResponseStatus responseStatus = requestStatsRecorder.getVeniceReadResponseStatus();
-    if (responseStatus == null) {
+    VeniceReadResponseStatus readResponseStatus = requestStatsRecorder.getVeniceReadResponseStatus();
+    if (readResponseStatus == null) {
       LOGGER.error(
           "Failed to record request stats: response status of request cannot be null",
           new VeniceException("response status of request cannot be null"));
@@ -338,6 +339,13 @@ public class RequestStatsRecorder {
       return;
     }
 
+    if (readResponseStatus == VeniceRequestEarlyTerminationException.getResponseStatusCode()) {
+      requestStatsRecorder.setRequestTerminatedEarly();
+    }
+    if (readResponseStatus == MISROUTED_STORE_VERSION) {
+      requestStatsRecorder.setMisroutedStoreVersion(true);
+    }
+
     // Calculate the latency
     double requestLatency = LatencyUtils.getElapsedTimeFromNSToMS(requestStatsRecorder.getRequestStartTimeInNS());
 
@@ -350,10 +358,10 @@ public class RequestStatsRecorder {
     requestStatsRecorder.recordBasicMetrics(serverHttpRequestStats);
 
     // Record success or error based on the response status
-    if (isSuccess && (responseStatus == VeniceReadResponseStatus.OK
-        || responseStatus == VeniceReadResponseStatus.KEY_NOT_FOUND)) {
+    if (isSuccess && (readResponseStatus == VeniceReadResponseStatus.OK
+        || readResponseStatus == VeniceReadResponseStatus.KEY_NOT_FOUND)) {
       requestStatsRecorder.successRequest(serverHttpRequestStats, requestLatency);
-    } else if (responseStatus != VeniceReadResponseStatus.TOO_MANY_REQUESTS) {
+    } else if (readResponseStatus != VeniceReadResponseStatus.TOO_MANY_REQUESTS) {
       requestStatsRecorder.errorRequest(serverHttpRequestStats, requestLatency);
     }
 
