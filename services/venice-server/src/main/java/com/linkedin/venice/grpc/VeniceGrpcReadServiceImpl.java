@@ -51,7 +51,56 @@ import org.apache.logging.log4j.Logger;
 
 
 /**
- * This class implements the Venice Read Service gRPC service.
+ * This class implements the Venice gRPC read service. It manages the processing of read requests
+ * in a multi-threaded environment using Netty-based gRPC. To optimize performance and prevent deadlocks,
+ * it handles IO and non-IO operations in different thread pools.
+ *
+ * ### Thread Pools in Netty-based gRPC:
+ * 1. **Netty Boss Group**: Handles incoming connections.
+ * 2. **Netty Worker Group**: Handles IO-related work (Netty IO threads).
+ * 3. **gRPC Executor**: Executes gRPC service methods. The default gRPC executor is a caching thread pool,
+ *    which creates a new thread for each incoming request. However, this is inefficient for handling
+ *    a large number of requests, as it leads to thread creation overhead.
+ *
+ * Note: Netty threads and abstractions are not directly exposed to us.
+ *
+ * ### Custom gRPC Executor:
+ * To avoid creating a new thread per request, we provide a fixed-size thread pool executor to the gRPC server builder.
+ * The fixed thread pool ensures a controlled request processing concurrency.
+ * However, to prevent deadlocks, we must avoid blocking the gRPC executor threads with long-running or blocking operations.
+ *
+ * ### Offloading IO Requests:
+ * Since IO requests (like reading from storage) are blocking, they are offloaded to a separate thread pool.
+ * The {@link StorageReadRequestHandler#executor} is responsible for processing these requests. Offloading IO requests
+ * improves performance by ensuring that the gRPC executor is not tied up with slow operations, allowing it to process
+ * new incoming requests efficiently.
+ *
+ * ### Non-IO Requests:
+ * Non-IO requests, which are not expected to block, are processed directly in the gRPC executor threads.
+ * For read requests, quota enforcement is performed in the gRPC executor thread. If the request passes quota enforcement,
+ * it is then handed off to the IO thread pool for further processing.
+ *
+ * ### Rough Request Flow:
+ * ```
+ * +-------------------+    1. Incoming conn            +--------------------------+
+ * | Netty Boss Group   | <---------------------------- | Client                   |
+ * +-------------------+                                +--------------------------+
+ *         |
+ *         v
+ * +-------------------+    2. Handles Req IO work      +--------------------------+
+ * | Netty Worker Group | <---------------------------- | Storage / IO Operations  |
+ * +-------------------+                                +--------------------------+
+ *         |
+ *         v
+ * +-------------------+    3. Execute gRPC Method      +--------------------------+
+ * | gRPC Executor      | <---------------------------- | gRPC Service Method      |
+ * +-------------------+                                +--------------------------+
+ *         |
+ *         v
+ * +-------------------+    4. Offload Blocking IO      +--------------------------+
+ * | IO Thread Pool     | <---------------------------- | StorageReadRequestHandler|
+ * +-------------------+                                +--------------------------+
+ * ```
  */
 public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadServiceImplBase {
   private static final Logger LOGGER = LogManager.getLogger(VeniceGrpcReadServiceImpl.class);
@@ -83,7 +132,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      clientRequestCtx.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      clientRequestCtx.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(singleGetRequest.getSerializedSize());
       clientRequestCtx.setRouterRequest(routerRequest);
       requestProcessor.processRequest(clientRequestCtx);
     } catch (Exception e) {
@@ -108,7 +159,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(batchGetRequest);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(batchGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -129,7 +182,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, SINGLE_GET);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(singleGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -145,12 +200,14 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void multiGet(MultiGetRequest request, StreamObserver<MultiKeyResponse> streamObserver) {
+  public void multiGet(MultiGetRequest multiGetRequest, StreamObserver<MultiKeyResponse> streamObserver) {
     GrpcRequestContext<MultiKeyResponse> requestContext =
         GrpcRequestContext.create(dependencies, streamObserver, MULTI_GET);
     try {
-      RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(request);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(multiGetRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(multiGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -166,12 +223,14 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void compute(ComputeRequest request, StreamObserver<MultiKeyResponse> responseObserver) {
+  public void compute(ComputeRequest computeRequest, StreamObserver<MultiKeyResponse> responseObserver) {
     GrpcRequestContext<MultiKeyResponse> requestContext =
         GrpcRequestContext.create(dependencies, responseObserver, COMPUTE);
     try {
-      RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(request);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(computeRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(computeRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
