@@ -21,13 +21,14 @@ import com.linkedin.venice.listener.request.MultiGetRouterRequestWrapper;
 import com.linkedin.venice.listener.request.RouterRequest;
 import com.linkedin.venice.listener.request.TopicPartitionIngestionContextRequest;
 import com.linkedin.venice.listener.response.BinaryResponse;
+import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.protocols.AdminRequest;
 import com.linkedin.venice.protocols.AdminResponse;
+import com.linkedin.venice.protocols.CompressionDictionaryRequest;
+import com.linkedin.venice.protocols.CompressionDictionaryResponse;
 import com.linkedin.venice.protocols.ComputeRequest;
 import com.linkedin.venice.protocols.CurrentVersionInfoRequest;
 import com.linkedin.venice.protocols.CurrentVersionInfoResponse;
-import com.linkedin.venice.protocols.GetCompressionDictionaryRequest;
-import com.linkedin.venice.protocols.GetCompressionDictionaryResponse;
 import com.linkedin.venice.protocols.HealthCheckRequest;
 import com.linkedin.venice.protocols.HealthCheckResponse;
 import com.linkedin.venice.protocols.IngestionContextRequest;
@@ -253,8 +254,8 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
     if (diskHealthCheckService.isDiskHealthy()) {
       builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
     } else {
-      builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
-      builder.setMessage(VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG);
+      builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
+          .setMessage(VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG);
     }
     responseObserver.onNext(builder.build());
     responseObserver.onCompleted();
@@ -262,14 +263,18 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
 
   @Override
   public void getCompressionDictionary(
-      GetCompressionDictionaryRequest dictionaryRequest,
-      StreamObserver<GetCompressionDictionaryResponse> responseObserver) {
-    GetCompressionDictionaryResponse.Builder builder = GetCompressionDictionaryResponse.newBuilder();
+      CompressionDictionaryRequest dictionaryRequest,
+      StreamObserver<CompressionDictionaryResponse> responseObserver) {
+    CompressionDictionaryResponse.Builder builder = CompressionDictionaryResponse.newBuilder();
     try {
-      DictionaryFetchRequest dictionaryFetchRequest = DictionaryFetchRequest.parseGetGrpcRequest(dictionaryRequest);
-      BinaryResponse binaryResponse = storageReadRequestHandler.handleDictionaryFetchRequest(dictionaryFetchRequest);
-      builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
-      builder.setValue(GrpcUtils.toByteString(binaryResponse.getBody()));
+      String topicName =
+          Version.composeKafkaTopic(dictionaryRequest.getStoreName(), dictionaryRequest.getStoreVersion());
+      BinaryResponse binaryResponse = storageReadRequestHandler
+          .handleDictionaryFetchRequest(DictionaryFetchRequest.create(dictionaryRequest.getStoreName(), topicName));
+      builder.setStatusCode(binaryResponse.getStatus().getCode())
+          .setContentType(HttpConstants.BINARY)
+          .setContentLength(binaryResponse.getBody().readableBytes())
+          .setValue(GrpcUtils.toByteString(binaryResponse.getBody()));
     } catch (Exception e) {
       LOGGER.error("Error while processing dictionary request", e);
       builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());

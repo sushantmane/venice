@@ -808,7 +808,6 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   }
 
   /**
-   * The following handle request methods absolutely do not belong in this class, but are here for now to avoid a massive refactor.
    * TODO: Refactor these methods into a a common service class.
    */
   public BinaryResponse handleDictionaryFetchRequest(DictionaryFetchRequest request) {

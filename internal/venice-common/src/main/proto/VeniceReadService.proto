@@ -22,7 +22,7 @@ service VeniceReadService {
 
   rpc isServerHealthy(HealthCheckRequest) returns (HealthCheckResponse) {}
 
-  rpc getCompressionDictionary(GetCompressionDictionaryRequest) returns (GetCompressionDictionaryResponse) {}
+  rpc getCompressionDictionary(CompressionDictionaryRequest) returns (CompressionDictionaryResponse) {}
 
   rpc handleAdminRequest(AdminRequest) returns (AdminResponse) {}
 
@@ -117,12 +117,12 @@ message HealthCheckResponse {
   string message = 2;
 }
 
-message GetCompressionDictionaryRequest {
+message CompressionDictionaryRequest {
   string storeName = 1;
   uint32 storeVersion = 2;
 }
 
-message GetCompressionDictionaryResponse {
+message CompressionDictionaryResponse {
   int32 statusCode = 1;
   bytes value = 2;
   string contentType = 3;
