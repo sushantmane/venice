@@ -83,7 +83,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      clientRequestCtx.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      clientRequestCtx.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(singleGetRequest.getSerializedSize());
       clientRequestCtx.setRouterRequest(routerRequest);
       requestProcessor.processRequest(clientRequestCtx);
     } catch (Exception e) {
@@ -108,7 +110,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, LEGACY);
     try {
       RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(batchGetRequest);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(batchGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -129,7 +133,9 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
         GrpcRequestContext.create(dependencies, streamObserver, SINGLE_GET);
     try {
       RouterRequest routerRequest = GetRouterRequest.parseSingleGetGrpcRequest(singleGetRequest);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(singleGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -145,12 +151,14 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void multiGet(MultiGetRequest request, StreamObserver<MultiKeyResponse> streamObserver) {
+  public void multiGet(MultiGetRequest multiGetRequest, StreamObserver<MultiKeyResponse> streamObserver) {
     GrpcRequestContext<MultiKeyResponse> requestContext =
         GrpcRequestContext.create(dependencies, streamObserver, MULTI_GET);
     try {
-      RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(request);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(multiGetRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(multiGetRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {
@@ -166,12 +174,14 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
   }
 
   @Override
-  public void compute(ComputeRequest request, StreamObserver<MultiKeyResponse> responseObserver) {
+  public void compute(ComputeRequest computeRequest, StreamObserver<MultiKeyResponse> responseObserver) {
     GrpcRequestContext<MultiKeyResponse> requestContext =
         GrpcRequestContext.create(dependencies, responseObserver, COMPUTE);
     try {
-      RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(request);
-      requestContext.getRequestStatsRecorder().setRequestInfo(routerRequest);
+      RouterRequest routerRequest = ComputeRouterRequestWrapper.parseComputeGrpcRequest(computeRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(computeRequest.getSerializedSize());
       requestContext.setRouterRequest(routerRequest);
       requestProcessor.processRequest(requestContext);
     } catch (Exception e) {

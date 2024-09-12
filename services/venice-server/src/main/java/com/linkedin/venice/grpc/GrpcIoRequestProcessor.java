@@ -17,8 +17,6 @@ import com.linkedin.venice.protocols.MultiKeyResponse;
 import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
-import com.linkedin.venice.stats.ServerHttpRequestStats;
-import com.linkedin.venice.utils.LatencyUtils;
 import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -189,33 +187,7 @@ public class GrpcIoRequestProcessor {
     reportRequestStats(requestContext);
   }
 
-  /**
-   * TODO: Fix stats recording as this is incomplete and broken
-   */
   public static void reportRequestStats(GrpcRequestContext requestContext) {
-    RequestStatsRecorder requestStatsRecorder = requestContext.getRequestStatsRecorder();
-
-    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
-    if (responseStatus == null) {
-      LOGGER.error("Received error in outbound gRPC Stats Handler: response status could not be null");
-      return;
-    }
-
-    String storeName = requestStatsRecorder.getStoreName();
-    ServerHttpRequestStats serverHttpRequestStats;
-    if (requestStatsRecorder.getStoreName() == null) {
-      LOGGER.error("Received error in outbound gRPC Stats Handler: store name could not be null");
-      return;
-    }
-
-    serverHttpRequestStats = requestStatsRecorder.getCurrentStats().getStoreStats(storeName);
-    requestStatsRecorder.recordBasicMetrics(serverHttpRequestStats);
-    double elapsedTime = LatencyUtils.getElapsedTimeFromNSToMS(requestStatsRecorder.getRequestStartTimeInNS());
-    if (responseStatus == VeniceReadResponseStatus.OK || responseStatus == VeniceReadResponseStatus.KEY_NOT_FOUND) {
-      requestStatsRecorder.successRequest(serverHttpRequestStats, elapsedTime);
-      return;
-    }
-
-    requestStatsRecorder.errorRequest(serverHttpRequestStats, elapsedTime);
+    RequestStatsRecorder.recordRequestCompletionStats(requestContext.getRequestStatsRecorder(), true, -1);
   }
 }

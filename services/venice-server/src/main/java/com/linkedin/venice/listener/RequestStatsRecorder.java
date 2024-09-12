@@ -10,7 +10,10 @@ import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.stats.AggServerHttpRequestStats;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
+import com.linkedin.venice.utils.LatencyUtils;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -22,6 +25,8 @@ import io.netty.channel.ChannelHandlerContext;
  * direct copy of StatsHandler, without Netty Channel Read/Write logic.
  */
 public class RequestStatsRecorder {
+  private static final Logger LOGGER = LogManager.getLogger(RequestStatsRecorder.class);
+
   private ReadResponseStatsRecorder responseStatsRecorder = null;
   private long startTimeInNS = System.nanoTime();
   private VeniceReadResponseStatus responseStatus = null;
@@ -38,6 +43,7 @@ public class RequestStatsRecorder {
   // a flag that indicates if this is a new HttpRequest. Netty is TCP-based, so a HttpRequest is chunked into packages.
   // Set the startTimeInNS in ChannelRead if it is the first package within a HttpRequest.
   private boolean newRequest = true;
+
   /**
    * To indicate whether the stat callback has been triggered or not for a given request.
    * This is mostly to bypass the issue that stat callback could be triggered multiple times for one single request.
@@ -45,6 +51,7 @@ public class RequestStatsRecorder {
   private boolean statCallbackExecuted = false;
 
   /**
+   * For Netty pipeline:
    * Normally, one multi-get request will be split into two parts, and it means
    * {@link StatsHandler#channelRead(ChannelHandlerContext, Object)} will be invoked twice.
    *
@@ -65,12 +72,17 @@ public class RequestStatsRecorder {
    * {@link RouterRequestHttpHandler}
    * {@link StorageReadRequestHandler}
    *
+   * For gRPC pipeline: Request is not split into parts, so part latency is not applicable.
    */
   private double firstPartLatency = -1;
   private double secondPartLatency = -1;
   private double partsInvokeDelayLatency = -1;
   private int requestPartCount = 1;
   private boolean isMisroutedStoreVersion = false;
+
+  /**
+   * TODO: We need to figure out how to record the flush latency for gRPC requests.
+   */
   private double flushLatency = -1;
   private int responseSize = -1;
 
@@ -257,19 +269,25 @@ public class RequestStatsRecorder {
     return this;
   }
 
-  // This method does not have to be synchronized since operations in Tehuti are already synchronized.
-  // Please re-consider the race condition if new logic is added.
+  /**
+   * Records a successful request in the statistics.
+   * This method is called when the {@link responseStatus} is either OK or KEY_NOT_FOUND.
+   *
+   * Note: Synchronization is not required here, as operations in Tehuti are already synchronized.
+   * However, reconsider potential race conditions if new logic is introduced.
+   */
   public RequestStatsRecorder successRequest(ServerHttpRequestStats stats, double elapsedTime) {
     if (stats != null) {
       stats.recordSuccessRequest();
       stats.recordSuccessRequestLatency(elapsedTime);
-    } else {
-      throw new VeniceException("store name could not be null if request succeeded");
     }
-
     return this;
   }
 
+  /**
+   * Records an error request in the statistics.
+   * This method is called when the {@link responseStatus} is neither OK, KEY_NOT_FOUND, nor TOO_MANY_REQUESTS.
+   */
   public RequestStatsRecorder errorRequest(ServerHttpRequestStats stats, double elapsedTime) {
     if (stats == null) {
       currentStats.recordErrorRequest();
@@ -294,5 +312,52 @@ public class RequestStatsRecorder {
 
   public void setMisroutedStoreVersion(boolean misroutedStoreVersion) {
     isMisroutedStoreVersion = misroutedStoreVersion;
+  }
+
+  /**
+   * Records the completion of a request in the statistics.
+   * This method should be called at the end of the request processing.
+   */
+  public static void recordRequestCompletionStats(
+      RequestStatsRecorder requestStatsRecorder,
+      boolean isSuccess,
+      long flushLatencyNs) {
+    VeniceReadResponseStatus responseStatus = requestStatsRecorder.getVeniceReadResponseStatus();
+    if (responseStatus == null) {
+      LOGGER.error(
+          "Failed to record request stats: response status of request cannot be null",
+          new VeniceException("response status of request cannot be null"));
+      return;
+    }
+
+    String storeName = requestStatsRecorder.getStoreName();
+    if (storeName == null) {
+      LOGGER.error(
+          "Failed to record request stats: store name of request cannot be null",
+          new VeniceException("store name of request cannot be null"));
+      return;
+    }
+
+    // Calculate the latency
+    double requestLatency = LatencyUtils.getElapsedTimeFromNSToMS(requestStatsRecorder.getRequestStartTimeInNS());
+
+    // Optionally include flush latency if available
+    if (flushLatencyNs > 0) {
+      requestStatsRecorder.setFlushLatency(LatencyUtils.getElapsedTimeFromNSToMS(flushLatencyNs));
+    }
+
+    ServerHttpRequestStats serverHttpRequestStats = requestStatsRecorder.getCurrentStats().getStoreStats(storeName);
+    requestStatsRecorder.recordBasicMetrics(serverHttpRequestStats);
+
+    // Record success or error based on the response status
+    if (isSuccess && (responseStatus == VeniceReadResponseStatus.OK
+        || responseStatus == VeniceReadResponseStatus.KEY_NOT_FOUND)) {
+      requestStatsRecorder.successRequest(serverHttpRequestStats, requestLatency);
+    } else if (responseStatus != VeniceReadResponseStatus.TOO_MANY_REQUESTS) {
+      requestStatsRecorder.errorRequest(serverHttpRequestStats, requestLatency);
+    }
+
+    // Mark the callback as executed
+    requestStatsRecorder.setStatCallBackExecuted(true);
   }
 }
