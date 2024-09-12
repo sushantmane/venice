@@ -116,7 +116,7 @@ public class GrpcIoRequestProcessor {
   }
 
   /**
-   * Call must ensure that all fields in the request context are properly set before invoking this method.
+   * Callers must ensure that all fields in the request context are properly set before invoking this method.
    * Callers must also use the appropriate {@link GrpcRequestContext#readResponseStatus} to comply with the API contract.
    *
    * @param requestContext The context of the request for which a response is being sent
@@ -265,10 +265,10 @@ public class GrpcIoRequestProcessor {
     if (readResponse == null) {
       requestStatsRecorder.setReadResponseStats(null).setResponseSize(0);
     } else if (readResponse.isFound()) {
-      requestStatsRecorder.setReadResponseStats(abstractReadResponse.getStatsRecorder())
+      requestStatsRecorder.setReadResponseStats(abstractReadResponse.getReadResponseStatsRecorder())
           .setResponseSize(abstractReadResponse.getResponseBody().readableBytes());
     } else {
-      requestStatsRecorder.setReadResponseStats(abstractReadResponse.getStatsRecorder()).setResponseSize(0);
+      requestStatsRecorder.setReadResponseStats(abstractReadResponse.getReadResponseStatsRecorder()).setResponseSize(0);
     }
 
     RequestStatsRecorder.recordRequestCompletionStats(requestContext.getRequestStatsRecorder(), true, -1);

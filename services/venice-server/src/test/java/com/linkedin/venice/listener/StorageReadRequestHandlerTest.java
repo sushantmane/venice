@@ -451,7 +451,7 @@ public class StorageReadRequestHandlerTest {
       }
 
       ServerHttpRequestStats stats = mock(ServerHttpRequestStats.class);
-      multiGetResponseWrapper.getStatsRecorder().recordMetrics(stats);
+      multiGetResponseWrapper.getReadResponseStatsRecorder().recordMetrics(stats);
       if (responseProvider == validResponseProvider) {
         verify(stats).recordSuccessRequestKeyCount(recordCount);
       }
@@ -727,7 +727,7 @@ public class StorageReadRequestHandlerTest {
       double expectedReadComputeEfficiency = (double) valueBytes.length / (double) expectedReadComputeOutputSize;
 
       ServerHttpRequestStats stats = mock(ServerHttpRequestStats.class);
-      computeResponse.getStatsRecorder().recordMetrics(stats);
+      computeResponse.getReadResponseStatsRecorder().recordMetrics(stats);
       verify(stats).recordSuccessRequestKeyCount(keySet.size());
       verify(stats).recordDotProductCount(1);
       verify(stats).recordHadamardProduct(1);
