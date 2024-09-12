@@ -487,12 +487,12 @@ subprojects {
       doLast {
         parseJacocoXml("$buildDir/reports/jacoco/test/jacocoTestReport.xml")
       }
-
-      afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: [
-            '**/com/linkedin/venice/protocols/**',
-        ])}))
-      }
+// This is required to remove generated code from the report but it fails build in all-modules
+//      afterEvaluate {
+//        classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: [
+//            '**/com/linkedin/venice/protocols/**',
+//        ])}))
+//      }
     }
 
     afterEvaluate {

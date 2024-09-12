@@ -8,15 +8,13 @@ import io.grpc.stub.StreamObserver;
 
 
 /**
- * We need to keep track of each request as it goes through the pipeline so that we can record the necessary metrics
- * and separate different parts of the logic for the response. If a specific handler raises an error, we set
- * the hasError flag to true and stop executing the rest of the pipeline excluding the stats collection.
+ * This class is used to store the context of a gRPC request.
+ * @param <T> the type of the response observer
  */
 public class GrpcRequestContext<T> {
   private final StreamObserver<T> responseObserver;
   private final GrpcRequestType grpcRequestType;
   private final RequestStatsRecorder requestStatsRecorder;
-
   private RouterRequest routerRequest;
   private ReadResponse readResponse = null;
   private VeniceReadResponseStatus readResponseStatus = null;
@@ -69,14 +67,6 @@ public class GrpcRequestContext<T> {
     this.readResponse = readResponse;
   }
 
-  public boolean hasError() {
-    return readResponse == null;
-  }
-
-  public void setError() {
-    readResponse = null;
-  }
-
   public VeniceReadResponseStatus getReadResponseStatus() {
     // If the readResponseStatus is set, return it.
     if (readResponseStatus != null) {
@@ -99,6 +89,9 @@ public class GrpcRequestContext<T> {
 
   public void setReadResponseStatus(VeniceReadResponseStatus readResponseStatus) {
     this.readResponseStatus = readResponseStatus;
+    if (requestStatsRecorder != null) {
+      requestStatsRecorder.setResponseStatus(readResponseStatus);
+    }
   }
 
   public String getErrorMessage() {
