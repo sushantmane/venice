@@ -101,7 +101,6 @@ public class VeniceGrpcReadServiceImplTest {
     assertTrue(response.getMessage().contains(VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG));
   }
 
-  // getCompressionDictionary
   @Test
   public void testGetCompressionDictionary() {
     String storeName = "testStore";
@@ -131,5 +130,10 @@ public class VeniceGrpcReadServiceImplTest {
         .thenThrow(new VeniceException("Test exception"));
     CompressionDictionaryResponse exceptionActualResponse = blockingStub.getCompressionDictionary(request);
     assertEquals(exceptionActualResponse.getStatusCode(), VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
+  }
+
+  @Test
+  public void testHandleAdminRequest() {
+
   }
 }
