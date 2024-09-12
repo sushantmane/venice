@@ -7,15 +7,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import java.util.Objects;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 
 /**
  * This class is responsible for handling the stats for the HTTP request handled by the Netty server.
  */
 public class StatsHandler extends ChannelDuplexHandler {
-  private static final Logger LOGGER = LogManager.getLogger(StatsHandler.class);
   private final RequestStatsRecorder requestStatsRecorder;
 
   public StatsHandler(RequestStatsRecorder requestStatsRecorder) {

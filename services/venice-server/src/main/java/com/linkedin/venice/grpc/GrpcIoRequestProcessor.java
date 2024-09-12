@@ -61,7 +61,6 @@ public class GrpcIoRequestProcessor {
         requestContext.setReadResponseStatus(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR);
         requestContext.setErrorMessage("Unknown quota enforcement result: " + result);
     }
-    requestContext.setError();
     sendResponse(requestContext);
   }
 
@@ -105,7 +104,6 @@ public class GrpcIoRequestProcessor {
           .setContentType(HttpConstants.AVRO_BINARY)
           .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
     } else {
-      requestContext.setError();
       builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
@@ -140,7 +138,6 @@ public class GrpcIoRequestProcessor {
           .setContentType(HttpConstants.AVRO_BINARY)
           .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
     } else {
-      requestContext.setError();
       builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
@@ -174,7 +171,6 @@ public class GrpcIoRequestProcessor {
           .setSchemaId(readResponse.getResponseSchemaIdHeader())
           .setData(GrpcUtils.toByteString(readResponse.getResponseBody()));
     } else {
-      requestContext.setError();
       builder.setErrorCode(responseStatus.getCode()).setErrorMessage("Key not found").setData(ByteString.EMPTY);
     }
 

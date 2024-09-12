@@ -61,7 +61,6 @@ public class GrpcStorageResponseHandlerCallback implements StorageResponseHandle
       statsRecorder.setMisroutedStoreVersion(true);
     }
 
-    requestContext.setError();
     requestContext.setReadResponseStatus(readResponseStatus);
     requestContext.setErrorMessage(message);
     requestContext.setReadResponse(null);

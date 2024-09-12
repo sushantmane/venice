@@ -14,9 +14,7 @@ import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.compression.CompressionStrategy;
-import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.utils.ObjectMapperFactory;
-import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -187,24 +185,5 @@ public class OutboundHttpWrapperHandlerTest {
       return null;
     });
     outboundHttpWrapperHandler.write(mockCtx, msg, null);
-  }
-
-  private StreamObserver<VeniceServerResponse> getStreamObserver() {
-    return new StreamObserver<VeniceServerResponse>() {
-      @Override
-      public void onNext(VeniceServerResponse value) {
-
-      }
-
-      @Override
-      public void onError(Throwable t) {
-
-      }
-
-      @Override
-      public void onCompleted() {
-
-      }
-    };
   }
 }
