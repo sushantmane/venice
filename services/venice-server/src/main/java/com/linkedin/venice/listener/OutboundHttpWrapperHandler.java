@@ -167,6 +167,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
               .getBytes(StandardCharsets.UTF_8));
       contentType = HttpConstants.TEXT_PLAIN;
     } finally {
+      // Setting response status is an important step to ensure that metrics are recorded correctly
       requestStatsRecorder.setResponseStatus(responseStatus);
     }
 
