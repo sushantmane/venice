@@ -56,6 +56,11 @@ message VeniceServerResponse {
   string errorMessage = 7;
 }
 
+
+/*
+ * Note: The following message formats will be evolved in the future. The current format is used
+  * for the initial implementation and help refactor the existing code.
+ */
 message SingleGetRequest {
   string resourceName = 1;
   uint32 partition = 2;

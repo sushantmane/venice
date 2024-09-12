@@ -90,6 +90,7 @@ public class GrpcRequestContext<T> {
   public void setReadResponseStatus(VeniceReadResponseStatus readResponseStatus) {
     this.readResponseStatus = readResponseStatus;
     if (requestStatsRecorder != null) {
+      // Setting response status is an important step to ensure that metrics are recorded correctly
       requestStatsRecorder.setResponseStatus(readResponseStatus);
     }
   }
