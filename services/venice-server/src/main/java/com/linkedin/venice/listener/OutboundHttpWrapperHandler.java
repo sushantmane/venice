@@ -56,7 +56,7 @@ public class OutboundHttpWrapperHandler extends ChannelOutboundHandlerAdapter {
     try {
       if (msg instanceof AbstractReadResponse) {
         AbstractReadResponse obj = (AbstractReadResponse) msg;
-        requestStatsRecorder.setReadResponseStats(obj.getStatsRecorder());
+        requestStatsRecorder.setReadResponseStats(obj.getReadResponseStatsRecorder());
         compressionStrategy = obj.getCompressionStrategy();
         if (obj.isFound()) {
           body = obj.getResponseBody();
