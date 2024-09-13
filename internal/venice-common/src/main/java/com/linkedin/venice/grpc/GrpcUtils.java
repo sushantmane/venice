@@ -115,4 +115,8 @@ public final class GrpcUtils {
     // Fallback to nioBuffer() to handle the conversion efficiently
     return ByteString.copyFrom(body.nioBuffer());
   }
+
+  public static ByteString toByteString(byte[] bytes) {
+    return ByteString.copyFrom(bytes);
+  }
 }
