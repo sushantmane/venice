@@ -7,6 +7,7 @@ import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.SINGLE
 import static com.linkedin.venice.listener.StorageReadRequestHandler.VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.ByteString;
 import com.linkedin.davinci.listener.response.ServerCurrentVersionResponse;
 import com.linkedin.davinci.listener.response.TopicPartitionIngestionContextResponse;
 import com.linkedin.davinci.storage.DiskHealthCheckService;
@@ -45,8 +46,6 @@ import com.linkedin.venice.protocols.VeniceServerResponse;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import io.grpc.stub.StreamObserver;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -293,16 +292,16 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       com.linkedin.davinci.listener.response.AdminResponse adminResponse = storageReadRequestHandler
           .handleServerAdminRequest(com.linkedin.venice.listener.request.AdminRequest.parseAdminGrpcRequest(request));
       if (!adminResponse.isError()) {
-        builder.setSchemaId(com.linkedin.davinci.listener.response.AdminResponse.getResponseSchemaIdHeader());
-        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
-        builder.setValue(GrpcUtils.toByteString(adminResponse.getResponseBody()));
-        builder.setContentType(HttpConstants.AVRO_BINARY);
-        builder.setContentLength(adminResponse.getResponseBody().readableBytes());
+        builder.setSchemaId(com.linkedin.davinci.listener.response.AdminResponse.getResponseSchemaIdHeader())
+            .setStatusCode(VeniceReadResponseStatus.OK.getCode())
+            .setValue(GrpcUtils.toByteString(adminResponse.getResponseBody()))
+            .setContentType(HttpConstants.AVRO_BINARY)
+            .setContentLength(adminResponse.getResponseBody().readableBytes());
       } else {
-        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
         String errorMessage = adminResponse.getMessage() != null ? adminResponse.getMessage() : "Unknown error";
-        builder.setErrorMessage(errorMessage);
-        builder.setContentType(HttpConstants.TEXT_PLAIN);
+        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
+            .setErrorMessage(errorMessage)
+            .setContentType(HttpConstants.TEXT_PLAIN);
       }
     } catch (Exception e) {
       LOGGER.error("Error while processing admin request", e);
@@ -323,16 +322,16 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       com.linkedin.davinci.listener.response.MetadataResponse metadataResponse =
           storageReadRequestHandler.handleMetadataFetchRequest(metadataFetchRequest);
       if (!metadataResponse.isError()) {
-        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
-        builder.setValue(GrpcUtils.toByteString(metadataResponse.getResponseBody()));
-        builder.setContentType(HttpConstants.AVRO_BINARY);
-        builder.setContentLength(metadataResponse.getResponseBody().readableBytes());
-        builder.setSchemaId(metadataResponse.getResponseSchemaIdHeader());
+        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode())
+            .setValue(GrpcUtils.toByteString(metadataResponse.getResponseBody()))
+            .setContentType(HttpConstants.AVRO_BINARY)
+            .setContentLength(metadataResponse.getResponseBody().readableBytes())
+            .setSchemaId(metadataResponse.getResponseSchemaIdHeader());
       } else {
         String errorMessage = metadataResponse.getMessage() != null ? metadataResponse.getMessage() : "Unknown error";
-        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
-        builder.setErrorMessage(errorMessage);
-        builder.setContentType(HttpConstants.TEXT_PLAIN);
+        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
+            .setErrorMessage(errorMessage)
+            .setContentType(HttpConstants.TEXT_PLAIN);
       }
     } catch (Exception e) {
       LOGGER.error("Error while processing metadata request", e);
@@ -355,13 +354,12 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       ServerCurrentVersionResponse currentVersionResponse =
           storageReadRequestHandler.handleCurrentVersionRequest(currentVersionRequest);
       if (!currentVersionResponse.isError()) {
-        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
-        builder.setCurrentVersion(currentVersionResponse.getCurrentVersion());
+        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode())
+            .setCurrentVersion(currentVersionResponse.getCurrentVersion());
       } else {
-        String errorMessage =
-            currentVersionResponse.getMessage() != null ? currentVersionResponse.getMessage() : "Unknown error";
-        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
-        builder.setErrorMessage(errorMessage);
+        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
+            .setErrorMessage(
+                currentVersionResponse.getMessage() != null ? currentVersionResponse.getMessage() : "Unknown error");
       }
     } catch (Exception e) {
       LOGGER.error("Error while processing current version info request", e);
@@ -385,16 +383,13 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
       TopicPartitionIngestionContextResponse response =
           storageReadRequestHandler.handleTopicPartitionIngestionContextRequest(ingestionContextRequest);
       if (!response.isError()) {
-        builder.setStatusCode(VeniceReadResponseStatus.OK.getCode());
-        ByteBuf body = Unpooled.wrappedBuffer(OBJECT_MAPPER.writeValueAsBytes(response));
-        builder.setValue(GrpcUtils.toByteString(body));
-        builder.setContentType(HttpConstants.JSON);
-        builder.setContentLength(body.readableBytes());
+        ByteString body = GrpcUtils.toByteString(response.getTopicPartitionIngestionContext());
+        builder.setValue(body).setContentLength(body.size()).setStatusCode(VeniceReadResponseStatus.OK.getCode());
       } else {
         String errorMessage = response.getMessage() != null ? response.getMessage() : "Unknown error";
-        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
-        builder.setErrorMessage(errorMessage);
-        builder.setContentType(HttpConstants.TEXT_PLAIN);
+        builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode())
+            .setErrorMessage(errorMessage)
+            .setContentType(HttpConstants.TEXT_PLAIN);
       }
     } catch (Exception e) {
       LOGGER.error("Error while processing ingestion context request", e);
