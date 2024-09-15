@@ -3,6 +3,7 @@ package com.linkedin.venice.listener.request;
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.protocols.MultiGetRequest;
+import com.linkedin.venice.protocols.MultiKeyRequestKey;
 import com.linkedin.venice.protocols.VeniceClientRequest;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.read.protocol.request.router.MultiGetRouterRequestKeyV1;
@@ -12,6 +13,7 @@ import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.streaming.StreamingUtils;
 import com.linkedin.venice.utils.NettyUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.avro.io.OptimizedBinaryDecoderFactory;
 
@@ -70,9 +72,18 @@ public class MultiGetRouterRequestWrapper extends MultiKeyRouterRequestWrapper<M
     return new MultiGetRouterRequestWrapper(resourceName, keys, isRetryRequest, isStreamingRequest);
   }
 
+  // TODO: Get rid of the avro envelope and use something generic
   public static MultiGetRouterRequestWrapper parseMultiGetGrpcRequest(MultiGetRequest grpcRequest) {
     String resourceName = grpcRequest.getResourceName();
-    List<MultiGetRouterRequestKeyV1> keys = parseKeys(grpcRequest.getKeyBytes().toByteArray());
+    List<MultiGetRouterRequestKeyV1> keys = new ArrayList<>(grpcRequest.getKeyCount());
+    for (int i = 0; i < grpcRequest.getKeyCount(); i++) {
+      MultiKeyRequestKey multiKeyRequestKey = grpcRequest.getKeys(i);
+      keys.add(
+          new MultiGetRouterRequestKeyV1(
+              multiKeyRequestKey.getKeyIndex(),
+              multiKeyRequestKey.getKeyBytes().asReadOnlyByteBuffer(),
+              multiKeyRequestKey.getPartition()));
+    }
     boolean isRetryRequest = grpcRequest.getIsRetryRequest();
     return new MultiGetRouterRequestWrapper(resourceName, keys, isRetryRequest, false);
   }

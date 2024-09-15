@@ -66,6 +66,7 @@ message SingleGetRequest {
   uint32 partition = 2;
   string key = 3;
   bool isRetryRequest = 4;
+  string keyEncodingType = 5;
 }
 
 message SingleGetResponse {
@@ -81,10 +82,15 @@ message SingleGetResponse {
 
 message MultiGetRequest {
   string resourceName = 1;
+  uint32 keyCount = 2;
+  bool isRetryRequest = 3;
+  repeated MultiKeyRequestKey keys = 4;
+}
+
+message MultiKeyRequestKey {
+  uint32 keyIndex = 1;
   uint32 partition = 2;
-  bytes  keyBytes = 3;            // used for batch get
-  uint32 keyCount = 4;
-  bool isRetryRequest = 5;
+  bytes keyBytes = 3;
 }
 
 message MultiKeyResponse {
