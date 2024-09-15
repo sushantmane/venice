@@ -1,5 +1,7 @@
 package com.linkedin.venice.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linkedin.davinci.listener.response.ReadResponse;
 import com.linkedin.venice.listener.RequestStatsRecorder;
 import com.linkedin.venice.listener.request.RouterRequest;
@@ -28,9 +30,10 @@ public class GrpcRequestContext<T> {
       RequestStatsRecorder requestStatsRecorder,
       StreamObserver<T> responseObserver,
       GrpcRequestType grpcRequestType) {
-    this.requestStatsRecorder = requestStatsRecorder;
-    this.responseObserver = responseObserver;
-    this.grpcRequestType = grpcRequestType;
+    this.requestStatsRecorder =
+        requireNonNull(requestStatsRecorder, "RequestStatsRecorder cannot be null in GrpcRequestContext");
+    this.responseObserver = requireNonNull(responseObserver, "ResponseObserver cannot be null in GrpcRequestContext");
+    this.grpcRequestType = requireNonNull(grpcRequestType, "GrpcRequestType cannot be null in GrpcRequestContext");
   }
 
   public static <T> GrpcRequestContext<T> create(

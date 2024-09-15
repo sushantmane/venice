@@ -15,6 +15,7 @@ public class GrpcServiceDependencies {
   private final AggServerHttpRequestStats singleGetStats;
   private final AggServerHttpRequestStats multiGetStats;
   private final AggServerHttpRequestStats computeStats;
+  private final GrpcReplyProcessor grpcReplyProcessor;
 
   private GrpcServiceDependencies(Builder builder) {
     this.diskHealthCheckService = builder.diskHealthCheckService;
@@ -23,6 +24,7 @@ public class GrpcServiceDependencies {
     this.singleGetStats = builder.singleGetStats;
     this.multiGetStats = builder.multiGetStats;
     this.computeStats = builder.computeStats;
+    this.grpcReplyProcessor = builder.grpcReplyProcessor;
   }
 
   public DiskHealthCheckService getDiskHealthCheckService() {
@@ -49,6 +51,10 @@ public class GrpcServiceDependencies {
     return computeStats;
   }
 
+  public GrpcReplyProcessor getGrpcReplyProcessor() {
+    return grpcReplyProcessor;
+  }
+
   public static class Builder {
     private DiskHealthCheckService diskHealthCheckService;
     private StorageReadRequestHandler storageReadRequestHandler;
@@ -56,6 +62,7 @@ public class GrpcServiceDependencies {
     private AggServerHttpRequestStats singleGetStats;
     private AggServerHttpRequestStats multiGetStats;
     private AggServerHttpRequestStats computeStats;
+    private GrpcReplyProcessor grpcReplyProcessor;
 
     public Builder setDiskHealthCheckService(DiskHealthCheckService diskHealthCheckService) {
       this.diskHealthCheckService = diskHealthCheckService;
@@ -87,11 +94,20 @@ public class GrpcServiceDependencies {
       return this;
     }
 
+    public Builder setGrpcReplyProcessor(GrpcReplyProcessor grpcReplyProcessor) {
+      this.grpcReplyProcessor = grpcReplyProcessor;
+      return this;
+    }
+
     public GrpcServiceDependencies build() {
       // Validate that all required fields are set
       if (quotaEnforcementHandler == null) {
-        quotaEnforcementHandler = new NoOpReadQuotaEnforcementHandler();
+        quotaEnforcementHandler = NoOpReadQuotaEnforcementHandler.getInstance();
       }
+      if (grpcReplyProcessor == null) {
+        grpcReplyProcessor = new GrpcReplyProcessor();
+      }
+
       singleGetStats = Objects.requireNonNull(singleGetStats, "singleGetStats cannot be null");
       multiGetStats = Objects.requireNonNull(multiGetStats, "multiGetStats cannot be null");
       computeStats = Objects.requireNonNull(computeStats, "computeStats cannot be null");
