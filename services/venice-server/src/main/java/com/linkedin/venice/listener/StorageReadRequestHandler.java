@@ -603,12 +603,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
         if (requestContext.isStreaming) {
           // For streaming, we would like to send back non-existing keys since the end-user won't know the status of
           // non-existing keys in the response if the response is partial.
-          record = new MultiGetResponseRecordV1();
-          // Negative key index to indicate the non-existing keys
-          record.keyIndex = Math.negateExact(key.keyIndex);
-          record.schemaId = StreamingConstants.NON_EXISTING_KEY_SCHEMA_ID;
-          record.value = StreamingUtils.EMPTY_BYTE_BUFFER;
-          response.addRecord(record);
+          response.addRecord(createMissingKeyRecord(key.keyIndex));
         }
       } else {
         record.keyIndex = key.keyIndex;
@@ -618,6 +613,16 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
 
     // Trigger serialization
     response.getResponseBody();
+  }
+
+  // This method is used to create a record for a missing key in the response
+  public static MultiGetResponseRecordV1 createMissingKeyRecord(int keyIndex) {
+    MultiGetResponseRecordV1 record = new MultiGetResponseRecordV1();
+    // Negative key index to indicate the non-existing keys
+    record.keyIndex = Math.negateExact(keyIndex);
+    record.schemaId = StreamingConstants.NON_EXISTING_KEY_SCHEMA_ID;
+    record.value = StreamingUtils.EMPTY_BYTE_BUFFER;
+    return record;
   }
 
   public CompletableFuture<ReadResponse> handleMultiGetRequest(MultiGetRouterRequestWrapper request) {
@@ -792,12 +797,7 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
         response.addRecord(record);
         hits++;
       } else if (requestContext.isStreaming) {
-        // For streaming, we need to send back non-existing keys
-        record = new ComputeResponseRecordV1();
-        // Negative key index to indicate non-existing key
-        record.keyIndex = Math.negateExact(key.getKeyIndex());
-        record.value = StreamingUtils.EMPTY_BYTE_BUFFER;
-        response.addRecord(record);
+        response.addRecord(createMissingKeyComputeRecord(key.keyIndex));
       }
     }
 
@@ -805,6 +805,15 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     response.getResponseBody();
 
     incrementOperatorCounters(response.getStats(), requestContext.operations, hits);
+  }
+
+  public static ComputeResponseRecordV1 createMissingKeyComputeRecord(int keyIndex) {
+    // For streaming, we need to send back non-existing keys
+    ComputeResponseRecordV1 record = new ComputeResponseRecordV1();
+    // Negative key index to indicate non-existing key
+    record.keyIndex = Math.negateExact(keyIndex);
+    record.value = StreamingUtils.EMPTY_BYTE_BUFFER;
+    return record;
   }
 
   /**

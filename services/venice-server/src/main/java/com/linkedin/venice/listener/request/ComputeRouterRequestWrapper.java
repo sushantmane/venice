@@ -7,12 +7,14 @@ import com.linkedin.venice.compute.ComputeUtils;
 import com.linkedin.venice.compute.protocol.request.ComputeRequest;
 import com.linkedin.venice.compute.protocol.request.router.ComputeRouterRequestKeyV1;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.protocols.MultiKeyRequestKey;
 import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.streaming.StreamingUtils;
 import com.linkedin.venice.utils.NettyUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.OptimizedBinaryDecoderFactory;
@@ -32,14 +34,12 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
       String resourceName,
       ComputeRequest computeRequest,
       List<ComputeRouterRequestKeyV1> keys,
-      String schemaId,
+      int schemaId,
       boolean isRetryRequest,
       boolean isStreamingRequest) {
     super(resourceName, keys, isRetryRequest, isStreamingRequest);
     this.computeRequest = computeRequest;
-    if (schemaId != null) {
-      this.valueSchemaId = Integer.parseInt(schemaId);
-    }
+    this.valueSchemaId = schemaId;
   }
 
   public static ComputeRouterRequestWrapper parseComputeHttpRequest(
@@ -49,40 +49,26 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
       // [0]""/[1]"compute"/[2]{$resourceName}
       throw new VeniceException("Invalid request: " + httpRequest.uri());
     }
-    String resourceName = requestParts[2];
     int apiVersion = parseApiVersion(httpRequest.headers().get(HttpConstants.VENICE_API_VERSION));
-    byte[] requestContent = getRequestContent(httpRequest);
-
-    return buildComputeRouterRequestWrapper(
-        resourceName,
-        apiVersion,
-        requestContent,
-        httpRequest.headers().get(HttpConstants.VENICE_COMPUTE_VALUE_SCHEMA_ID),
-        NettyUtils.containRetryHeader(httpRequest),
-        StreamingUtils.isStreamingEnabled(httpRequest));
-  }
-
-  // Helper method to handle common logic
-  private static ComputeRouterRequestWrapper buildComputeRouterRequestWrapper(
-      String resourceName,
-      int apiVersion,
-      byte[] requestContent,
-      String schemaId,
-      boolean isRetryRequest,
-      boolean isStreamingRequest) {
     validateApiVersion(apiVersion);
+    String resourceName = requestParts[2];
+    byte[] requestContent = getRequestContent(httpRequest);
 
     BinaryDecoder decoder = OptimizedBinaryDecoderFactory.defaultFactory()
         .createOptimizedBinaryDecoder(requestContent, 0, requestContent.length);
-
     ComputeRequest computeRequest = ComputeUtils.deserializeComputeRequest(decoder, null);
     List<ComputeRouterRequestKeyV1> keys = DESERIALIZER.deserializeObjects(decoder);
+
+    boolean isRetryRequest = NettyUtils.containRetryHeader(httpRequest);
+    boolean isStreamingRequest = StreamingUtils.isStreamingEnabled(httpRequest);
+    String schemaId = httpRequest.headers().get(HttpConstants.VENICE_COMPUTE_VALUE_SCHEMA_ID);
+    int valueSchemaId = schemaId == null ? -1 : Integer.parseInt(schemaId);
 
     return new ComputeRouterRequestWrapper(
         resourceName,
         computeRequest,
         keys,
-        schemaId,
+        valueSchemaId,
         isRetryRequest,
         isStreamingRequest);
   }
@@ -116,15 +102,32 @@ public class ComputeRouterRequestWrapper extends MultiKeyRouterRequestWrapper<Co
       com.linkedin.venice.protocols.ComputeRequest grpcRequest) {
     String resourceName = grpcRequest.getResourceName();
     int apiVersion = grpcRequest.getApiVersion();
-    byte[] requestContent = grpcRequest.getPayload().toByteArray();
+    byte[] computeRequestBytes = grpcRequest.getComputeRequestBytes().toByteArray();
+    validateApiVersion(apiVersion);
+    BinaryDecoder decoder = OptimizedBinaryDecoderFactory.defaultFactory()
+        .createOptimizedBinaryDecoder(computeRequestBytes, 0, computeRequestBytes.length);
+    ComputeRequest computeRequest = ComputeUtils.deserializeComputeRequest(decoder, null);
 
-    return buildComputeRouterRequestWrapper(
+    int computeRequestSchemaId = grpcRequest.getComputeValueSchemaId();
+    boolean isRetryRequest = grpcRequest.getIsRetryRequest();
+
+    List<ComputeRouterRequestKeyV1> keys = new ArrayList<>(grpcRequest.getKeyCount());
+    for (int i = 0; i < grpcRequest.getKeyCount(); i++) {
+      MultiKeyRequestKey multiKeyRequestKey = grpcRequest.getKeys(i);
+      keys.add(
+          new ComputeRouterRequestKeyV1(
+              multiKeyRequestKey.getKeyIndex(),
+              multiKeyRequestKey.getKeyBytes().asReadOnlyByteBuffer(),
+              multiKeyRequestKey.getPartition()));
+    }
+
+    return new ComputeRouterRequestWrapper(
         resourceName,
-        apiVersion,
-        requestContent,
-        Integer.toString(grpcRequest.getComputeValueSchemaId()),
-        grpcRequest.getIsRetryRequest(),
-        grpcRequest.getIsStreamingRequest());
+        computeRequest,
+        keys,
+        computeRequestSchemaId,
+        isRetryRequest,
+        true);
   }
 
   public ComputeRequest getComputeRequest() {

@@ -1,7 +1,7 @@
 package com.linkedin.venice.grpc;
 
-import com.linkedin.venice.acl.handler.AccessResult;
 import com.google.protobuf.ByteString;
+import com.linkedin.venice.acl.handler.AccessResult;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.security.SSLConfig;
 import com.linkedin.venice.security.SSLFactory;
@@ -10,9 +10,9 @@ import io.grpc.Grpc;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -118,5 +118,9 @@ public final class GrpcUtils {
 
   public static ByteString toByteString(byte[] bytes) {
     return ByteString.copyFrom(bytes);
+  }
+
+  public static ByteString toByteString(ByteBuffer byteBuffer) {
+    return ByteString.copyFrom(byteBuffer);
   }
 }

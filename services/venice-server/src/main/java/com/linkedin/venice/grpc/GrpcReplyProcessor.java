@@ -7,10 +7,13 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.listener.RequestStatsRecorder;
 import com.linkedin.venice.listener.response.AbstractReadResponse;
 import com.linkedin.venice.protocols.MultiKeyResponse;
+import com.linkedin.venice.protocols.MultiKeyStreamingResponse;
 import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceServerResponse;
+import com.linkedin.venice.read.protocol.response.MultiGetResponseRecordV1;
 import com.linkedin.venice.response.VeniceReadResponseStatus;
 import io.grpc.stub.StreamObserver;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -100,28 +103,42 @@ public class GrpcReplyProcessor {
     ReadResponse readResponse = requestContext.getReadResponse();
     MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
     VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    StreamObserver<MultiKeyResponse> responseObserver = requestContext.getResponseObserver();
 
     if (readResponse == null) {
       builder.setStatusCode(responseStatus.getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
-    } else if (readResponse.isFound()) {
-      builder.setStatusCode(responseStatus.getCode())
-          .setRcu(readResponse.getRCU())
-          .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
-          .setContentLength(readResponse.getResponseBody().readableBytes())
-          .setContentType(HttpConstants.AVRO_BINARY)
-          .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
-    } else {
+      synchronized (responseObserver) {
+        responseObserver.onNext(builder.build());
+        responseObserver.onCompleted();
+      }
+    } else if (!readResponse.isFound()) {
       builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
           .setContentLength(0);
-    }
-
-    StreamObserver<MultiKeyResponse> responseObserver = requestContext.getResponseObserver();
-    synchronized (responseObserver) {
-      responseObserver.onNext(builder.build());
-      responseObserver.onCompleted();
+      synchronized (responseObserver) {
+        responseObserver.onNext(builder.build());
+        responseObserver.onCompleted();
+      }
+    } else {
+      synchronized (responseObserver) {
+        List<MultiGetResponseRecordV1> list = readResponse.getRecords();
+        for (MultiGetResponseRecordV1 recordV1: list) {
+          MultiKeyStreamingResponse.Builder builder1 = MultiKeyStreamingResponse.newBuilder();
+          ByteString valStr = GrpcUtils.toByteString(recordV1.getValue());
+          builder1.setRcu(readResponse.getRCU())
+              .setStatusCode(responseStatus.getCode())
+              .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+              .setSchemaId(recordV1.getSchemaId())
+              .setValue(valStr)
+              .setContentLength(valStr.size())
+              .setContentType(HttpConstants.AVRO_BINARY)
+              .setKeyIndex(recordV1.getKeyIndex());
+          responseObserver.onNext(builder1.build());
+        }
+        responseObserver.onCompleted();
+      }
     }
     reportRequestStats(requestContext);
   }
