@@ -23,7 +23,7 @@ public class GrpcRequestContext<T> {
   private String errorMessage;
 
   enum GrpcRequestType {
-    LEGACY, SINGLE_GET, MULTI_GET, COMPUTE
+    LEGACY, SINGLE_GET, MULTI_GET, COMPUTE, MULTI_GET_STREAMING, COMPUTE_STREAMING
   }
 
   private GrpcRequestContext(

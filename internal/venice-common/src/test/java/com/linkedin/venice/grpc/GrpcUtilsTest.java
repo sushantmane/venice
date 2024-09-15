@@ -1,25 +1,18 @@
 package com.linkedin.venice.grpc;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-
-import com.linkedin.venice.acl.handler.AccessResult;
-import com.linkedin.venice.security.SSLFactory;
-import com.linkedin.venice.utils.SslUtils;
-import io.grpc.Status;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 import com.google.protobuf.ByteString;
+import com.linkedin.venice.acl.handler.AccessResult;
 import com.linkedin.venice.security.SSLFactory;
 import com.linkedin.venice.utils.SslUtils;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import java.nio.ByteBuffer;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.TrustManager;

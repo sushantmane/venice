@@ -76,6 +76,10 @@ public abstract class MultiKeyResponseWrapper<K> extends AbstractReadResponse {
     return responseBody.get();
   }
 
+  public List<K> getRecords() {
+    return records;
+  }
+
   @Override
   public String toString() {
     return this.getClass().getSimpleName() + "(" + this.records.size() + " records)";

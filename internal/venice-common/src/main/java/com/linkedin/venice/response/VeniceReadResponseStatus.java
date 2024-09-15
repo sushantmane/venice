@@ -14,7 +14,7 @@ public enum VeniceReadResponseStatus {
   FORBIDDEN(HttpResponseStatus.FORBIDDEN), METHOD_NOT_ALLOWED(HttpResponseStatus.METHOD_NOT_ALLOWED),
   REQUEST_TIMEOUT(HttpResponseStatus.REQUEST_TIMEOUT), TOO_MANY_REQUESTS(HttpResponseStatus.TOO_MANY_REQUESTS),
   INTERNAL_SERVER_ERROR(HttpResponseStatus.INTERNAL_SERVER_ERROR),
-  SERVICE_UNAVAILABLE(HttpResponseStatus.SERVICE_UNAVAILABLE),
+  SERVICE_UNAVAILABLE(HttpResponseStatus.SERVICE_UNAVAILABLE), PARTIAL_RESPONSE(HttpResponseStatus.PARTIAL_CONTENT),
   MISROUTED_STORE_VERSION(new HttpResponseStatus(570, "Misrouted request"));
 
   private static final Map<Integer, VeniceReadResponseStatus> STATUS_MAP = new HashMap<>(16);
