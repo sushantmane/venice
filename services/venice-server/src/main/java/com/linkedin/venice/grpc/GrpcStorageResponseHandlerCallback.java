@@ -13,25 +13,34 @@ import com.linkedin.venice.response.VeniceReadResponseStatus;
  */
 public class GrpcStorageResponseHandlerCallback implements StorageResponseHandlerCallback {
   private final GrpcRequestContext requestContext;
+  private final GrpcReplyProcessor grpcReplyProcessor;
 
-  private GrpcStorageResponseHandlerCallback(GrpcRequestContext requestContext) {
+  private GrpcStorageResponseHandlerCallback(GrpcRequestContext requestContext, GrpcReplyProcessor grpcReplyProcessor) {
     this.requestContext = requestContext;
+    this.grpcReplyProcessor = grpcReplyProcessor;
   }
 
   // Factory method for creating an instance of this class.
-  public static GrpcStorageResponseHandlerCallback create(GrpcRequestContext requestContext) {
-    return new GrpcStorageResponseHandlerCallback(requestContext);
+  public static GrpcStorageResponseHandlerCallback create(
+      GrpcRequestContext requestContext,
+      GrpcReplyProcessor grpcReplyProcessor) {
+    return new GrpcStorageResponseHandlerCallback(requestContext, grpcReplyProcessor);
   }
 
   @Override
   public void onReadResponse(ReadResponse readResponse) {
+    if (readResponse == null) {
+      onError(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR, "StorageHandler returned a unexpected null response");
+      return;
+    }
+
     if (readResponse.isFound()) {
       requestContext.setReadResponseStatus(VeniceReadResponseStatus.OK);
     } else {
       requestContext.setReadResponseStatus(VeniceReadResponseStatus.KEY_NOT_FOUND);
     }
     requestContext.setReadResponse(readResponse);
-    GrpcIoRequestProcessor.sendResponse(requestContext);
+    grpcReplyProcessor.sendResponse(requestContext);
   }
 
   @Override
@@ -39,6 +48,6 @@ public class GrpcStorageResponseHandlerCallback implements StorageResponseHandle
     requestContext.setReadResponseStatus(readResponseStatus);
     requestContext.setErrorMessage(message);
     requestContext.setReadResponse(null);
-    GrpcIoRequestProcessor.sendResponse(requestContext);
+    grpcReplyProcessor.sendResponse(requestContext);
   }
 }
