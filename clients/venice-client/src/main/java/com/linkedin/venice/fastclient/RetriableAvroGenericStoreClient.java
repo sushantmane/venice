@@ -111,13 +111,13 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
 
     @Override
     public void run() {
-      requestContext.retryContext = new GetRequestContext.RetryContext();
+      requestContext.setRetryContext(new GetRequestContext.RetryContext());
       switch (retryType) {
         case LONG_TAIL_RETRY:
-          requestContext.retryContext.longTailRetryRequestTriggered = true;
+          requestContext.getRetryContext().longTailRetryRequestTriggered = true;
           break;
         case ERROR_RETRY:
-          requestContext.retryContext.errorRetryRequestTriggered = true;
+          requestContext.getRetryContext().errorRetryRequestTriggered = true;
           break;
         default:
           throw new VeniceClientException("Unknown retry type: " + retryType);
@@ -163,7 +163,7 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
               /**
                * Setting flag before completing {@link finalFuture} for the counters to be incremented properly.
                */
-              requestContext.retryContext.retryWin = true;
+              requestContext.getRetryContext().retryWin = true;
               finalFuture.complete(value);
             }
           }
@@ -185,7 +185,7 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
         if (finalFuture.complete(value)) {
           // original request is faster: Resetting it even though the default is false to be accurate as
           // retryWin is set to true in the above block before completing the future, so there can be a race.
-          requestContext.retryContext.retryWin = false;
+          requestContext.getRetryContext().retryWin = false;
         }
       } else {
         // Trigger the retry right away when receiving any error that's not a 429 otherwise try to cancel any scheduled
@@ -281,7 +281,7 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
       int longTailRetryThresholdInMicroSeconds,
       RequestContextConstructor<K, V, R> requestContextConstructor,
       StreamingRequestExecutor<K, V, R, RESPONSE> streamingRequestExecutor) throws VeniceClientException {
-    requestContext.retryContext = new MultiKeyRequestContext.RetryContext<K, V>();
+    requestContext.setRetryContext(new MultiKeyRequestContext.RetryContext<K, V>());
 
     /** Track the final completion of the request. It will be completed normally if
      1. the original requests calls onCompletion with no exception
@@ -314,9 +314,9 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
         if (throwable != null || multiKeyLongTailRetryManager.isRetryAllowed(pendingKeysFuture.keySet().size())) {
           Set<K> pendingKeys = Collections.unmodifiableSet(pendingKeysFuture.keySet());
           R retryRequestContext =
-              requestContextConstructor.construct(pendingKeys.size(), requestContext.isPartialSuccessAllowed);
+              requestContextConstructor.construct(pendingKeys.size(), requestContext.isPartialSuccessAllowed());
 
-          requestContext.retryContext.retryRequestContext = retryRequestContext;
+          requestContext.getRetryContext().retryRequestContext = retryRequestContext;
           LOGGER.debug("Retrying {} incomplete keys", retryRequestContext.numKeysInRequest);
           // Prepare the retry context and track excluded routes on a per-partition basis
           retryRequestContext.setRoutesForPartitionMapping(requestContext.getRoutesForPartitionMapping());
@@ -373,7 +373,7 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
         requestContext.setPartialResponseException(null);
         callback.onCompletion(Optional.empty());
       } else {
-        R retryRequestContext = (R) requestContext.retryContext.retryRequestContext;
+        R retryRequestContext = (R) requestContext.getRetryContext().retryRequestContext;
         if (requestContext.isCompletedAcceptably()
             && (retryRequestContext == null || retryRequestContext.isCompletedAcceptably())) {
           requestContext.setPartialResponseExceptionIfNull(finalException);
@@ -400,7 +400,7 @@ public class RetriableAvroGenericStoreClient<K, V> extends DelegatingAvroStoreCl
         CompletableFuture<RESPONSE> removed = pendingKeysFuture.remove(key);
         if (removed != null) {
           removed.complete(value); // This will invoke the onRecordReceived callback of the original request
-          requestContext.numKeysCompleted.incrementAndGet();
+          requestContext.incrementNumKeysCompleted();
         }
         if (pendingKeysFuture.isEmpty() && !finalRequestCompletionFuture.isDone()) {
           // No more pending keys, so complete the finalRequest

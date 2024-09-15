@@ -39,9 +39,9 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
   private Map<Integer, Set<String>> routesForPartition;
 
   final int numKeysInRequest;
-  AtomicInteger numKeysCompleted;
-  RetryContext retryContext;
-  final boolean isPartialSuccessAllowed;
+  private AtomicInteger numKeysCompleted;
+  private RetryContext retryContext;
+  private final boolean isPartialSuccessAllowed;
   private boolean completed;
 
   private int fanoutSize;
@@ -100,13 +100,13 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
       recordDeserializationTimeNS += rrc.recordDeserializationTime.get();
       requestSerializationTimeNS += rrc.requestSerializationTime.get();
     }
-    decompressionTime = LatencyUtils.convertNSToMS(decompressionTimeNS);
-    responseDeserializationTime =
-        LatencyUtils.convertNSToMS(responseDeserializationTimeNS + recordDeserializationTimeNS);
-    requestSerializationTime = LatencyUtils.convertNSToMS(requestSerializationTimeNS);
+    setDecompressionTime(LatencyUtils.convertNSToMS(decompressionTimeNS));
+    setResponseDeserializationTime(
+        LatencyUtils.convertNSToMS(responseDeserializationTimeNS + recordDeserializationTimeNS));
+    setRequestSerializationTime(LatencyUtils.convertNSToMS(requestSerializationTimeNS));
 
     if (firstRequestSentTS.get() != -1 && firstResponseReceivedTS.get() != -1) {
-      requestSubmissionToResponseHandlingTime = firstResponseReceivedTS.get() - firstRequestSentTS.get();
+      setRequestSubmissionToResponseHandlingTime(firstResponseReceivedTS.get() - firstRequestSentTS.get());
     }
   }
 
@@ -134,7 +134,7 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
     Validate.notNull(routeId);
     long requestSentTS = System.nanoTime();
     if (firstRequestSentTS.compareAndSet(-1, requestSentTS)) {
-      requestSentTimestampNS = firstRequestSentTS.get();
+      setRequestSentTimestampNS(firstRequestSentTS.get());
     }
   }
 
@@ -182,6 +182,50 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   public int getFanoutSize() {
     return fanoutSize;
+  }
+
+  public void setRetryContext(RetryContext retryContext) {
+    this.retryContext = retryContext;
+  }
+
+  public RetryContext getRetryContext() {
+    return retryContext;
+  }
+
+  public int getNumKeysCompleted() {
+    return numKeysCompleted.get();
+  }
+
+  public int incrementNumKeysCompleted() {
+    return numKeysCompleted.incrementAndGet();
+  }
+
+  public int getNumKeysInRequest() {
+    return numKeysInRequest;
+  }
+
+  public boolean isPartialSuccessAllowed() {
+    return isPartialSuccessAllowed;
+  }
+
+  public boolean isCompleted() {
+    return completed;
+  }
+
+  public void setCompleted(boolean completed) {
+    this.completed = completed;
+  }
+
+  public Map<String, RouteRequestContext<K>> getRouteRequests() {
+    return routeRequests;
+  }
+
+  public AtomicLong getFirstRequestSentTS() {
+    return firstRequestSentTS;
+  }
+
+  public AtomicLong getFirstResponseReceivedTS() {
+    return firstResponseReceivedTS;
   }
 
   /**

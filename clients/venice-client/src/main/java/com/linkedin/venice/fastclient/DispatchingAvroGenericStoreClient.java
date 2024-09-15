@@ -22,6 +22,7 @@ import com.linkedin.venice.compression.VeniceCompressor;
 import com.linkedin.venice.compute.ComputeRequestWrapper;
 import com.linkedin.venice.compute.protocol.request.router.ComputeRouterRequestKeyV1;
 import com.linkedin.venice.fastclient.meta.StoreMetadata;
+import com.linkedin.venice.fastclient.transport.FastClientTransport;
 import com.linkedin.venice.fastclient.transport.GrpcTransportClient;
 import com.linkedin.venice.fastclient.transport.R2TransportClient;
 import com.linkedin.venice.fastclient.transport.TransportClientResponseForRoute;
@@ -37,7 +38,6 @@ import com.linkedin.venice.serialization.StoreDeserializerCache;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.serializer.RecordSerializer;
-import com.linkedin.venice.utils.EncodingUtils;
 import com.linkedin.venice.utils.LatencyUtils;
 import com.linkedin.venice.utils.RedundantExceptionFilter;
 import com.linkedin.venice.utils.concurrent.ChainedCompletableFuture;
@@ -71,7 +71,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
   private static final AtomicLong REQUEST_ID_GENERATOR = new AtomicLong();
 
   private static final Logger LOGGER = LogManager.getLogger(DispatchingAvroGenericStoreClient.class);
-  private static final String URI_SEPARATOR = "/";
+  public static final String URI_SEPARATOR = "/";
   private static final Executor DESERIALIZATION_EXECUTOR = AbstractAvroStoreClient.getDefaultDeserializationExecutor();
   private static final RedundantExceptionFilter REDUNDANT_LOGGING_FILTER =
       RedundantExceptionFilter.getRedundantExceptionFilter();
@@ -83,6 +83,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
 
   private final ClientConfig config;
   private final TransportClient transportClient;
+  private FastClientTransport fastClientTransport;
   private final Executor deserializationExecutor;
 
   // Key serializer
@@ -138,28 +139,27 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     return metadata;
   }
 
-  private String composeURIForSingleGet(GetRequestContext requestContext, K key) {
+  private void composeURIForSingleGet(GetRequestContext requestContext, K key) {
     int currentVersion = getCurrentVersion();
     String resourceName = getResourceName(currentVersion);
     long nanoTsBeforeSerialization = System.nanoTime();
     byte[] keyBytes = keySerializer.serialize(key);
-    requestContext.requestSerializationTime = LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSerialization);
+    double serializationTime = LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSerialization);
     int partitionId = metadata.getPartitionId(currentVersion, keyBytes);
-    String b64EncodedKeyBytes = EncodingUtils.base64EncodeToString(keyBytes);
 
-    requestContext.currentVersion = currentVersion;
-    requestContext.partitionId = partitionId;
-
-    String sb = URI_SEPARATOR + AbstractAvroStoreClient.TYPE_STORAGE + URI_SEPARATOR + resourceName + URI_SEPARATOR
-        + partitionId + URI_SEPARATOR + b64EncodedKeyBytes + AbstractAvroStoreClient.B64_FORMAT;
-    return sb;
+    requestContext.setResourceName(resourceName);
+    requestContext.setRequestSerializationTime(serializationTime);
+    requestContext.setCurrentVersion(currentVersion);
+    requestContext.setPartitionId(partitionId);
+    requestContext.setKeyEncodingType(KeyEncodingType.BASE64);
+    requestContext.setKeyBytes(keyBytes);
   }
 
   private String composeRouteForBatchGetRequest(BatchGetRequestContext<K, V> requestContext) {
     int currentVersion = getCurrentVersion();
     String resourceName = getResourceName(currentVersion);
 
-    requestContext.currentVersion = currentVersion;
+    requestContext.setCurrentVersion(currentVersion);
     StringBuilder sb = new StringBuilder();
     sb.append(URI_SEPARATOR).append(AbstractAvroStoreClient.TYPE_STORAGE).append(URI_SEPARATOR).append(resourceName);
     return sb.toString();
@@ -169,7 +169,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     int currentVersion = getCurrentVersion();
     String resourceName = getResourceName(currentVersion);
 
-    requestContext.currentVersion = currentVersion;
+    requestContext.setCurrentVersion(currentVersion);
     StringBuilder sb = new StringBuilder();
     sb.append(URI_SEPARATOR).append(TYPE_COMPUTE).append(URI_SEPARATOR).append(resourceName);
     return sb.toString();
@@ -195,17 +195,16 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
   @Override
   protected CompletableFuture<V> get(GetRequestContext requestContext, K key) throws VeniceClientException {
     verifyMetadataInitialized();
-    requestContext.instanceHealthMonitor = metadata.getInstanceHealthMonitor();
-    if (requestContext.requestUri == null) {
+    requestContext.setInstanceHealthMonitor(metadata.getInstanceHealthMonitor());
+    if (requestContext.getRequestUri() == null) {
       /**
        * Reuse the request uri for the retry request.
        */
-      requestContext.requestUri = composeURIForSingleGet(requestContext, key);
+      composeURIForSingleGet(requestContext, key);
     }
-    final String uri = requestContext.requestUri;
-
-    int currentVersion = requestContext.currentVersion;
-    int partitionId = requestContext.partitionId;
+    // final String uri = requestContext.getRequestUri();
+    int currentVersion = requestContext.getCurrentVersion();
+    int partitionId = requestContext.getPartitionId();
 
     CompletableFuture<V> valueFuture = new CompletableFuture<>();
     long nanoTsBeforeSendingRequest = System.nanoTime();
@@ -219,9 +218,9 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
         currentVersion,
         partitionId,
         requiredReplicaCount,
-        requestContext.routeRequestMap.keySet());
+        requestContext.getRouteRequestMap().keySet());
     if (routes.isEmpty()) {
-      requestContext.noAvailableReplica = true;
+      requestContext.setNoAvailableReplica(true);
       valueFuture.completeExceptionally(
           new VeniceClientException(
               "No available route for store: " + getStoreName() + ", version: " + currentVersion + ", partition: "
@@ -254,16 +253,16 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
      *                        health of the replicas).
      */
     List<CompletableFuture<TransportClientResponse>> transportFutures = new LinkedList<>();
-    requestContext.requestSentTimestampNS = System.nanoTime();
+    requestContext.setRequestSentTimestampNS(System.nanoTime());
     for (String route: routes) {
       CompletableFuture<Integer> routeRequestFuture = null;
       try {
-        String url = route + uri;
-        CompletableFuture<TransportClientResponse> transportFuture = transportClient.get(url);
+        CompletableFuture<TransportClientResponse> transportFuture =
+            fastClientTransport.singleGet(requestContext, route);
         routeRequestFuture =
             metadata.trackHealthBasedOnRequestToInstance(route, currentVersion, partitionId, transportFuture)
                 .getOriginalFuture();
-        requestContext.routeRequestMap.put(route, routeRequestFuture);
+        requestContext.addRouteRequest(route, routeRequestFuture);
 
         transportFutures.add(transportFuture);
         CompletableFuture<Integer> finalRouteRequestFuture = routeRequestFuture;
@@ -273,8 +272,8 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
           } else if (response == null) {
             finalRouteRequestFuture.complete(SC_NOT_FOUND);
             if (!receivedSuccessfulResponse.getAndSet(true)) {
-              requestContext.requestSubmissionToResponseHandlingTime =
-                  LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest);
+              requestContext.setRequestSubmissionToResponseHandlingTime(
+                  LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest));
 
               valueFuture.complete(null);
             }
@@ -282,22 +281,22 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
             try {
               finalRouteRequestFuture.complete(SC_OK);
               if (!receivedSuccessfulResponse.getAndSet(true)) {
-                requestContext.requestSubmissionToResponseHandlingTime =
-                    LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest);
+                requestContext.setRequestSubmissionToResponseHandlingTime(
+                    LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest));
                 CompressionStrategy compressionStrategy = response.getCompressionStrategy();
                 long nanoTsBeforeDecompression = System.nanoTime();
                 ByteBuffer data = decompressRecord(
                     compressionStrategy,
                     ByteBuffer.wrap(response.getBody()),
-                    requestContext.currentVersion,
-                    metadata.getCompressor(compressionStrategy, requestContext.currentVersion));
-                requestContext.decompressionTime = LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDecompression);
+                    requestContext.getCurrentVersion(),
+                    metadata.getCompressor(compressionStrategy, requestContext.getCurrentVersion()));
+                requestContext.setDecompressionTime(LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDecompression));
                 long nanoTsBeforeDeserialization = System.nanoTime();
                 RecordDeserializer<V> deserializer = getDataRecordDeserializer(response.getSchemaId());
                 V value = tryToDeserialize(deserializer, data, response.getSchemaId(), key);
-                requestContext.responseDeserializationTime =
-                    LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDeserialization);
-                requestContext.successRequestKeyCount.incrementAndGet();
+                requestContext
+                    .setResponseDeserializationTime(LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDeserialization));
+                requestContext.incrementSuccessRequestKeyCount();
                 valueFuture.complete(value);
               }
             } catch (Exception e) {
@@ -313,7 +312,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
           // to update health data, create a future if the exception was thrown before it could be created
           routeRequestFuture = metadata.trackHealthBasedOnRequestToInstance(route, currentVersion, partitionId, null)
               .getOriginalFuture();
-          requestContext.routeRequestMap.put(route, routeRequestFuture);
+          requestContext.addRouteRequest(route, routeRequestFuture);
         }
         routeRequestFuture.completeExceptionally(e);
       }
@@ -336,8 +335,8 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
         }
         if (allFailed) {
           // Only fail the request if all the transport futures are completed exceptionally.
-          requestContext.requestSubmissionToResponseHandlingTime =
-              LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest);
+          requestContext.setRequestSubmissionToResponseHandlingTime(
+              LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest));
           valueFuture.completeExceptionally(throwable);
         }
         return null;
@@ -426,8 +425,8 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     long requestId = REQUEST_ID_GENERATOR.getAndIncrement();
 
     /* Prepare each of the routes needed to query the keys */
-    requestContext.instanceHealthMonitor = metadata.getInstanceHealthMonitor();
-    int currentVersion = requestContext.currentVersion;
+    requestContext.setInstanceHealthMonitor(metadata.getInstanceHealthMonitor());
+    int currentVersion = requestContext.getCurrentVersion();
     Map<Integer, List<String>> partitionRouteMap = new HashMap<>();
     Set<String> partitionsWithNoRoutes = new ConcurrentSkipListSet<>();
     for (K key: keys) {
@@ -447,7 +446,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       if (routes.isEmpty()) {
         /* If a partition doesn't have an available route then there is something wrong about or metadata and this is
          * an error */
-        requestContext.noAvailableReplica = true;
+        requestContext.setNoAvailableReplica(true);
         partitionsWithNoRoutes.add(String.valueOf(partitionId));
       }
 
@@ -473,11 +472,13 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       byte[] serializedRequest = requestSerializer.apply(keysForRoutes);
       requestContext.recordRequestSerializationTime(route, getLatencyInNS(nanoTsBeforeSerialization));
       requestContext.recordRequestSentTimeStamp(route);
+
       CompletableFuture<TransportClientResponse> transportClientFutureForRoute =
           transportClient.post(url, requestHeaders, serializedRequest);
+
       ChainedCompletableFuture<Integer, Integer> routeRequestFuture =
           metadata.trackHealthBasedOnRequestToInstance(route, currentVersion, 0, transportClientFutureForRoute);
-      requestContext.routeRequestMap.put(route, routeRequestFuture.getOriginalFuture());
+      requestContext.addRouteRequest(route, routeRequestFuture.getOriginalFuture());
       requestCompletionFutures[routeIndex] = routeRequestFuture.getResultFuture();
 
       transportClientFutureForRoute.whenComplete((transportClientResponse, throwable) -> {
@@ -528,7 +529,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
 
       // Wiring in a callback for when all events have been received. If any route failed with an exception,
       // that exception will be passed to the aggregate future's next stages.
-      if (failedOverall && !requestContext.isPartialSuccessAllowed) {
+      if (failedOverall && !requestContext.isPartialSuccessAllowed()) {
         // The exception to send to the client might be different. Get from the requestContext
         Throwable clientException = throwable;
         if (requestContext.getPartialResponseException().isPresent()) {
@@ -576,14 +577,14 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
 
     long totalDecompressionTimeForResponse = 0;
     VeniceCompressor compressor =
-        metadata.getCompressor(transportClientResponse.getCompressionStrategy(), requestContext.currentVersion);
+        metadata.getCompressor(transportClientResponse.getCompressionStrategy(), requestContext.getCurrentVersion());
     for (MultiGetResponseRecordV1 r: records) {
       long nanoTsBeforeDecompression = System.nanoTime();
 
       ByteBuffer decompressRecord = decompressRecord(
           transportClientResponse.getCompressionStrategy(),
           r.value,
-          requestContext.currentVersion,
+          requestContext.getCurrentVersion(),
           compressor);
 
       long nanoTsBeforeDeserialization = System.nanoTime();
