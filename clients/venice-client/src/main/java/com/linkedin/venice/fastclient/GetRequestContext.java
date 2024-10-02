@@ -1,7 +1,7 @@
 package com.linkedin.venice.fastclient;
 
-import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.meta.QueryAction;
+import com.linkedin.venice.read.RequestType;
 import com.linkedin.venice.utils.EncodingUtils;
 
 

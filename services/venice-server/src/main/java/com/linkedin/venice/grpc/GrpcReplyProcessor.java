@@ -43,6 +43,8 @@ public class GrpcReplyProcessor {
       case COMPUTE:
         sendMultiKeyResponse((GrpcRequestContext<MultiKeyResponse>) requestContext);
         break;
+      case MULTI_GET_STREAMING:
+        sendMultiKeyStreamingResponse((GrpcRequestContext<MultiKeyStreamingResponse>) requestContext);
       case LEGACY:
         sendVeniceServerResponse((GrpcRequestContext<VeniceServerResponse>) requestContext);
         break;
@@ -103,42 +105,28 @@ public class GrpcReplyProcessor {
     ReadResponse readResponse = requestContext.getReadResponse();
     MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
     VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
-    StreamObserver<MultiKeyResponse> responseObserver = requestContext.getResponseObserver();
 
     if (readResponse == null) {
       builder.setStatusCode(responseStatus.getCode());
       builder.setErrorMessage(requestContext.getErrorMessage());
-      synchronized (responseObserver) {
-        responseObserver.onNext(builder.build());
-        responseObserver.onCompleted();
-      }
-    } else if (!readResponse.isFound()) {
+    } else if (readResponse.isFound()) {
+      builder.setStatusCode(responseStatus.getCode())
+          .setRcu(readResponse.getRCU())
+          .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+          .setContentLength(readResponse.getResponseBody().readableBytes())
+          .setContentType(HttpConstants.AVRO_BINARY)
+          .setValue(GrpcUtils.toByteString(readResponse.getResponseBody()));
+    } else {
       builder.setStatusCode(responseStatus.getCode())
           .setRcu(readResponse.getRCU())
           .setErrorMessage("Key not found")
           .setContentLength(0);
-      synchronized (responseObserver) {
-        responseObserver.onNext(builder.build());
-        responseObserver.onCompleted();
-      }
-    } else {
-      synchronized (responseObserver) {
-        List<MultiGetResponseRecordV1> list = readResponse.getRecords();
-        for (MultiGetResponseRecordV1 recordV1: list) {
-          MultiKeyStreamingResponse.Builder builder1 = MultiKeyStreamingResponse.newBuilder();
-          ByteString valStr = GrpcUtils.toByteString(recordV1.getValue());
-          builder1.setRcu(readResponse.getRCU())
-              .setStatusCode(responseStatus.getCode())
-              .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
-              .setSchemaId(recordV1.getSchemaId())
-              .setValue(valStr)
-              .setContentLength(valStr.size())
-              .setContentType(HttpConstants.AVRO_BINARY)
-              .setKeyIndex(recordV1.getKeyIndex());
-          responseObserver.onNext(builder1.build());
-        }
-        responseObserver.onCompleted();
-      }
+    }
+
+    StreamObserver<MultiKeyResponse> responseObserver = requestContext.getResponseObserver();
+    synchronized (responseObserver) {
+      responseObserver.onNext(builder.build());
+      responseObserver.onCompleted();
     }
     reportRequestStats(requestContext);
   }
@@ -175,6 +163,43 @@ public class GrpcReplyProcessor {
       responseObserver.onCompleted();
     }
 
+    reportRequestStats(requestContext);
+  }
+
+  void sendMultiKeyStreamingResponse(GrpcRequestContext<MultiKeyStreamingResponse> requestContext) {
+    ReadResponse readResponse = requestContext.getReadResponse();
+    MultiKeyStreamingResponse.Builder builder = MultiKeyStreamingResponse.newBuilder();
+    VeniceReadResponseStatus responseStatus = requestContext.getReadResponseStatus();
+    StreamObserver<MultiKeyStreamingResponse> responseObserver = requestContext.getResponseObserver();
+
+    synchronized (responseObserver) {
+      if (readResponse == null) {
+        builder.setStatusCode(responseStatus.getCode());
+        builder.setErrorMessage(requestContext.getErrorMessage());
+        responseObserver.onNext(builder.build());
+      } else if (!readResponse.isFound()) {
+        builder.setStatusCode(responseStatus.getCode())
+            .setRcu(readResponse.getRCU())
+            .setErrorMessage("Key not found")
+            .setContentLength(0);
+        responseObserver.onNext(builder.build());
+      } else {
+        List<MultiGetResponseRecordV1> records = readResponse.getRecords();
+        for (MultiGetResponseRecordV1 record: records) {
+          ByteString valueString = GrpcUtils.toByteString(record.getValue());
+          builder.setRcu(readResponse.getRCU())
+              .setStatusCode(responseStatus.getCode())
+              .setCompressionStrategy(readResponse.getCompressionStrategy().getValue())
+              .setSchemaId(record.getSchemaId())
+              .setValue(valueString)
+              .setContentLength(valueString.size())
+              .setContentType(HttpConstants.AVRO_BINARY)
+              .setKeyIndex(record.getKeyIndex());
+          responseObserver.onNext(builder.build());
+        }
+      }
+      responseObserver.onCompleted();
+    }
     reportRequestStats(requestContext);
   }
 

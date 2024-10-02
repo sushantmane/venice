@@ -1,10 +1,10 @@
 package com.linkedin.venice.fastclient;
 
-import com.linkedin.venice.read.RequestType;
 import static com.linkedin.venice.fastclient.GetRequestContext.URI_SEPARATOR;
 import static com.linkedin.venice.meta.QueryAction.COMPUTE;
 
 import com.linkedin.venice.meta.QueryAction;
+import com.linkedin.venice.read.RequestType;
 import java.util.Objects;
 
 

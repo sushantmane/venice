@@ -1,9 +1,6 @@
 package com.linkedin.venice.grpc;
 
-import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.COMPUTE;
-import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.LEGACY;
-import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.MULTI_GET;
-import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.SINGLE_GET;
+import static com.linkedin.venice.grpc.GrpcRequestContext.GrpcRequestType.*;
 import static com.linkedin.venice.listener.StorageReadRequestHandler.VENICE_STORAGE_NODE_HARDWARE_IS_NOT_HEALTHY_MSG;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +35,7 @@ import com.linkedin.venice.protocols.MetadataRequest;
 import com.linkedin.venice.protocols.MetadataResponse;
 import com.linkedin.venice.protocols.MultiGetRequest;
 import com.linkedin.venice.protocols.MultiKeyResponse;
+import com.linkedin.venice.protocols.MultiKeyStreamingResponse;
 import com.linkedin.venice.protocols.SingleGetRequest;
 import com.linkedin.venice.protocols.SingleGetResponse;
 import com.linkedin.venice.protocols.VeniceClientRequest;
@@ -213,6 +211,30 @@ public class VeniceGrpcReadServiceImpl extends VeniceReadServiceGrpc.VeniceReadS
     } catch (Exception e) {
       LOGGER.debug("Error while processing multi get request", e);
       MultiKeyResponse.Builder builder = MultiKeyResponse.newBuilder();
+      builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
+      if (e.getMessage() != null) {
+        builder.setErrorMessage(e.getMessage());
+      }
+      streamObserver.onNext(builder.build());
+      streamObserver.onCompleted();
+    }
+  }
+
+  public void multiGetStreaming(
+      MultiGetRequest multiGetRequest,
+      StreamObserver<MultiKeyStreamingResponse> streamObserver) {
+    GrpcRequestContext<MultiKeyStreamingResponse> requestContext =
+        GrpcRequestContext.create(dependencies, streamObserver, MULTI_GET_STREAMING);
+    try {
+      RouterRequest routerRequest = MultiGetRouterRequestWrapper.parseMultiGetGrpcRequest(multiGetRequest);
+      requestContext.getRequestStatsRecorder()
+          .setRequestInfo(routerRequest)
+          .setRequestSize(multiGetRequest.getSerializedSize());
+      requestContext.setRouterRequest(routerRequest);
+      requestProcessor.processRequest(requestContext);
+    } catch (Exception e) {
+      LOGGER.debug("Error while processing multi get request", e);
+      MultiKeyStreamingResponse.Builder builder = MultiKeyStreamingResponse.newBuilder();
       builder.setStatusCode(VeniceReadResponseStatus.INTERNAL_SERVER_ERROR.getCode());
       if (e.getMessage() != null) {
         builder.setErrorMessage(e.getMessage());
