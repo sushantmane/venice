@@ -534,7 +534,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
    * This callback handles results from one route for multiple keys in that route once the post()
    * is completed with {@link TransportClientResponseForRoute} for this route.
    */
-  private void batchGetTransportRequestCompletionHandler(
+  private static void batchGetTransportRequestCompletionHandler(
       MultiKeyRequestContext<K, V> requestContext,
       TransportClientResponseForRoute transportClientResponse,
       Throwable exception,
