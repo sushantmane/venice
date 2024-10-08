@@ -435,6 +435,13 @@ public class AdminTool {
         case QUERY_KAFKA_TOPIC:
           queryKafkaTopic(cmd, pubSubClientsFactory);
           break;
+        /**
+         * We need to support following types of queries:
+         * 1. Query a specific store-version-partition and get all incremental push versions applied for that partition.
+         * 2. Query a specific store-version-partition for a specific incremental push version.
+         */
+        case QUERY_INCREMENTAL_PUSH_STATUS:
+          queryIncrementalPushVersion(cmd);
         case MIGRATE_STORE:
           migrateStore(cmd);
           break;

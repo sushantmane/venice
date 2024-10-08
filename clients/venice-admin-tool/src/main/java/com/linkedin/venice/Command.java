@@ -354,6 +354,11 @@ public enum Command {
           KEY },
       new Arg[] { END_DATE, PROGRESS_INTERVAL }
   ),
+  QUERY_INCREMENTAL_PUSH_STATUS(
+      "query-incremental-push-status", "Query incremental push status for a store", new Arg[] { URL, STORE },
+      new Arg[] { CLUSTER, VERSION }
+  ),
+
   MIGRATE_STORE(
       "migrate-store", "Migrate store from one cluster to another within the same fabric",
       new Arg[] { URL, STORE, CLUSTER_SRC, CLUSTER_DEST }
