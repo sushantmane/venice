@@ -61,6 +61,7 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.STATUS;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORAGE_NODE_ID;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_CONFIG_NAME_FILTER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_CONFIG_VALUE_FILTER;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_PARTITION;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_SIZE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_TYPE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.TARGETED_REGIONS;
@@ -819,6 +820,20 @@ public class ControllerClient implements Closeable {
     int version = Version.parseVersionFromKafkaTopicName(kafkaTopic);
     QueryParams params = newParams().add(NAME, storeName).add(VERSION, version).add(FABRIC, region);
     return request(ControllerRoute.JOB, params, JobStatusQueryResponse.class, QUERY_JOB_STATUS_TIMEOUT, 1, null);
+  }
+
+  public IncrementalPushStatusResponse queryIncrementalPushStatus(
+      String clusterName,
+      String storeName,
+      int version,
+      int partition,
+      String incrementalPushVersion) {
+    QueryParams params = newParams().add(CLUSTER, clusterName)
+        .add(NAME, storeName)
+        .add(VERSION, version)
+        .add(STORE_PARTITION, partition)
+        .add(INCREMENTAL_PUSH_VERSION, incrementalPushVersion);
+    return request(ControllerRoute.INCREMENTAL_PUSH_STATUS, params, IncrementalPushStatusResponse.class);
   }
 
   public ControllerResponse sendPushJobDetails(String storeName, int version, byte[] pushJobDetails) {

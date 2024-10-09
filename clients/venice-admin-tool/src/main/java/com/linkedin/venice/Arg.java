@@ -24,6 +24,7 @@ public enum Arg {
   LARGEST_USED_VERSION_NUMBER(
       "largest-used-version", "luv", true, "Largest used store version number (whether active or not)"
   ), PUSH_ID("push-id", "pid", true, "Push Id"),
+  INCREMENTAL_PUSH_VERSION("incremental-push-version-id", "ipv", true, "Incremental push version id"),
   STORE_SIZE("store-size", "ss", true, "Size of the store in bytes, used to calculate partitioning"),
   KEY_SCHEMA("key-schema-file", "ks", true, "Path to text file with key schema"),
   VALUE_SCHEMA_ID("value-schema-id", "vid", true, "value schema id"),

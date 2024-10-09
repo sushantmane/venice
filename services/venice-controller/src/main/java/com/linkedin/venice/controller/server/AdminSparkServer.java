@@ -56,6 +56,7 @@ import static com.linkedin.venice.controllerapi.ControllerRoute.GET_STORE_LARGES
 import static com.linkedin.venice.controllerapi.ControllerRoute.GET_VALUE_OR_DERIVED_SCHEMA_ID;
 import static com.linkedin.venice.controllerapi.ControllerRoute.GET_VALUE_SCHEMA;
 import static com.linkedin.venice.controllerapi.ControllerRoute.GET_VALUE_SCHEMA_ID;
+import static com.linkedin.venice.controllerapi.ControllerRoute.INCREMENTAL_PUSH_STATUS;
 import static com.linkedin.venice.controllerapi.ControllerRoute.IS_STORE_VERSION_READY_FOR_DATA_RECOVERY;
 import static com.linkedin.venice.controllerapi.ControllerRoute.JOB;
 import static com.linkedin.venice.controllerapi.ControllerRoute.KILL_OFFLINE_PUSH_JOB;
@@ -340,6 +341,9 @@ public class AdminSparkServer extends AbstractVeniceService {
             newClusterBuildOutRoutes.copyOverStoreSchemasAndConfigs(admin)));
 
     httpService.get(JOB.getPath(), new VeniceParentControllerRegionStateHandler(admin, jobRoutes.jobStatus(admin)));
+    httpService.get(
+        INCREMENTAL_PUSH_STATUS.getPath(),
+        new VeniceParentControllerRegionStateHandler(admin, jobRoutes.getIncrementalPushStatus(admin)));
     httpService.post(
         KILL_OFFLINE_PUSH_JOB.getPath(),
         new VeniceParentControllerRegionStateHandler(admin, jobRoutes.killOfflinePushJob(admin)));

@@ -1693,6 +1693,19 @@ public class AdminTool {
     checkWhetherStoreMigrationIsAllowed(destClient);
   }
 
+  private static void queryIncrementalPushVersion(CommandLine cmd) {
+    String veniceUrl = getRequiredArgument(cmd, Arg.URL);
+    String clusterName = getRequiredArgument(cmd, Arg.CLUSTER);
+    String storeName = getRequiredArgument(cmd, Arg.STORE);
+
+    // if version is not provided, current version will be used by default
+    int version = Integer.parseInt(getOptionalArgument(cmd, Arg.VERSION, "-1"));
+    // if partition is not provided, all partitions will be used by default
+    int partition = Integer.parseInt(getOptionalArgument(cmd, Arg.PARTITION, "-1"));
+    controllerClient.queryJobStatus();
+
+  }
+
   private static void migrateStore(CommandLine cmd) {
     String veniceUrl = getRequiredArgument(cmd, Arg.URL);
     String storeName = getRequiredArgument(cmd, Arg.STORE);

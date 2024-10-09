@@ -201,4 +201,19 @@ public class JobRoutes extends AbstractRoute {
       return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(incrementalPushVersionsResponse);
     });
   }
+
+  // public Route getIncrementalPushStatus(Admin admin) {
+  // return (request, response) -> {
+  // IncrementalPushStatusResponse responseObject = new IncrementalPushStatusResponse();
+  // response.type(HttpConstants.JSON);
+  // try {
+  // AdminSparkServer.validateParams(request, INCREMENTAL_PUSH_STATUS.getParams(), admin);
+  // String cluster = request.queryParams(CLUSTER);
+  // String store = request.queryParams(NAME);
+  // int versionNumber = Utils.parseIntFromString(request.queryParams(VERSION), VERSION);
+  // int partition = Utils.parseIntFromString(request.queryParams(STORE_PARTITION), STORE_PARTITION);
+  // String incrementalPushVersion = request.queryParams(INCREMENTAL_PUSH_VERSION);
+  // }
+  // }
+  // }
 }

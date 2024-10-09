@@ -50,6 +50,7 @@ import static com.linkedin.venice.Arg.HYBRID_STORE_OVERHEAD_BYPASS;
 import static com.linkedin.venice.Arg.HYBRID_TIME_LAG;
 import static com.linkedin.venice.Arg.INCLUDE_SYSTEM_STORES;
 import static com.linkedin.venice.Arg.INCREMENTAL_PUSH_ENABLED;
+import static com.linkedin.venice.Arg.INCREMENTAL_PUSH_VERSION;
 import static com.linkedin.venice.Arg.INFILE;
 import static com.linkedin.venice.Arg.INTERVAL;
 import static com.linkedin.venice.Arg.KAFKA_BOOTSTRAP_SERVERS;
@@ -355,10 +356,9 @@ public enum Command {
       new Arg[] { END_DATE, PROGRESS_INTERVAL }
   ),
   QUERY_INCREMENTAL_PUSH_STATUS(
-      "query-incremental-push-status", "Query incremental push status for a store", new Arg[] { URL, STORE },
-      new Arg[] { CLUSTER, VERSION }
+      "query-incremental-push-status", "Query incremental push status for a store (version)",
+      new Arg[] { URL, CLUSTER, STORE, INCREMENTAL_PUSH_VERSION }, new Arg[] { VERSION, PARTITION }
   ),
-
   MIGRATE_STORE(
       "migrate-store", "Migrate store from one cluster to another within the same fabric",
       new Arg[] { URL, STORE, CLUSTER_SRC, CLUSTER_DEST }
