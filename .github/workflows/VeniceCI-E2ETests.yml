@@ -773,7 +773,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -815,7 +815,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -857,7 +857,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -899,7 +899,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -941,7 +941,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -983,7 +983,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1025,7 +1025,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1067,7 +1067,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1109,7 +1109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1151,7 +1151,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1193,7 +1193,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1235,7 +1235,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -1277,7 +1277,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [17]
+        jdk: [21]
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
