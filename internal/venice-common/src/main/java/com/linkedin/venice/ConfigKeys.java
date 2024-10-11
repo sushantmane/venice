@@ -214,6 +214,10 @@ public class ConfigKeys {
   public static final String CONTROLLER_CLUSTER_ZK_ADDRESSS = "controller.cluster.zk.address";
   // Name of the Helix cluster for controllers
   public static final String CONTROLLER_CLUSTER = "controller.cluster.name";
+  // What instance group tag to assign to a cluster resource
+  public static final String CONTROLLER_RESOURCE_INSTANCE_GROUP_TAG = "controller.resource.instance.group.tag";
+  // What tags to assign to a controller instance
+  public static final String CONTROLLER_INSTANCE_TAG_LIST = "controller.instance.tag.list";
 
   /** List of forbidden admin paths */
   public static final String CONTROLLER_DISABLED_ROUTES = "controller.cluster.disabled.routes";
@@ -316,9 +320,35 @@ public class ConfigKeys {
   public static final String ALLOW_CLUSTER_WIPE = "allow.cluster.wipe";
 
   /**
-   * Whether the controller is in Azure fabric. Default is false.
+   * Whether the controller cluster is in a cloud environment. Default is false.
    */
-  public static final String CONTROLLER_IN_AZURE_FABRIC = "controller.in.azure.fabric";
+  public static final String CONTROLLER_CLUSTER_HELIX_CLOUD_ENABLED = "controller.cluster.helix.cloud.enabled";
+
+  /**
+   * Whether the controller storage cluster is in a cloud environment. Default is false.
+   */
+  public static final String CONTROLLER_STORAGE_CLUSTER_HELIX_CLOUD_ENABLED =
+      "controller.storage.cluster.helix.cloud.enabled";
+
+  /**
+   * What cloud environment the controller is in. Maps to {@link org.apache.helix.cloud.constants.CloudProvider} Default is empty string.
+   */
+  public static final String CONTROLLER_HELIX_CLOUD_PROVIDER = "controller.helix.cloud.provider";
+
+  /**
+   * Specific id in cloud environment that belongs to this cluster. Default is empty string.
+   */
+  public static final String CONTROLLER_HELIX_CLOUD_ID = "controller.helix.cloud.id";
+
+  /**
+   * Sources for retrieving the cloud information. Default is empty list.
+   */
+  public static final String CONTROLLER_HELIX_CLOUD_INFO_SOURCES = "controller.helix.cloud.info.sources";
+
+  /**
+   * Name of the function that processes the fetching and parsing of cloud information. Default is empty string.
+   */
+  public static final String CONTROLLER_HELIX_CLOUD_INFO_PROCESSOR_NAME = "controller.helix.cloud.info.processor.name";
 
   /**
    * Whether to enable graveyard cleanup for batch-only store at cluster level. Default is false.
@@ -529,6 +559,27 @@ public class ConfigKeys {
   public static final String SERVER_NODE_CAPACITY_RCU = "server.node.capacity.rcu.per.second";
 
   /**
+   * Rate limiter for store version level read quota enforcement.
+   */
+  public static final String SERVER_STORE_VERSION_QPS_RATE_LIMITER = "server.store.version.qps.rate.limiter";
+
+  /**
+   * Rate limiter for storage node level read quota enforcement.
+   */
+  public static final String SERVER_STORAGE_NODE_RATE_LIMITER = "server.storage.node.rate.limiter";
+
+  /**
+   * Server quota enforcement interval in milliseconds.
+   */
+  public static final String SERVER_QUOTA_ENFORCEMENT_INTERVAL_IN_MILLIS =
+      "server.quota.enforcement.interval.in.millis";
+
+  /**
+   * Server quota enforcement capacity multiple.
+   */
+  public static final String SERVER_QUOTA_ENFORCEMENT_CAPACITY_MULTIPLE = "server.quota.enforcement.capacity.multiple";
+
+  /**
    * This config is used to control the maximum records returned by every poll request.
    * So far, Store Ingestion is throttling per poll, so if the configured value is too big,
    * the throttling could be inaccurate and it may impact GC as well.
@@ -723,6 +774,14 @@ public class ConfigKeys {
    */
   public static final String SERVER_INGESTION_ISOLATION_HEARTBEAT_REQUEST_TIMEOUT_SECONDS =
       "server.ingestion.isolation.heartbeat.request.timeout.seconds";
+
+  public static final String SERVER_BATCH_REPORT_END_OF_INCREMENTAL_PUSH_STATUS_ENABLED =
+      "server.batch.report.end.of.incremental.push.status.enabled";
+
+  /**
+   * This config dictates where the server should write the end of incremental push status.
+   */
+  public static final String SERVER_INCREMENTAL_PUSH_STATUS_WRITE_MODE = "server.incremental.push.status.write.mode";
 
   /**
    * whether to enable checksum verification in the ingestion path from kafka to database persistency. If enabled it will
@@ -1164,6 +1223,14 @@ public class ConfigKeys {
    */
   public static final String ENABLE_INCREMENTAL_PUSH_FOR_HYBRID_ACTIVE_ACTIVE_USER_STORES =
       "enable.incremental.push.for.hybrid.active.active.user.stores";
+
+  /**
+   * We will use this config to determine whether we should enable separate real-time topic for incremental push enabled stores.
+   * If this config is set to true, we will enable separate real-time topic for incremental push enabled stores.
+   */
+  public static final String ENABLE_SEPARATE_REAL_TIME_TOPIC_FOR_STORE_WITH_INCREMENTAL_PUSH =
+      "enable.separate.real.time.topic.for.store.with.incremental.push";
+
   /**
    * We will use this config to determine whether we should enable partial update for hybrid active-active user stores.
    * If this config is set to true, we will enable partial update for hybrid active-active user stores whose latest value
@@ -1788,13 +1855,6 @@ public class ConfigKeys {
   public static final String LEAKED_RESOURCE_ALLOWED_LINGER_TIME_MS = "leaked.resource.allowed.linger.time.ms";
 
   /**
-   * This config controls whether to use da-vinci based implementation of the system store repository when
-   * CLIENT_USE_SYSTEM_STORE_REPOSITORY is set to true. By default the thin-client based implementation will be used.
-   */
-  public static final String CLIENT_USE_DA_VINCI_BASED_SYSTEM_STORE_REPOSITORY =
-      "client.use.da.vinci.based.system.store.repository";
-
-  /**
    *
    */
   public static final String CONTROLLER_DISABLE_PARENT_REQUEST_TOPIC_FOR_STREAM_PUSHES =
@@ -2154,6 +2214,19 @@ public class ConfigKeys {
       "controller.dangling.topic.occurrence.threshold.for.cleanup";
 
   /**
+   * Configure in controllers to provide a custom list of checkpoints to define user errors and to
+   * override the default checkpoint list {@link PushJobCheckpoints#DEFAULT_PUSH_JOB_USER_ERROR_CHECKPOINTS}.
+   * This is useful to emit the push job failure metrics due to user errors or not due
+   * to user errors based on the custom checkpoint list.
+   *
+   * Check {@link PushJobCheckpoints} for the list of supported checkpoints: Config should contain one or more
+   * of the checkpoints strings separated by comma. In case of invalid config, the default list of checkpoints
+   * will be used.
+   */
+  public static final String PUSH_JOB_FAILURE_CHECKPOINTS_TO_DEFINE_USER_ERROR =
+      "push.job.failure.checkpoints.to.define.user.error";
+
+  /**
    * Config for the default value which is filled in when the store-level config
    * {@link com.linkedin.venice.writer.VeniceWriter#maxRecordSizeBytes} is left unset. Used as a controller config for
    * batch push jobs. Used as a server config for nearline jobs / partial updates.
@@ -2217,4 +2290,11 @@ public class ConfigKeys {
 
   public static final String SERVER_CHANNEL_OPTION_WRITE_BUFFER_WATERMARK_HIGH_BYTES =
       "server.channel.option.write.buffer.watermark.high.bytes";
+
+  public static final String SERVER_AA_WC_WORKLOAD_PARALLEL_PROCESSING_ENABLED =
+      "server.aa.wc.workload.parallel.processing.enabled";
+
+  public static final String SERVER_AA_WC_WORKLOAD_PARALLEL_PROCESSING_THREAD_POOL_SIZE =
+      "server.aa.wc.workload.parallel.processing.thread.pool.size";
+  public static final String SERVER_GLOBAL_RT_DIV_ENABLED = "server.global.rt.div.enabled";
 }

@@ -11,8 +11,10 @@ import static com.linkedin.venice.ConfigKeys.DAVINCI_P2P_BLOB_TRANSFER_SERVER_PO
 import static com.linkedin.venice.ConfigKeys.DAVINCI_PUSH_STATUS_CHECK_INTERVAL_IN_MS;
 import static com.linkedin.venice.ConfigKeys.DAVINCI_PUSH_STATUS_SCAN_INTERVAL_IN_SECONDS;
 import static com.linkedin.venice.ConfigKeys.DA_VINCI_CURRENT_VERSION_BOOTSTRAPPING_SPEEDUP_ENABLED;
+import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND;
 import static com.linkedin.venice.ConfigKeys.PERSISTENCE_TYPE;
 import static com.linkedin.venice.ConfigKeys.PUSH_STATUS_STORE_ENABLED;
+import static com.linkedin.venice.ConfigKeys.PUSH_STATUS_STORE_HEARTBEAT_INTERVAL_IN_SECONDS;
 import static com.linkedin.venice.ConfigKeys.SERVER_CONSUMER_POOL_SIZE_PER_KAFKA_CLUSTER;
 import static com.linkedin.venice.ConfigKeys.SERVER_DATABASE_CHECKSUM_VERIFICATION_ENABLED;
 import static com.linkedin.venice.ConfigKeys.SERVER_DATABASE_SYNC_BYTES_INTERNAL_FOR_DEFERRED_WRITE_MODE;
@@ -21,7 +23,6 @@ import static com.linkedin.venice.ConfigKeys.SERVER_INGESTION_ISOLATION_CONNECTI
 import static com.linkedin.venice.ConfigKeys.SERVER_INGESTION_ISOLATION_SERVICE_PORT;
 import static com.linkedin.venice.ConfigKeys.SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS;
 import static com.linkedin.venice.ConfigKeys.VENICE_PARTITIONERS;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.VENICE_STORE_NAME_PROP;
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT_KEY_SCHEMA;
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapper.DEFAULT_VALUE_SCHEMA;
 import static com.linkedin.venice.meta.PersistenceType.ROCKS_DB;
@@ -29,6 +30,7 @@ import static com.linkedin.venice.utils.IntegrationTestPushUtils.createStoreForJ
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.defaultVPJProps;
 import static com.linkedin.venice.utils.TestWriteUtils.getTempDataDirectory;
 import static com.linkedin.venice.utils.TestWriteUtils.writeSimpleAvroFileWithIntToStringSchema;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.VENICE_STORE_NAME_PROP;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -70,6 +72,7 @@ import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
 import com.linkedin.venice.integration.utils.VeniceRouterWrapper;
 import com.linkedin.venice.meta.IngestionMetadataUpdateType;
+import com.linkedin.venice.meta.IngestionMode;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.OffsetRecord;
 import com.linkedin.venice.partitioner.ConstantVenicePartitioner;
@@ -148,6 +151,8 @@ public class DaVinciClientTest {
     inputDirPath = "file://" + inputDir.getAbsolutePath();
     Properties clusterConfig = new Properties();
     clusterConfig.put(SERVER_PROMOTION_TO_LEADER_REPLICA_DELAY_SECONDS, 1L);
+    clusterConfig.put(PUSH_STATUS_STORE_ENABLED, true);
+    clusterConfig.put(DAVINCI_PUSH_STATUS_SCAN_INTERVAL_IN_SECONDS, 3);
     cluster = ServiceFactory.getVeniceCluster(1, 2, 1, 2, 100, false, false, clusterConfig);
     d2Client = new D2ClientBuilder().setZkHosts(cluster.getZk().getAddress())
         .setZkSessionTimeout(3, TimeUnit.SECONDS)
@@ -775,7 +780,7 @@ public class DaVinciClientTest {
         // Isolated clients should not be able to unsubscribe partitions of other clients.
         client3.unsubscribeAll();
 
-        client3.subscribe(Collections.singleton(partition)).get(0, TimeUnit.SECONDS);
+        client3.subscribe(Collections.singleton(partition)).get(10, TimeUnit.SECONDS);
         for (int i = 0; i < KEY_COUNT; i++) {
           final int key = i;
           // Both client2 & client4 are not subscribed to any partition. But client2 is not-isolated so it can
@@ -785,6 +790,58 @@ public class DaVinciClientTest {
           assertThrows(NonLocalAccessException.class, () -> client4.get(key).get());
         }
       }
+    }
+  }
+
+  @Test(timeOut = TEST_TIMEOUT, dataProvider = "Isolated-Ingestion", dataProviderClass = DataProviderUtils.class)
+  public void testStatusReportDuringBoostrap(IngestionMode ingestionMode) throws Exception {
+    int keyCnt = 1000;
+    String storeName = createStoreWithMetaSystemStoreAndPushStatusSystemStore(keyCnt);
+    String baseDataPath = Utils.getTempDataDirectory().getAbsolutePath();
+    Map<String, Object> extraBackendProp = new HashMap<>();
+    extraBackendProp.put(DATA_BASE_PATH, baseDataPath);
+    extraBackendProp.put(PUSH_STATUS_STORE_HEARTBEAT_INTERVAL_IN_SECONDS, "5");
+    extraBackendProp.put(KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND, "5");
+    extraBackendProp.put(PUSH_STATUS_STORE_ENABLED, "true");
+    DaVinciTestContext<Integer, Object> daVinciTestContext =
+        ServiceFactory.getGenericAvroDaVinciFactoryAndClientWithRetries(
+            d2Client,
+            new MetricsRepository(),
+            Optional.empty(),
+            cluster.getZk().getAddress(),
+            storeName,
+            new DaVinciConfig().setIsolated(ingestionMode.equals(IngestionMode.ISOLATED)),
+            extraBackendProp);
+    try (DaVinciClient<Integer, Object> client = daVinciTestContext.getDaVinciClient()) {
+      CompletableFuture<Void> subscribeFuture = client.subscribeAll();
+
+      /**
+       * Create a new version while bootstrapping.
+       */
+      VersionCreationResponse newVersion = cluster.getNewVersion(storeName);
+      String topic = newVersion.getKafkaTopic();
+      VeniceWriterFactory vwFactory = IntegrationTestPushUtils
+          .getVeniceWriterFactory(cluster.getPubSubBrokerWrapper(), pubSubProducerAdapterFactory);
+      VeniceKafkaSerializer keySerializer = new VeniceAvroKafkaSerializer(DEFAULT_KEY_SCHEMA);
+      VeniceKafkaSerializer valueSerializer = new VeniceAvroKafkaSerializer(DEFAULT_VALUE_SCHEMA);
+      int valueSchemaId = HelixReadOnlySchemaRepository.VALUE_SCHEMA_STARTING_ID;
+
+      try (VeniceWriter<Object, Object, byte[]> batchProducer = vwFactory.createVeniceWriter(
+          new VeniceWriterOptions.Builder(topic).setKeySerializer(keySerializer)
+              .setValueSerializer(valueSerializer)
+              .build())) {
+        batchProducer.broadcastStartOfPush(Collections.emptyMap());
+        int keyCntForSecondVersion = 100;
+        Future[] writerFutures = new Future[keyCntForSecondVersion];
+        for (int i = 0; i < keyCntForSecondVersion; i++) {
+          writerFutures[i] = batchProducer.put(i, i, valueSchemaId);
+        }
+        for (int i = 0; i < keyCntForSecondVersion; i++) {
+          writerFutures[i].get();
+        }
+        batchProducer.broadcastEndOfPush(Collections.emptyMap());
+      }
+      subscribeFuture.get();
     }
   }
 
@@ -995,7 +1052,8 @@ public class DaVinciClientTest {
         "10",
         "true",
         Integer.toString(port1),
-        Integer.toString(port2));
+        Integer.toString(port2),
+        StorageClass.DISK.toString());
     // Sleep long enough so the forked Da Vinci app process can finish ingestion.
     Thread.sleep(60000);
     IsolatedIngestionUtils.executeShellCommand("kill " + forkedDaVinciUserApp.pid());
@@ -1069,7 +1127,8 @@ public class DaVinciClientTest {
         "10",
         "false",
         Integer.toString(port1),
-        Integer.toString(port2));
+        Integer.toString(port2),
+        StorageClass.DISK.toString());
 
     // Wait for the first DaVinci Client to complete ingestion
     Thread.sleep(60000);
@@ -1104,6 +1163,48 @@ public class DaVinciClientTest {
         String snapshotPath = RocksDBUtils.composeSnapshotDir(dvcPath1 + "/rocksdb", storeName + "_v1", i);
         Assert.assertTrue(Files.exists(Paths.get(snapshotPath)));
       }
+    }
+  }
+
+  /**
+   * Test to verify the snapshot generation
+   */
+  @Test(dataProviderClass = DataProviderUtils.class, dataProvider = "True-and-False", timeOut = 2 * TEST_TIMEOUT)
+  public void testDVCSnapshotGeneration(boolean useDiskStorage) throws Exception {
+    String dvcPath1 = Utils.getTempDataDirectory().getAbsolutePath();
+    String zkHosts = cluster.getZk().getAddress();
+    int port1 = TestUtils.getFreePort();
+    int port2 = TestUtils.getFreePort();
+    while (port1 == port2) {
+      port2 = TestUtils.getFreePort();
+    }
+    Consumer<UpdateStoreQueryParams> paramsConsumer = params -> params.setBlobTransferEnabled(true);
+    String storeName = Utils.getUniqueString("test-store");
+    setUpStore(storeName, paramsConsumer, properties -> {}, true);
+    LOGGER.info("Port1 is {}, Port2 is {}", port1, port2);
+    LOGGER.info("zkHosts is {}", zkHosts);
+
+    // Start the first DaVinci Client using DaVinciUserApp for regular ingestion
+    String storageClass = useDiskStorage ? StorageClass.DISK.toString() : StorageClass.MEMORY_BACKED_BY_DISK.toString();
+    ForkedJavaProcess.exec(
+        DaVinciUserApp.class,
+        zkHosts,
+        dvcPath1,
+        storeName,
+        "100",
+        "10",
+        "false",
+        Integer.toString(port1),
+        Integer.toString(port2),
+        storageClass);
+
+    // Wait for the first DaVinci Client to complete ingestion
+    Thread.sleep(60000);
+
+    // verify the dvc1 snapshot is created
+    for (int i = 0; i < 3; i++) {
+      String snapshotPath = RocksDBUtils.composeSnapshotDir(dvcPath1 + "/rocksdb", storeName + "_v1", i);
+      Assert.assertTrue(Files.exists(Paths.get(snapshotPath)));
     }
   }
 

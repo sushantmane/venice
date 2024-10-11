@@ -4,16 +4,9 @@ import static com.linkedin.davinci.store.rocksdb.RocksDBServerConfig.ROCKSDB_LEV
 import static com.linkedin.davinci.store.rocksdb.RocksDBServerConfig.ROCKSDB_PLAIN_TABLE_FORMAT_ENABLED;
 import static com.linkedin.venice.ConfigKeys.CHILD_DATA_CENTER_KAFKA_URL_PREFIX;
 import static com.linkedin.venice.ConfigKeys.DEFAULT_MAX_NUMBER_OF_PARTITIONS;
+import static com.linkedin.venice.ConfigKeys.SERVER_AA_WC_WORKLOAD_PARALLEL_PROCESSING_ENABLED;
 import static com.linkedin.venice.ConfigKeys.SERVER_CONSUMER_POOL_ALLOCATION_STRATEGY;
 import static com.linkedin.venice.ConfigKeys.SERVER_DEDICATED_DRAINER_FOR_SORTED_INPUT_ENABLED;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.DEFAULT_KEY_FIELD_PROP;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.DEFAULT_VALUE_FIELD_PROP;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.KAFKA_INPUT_BROKER_URL;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.KAFKA_INPUT_MAX_RECORDS_PER_MAPPER;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.REPUSH_TTL_ENABLE;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.REWIND_TIME_IN_SECONDS_OVERRIDE;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.SOURCE_KAFKA;
-import static com.linkedin.venice.hadoop.VenicePushJobConstants.TARGETED_REGION_PUSH_ENABLED;
 import static com.linkedin.venice.integration.utils.VeniceClusterWrapperConstants.DEFAULT_PARENT_DATA_CENTER_REGION_NAME;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.createStoreForJob;
 import static com.linkedin.venice.utils.IntegrationTestPushUtils.getSamzaProducerConfig;
@@ -22,6 +15,14 @@ import static com.linkedin.venice.utils.IntegrationTestPushUtils.sendStreamingRe
 import static com.linkedin.venice.utils.TestUtils.generateInput;
 import static com.linkedin.venice.utils.TestWriteUtils.STRING_SCHEMA;
 import static com.linkedin.venice.utils.TestWriteUtils.getTempDataDirectory;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.DEFAULT_KEY_FIELD_PROP;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.DEFAULT_VALUE_FIELD_PROP;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.KAFKA_INPUT_BROKER_URL;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.KAFKA_INPUT_MAX_RECORDS_PER_MAPPER;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.REPUSH_TTL_ENABLE;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.REWIND_TIME_IN_SECONDS_OVERRIDE;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.SOURCE_KAFKA;
+import static com.linkedin.venice.vpj.VenicePushJobConstants.TARGETED_REGION_PUSH_ENABLED;
 
 import com.linkedin.davinci.kafka.consumer.KafkaConsumerServiceDelegator;
 import com.linkedin.venice.ConfigKeys;
@@ -98,6 +99,10 @@ public class TestActiveActiveIngestion {
     return false;
   }
 
+  protected boolean isAAWCParallelProcessingEnabled() {
+    return false;
+  }
+
   @BeforeClass(alwaysRun = true)
   public void setUp() {
     serializer = new AvroSerializer(STRING_SCHEMA);
@@ -114,6 +119,7 @@ public class TestActiveActiveIngestion {
     serverProperties.put(
         SERVER_CONSUMER_POOL_ALLOCATION_STRATEGY,
         KafkaConsumerServiceDelegator.ConsumerPoolStrategyType.CURRENT_VERSION_PRIORITIZATION.name());
+    serverProperties.put(SERVER_AA_WC_WORKLOAD_PARALLEL_PROCESSING_ENABLED, isAAWCParallelProcessingEnabled());
     Properties controllerProps = new Properties();
     controllerProps.put(DEFAULT_MAX_NUMBER_OF_PARTITIONS, 20);
     multiRegionMultiClusterWrapper = ServiceFactory.getVeniceTwoLayerMultiRegionMultiClusterWrapper(

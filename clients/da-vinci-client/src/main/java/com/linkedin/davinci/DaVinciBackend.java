@@ -7,6 +7,8 @@ import static com.linkedin.venice.pushmonitor.ExecutionStatus.DVC_INGESTION_ERRO
 import static com.linkedin.venice.pushmonitor.ExecutionStatus.DVC_INGESTION_ERROR_OTHER;
 import static java.lang.Thread.currentThread;
 
+import com.linkedin.davinci.blobtransfer.BlobTransferManager;
+import com.linkedin.davinci.blobtransfer.BlobTransferUtil;
 import com.linkedin.davinci.client.DaVinciRecordTransformer;
 import com.linkedin.davinci.compression.StorageEngineBackedCompressorFactory;
 import com.linkedin.davinci.config.StoreBackendConfig;
@@ -30,8 +32,6 @@ import com.linkedin.davinci.storage.StorageService;
 import com.linkedin.davinci.store.AbstractStorageEngine;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheBackend;
 import com.linkedin.davinci.store.cache.backend.ObjectCacheConfig;
-import com.linkedin.venice.blobtransfer.BlobTransferManager;
-import com.linkedin.venice.blobtransfer.BlobTransferUtil;
 import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.client.schema.StoreSchemaFetcher;
 import com.linkedin.venice.client.store.ClientConfig;
@@ -79,6 +79,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -109,7 +110,6 @@ public class DaVinciBackend implements Closeable {
   private IngestionBackend ingestionBackend;
   private final AggVersionedStorageEngineStats aggVersionedStorageEngineStats;
   private final boolean useDaVinciSpecificExecutionStatusForError;
-  private final ClientConfig clientConfig;
   private BlobTransferManager<Void> blobTransferManager;
   private final boolean writeBatchingPushStatus;
 
@@ -126,7 +126,6 @@ public class DaVinciBackend implements Closeable {
       useDaVinciSpecificExecutionStatusForError = backendConfig.useDaVinciSpecificExecutionStatusForError();
       writeBatchingPushStatus = backendConfig.getDaVinciPushStatusCheckIntervalInMs() >= 0;
       this.configLoader = configLoader;
-      this.clientConfig = clientConfig;
       metricsRepository = Optional.ofNullable(clientConfig.getMetricsRepository())
           .orElse(TehutiUtils.getMetricsRepository("davinci-client"));
       VeniceMetadataRepositoryBuilder veniceMetadataRepositoryBuilder =
@@ -279,7 +278,6 @@ public class DaVinciBackend implements Closeable {
           null);
 
       ingestionService.start();
-      ingestionService.addIngestionNotifier(ingestionListener);
 
       if (isIsolatedIngestion() && cacheConfig.isPresent()) {
         // TODO: There are 'some' cases where this mix might be ok, (like a batch only store, or with certain TTL
@@ -292,11 +290,12 @@ public class DaVinciBackend implements Closeable {
       }
 
       if (backendConfig.isBlobTransferManagerEnabled()) {
-        blobTransferManager = BlobTransferUtil.getP2PBlobTransferManagerAndStart(
+        blobTransferManager = BlobTransferUtil.getP2PBlobTransferManagerForDVCAndStart(
             configLoader.getVeniceServerConfig().getDvcP2pBlobTransferServerPort(),
             configLoader.getVeniceServerConfig().getDvcP2pBlobTransferClientPort(),
             configLoader.getVeniceServerConfig().getRocksDBPath(),
-            clientConfig);
+            clientConfig,
+            storageMetadataService);
       } else {
         blobTransferManager = null;
       }
@@ -448,7 +447,8 @@ public class DaVinciBackend implements Closeable {
             storageMetadataService,
             ingestionService,
             storageService,
-            blobTransferManager)
+            blobTransferManager,
+            this::getVeniceCurrentVersionNumber)
         : new DefaultIngestionBackend(
             storageMetadataService,
             ingestionService,
@@ -658,6 +658,11 @@ public class DaVinciBackend implements Closeable {
     }
   }
 
+  int getVeniceCurrentVersionNumber(String storeName) {
+    Version currentVersion = getVeniceCurrentVersion(storeName);
+    return currentVersion == null ? -1 : currentVersion.getNumber();
+  }
+
   private Version getVeniceLatestNonFaultyVersion(Store store, Set<Integer> faultyVersions) {
     Version latestNonFaultyVersion = null;
     for (Version version: store.getVersions()) {
@@ -697,6 +702,13 @@ public class DaVinciBackend implements Closeable {
         VersionBackend versionBackend = versionByTopicMap.get(kafkaTopic);
         if (versionBackend != null) {
           versionBackend.completePartition(partitionId);
+          versionBackend.maybeReportBatchEOIPStatus(
+              partitionId,
+              v -> reportPushStatus(
+                  kafkaTopic,
+                  partitionId,
+                  ExecutionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED,
+                  Optional.of(v)));
           versionBackend.tryStopHeartbeat();
           reportPushStatus(kafkaTopic, partitionId, ExecutionStatus.COMPLETED);
         }
@@ -757,11 +769,15 @@ public class DaVinciBackend implements Closeable {
       ingestionReportExecutor.submit(() -> {
         VersionBackend versionBackend = versionByTopicMap.get(kafkaTopic);
         if (versionBackend != null) {
-          reportPushStatus(
-              kafkaTopic,
+          versionBackend.maybeReportIncrementalPushStatus(
               partitionId,
+              incrementalPushVersion,
               ExecutionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED,
-              Optional.of(incrementalPushVersion));
+              v -> reportPushStatus(
+                  kafkaTopic,
+                  partitionId,
+                  ExecutionStatus.START_OF_INCREMENTAL_PUSH_RECEIVED,
+                  Optional.of(v)));
           versionBackend.tryStartHeartbeat();
         }
       });
@@ -777,11 +793,15 @@ public class DaVinciBackend implements Closeable {
         VersionBackend versionBackend = versionByTopicMap.get(kafkaTopic);
         if (versionBackend != null) {
           versionBackend.tryStopHeartbeat();
-          reportPushStatus(
-              kafkaTopic,
+          versionBackend.maybeReportIncrementalPushStatus(
               partitionId,
+              incrementalPushVersion,
               ExecutionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED,
-              Optional.of(incrementalPushVersion));
+              v -> reportPushStatus(
+                  kafkaTopic,
+                  partitionId,
+                  ExecutionStatus.END_OF_INCREMENTAL_PUSH_RECEIVED,
+                  Optional.of(v)));
         }
       });
     }
@@ -804,5 +824,31 @@ public class DaVinciBackend implements Closeable {
       status = ExecutionStatus.ERROR;
     }
     return status;
+  }
+
+  public boolean hasCurrentVersionBootstrapping() {
+    return ingestionBackend.hasCurrentVersionBootstrapping();
+  }
+
+  static class BootstrappingAwareCompletableFuture {
+    private ScheduledExecutorService scheduledExecutor =
+        Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory("DaVinci_Bootstrapping_Check_Executor"));
+    public final CompletableFuture<Void> bootstrappingFuture = new CompletableFuture<>();
+
+    public BootstrappingAwareCompletableFuture(DaVinciBackend backend) {
+      scheduledExecutor.scheduleAtFixedRate(() -> {
+        if (bootstrappingFuture.isDone()) {
+          return;
+        }
+        if (!backend.hasCurrentVersionBootstrapping()) {
+          bootstrappingFuture.complete(null);
+        }
+      }, 0, 3, TimeUnit.SECONDS);
+      bootstrappingFuture.whenComplete((ignored1, ignored2) -> scheduledExecutor.shutdown());
+    }
+
+    public CompletableFuture<Void> getBootstrappingFuture() {
+      return bootstrappingFuture;
+    }
   }
 }

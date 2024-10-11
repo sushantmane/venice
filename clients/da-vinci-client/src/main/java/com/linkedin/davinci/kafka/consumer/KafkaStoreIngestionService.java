@@ -188,6 +188,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
   private final PubSubTopicRepository pubSubTopicRepository = new PubSubTopicRepository();
   private KafkaValueSerializer kafkaValueSerializer;
   private final IngestionThrottler ingestionThrottler;
+  private final ExecutorService aaWCWorkLoadProcessingThreadPool;
 
   public KafkaStoreIngestionService(
       StorageEngineRepository storageEngineRepository,
@@ -438,6 +439,14 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
 
     VeniceViewWriterFactory viewWriterFactory = new VeniceViewWriterFactory(veniceConfigLoader);
 
+    if (serverConfig.isAAWCWorkloadParallelProcessingEnabled()) {
+      this.aaWCWorkLoadProcessingThreadPool = Executors.newFixedThreadPool(
+          serverConfig.getAAWCWorkloadParallelProcessingThreadPoolSize(),
+          new DaemonThreadFactory("AA_WC_PARALLEL_PROCESSING"));
+    } else {
+      this.aaWCWorkLoadProcessingThreadPool = null;
+    }
+
     ingestionTaskFactory = StoreIngestionTaskFactory.builder()
         .setVeniceWriterFactory(veniceWriterFactory)
         .setStorageEngineRepository(storageEngineRepository)
@@ -463,6 +472,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
         .setRunnableForKillIngestionTasksForNonCurrentVersions(
             serverConfig.getIngestionMemoryLimit() > 0 ? () -> killConsumptionTaskForNonCurrentVersions() : null)
         .setHeartbeatMonitoringService(heartbeatMonitoringService)
+        .setAAWCWorkLoadProcessingThreadPool(aaWCWorkLoadProcessingThreadPool)
         .build();
   }
 
@@ -547,6 +557,20 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     }
   }
 
+  public boolean hasCurrentVersionBootstrapping() {
+    return hasCurrentVersionBootstrapping(topicNameToIngestionTaskMap);
+  }
+
+  public static boolean hasCurrentVersionBootstrapping(Map<String, StoreIngestionTask> ingestionTaskMap) {
+    for (Map.Entry<String, StoreIngestionTask> entry: ingestionTaskMap.entrySet()) {
+      StoreIngestionTask task = entry.getValue();
+      if (task.isCurrentVersion() && !task.hasAllPartitionReportedCompleted()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Stops all the Kafka consumption tasks.
    * Closes all the Kafka clients.
@@ -568,6 +592,8 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
 
     leaderFollowerNotifiers.forEach(VeniceNotifier::close);
     Utils.closeQuietlyWithErrorLogged(metaStoreWriter);
+
+    shutdownExecutorService(aaWCWorkLoadProcessingThreadPool, "aaWCWorkLoadProcessingThreadPool", true);
 
     kafkaMessageEnvelopeSchemaReader.ifPresent(Utils::closeQuietlyWithErrorLogged);
 
@@ -1183,7 +1209,8 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
       LOGGER.error(
           "Caught exception when deserializing offset record byte array: {} for replica: {}",
           Arrays.toString(offsetRecordByteArray),
-          Utils.getReplicaId(topicName, partition));
+          Utils.getReplicaId(topicName, partition),
+          e);
       throw e;
     }
     storageMetadataService.put(topicName, partition, offsetRecord);

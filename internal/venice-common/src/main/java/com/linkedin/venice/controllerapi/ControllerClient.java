@@ -40,7 +40,6 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.PERSONA_O
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PERSONA_QUOTA;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PERSONA_STORES;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_IN_SORTED_ORDER;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_DETAILS;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_ID;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_STRATEGY;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_TYPE;
@@ -713,23 +712,38 @@ public class ControllerClient implements Closeable {
       throw new VeniceException(
           "Querying with retries requires at least one attempt, called with " + totalAttempts + " attempts");
     }
-    int currentAttempt = 1;
-    while (true) {
-      R response = request.apply(client);
+    Exception exception = null;
+    R response = null;
+
+    for (int currentAttempt = 1; currentAttempt <= totalAttempts; currentAttempt++) {
+      try {
+        response = request.apply(client);
+      } catch (Exception e) {
+        exception = e;
+      }
       // Do not retry if value schema is not found. TODO: Ideally response should not be an error but should return
       // INVALID schema ID in the response.
-      if (!response.isError() || currentAttempt == totalAttempts || valueSchemaNotFoundSchemaResponse(response)
-          || abortRetryCondition.apply(response)) {
+      if (exception == null && (!response.isError() || valueSchemaNotFoundSchemaResponse(response)
+          || abortRetryCondition.apply(response))) {
         return response;
       } else {
-        LOGGER.warn(
-            "Error on attempt {}/{} of querying the Controller: {}",
-            currentAttempt,
-            totalAttempts,
-            response.getError());
-        currentAttempt++;
+        if (exception != null) {
+          LOGGER
+              .warn("Exception on attempt {}/{} of querying the Controller", currentAttempt, totalAttempts, exception);
+        } else {
+          LOGGER.warn(
+              "Error on attempt {}/{} of querying the Controller: {}",
+              currentAttempt,
+              totalAttempts,
+              response.getError());
+        }
         Utils.sleep(2000);
       }
+    }
+    if (exception != null) {
+      throw new VeniceException("Could not execute query even after " + totalAttempts + " attempts.", exception);
+    } else {
+      return response;
     }
   }
 
@@ -805,13 +819,6 @@ public class ControllerClient implements Closeable {
     int version = Version.parseVersionFromKafkaTopicName(kafkaTopic);
     QueryParams params = newParams().add(NAME, storeName).add(VERSION, version).add(FABRIC, region);
     return request(ControllerRoute.JOB, params, JobStatusQueryResponse.class, QUERY_JOB_STATUS_TIMEOUT, 1, null);
-  }
-
-  // TODO remove passing PushJobDetails as JSON string once all VPJ plugins are updated.
-  public ControllerResponse sendPushJobDetails(String storeName, int version, String pushJobDetailsString) {
-    QueryParams params =
-        newParams().add(NAME, storeName).add(VERSION, version).add(PUSH_JOB_DETAILS, pushJobDetailsString);
-    return request(ControllerRoute.SEND_PUSH_JOB_DETAILS, params, ControllerResponse.class);
   }
 
   public ControllerResponse sendPushJobDetails(String storeName, int version, byte[] pushJobDetails) {
@@ -1434,6 +1441,8 @@ public class ControllerClient implements Closeable {
           }
           // leader controller has changed. Let's wait for a new leader to realize it.
           lastException = e;
+        } catch (Exception e) {
+          lastException = e;
         }
 
         if (attempt < maxAttempts) {
@@ -1459,14 +1468,14 @@ public class ControllerClient implements Closeable {
     return makeErrorResponse(message, lastException, responseType, logErrorMessage);
   }
 
-  private <T extends ControllerResponse> T makeErrorResponse(
+  private static <T extends ControllerResponse> T makeErrorResponse(
       String message,
       Exception exception,
       Class<T> responseType) {
     return makeErrorResponse(message, exception, responseType, true);
   }
 
-  private <T extends ControllerResponse> T makeErrorResponse(
+  private static <T extends ControllerResponse> T makeErrorResponse(
       String message,
       Exception exception,
       Class<T> responseType,

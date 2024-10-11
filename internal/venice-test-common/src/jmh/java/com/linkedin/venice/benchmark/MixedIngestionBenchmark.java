@@ -52,8 +52,8 @@ public class MixedIngestionBenchmark {
   private int replicaFactor = 1;
   private int partitionSize = 1000;
   private long testTimeOutMS = 200000;
-  private final String keyPrefix = "key_";
-  private final String valuePrefix = "value_";
+  private static final String keyPrefix = "key_";
+  private static final String valuePrefix = "value_";
 
   @Setup
   public void setUp() throws Exception {

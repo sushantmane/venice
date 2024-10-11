@@ -64,8 +64,12 @@ public class LeakedResourceCleaner extends AbstractVeniceService {
 
   @Override
   public void stopInner() {
-    cleaner.setStop();
-    runner.interrupt();
+    if (cleaner != null) {
+      cleaner.setStop();
+    }
+    if (runner != null && runner.isAlive()) {
+      runner.interrupt();
+    }
   }
 
   private class LeakedResourceCleanerRunnable implements Runnable {

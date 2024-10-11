@@ -8,9 +8,9 @@ plugins {
   id 'idea'
   id 'java'
   id 'maven-publish'
-  id 'com.diffplug.spotless' version '6.12.0'
+  id 'com.diffplug.spotless' version '6.25.0'
   id 'com.dorongold.task-tree' version '2.1.0'
-  id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
+  id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
   id 'com.github.spotbugs' version '4.8.0' apply false
   id 'org.gradle.test-retry' version '1.5.0' apply false
   id 'com.form.diff-coverage' version '0.9.5' apply false
@@ -85,7 +85,7 @@ ext.libraries = [
     grpcServices: "io.grpc:grpc-services:${grpcVersion}",
     grpcStub: "io.grpc:grpc-stub:${grpcVersion}",
     hadoopCommon: "org.apache.hadoop:hadoop-common:${hadoopVersion}",
-    helix: 'org.apache.helix:helix-core:1.1.0',
+    hadoopHdfs: "org.apache.hadoop:hadoop-hdfs:${hadoopVersion}",
     httpAsyncClient: 'org.apache.httpcomponents:httpasyncclient:4.1.5',
     httpClient5: 'org.apache.httpcomponents.client5:httpclient5:5.3',
     httpCore5: 'org.apache.httpcomponents.core5:httpcore5:5.2.4',
@@ -110,7 +110,7 @@ ext.libraries = [
     mail: 'javax.mail:mail:1.4.4',
     mapreduceClientCore: "org.apache.hadoop:hadoop-mapreduce-client-core:${hadoopVersion}",
     mapreduceClientJobClient: "org.apache.hadoop:hadoop-mapreduce-client-jobclient:${hadoopVersion}",
-    mockito: 'org.mockito:mockito-core:4.11.0',
+    mockito: 'org.mockito:mockito-core:5.12.0',
     netty: 'io.netty:netty-all:4.1.74.Final',
     oss: 'org.sonatype.oss:oss-parent:7',
     pulsarClient: "${pulsarGroup}:pulsar-client:${pulsarVersion}",
@@ -125,8 +125,8 @@ ext.libraries = [
     slf4jSimple: 'org.slf4j:slf4j-simple:1.7.36',
     snappy: 'org.iq80.snappy:snappy:0.4',
     spark: 'com.sparkjava:spark-core:2.9.4', // Spark-Java Rest framework
-    spotbugs: 'com.github.spotbugs:spotbugs:4.5.2',
-    tehuti: 'io.tehuti:tehuti:0.11.4',
+    tehuti: 'io.tehuti:tehuti:0.12.3',
+    spotbugs: 'com.github.spotbugs:spotbugs:4.8.6',
     testcontainers: 'org.testcontainers:testcontainers:1.18.0',
     testng: 'org.testng:testng:6.14.3',
     tomcatAnnotations: 'org.apache.tomcat:annotations-api:6.0.53',
@@ -135,7 +135,7 @@ ext.libraries = [
     xalan: 'xalan:xalan:2.7.1',
     xerces: 'xerces:xercesImpl:2.9.1',
     zkclient: 'com.101tec:zkclient:0.7', // For Kafka AdminUtils
-    zookeeper: 'org.apache.zookeeper:zookeeper:3.5.9',
+    zookeeper: 'org.apache.zookeeper:zookeeper:3.6.3',
     zstd: 'com.github.luben:zstd-jni:1.5.2-3',
 ]
 
@@ -480,8 +480,10 @@ subprojects {
       dependsOn test // tests are required to run before generating the report
 
       reports {
-        xml.enabled = true
-        html.enabled = true
+        xml.required.set(true) // Enable the XML report
+        html.required.set(true) // Enable the HTML report
+        csv.required.set(false)
+//        html.outputLocation.set(layout.buildDirectory.dir('jacocoHtml'))
       }
 
       doLast {
@@ -568,7 +570,7 @@ subprojects {
   }
 
   task testJar(type: Jar) {
-    classifier 'tests'
+    archiveClassifier.set('tests') // Use archiveClassifier.set() instead
     from sourceSets.test.output
   }
 
@@ -798,4 +800,22 @@ ext.parseJacocoXml = { filePath ->
 
 allprojects {
   task printAllDependencies(type: DependencyReportTask) {}
+}
+
+def supportedJdkVersions = [JavaVersion.VERSION_1_8, JavaVersion.VERSION_11, JavaVersion.VERSION_17]
+
+//task verifyJdkVersion {
+//  def currentJdkVersion = JavaVersion.current()
+//  def isSupported = supportedJdkVersions.any {version -> currentJdkVersion.equals(version) }
+//  if (!isSupported) {
+//    throw new GradleException("Invalid JDK version: ${currentJdkVersion}.\n" + \
+//    "Supported versions: ${supportedJdkVersions.join(', ')}.\n" + \
+//    "Please set the JAVA_HOME environment variable to a supported version either locally or globally.")
+//  }
+//  println "JDK version ${currentJdkVersion} is valid."
+//}
+
+gradle.taskGraph.whenReady {
+  // Ensure the JDK version is verified before any other tasks
+//  verifyJdkVersion
 }
