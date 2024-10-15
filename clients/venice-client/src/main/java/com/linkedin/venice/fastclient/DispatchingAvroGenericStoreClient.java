@@ -137,6 +137,14 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     return metadata;
   }
 
+  public String getBatchGetTransportExceptionFilterMessage() {
+    return BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
+  }
+
+  public String getComputeTransportExceptionFilterMessage() {
+    return COMPUTE_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
+  }
+
   private void composeURIForSingleGet(GetRequestContext requestContext, K key) {
     int currentVersion = getCurrentVersion();
     String resourceName = getResourceName(currentVersion);
@@ -264,11 +272,12 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
                     LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeSendingRequest);
                 CompressionStrategy compressionStrategy = response.getCompressionStrategy();
                 long nanoTsBeforeDecompression = System.nanoTime();
-                ByteBuffer data = decompressRecord(
+                ByteBuffer data = FastClientHelperUtils.decompressRecord(
                     compressionStrategy,
+                    metadata.getCompressor(compressionStrategy, requestContext.currentVersion),
                     ByteBuffer.wrap(response.getBody()),
-                    requestContext.currentVersion,
-                    metadata.getCompressor(compressionStrategy, requestContext.currentVersion));
+                    getStoreName(),
+                    requestContext.currentVersion);
                 requestContext.decompressionTime = LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDecompression);
                 long nanoTsBeforeDeserialization = System.nanoTime();
                 RecordDeserializer<V> deserializer = getDataRecordDeserializer(response.getSchemaId());
@@ -373,7 +382,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
    * @param requestContext The context that is used to track the state of the request.
    * @param requestType The type of the request.
    * @param keys The set of keys to be queried.
-   * @param callback When all routes have completed, the {@link StreamingCallback#onCompletion(Optional)} is triggered.
+   * @param userCallback When all routes have completed, the {@link StreamingCallback#onCompletion(Optional)} is triggered.
    * @param requestHeaders The headers to be sent with the request
    * @param requestSerializer The function that serializes the request from a list of keys to a byte array. This will form the body of the request.
    * @param routeResponseHandler The callback is invoked whenever a response is received from the internal transport.
@@ -385,7 +394,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       MultiKeyRequestContext<K, V> requestContext,
       RequestType requestType,
       Set<K> keys,
-      StreamingCallback callback,
+      StreamingCallback<K, V> userCallback,
       Map<String, String> requestHeaders,
       Function<List<MultiKeyRequestContext.KeyInfo<K>>, byte[]> requestSerializer,
       MultiKeyStreamingRouteResponseHandler routeResponseHandler) {
@@ -394,7 +403,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     if (keyCnt > metadata.getBatchGetLimit()) {
       VeniceKeyCountLimitException veniceKeyCountLimitException =
           new VeniceKeyCountLimitException(getStoreName(), requestType, keyCnt, metadata.getBatchGetLimit());
-      callback.onCompletion(Optional.of(veniceKeyCountLimitException));
+      userCallback.onCompletion(Optional.of(veniceKeyCountLimitException));
       return;
     }
 
@@ -449,8 +458,14 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     for (String route: requestContext.getRoutes()) {
       List<MultiKeyRequestContext.KeyInfo<K>> keysForRoutes = requestContext.keysForRoutes(route);
       requestContext.recordRequestSentTimeStamp(route);
-      CompletableFuture<TransportClientResponse> transportClientFutureForRoute = fastClientTransport
-          .multiKeyStreamingRequest(route, requestContext, keysForRoutes, requestSerializer, requestHeaders);
+      CompletableFuture<TransportClientResponse> transportClientFutureForRoute =
+          fastClientTransport.multiKeyStreamingRequest(
+              route,
+              requestContext,
+              keysForRoutes,
+              requestSerializer,
+              requestHeaders,
+              userCallback);
       ChainedCompletableFuture<Integer, Integer> routeRequestFuture =
           metadata.trackHealthBasedOnRequestToInstance(route, currentVersion, 0, transportClientFutureForRoute);
       requestContext.routeRequestMap.put(route, routeRequestFuture.getOriginalFuture());
@@ -510,23 +525,29 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
         if (requestContext.getPartialResponseException().isPresent()) {
           clientException = requestContext.getPartialResponseException().get();
         }
-        callback.onCompletion(
+        userCallback.onCompletion(
             Optional.of(new VeniceClientException("At least one route did not complete", clientException)));
       } else {
-        callback.onCompletion(Optional.empty());
+        userCallback.onCompletion(Optional.empty());
       }
     });
+  }
+
+  protected StoreMetadata getMetadata() {
+    return metadata;
   }
 
   /**
    * This callback handles results from one route for multiple keys in that route once the post()
    * is completed with {@link TransportClientResponseForRoute} for this route.
    */
-  private void batchGetTransportRequestCompletionHandler(
+  private static <K, V> void batchGetTransportRequestCompletionHandler(
       MultiKeyRequestContext<K, V> requestContext,
       TransportClientResponseForRoute transportClientResponse,
       Throwable exception,
-      StreamingCallback<K, V> callback) {
+      StreamingCallback<K, V> callback,
+      String storeName,
+      DispatchingAvroGenericStoreClient<K, V> dispatchingAvroGenericStoreClient) {
     if (exception != null) {
       if (!REDUNDANT_LOGGING_FILTER.isRedundantException(BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE)) {
         LOGGER.error("Exception received from transport. ExMsg: {}", exception.getMessage());
@@ -538,37 +559,40 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     }
     // deserialize records and find the status
     RecordDeserializer<MultiGetResponseRecordV1> deserializer =
-        getMultiGetResponseRecordDeserializer(transportClientResponse.getSchemaId());
+        dispatchingAvroGenericStoreClient.getMultiGetResponseRecordDeserializer(transportClientResponse.getSchemaId());
+
     long nanoTsBeforeRequestDeserialization = System.nanoTime();
     Iterable<MultiGetResponseRecordV1> records =
         deserializer.deserializeObjects(new ByteBufferOptimizedBinaryDecoder(transportClientResponse.getBody()));
     requestContext.recordRequestDeserializationTime(
         transportClientResponse.getRouteId(),
-        getLatencyInNS(nanoTsBeforeRequestDeserialization));
+        LatencyUtils.getLatencyInNS(nanoTsBeforeRequestDeserialization));
 
     List<MultiKeyRequestContext.KeyInfo<K>> keyInfos =
         requestContext.keysForRoutes(transportClientResponse.getRouteId());
     Set<Integer> keysSeen = new HashSet<>();
 
     long totalDecompressionTimeForResponse = 0;
-    VeniceCompressor compressor =
-        metadata.getCompressor(transportClientResponse.getCompressionStrategy(), requestContext.currentVersion);
+    VeniceCompressor compressor = dispatchingAvroGenericStoreClient.getMetadata()
+        .getCompressor(transportClientResponse.getCompressionStrategy(), requestContext.currentVersion);
     for (MultiGetResponseRecordV1 r: records) {
       long nanoTsBeforeDecompression = System.nanoTime();
 
-      ByteBuffer decompressRecord = decompressRecord(
+      ByteBuffer decompressRecord = FastClientHelperUtils.decompressRecord(
           transportClientResponse.getCompressionStrategy(),
+          compressor,
           r.value,
-          requestContext.currentVersion,
-          compressor);
+          storeName,
+          requestContext.currentVersion);
 
       long nanoTsBeforeDeserialization = System.nanoTime();
       totalDecompressionTimeForResponse += nanoTsBeforeDeserialization - nanoTsBeforeDecompression;
-      RecordDeserializer<V> dataRecordDeserializer = getDataRecordDeserializer(r.getSchemaId());
+      RecordDeserializer<V> dataRecordDeserializer =
+          dispatchingAvroGenericStoreClient.getDataRecordDeserializer(r.getSchemaId());
       V deserializedValue = dataRecordDeserializer.deserialize(decompressRecord);
       requestContext.recordRecordDeserializationTime(
           transportClientResponse.getRouteId(),
-          getLatencyInNS(nanoTsBeforeDeserialization));
+          LatencyUtils.getLatencyInNS(nanoTsBeforeDeserialization));
       MultiKeyRequestContext.KeyInfo<K> k = keyInfos.get(r.keyIndex);
       keysSeen.add(r.keyIndex);
       callback.onRecordReceived(k.getKey(), deserializedValue);
@@ -755,7 +779,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
         LOGGER);
   }
 
-  private ByteBuffer decompressRecord(
+  private static ByteBuffer decompressRecord(
       CompressionStrategy compressionStrategy,
       ByteBuffer data,
       int version,

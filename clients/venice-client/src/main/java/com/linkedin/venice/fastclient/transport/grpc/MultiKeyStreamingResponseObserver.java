@@ -1,6 +1,7 @@
 package com.linkedin.venice.fastclient.transport.grpc;
 
 import com.linkedin.venice.client.store.transport.TransportClientResponse;
+import com.linkedin.venice.fastclient.TransportResponseHandler;
 import com.linkedin.venice.protocols.MultiKeyStreamingResponse;
 import io.grpc.stub.StreamObserver;
 import java.util.concurrent.CompletableFuture;
@@ -12,14 +13,18 @@ public class MultiKeyStreamingResponseObserver implements StreamObserver<MultiKe
   private static final Logger LOGGER = LogManager.getLogger(MultiKeyStreamingResponseObserver.class);
 
   private final CompletableFuture<TransportClientResponse> future;
+  private final TransportResponseHandler transportResponseHandler;
 
   // used mainly for testing
-  MultiKeyStreamingResponseObserver(CompletableFuture<TransportClientResponse> future) {
+  MultiKeyStreamingResponseObserver(
+      TransportResponseHandler transportResponseHandler,
+      CompletableFuture<TransportClientResponse> future) {
+    this.transportResponseHandler = transportResponseHandler;
     this.future = future;
   }
 
-  public MultiKeyStreamingResponseObserver() {
-    this.future = new CompletableFuture<>();
+  public MultiKeyStreamingResponseObserver(TransportResponseHandler transportResponseHandler) {
+    this(transportResponseHandler, new CompletableFuture<>());
   }
 
   public CompletableFuture<TransportClientResponse> getFuture() {
