@@ -5,6 +5,7 @@ import com.linkedin.davinci.store.record.ValueRecord;
 import com.linkedin.venice.listener.response.stats.ReadResponseStatsRecorder;
 import com.linkedin.venice.listener.response.stats.SingleGetResponseStats;
 import io.netty.buffer.ByteBuf;
+import java.util.List;
 
 
 public class SingleGetResponseWrapper extends AbstractReadResponse {
@@ -46,5 +47,10 @@ public class SingleGetResponseWrapper extends AbstractReadResponse {
   @Override
   public int getResponseSchemaIdHeader() {
     return getValueRecord().getSchemaId();
+  }
+
+  @Override
+  public <K> List<K> getRecords() {
+    throw new UnsupportedOperationException("SingleGetResponseWrapper does not support getRecords()");
   }
 }

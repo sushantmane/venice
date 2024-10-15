@@ -5,11 +5,14 @@ import com.linkedin.venice.listener.response.stats.ReadResponseStatsRecorder;
 import com.linkedin.venice.stats.ServerHttpRequestStats;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.IntFunction;
 
 
 public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> extends AbstractReadResponse {
   private final T[] chunks;
+  private int maxKeyCount;
 
   private ParallelMultiKeyResponseWrapper(
       int chunkCount,
@@ -20,6 +23,7 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
     for (int i = 0; i < chunkCount; i++) {
       this.chunks[i] = multiGetResponseProvider.apply(chunkSize);
     }
+    this.maxKeyCount = chunkCount * chunkSize;
   }
 
   public static ParallelMultiKeyResponseWrapper<MultiGetResponseWrapper> multiGet(
@@ -69,6 +73,15 @@ public class ParallelMultiKeyResponseWrapper<T extends MultiKeyResponseWrapper> 
       byteBufChunks[i] = this.chunks[i].getResponseBody();
     }
     return Unpooled.wrappedBuffer(byteBufChunks);
+  }
+
+  @Override
+  public <K> List<K> getRecords() {
+    List<K> records = new ArrayList<>(this.maxKeyCount);
+    for (int i = 0; i < chunks.length; i++) {
+      records.addAll(this.chunks[i].getRecords());
+    }
+    return records;
   }
 
   @Override

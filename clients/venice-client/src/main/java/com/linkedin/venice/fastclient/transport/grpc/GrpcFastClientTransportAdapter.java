@@ -102,6 +102,7 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
     boolean isRetryRequest = false;
 
     if (queryAction == QueryAction.COMPUTE) {
+      // We do not add keys to the compute request as the keys have separate fields in the request
       byte[] computeRequestBytes = requestSerializer.apply(Collections.emptyList());
       ComputeRequest.Builder computeRequestBuilder = ComputeRequest.newBuilder()
           .setResourceName(requestContext.getResourceName())
@@ -128,10 +129,10 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
 
       VeniceReadServiceStub clientAsyncStub = getOrCreateStub(route);
       MultiKeyStreamingResponseObserver responseObserver = new MultiKeyStreamingResponseObserver();
-      clientAsyncStub.compute(computeRequestBuilder.build(), null);
+      clientAsyncStub.computeStreaming(computeRequestBuilder.build(), responseObserver);
       return responseObserver.getFuture();
-
     }
+    // MultiGet request
     MultiGetRequest.Builder multiGetRequestBuilder = MultiGetRequest.newBuilder()
         .setResourceName(requestContext.getResourceName())
         .setIsRetryRequest(isRetryRequest)
@@ -159,7 +160,7 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
 
     VeniceReadServiceStub clientAsyncStub = getOrCreateStub(route);
     MultiKeyStreamingResponseObserver responseObserver = new MultiKeyStreamingResponseObserver();
-    clientAsyncStub.multiGet(multiGetRequestBuilder.build(), null);
+    clientAsyncStub.multiGetStreaming(multiGetRequestBuilder.build(), responseObserver);
     return responseObserver.getFuture();
   }
 

@@ -154,22 +154,6 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     requestContext.computeRequestUri();
   }
 
-  private String composeRouteForBatchGetRequest(BatchGetRequestContext<K, V> requestContext) {
-    int currentVersion = getCurrentVersion();
-    String resourceName = getResourceName(currentVersion);
-    requestContext.currentVersion = currentVersion;
-    requestContext.resourceName = resourceName;
-    return requestContext.computeRequestUri();
-  }
-
-  private String composeRouteForComputeRequest(ComputeRequestContext<K, V> requestContext) {
-    int currentVersion = getCurrentVersion();
-    String resourceName = getResourceName(currentVersion);
-    requestContext.currentVersion = currentVersion;
-    requestContext.resourceName = resourceName;
-    return requestContext.computeRequestUri();
-  }
-
   private String getResourceName(int currentVersion) {
     return metadata.getStoreName() + "_v" + currentVersion;
   }
@@ -419,7 +403,11 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     requestContext.serverClusterName = metadata.getClusterName();
     /* Prepare each of the routes needed to query the keys */
     requestContext.instanceHealthMonitor = metadata.getInstanceHealthMonitor();
-    int currentVersion = requestContext.currentVersion;
+    int currentVersion = getCurrentVersion();
+    String resourceName = getResourceName(currentVersion);
+    requestContext.currentVersion = currentVersion;
+    requestContext.resourceName = resourceName;
+
     Map<Integer, List<String>> partitionRouteMap = new HashMap<>();
     Set<String> partitionsWithNoRoutes = new ConcurrentSkipListSet<>();
     for (K key: keys) {
