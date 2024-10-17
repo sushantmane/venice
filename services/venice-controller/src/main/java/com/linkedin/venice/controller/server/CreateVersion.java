@@ -22,7 +22,6 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.VERSION;
 import static com.linkedin.venice.controllerapi.ControllerRoute.ADD_VERSION;
 import static com.linkedin.venice.controllerapi.ControllerRoute.EMPTY_PUSH;
 import static com.linkedin.venice.controllerapi.ControllerRoute.END_OF_PUSH;
-import static com.linkedin.venice.controllerapi.ControllerRoute.OFFLINE_PUSH_INFO;
 import static com.linkedin.venice.controllerapi.ControllerRoute.REQUEST_TOPIC;
 import static com.linkedin.venice.meta.Version.PushType;
 import static com.linkedin.venice.meta.Version.REPLICATION_METADATA_VERSION_ID_UNSET;
@@ -34,6 +33,7 @@ import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.controllerapi.VersionResponse;
+import com.linkedin.venice.controllerapi.request.EmptyPushRequest;
 import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceHttpException;
@@ -65,8 +65,9 @@ public class CreateVersion extends AbstractRoute {
       boolean sslEnabled,
       Optional<DynamicAccessController> accessController,
       boolean checkReadMethodForKafka,
-      boolean disableParentRequestTopicForStreamPushes) {
-    super(sslEnabled, accessController);
+      boolean disableParentRequestTopicForStreamPushes,
+      VeniceControllerRequestHandler requestHandler) {
+    super(sslEnabled, accessController, requestHandler);
     this.checkReadMethodForKafka = checkReadMethodForKafka;
     this.disableParentRequestTopicForStreamPushes = disableParentRequestTopicForStreamPushes;
   }
@@ -579,36 +580,6 @@ public class CreateVersion extends AbstractRoute {
     };
   }
 
-  @Deprecated
-  public Route uploadPushInfo(Admin admin) {
-    return (request, response) -> {
-      ControllerResponse responseObject = new ControllerResponse();
-      response.type(HttpConstants.JSON);
-      try {
-        // Also allow allowlist users to run this command
-        if (!isAllowListUser(request) && !hasWriteAccessToTopic(request)) {
-          response.status(HttpStatus.SC_FORBIDDEN);
-          responseObject.setError("ACL failed for request " + request.url());
-          responseObject.setErrorType(ErrorType.BAD_REQUEST);
-          return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(responseObject);
-        }
-        AdminSparkServer.validateParams(request, OFFLINE_PUSH_INFO.getParams(), admin);
-
-        // Query params
-        String clusterName = request.queryParams(CLUSTER);
-        String storeName = request.queryParams(NAME);
-        responseObject.setCluster(clusterName);
-        responseObject.setName(storeName);
-        // TODO No-op, can be removed once the corresponding VPJ plugin version is deployed.
-      } catch (Throwable e) {
-        responseObject.setError(e);
-        AdminSparkServer.handleError(e, request, response);
-      }
-      return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(responseObject);
-
-    };
-  }
-
   /**
    * @see Admin#writeEndOfPush(String, String, int, boolean)
    */
@@ -650,8 +621,6 @@ public class CreateVersion extends AbstractRoute {
     return (request, response) -> {
       VersionCreationResponse responseObject = new VersionCreationResponse();
       response.type(HttpConstants.JSON);
-      String clusterName = null;
-      Version version = null;
       try {
         // Only allow allowlist users to run this command
         if (!isAllowListUser(request)) {
@@ -662,38 +631,12 @@ public class CreateVersion extends AbstractRoute {
         }
         AdminSparkServer.validateParams(request, EMPTY_PUSH.getParams(), admin);
 
-        String storeName = request.queryParams(NAME);
-        if (!admin.whetherEnableBatchPushFromAdmin(storeName)) {
-          throw new VeniceUnsupportedOperationException(
-              "EMPTY PUSH",
-              "Please push data to Venice Parent Colo instead or use Aggregate mode if you are running Samza GF Job.");
-        }
-
-        clusterName = request.queryParams(CLUSTER);
-        String pushJobId = request.queryParams(PUSH_JOB_ID);
-        int partitionNum = admin.calculateNumberOfPartitions(clusterName, storeName);
-        int replicationFactor = admin.getReplicationFactor(clusterName, storeName);
-        version = admin.incrementVersionIdempotent(clusterName, storeName, pushJobId, partitionNum, replicationFactor);
-        int versionNumber = version.getNumber();
-
-        responseObject.setCluster(clusterName);
-        responseObject.setName(storeName);
-        responseObject.setVersion(versionNumber);
-        responseObject.setPartitions(partitionNum);
-        responseObject.setReplicas(replicationFactor);
-        responseObject.setKafkaTopic(version.kafkaTopicName());
-        responseObject.setKafkaBootstrapServers(version.getPushStreamSourceAddress());
-
-        admin.writeEndOfPush(clusterName, storeName, versionNumber, true);
-
-        /** TODO: Poll {@link com.linkedin.venice.controller.VeniceParentHelixAdmin#getOffLineJobStatus(String, String, Map, TopicManager)} until it is terminal... */
-
+        EmptyPushRequest emptyPushRequest = new EmptyPushRequest(
+            request.queryParams(CLUSTER),
+            request.queryParams(NAME),
+            request.queryParams(PUSH_JOB_ID));
+        requestHandler.emptyPush(emptyPushRequest, responseObject);
       } catch (Throwable e) {
-        // Clean up on failed push.
-        if (version != null && clusterName != null) {
-          LOGGER.warn("Cleaning up failed Empty push of {}", version.kafkaTopicName());
-          admin.killOfflinePush(clusterName, version.kafkaTopicName(), true);
-        }
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
       }
