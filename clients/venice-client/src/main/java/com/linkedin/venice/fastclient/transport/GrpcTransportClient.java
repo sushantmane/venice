@@ -100,7 +100,7 @@ public class GrpcTransportClient extends InternalTransportClient {
   }
 
   @VisibleForTesting
-  ChannelCredentials buildChannelCredentials(SSLFactory sslFactory) {
+  public static ChannelCredentials buildChannelCredentials(SSLFactory sslFactory) {
     // TODO: Evaluate if this needs to fail instead since it depends on plain text support on server
     if (sslFactory == null) {
       return InsecureChannelCredentials.create();

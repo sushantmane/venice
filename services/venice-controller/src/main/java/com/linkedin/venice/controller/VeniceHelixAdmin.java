@@ -3836,6 +3836,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       String kafkaTopicName,
       long deprecatedJobTopicRetentionMs) {
     try {
+
       if (topicManager
           .updateTopicRetention(pubSubTopicRepository.getTopic(kafkaTopicName), deprecatedJobTopicRetentionMs)) {
         return true;
@@ -6703,7 +6704,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
               id,
               Utils.parseHostFromHelixNodeIdentifier(id),
               Utils.parsePortFromHelixNodeIdentifier(id),
-              multiClusterConfigs.getAdminSecurePort());
+              multiClusterConfigs.getAdminSecurePort(),
+              multiClusterConfigs.getAdminGrpcPort(),
+              multiClusterConfigs.getAdminSecureGrpcPort());
         }
       }
       if (attempt < maxAttempts) {

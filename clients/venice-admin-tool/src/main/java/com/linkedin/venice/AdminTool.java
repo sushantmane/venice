@@ -213,7 +213,9 @@ public class AdminTool {
        */
       buildSslFactory(cmd);
 
+      String grpcUrl = getOptionalArgument(cmd, Arg.CONTROLLER_GRPC_URL);
       boolean hasUrlArg = Arrays.asList(foundCommand.getRequiredArgs()).contains(Arg.URL);
+
       if (hasUrlArg) {
         veniceUrl = getRequiredArgument(cmd, Arg.URL);
 
@@ -236,7 +238,7 @@ public class AdminTool {
         }
 
         if (clusterName != null) {
-          controllerClient = ControllerClientFactory.getControllerClient(clusterName, veniceUrl, sslFactory);
+          controllerClient = ControllerClientFactory.getControllerClient(clusterName, veniceUrl, sslFactory, grpcUrl);
         }
       }
 
@@ -3261,7 +3263,7 @@ public class AdminTool {
   }
 
   ///// Print Output ////
-  private static void printObject(Object response) {
+  public static void printObject(Object response) {
     printObject(response, System.out::print);
   }
 
