@@ -1,13 +1,19 @@
 package com.linkedin.venice.grpc;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.acl.handler.AccessResult;
+import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.security.SSLFactory;
 import com.linkedin.venice.utils.SslUtils;
+import io.grpc.ChannelCredentials;
+import io.grpc.InsecureChannelCredentials;
 import io.grpc.Status;
+import io.grpc.TlsChannelCredentials;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.TrustManager;
 import org.testng.annotations.BeforeTest;
@@ -69,5 +75,29 @@ public class GrpcUtilsTest {
         AccessResult.UNAUTHORIZED.getMessage(),
         grpcStatus.getDescription(),
         "Mismatch in error description for the mapped grpc status");
+  }
+
+  @Test
+  public void testBuildChannelCredentials() {
+    // Case 1: sslFactory is null, expect InsecureChannelCredentials
+    ChannelCredentials credentials = GrpcUtils.buildChannelCredentials(null);
+    assertTrue(
+        credentials instanceof InsecureChannelCredentials,
+        "Expected InsecureChannelCredentials when sslFactory is null");
+
+    // Case 2: Valid sslFactory, expect TlsChannelCredentials
+    SSLFactory validSslFactory = SslUtils.getVeniceLocalSslFactory();
+    credentials = GrpcUtils.buildChannelCredentials(validSslFactory);
+    assertTrue(
+        credentials instanceof TlsChannelCredentials,
+        "Expected TlsChannelCredentials when sslFactory is provided");
+
+    // Case 3: SSLFactory throws an exception when initializing credentials
+    SSLFactory faultySslFactory = mock(SSLFactory.class);
+    Exception exception =
+        expectThrows(VeniceClientException.class, () -> GrpcUtils.buildChannelCredentials(faultySslFactory));
+    assertEquals(
+        exception.getMessage(),
+        "Failed to initialize SSL channel credentials for Venice gRPC Transport Client");
   }
 }
