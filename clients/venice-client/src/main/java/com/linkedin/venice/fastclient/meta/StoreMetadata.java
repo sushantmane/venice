@@ -1,6 +1,5 @@
 package com.linkedin.venice.fastclient.meta;
 
-import com.linkedin.venice.client.store.transport.TransportClientResponse;
 import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.compression.VeniceCompressor;
 import com.linkedin.venice.schema.SchemaReader;
@@ -52,7 +51,7 @@ public interface StoreMetadata extends SchemaReader {
       String instance,
       int version,
       int partitionId,
-      CompletableFuture<TransportClientResponse> transportFuture);
+      CompletableFuture transportFuture);
 
   InstanceHealthMonitor getInstanceHealthMonitor();
 

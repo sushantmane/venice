@@ -458,14 +458,17 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     for (String route: requestContext.getRoutes()) {
       List<MultiKeyRequestContext.KeyInfo<K>> keysForRoutes = requestContext.keysForRoutes(route);
       requestContext.recordRequestSentTimeStamp(route);
-      CompletableFuture<TransportClientResponse> transportClientFutureForRoute =
-          fastClientTransport.multiKeyStreamingRequest(
-              route,
-              requestContext,
-              keysForRoutes,
-              requestSerializer,
-              requestHeaders,
-              userCallback);
+
+      TransportRouteResponseHandlerCallback<K, V> routeResponseHandlerCallback =
+          new TransportRouteResponseHandlerCallback<>(route, requestContext, userCallback, keysForRoutes);
+      fastClientTransport.multiKeyStreamingRequest(
+          route,
+          requestContext,
+          keysForRoutes,
+          requestSerializer,
+          requestHeaders,
+          routeResponseHandlerCallback);
+
       ChainedCompletableFuture<Integer, Integer> routeRequestFuture =
           metadata.trackHealthBasedOnRequestToInstance(route, currentVersion, 0, transportClientFutureForRoute);
       requestContext.routeRequestMap.put(route, routeRequestFuture.getOriginalFuture());
@@ -477,6 +480,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
             .fromTransportClientWithRoute(transportClientResponse, route, routeRequestFuture.getOriginalFuture());
         routeResponseHandler.handle(keysForRoutes, response, throwable);
       });
+
       routeIndex++;
     }
 
