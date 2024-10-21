@@ -47,11 +47,11 @@ public interface StoreMetadata extends SchemaReader {
       int requiredReplicaCount,
       Set<String> excludedInstances);
 
-  ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
+  <T> ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
       String instance,
       int version,
       int partitionId,
-      CompletableFuture transportFuture);
+      CompletableFuture<T> transportFuture);
 
   InstanceHealthMonitor getInstanceHealthMonitor();
 

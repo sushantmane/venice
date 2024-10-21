@@ -39,8 +39,8 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   private Map<Integer, Set<String>> routesForPartition;
 
-  String requestUri;
-  String resourceName;
+  protected String requestUri;
+  protected String resourceName;
 
   final int numKeysInRequest;
   AtomicInteger numKeysCompleted;
@@ -73,7 +73,7 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
     return routeRequests.keySet();
   }
 
-  List<KeyInfo<K>> keysForRoutes(String route) {
+  public List<KeyInfo<K>> keysForRoutes(String route) {
     Validate.notNull(route);
     return routeRequests.get(route).keysRequested;
   }
@@ -84,6 +84,11 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   void markCompleteExceptionally(TransportClientResponseForRoute response, Throwable exception) {
     validateResponseRoute(response);
+    Validate.notNull(exception);
+    partialResponseException.compareAndSet(null, exception);
+  }
+
+  void markCompleteExceptionally(Throwable exception) {
     Validate.notNull(exception);
     partialResponseException.compareAndSet(null, exception);
   }
@@ -114,17 +119,17 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
     }
   }
 
-  void recordDecompressionTime(String routeId, long latencyInNS) {
+  public void recordDecompressionTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).decompressionTime.addAndGet(latencyInNS);
   }
 
-  void recordRequestDeserializationTime(String routeId, long latencyInNS) {
+  public void recordRequestDeserializationTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).responseDeserializationTime.addAndGet(latencyInNS);
   }
 
-  void recordRecordDeserializationTime(String routeId, long latencyInNS) {
+  public void recordRecordDeserializationTime(String routeId, long latencyInNS) {
     Validate.notNull(routeId);
     routeRequests.get(routeId).recordDeserializationTime.addAndGet(latencyInNS);
   }
@@ -186,10 +191,6 @@ public abstract class MultiKeyRequestContext<K, V> extends RequestContext {
 
   public int getFanoutSize() {
     return fanoutSize;
-  }
-
-  public void setResourceName(String resourceName) {
-    this.resourceName = resourceName;
   }
 
   public String getResourceName() {

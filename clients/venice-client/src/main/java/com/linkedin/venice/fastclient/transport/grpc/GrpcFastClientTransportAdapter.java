@@ -9,6 +9,7 @@ import com.linkedin.venice.client.store.transport.TransportClientResponse;
 import com.linkedin.venice.fastclient.GetRequestContext;
 import com.linkedin.venice.fastclient.GrpcClientConfig;
 import com.linkedin.venice.fastclient.MultiKeyRequestContext;
+import com.linkedin.venice.fastclient.TransportRouteResponseHandlerCallback;
 import com.linkedin.venice.fastclient.transport.FastClientTransport;
 import com.linkedin.venice.grpc.GrpcUtils;
 import com.linkedin.venice.meta.QueryAction;
@@ -91,16 +92,18 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
   }
 
   @Override
-  public <K, V> CompletableFuture<TransportClientResponse> multiKeyStreamingRequest(
+  public <K, V> void multiKeyStreamingRequest(
       String route,
       MultiKeyRequestContext<K, V> requestContext,
       List<MultiKeyRequestContext.KeyInfo<K>> keysForRoutes,
       Function<List<MultiKeyRequestContext.KeyInfo<K>>, byte[]> requestSerializer,
-      Map<String, String> headers) {
+      Map<String, String> headers,
+      TransportRouteResponseHandlerCallback<K, V> routeResponseHandlerCallback) {
     QueryAction queryAction = requestContext.getQueryAction();
 
     boolean isRetryRequest = false;
 
+    // Compute request
     if (queryAction == QueryAction.COMPUTE) {
       // We do not add keys to the compute request as the keys have separate fields in the request
       byte[] computeRequestBytes = requestSerializer.apply(Collections.emptyList());
@@ -128,10 +131,12 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
       computeRequestBuilder.setIsRetryRequest(isRetryRequest);
 
       VeniceReadServiceStub clientAsyncStub = getOrCreateStub(route);
-      MultiKeyStreamingResponseObserver responseObserver = new MultiKeyStreamingResponseObserver();
+      MultiKeyStreamingResponseObserver responseObserver =
+          new MultiKeyStreamingResponseObserver(routeResponseHandlerCallback);
       clientAsyncStub.computeStreaming(computeRequestBuilder.build(), responseObserver);
-      return responseObserver.getFuture();
+      return;
     }
+
     // MultiGet request
     MultiGetRequest.Builder multiGetRequestBuilder = MultiGetRequest.newBuilder()
         .setResourceName(requestContext.getResourceName())
@@ -159,9 +164,9 @@ public class GrpcFastClientTransportAdapter implements FastClientTransport {
     multiGetRequestBuilder.setIsRetryRequest(isRetryRequest);
 
     VeniceReadServiceStub clientAsyncStub = getOrCreateStub(route);
-    MultiKeyStreamingResponseObserver responseObserver = new MultiKeyStreamingResponseObserver();
+    MultiKeyStreamingResponseObserver responseObserver =
+        new MultiKeyStreamingResponseObserver(routeResponseHandlerCallback);
     clientAsyncStub.multiGetStreaming(multiGetRequestBuilder.build(), responseObserver);
-    return responseObserver.getFuture();
   }
 
   @Override

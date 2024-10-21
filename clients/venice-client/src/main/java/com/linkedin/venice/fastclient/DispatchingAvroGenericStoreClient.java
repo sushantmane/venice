@@ -71,10 +71,11 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
 
   private static final Logger LOGGER = LogManager.getLogger(DispatchingAvroGenericStoreClient.class);
   private static final Executor DESERIALIZATION_EXECUTOR = AbstractAvroStoreClient.getDefaultDeserializationExecutor();
-  private static final RedundantExceptionFilter REDUNDANT_LOGGING_FILTER =
+
+  public static final RedundantExceptionFilter FC_REDUNDANT_LOGGING_FILTER =
       RedundantExceptionFilter.getRedundantExceptionFilter();
-  private final String BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
-  private final String COMPUTE_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
+  protected final String BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
+  protected final String COMPUTE_TRANSPORT_EXCEPTION_FILTER_MESSAGE;
 
   protected final StoreMetadata metadata;
   private final int requiredReplicaCount;
@@ -276,8 +277,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
                     compressionStrategy,
                     metadata.getCompressor(compressionStrategy, requestContext.currentVersion),
                     ByteBuffer.wrap(response.getBody()),
-                    getStoreName(),
-                    requestContext.currentVersion);
+                    requestContext.resourceName);
                 requestContext.decompressionTime = LatencyUtils.getElapsedTimeFromNSToMS(nanoTsBeforeDecompression);
                 long nanoTsBeforeDeserialization = System.nanoTime();
                 RecordDeserializer<V> deserializer = getDataRecordDeserializer(response.getSchemaId());
@@ -394,7 +394,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       MultiKeyRequestContext<K, V> requestContext,
       RequestType requestType,
       Set<K> keys,
-      StreamingCallback<K, V> userCallback,
+      StreamingCallback userCallback,
       Map<String, String> requestHeaders,
       Function<List<MultiKeyRequestContext.KeyInfo<K>>, byte[]> requestSerializer,
       MultiKeyStreamingRouteResponseHandler routeResponseHandler) {
@@ -460,7 +460,9 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       requestContext.recordRequestSentTimeStamp(route);
 
       TransportRouteResponseHandlerCallback<K, V> routeResponseHandlerCallback =
-          new TransportRouteResponseHandlerCallback<>(route, requestContext, userCallback, keysForRoutes);
+          new TransportRouteResponseHandlerCallback<>(route, requestContext, userCallback, keysForRoutes, this);
+      CompletableFuture<Void> transportClientFutureForRoute = routeResponseHandlerCallback.getRouteRequestFuture();
+
       fastClientTransport.multiKeyStreamingRequest(
           route,
           requestContext,
@@ -474,8 +476,14 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       requestContext.routeRequestMap.put(route, routeRequestFuture.getOriginalFuture());
       requestCompletionFutures[routeIndex] = routeRequestFuture.getResultFuture();
 
-      transportClientFutureForRoute.whenComplete((transportClientResponse, throwable) -> {
+      transportClientFutureForRoute.whenComplete((ignored, throwable) -> {
         requestContext.recordRequestSubmissionToResponseHandlingTime(route);
+        if (throwable != null) {
+          routeResponseHandler.handle(keysForRoutes, null, throwable);
+        }
+      });
+
+      transportClientFutureForRoute.whenComplete((transportClientResponse, throwable) -> {
         TransportClientResponseForRoute response = TransportClientResponseForRoute
             .fromTransportClientWithRoute(transportClientResponse, route, routeRequestFuture.getOriginalFuture());
         routeResponseHandler.handle(keysForRoutes, response, throwable);
@@ -492,7 +500,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
           String.join(", ", partitionsWithNoRoutes));
       // TODO: Explore if we need to use a different message as the filter for the redundant filter as different
       // partition sets will have different error messages
-      if (!REDUNDANT_LOGGING_FILTER.isRedundantException(errorMessage)) {
+      if (!FC_REDUNDANT_LOGGING_FILTER.isRedundantException(errorMessage)) {
         LOGGER.error(errorMessage);
       }
       VeniceClientHttpException clientException = new VeniceClientHttpException(errorMessage, SC_BAD_GATEWAY);
@@ -537,7 +545,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     });
   }
 
-  protected StoreMetadata getMetadata() {
+  public StoreMetadata getMetadata() {
     return metadata;
   }
 
@@ -553,7 +561,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       String storeName,
       DispatchingAvroGenericStoreClient<K, V> dispatchingAvroGenericStoreClient) {
     if (exception != null) {
-      if (!REDUNDANT_LOGGING_FILTER.isRedundantException(BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE)) {
+      if (!FC_REDUNDANT_LOGGING_FILTER.isRedundantException(BATCH_GET_TRANSPORT_EXCEPTION_FILTER_MESSAGE)) {
         LOGGER.error("Exception received from transport. ExMsg: {}", exception.getMessage());
       }
 
@@ -563,7 +571,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     }
     // deserialize records and find the status
     RecordDeserializer<MultiGetResponseRecordV1> deserializer =
-        dispatchingAvroGenericStoreClient.getMultiGetResponseRecordDeserializer(transportClientResponse.getSchemaId());
+        FastClientHelperUtils.getMultiGetResponseRecordDeserializer(transportClientResponse.getSchemaId());
 
     long nanoTsBeforeRequestDeserialization = System.nanoTime();
     Iterable<MultiGetResponseRecordV1> records =
@@ -712,7 +720,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
       Throwable exception,
       ComputeRecordStreamDecoder decoder) {
     if (exception != null) {
-      if (!REDUNDANT_LOGGING_FILTER.isRedundantException(COMPUTE_TRANSPORT_EXCEPTION_FILTER_MESSAGE)) {
+      if (!FC_REDUNDANT_LOGGING_FILTER.isRedundantException(COMPUTE_TRANSPORT_EXCEPTION_FILTER_MESSAGE)) {
         LOGGER.error("Exception received from transport. ExMsg: {}", exception.getMessage());
       }
       VeniceClientException clientException;
@@ -756,15 +764,7 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
     return COMPUTE_REQUEST_SERIALIZER.serializeObjects(routerRequestKeys, ByteBuffer.wrap(computeRequest.serialize()));
   }
 
-  /* Batch get helper methods */
-  protected RecordDeserializer<MultiGetResponseRecordV1> getMultiGetResponseRecordDeserializer(int schemaId) {
-    // TODO: get multi-get response write schema from Router
-
-    return FastSerializerDeserializerFactory
-        .getFastAvroSpecificDeserializer(MultiGetResponseRecordV1.SCHEMA$, MultiGetResponseRecordV1.class);
-  }
-
-  protected RecordDeserializer<V> getDataRecordDeserializer(int schemaId) throws VeniceClientException {
+  public RecordDeserializer<V> getDataRecordDeserializer(int schemaId) throws VeniceClientException {
     return storeDeserializerCache.getDeserializer(schemaId, metadata.getLatestValueSchemaId());
   }
 
@@ -781,32 +781,6 @@ public class DispatchingAvroGenericStoreClient<K, V> extends InternalAvroStoreCl
         keySerializer,
         metadata,
         LOGGER);
-  }
-
-  private static ByteBuffer decompressRecord(
-      CompressionStrategy compressionStrategy,
-      ByteBuffer data,
-      int version,
-      VeniceCompressor compressor) {
-    try {
-      if (compressor == null) {
-        throw new VeniceClientException(
-            String.format(
-                "Expected to find compressor in metadata but found null, compressionStrategy:%s, store:%s, version:%d",
-                compressionStrategy,
-                getStoreName(),
-                version));
-      }
-      return compressor.decompress(data);
-    } catch (Exception e) {
-      throw new VeniceClientException(
-          String.format(
-              "Unable to decompress the record, compressionStrategy:%s store:%s version:%d",
-              compressionStrategy,
-              getStoreName(),
-              version),
-          e);
-    }
   }
 
   /* Short utility methods */

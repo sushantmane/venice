@@ -89,9 +89,9 @@ public class InstanceHealthMonitor implements Closeable {
    *
    * Using this we can track the number of pending requests for each server instance.
    */
-  public ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
+  public <T> ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
       String instance,
-      CompletableFuture transportFuture) {
+      CompletableFuture<T> transportFuture) {
     CompletableFuture<Integer> requestFuture = new CompletableFuture<>();
     pendingRequestCounterMap.compute(instance, (k, v) -> {
       // currently tracking the number of requests as 1 for single get

@@ -91,11 +91,11 @@ public abstract class AbstractStoreMetadata implements StoreMetadata {
   }
 
   @Override
-  public ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
+  public <T> ChainedCompletableFuture<Integer, Integer> trackHealthBasedOnRequestToInstance(
       String instance,
       int version,
       int partitionId,
-      CompletableFuture transportFuture) {
+      CompletableFuture<T> transportFuture) {
     return instanceHealthMonitor.trackHealthBasedOnRequestToInstance(instance, transportFuture);
   }
 

@@ -35,4 +35,8 @@ public abstract class RequestContext {
   }
 
   public abstract RequestType getRequestType();
+
+  public int getCurrentVersion() {
+    return currentVersion;
+  }
 }

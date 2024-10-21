@@ -123,4 +123,8 @@ public final class GrpcUtils {
   public static ByteString toByteString(ByteBuffer byteBuffer) {
     return ByteString.copyFrom(byteBuffer);
   }
+
+  public static ByteBuffer toByteBuffer(ByteString byteString) {
+    return byteString.asReadOnlyByteBuffer();
+  }
 }
