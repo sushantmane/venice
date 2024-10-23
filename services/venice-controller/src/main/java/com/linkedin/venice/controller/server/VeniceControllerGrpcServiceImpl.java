@@ -10,6 +10,7 @@ import com.linkedin.venice.controllerapi.AdminCommandExecutionStatus;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
+import com.linkedin.venice.controllerapi.MultiVersionStatusResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
 import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
@@ -21,6 +22,7 @@ import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcRequest;
 import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcResponse;
 import com.linkedin.venice.protocols.AdminTopicMetadataGrpcRequest;
 import com.linkedin.venice.protocols.AdminTopicMetadataGrpcResponse;
+import com.linkedin.venice.protocols.BootstrappingVersion;
 import com.linkedin.venice.protocols.CheckResourceCleanupForStoreCreationGrpcRequest;
 import com.linkedin.venice.protocols.CheckResourceCleanupForStoreCreationGrpcResponse;
 import com.linkedin.venice.protocols.CreateStoreGrpcRequest;
@@ -35,6 +37,8 @@ import com.linkedin.venice.protocols.LastSuccessfulAdminCommandExecutionGrpcRequ
 import com.linkedin.venice.protocols.LastSuccessfulAdminCommandExecutionGrpcResponse;
 import com.linkedin.venice.protocols.LeaderControllerGrpcRequest;
 import com.linkedin.venice.protocols.LeaderControllerGrpcResponse;
+import com.linkedin.venice.protocols.ListBootstrappingVersionsGrpcRequest;
+import com.linkedin.venice.protocols.ListBootstrappingVersionsGrpcResponse;
 import com.linkedin.venice.protocols.UpdateAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.UpdateAclForStoreGrpcResponse;
 import com.linkedin.venice.protocols.UpdateAdminTopicMetadataGrpcRequest;
@@ -373,6 +377,34 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
       responseObserver.onError(
           Status.fromCode(Code.INTERNAL)
               .withDescription("Error while discovering cluster for store")
+              .withCause(e)
+              .asRuntimeException());
+    }
+  }
+
+  @Override
+  public void listBootstrappingVersions(
+      ListBootstrappingVersionsGrpcRequest grpcRequest,
+      StreamObserver<ListBootstrappingVersionsGrpcResponse> responseObserver) {
+    String clusterName = grpcRequest.getClusterName();
+    LOGGER.debug("Received gRPC request to list bootstrapping versions for cluster: {}", clusterName);
+    try {
+      MultiVersionStatusResponse response = new MultiVersionStatusResponse();
+      requestHandler.listBootstrappingVersions(new ControllerRequest(clusterName), response);
+      ListBootstrappingVersionsGrpcResponse.Builder responseBuilder =
+          ListBootstrappingVersionsGrpcResponse.newBuilder().setClusterName(response.getCluster());
+      for (Map.Entry<String, String> entry: response.getVersionStatusMap().entrySet()) {
+        BootstrappingVersion.Builder bootstrappingVersionBuilder =
+            BootstrappingVersion.newBuilder().setStoreVersionName(entry.getKey()).setVersionStatus(entry.getValue());
+        responseBuilder.addBootstrappingVersions(bootstrappingVersionBuilder);
+      }
+      responseObserver.onNext(responseBuilder.build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error("Error while listing bootstrapping versions for cluster: {}", clusterName, e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while listing bootstrapping versions")
               .withCause(e)
               .asRuntimeException());
     }

@@ -10,6 +10,7 @@ import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
+import com.linkedin.venice.controllerapi.MultiVersionStatusResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
 import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
@@ -177,7 +178,10 @@ public class VeniceControllerRequestHandler {
     response.setServerD2Service(admin.getServerD2Service(clusterToD2Pair.getFirst()));
   }
 
-  public Admin getAdmin() {
-    return admin;
+  public void listBootstrappingVersions(ControllerRequest request, MultiVersionStatusResponse response) {
+    String clusterName = request.getClusterName();
+    response.setCluster(clusterName);
+    LOGGER.info("Listing bootstrapping versions for cluster: {}", clusterName);
+    response.setVersionStatusMap(admin.findAllBootstrappingVersions(clusterName));
   }
 }

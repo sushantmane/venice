@@ -8,28 +8,43 @@ option java_multiple_files = true;
 
 service VeniceControllerGrpcService {
 
-  // Partially migrated to gRPC and but old HTTP is not updated to use the common path
-  // Defined but not implemented
-  rpc getStoresInCluster(GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
-  rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
-
-  // --- Fully supported on gRPC and to use the common path; except for accessPermission check ---
-  // RPC for getting the leader controller
   rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
 
+  // CreateStore
   rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
   rpc updateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
   rpc getAclForStore(GetAclForStoreGrpcRequest) returns (GetAclForStoreGrpcResponse);
   rpc deleteAclForStore(DeleteAclForStoreGrpcRequest) returns (DeleteAclForStoreGrpcResponse);
   rpc checkResourceCleanupForStoreCreation(CheckResourceCleanupForStoreCreationGrpcRequest) returns (CheckResourceCleanupForStoreCreationGrpcResponse) {}
 
+  // AdminCommandExecution
   rpc getAdminCommandExecutionStatus(AdminCommandExecutionStatusGrpcRequest) returns (AdminCommandExecutionStatusGrpcResponse) {}
   rpc getLastSuccessfulAdminCommandExecutionId(LastSuccessfulAdminCommandExecutionGrpcRequest) returns (LastSuccessfulAdminCommandExecutionGrpcResponse) {}
 
+  // AdminTopicMetadata
   rpc getAdminTopicMetadata(AdminTopicMetadataGrpcRequest) returns (AdminTopicMetadataGrpcResponse) {}
   rpc updateAdminTopicMetadata(UpdateAdminTopicMetadataGrpcRequest) returns (UpdateAdminTopicMetadataGrpcResponse) {}
 
+  // ClusterDiscovery
   rpc discoverClusterForStore(DiscoverClusterGrpcRequest) returns (DiscoverClusterGrpcResponse) {}
+
+  // VersionRoute
+  rpc listBootstrappingVersions(ListBootstrappingVersionsGrpcRequest) returns (ListBootstrappingVersionsGrpcResponse) {}
+
+}
+
+message ListBootstrappingVersionsGrpcRequest {
+  string clusterName = 1;
+}
+
+message BootstrappingVersion {
+  string storeVersionName = 1;
+  string versionStatus = 2;
+}
+
+message ListBootstrappingVersionsGrpcResponse {
+  string clusterName = 1;
+  repeated BootstrappingVersion bootstrappingVersions = 2;
 }
 
 message DiscoverClusterGrpcRequest {
