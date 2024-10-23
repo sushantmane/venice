@@ -1,13 +1,21 @@
-package com.linkedin.venice.controller;
+package com.linkedin.venice.controller.server;
 
+import com.linkedin.venice.LastSucceedExecutionIdResponse;
+import com.linkedin.venice.controller.Admin;
+import com.linkedin.venice.controller.AdminCommandExecutionTracker;
+import com.linkedin.venice.controller.ControllerRequestHandlerDependencies;
 import com.linkedin.venice.controllerapi.AclResponse;
+import com.linkedin.venice.controllerapi.AdminCommandExecution;
 import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
+import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
+import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
+import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Instance;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -106,23 +114,53 @@ public class VeniceControllerRequestHandler {
     response.setAccessPermissions(accessPermissions);
   }
 
-  public void deleteAclForStore(ControllerRequest controllerRequest, AclResponse responseObject) {
-    String clusterName = controllerRequest.getClusterName();
-    String storeName = controllerRequest.getStoreName();
+  public void deleteAclForStore(ControllerRequest request, AclResponse response) {
+    String clusterName = request.getClusterName();
+    String storeName = request.getStoreName();
+    response.setCluster(clusterName);
+    response.setName(storeName);
     LOGGER.info("Deleting ACL for store: {} in cluster: {}", storeName, clusterName);
     admin.deleteAclForStore(clusterName, storeName);
-    responseObject.setCluster(clusterName);
-    responseObject.setName(storeName);
   }
 
-  public void checkResourceCleanupBeforeStoreCreation(
-      ControllerRequest controllerRequest,
-      ControllerResponse controllerResponse) {
-    String clusterName = controllerRequest.getClusterName();
-    String storeName = controllerRequest.getStoreName();
+  public void checkResourceCleanupBeforeStoreCreation(ControllerRequest request, ControllerResponse response) {
+    String clusterName = request.getClusterName();
+    String storeName = request.getStoreName();
+    response.setCluster(clusterName);
+
     LOGGER.info("Checking resource cleanup before creating store: {} in cluster: {}", storeName, clusterName);
     admin.checkResourceCleanupBeforeStoreCreation(clusterName, storeName);
-    controllerResponse.setCluster(clusterName);
-    controllerResponse.setName(storeName);
+    response.setName(storeName);
+  }
+
+  public void getAdminCommandExecutionStatus(
+      AdminCommandExecutionStatusRequest request,
+      AdminCommandExecutionResponse response) {
+    String clusterName = request.getClusterName();
+    long executionId = request.getAdminCommandExecutionId();
+    response.setCluster(clusterName);
+    LOGGER.info("Getting admin command execution status for execution id: {} in cluster: {}", executionId, clusterName);
+    Optional<AdminCommandExecutionTracker> adminCommandExecutionTracker =
+        admin.getAdminCommandExecutionTracker(clusterName);
+    if (!adminCommandExecutionTracker.isPresent()) {
+      throw new VeniceException(
+          "Could not track execution in this controller. Make sure you send the command to a correct parent controller.");
+    }
+    AdminCommandExecutionTracker tracker = adminCommandExecutionTracker.get();
+    AdminCommandExecution execution = tracker.checkExecutionStatus(executionId);
+    if (execution == null) {
+      throw new VeniceException(
+          "Could not find the execution by given id: " + executionId + " in cluster: " + clusterName);
+    }
+    response.setCluster(clusterName);
+    response.setExecution(execution);
+  }
+
+  public void getLastSucceedExecutionId(ControllerRequest request, LastSucceedExecutionIdResponse response) {
+    String clusterName = request.getClusterName();
+    response.setCluster(clusterName);
+    LOGGER.info("Getting last succeeded execution id in cluster: {}", clusterName);
+    long lastSucceedExecutionId = admin.getLastSucceedExecutionId(clusterName);
+    response.setLastSucceedExecutionId(lastSucceedExecutionId);
   }
 }

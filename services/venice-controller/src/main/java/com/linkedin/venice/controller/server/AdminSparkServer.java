@@ -110,7 +110,6 @@ import com.linkedin.venice.SSLConfig;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.AuditInfo;
-import com.linkedin.venice.controller.VeniceControllerRequestHandler;
 import com.linkedin.venice.controller.spark.VeniceSparkServerFactory;
 import com.linkedin.venice.controller.stats.SparkServerStats;
 import com.linkedin.venice.controllerapi.ControllerRoute;

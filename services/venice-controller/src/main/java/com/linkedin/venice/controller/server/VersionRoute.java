@@ -5,7 +5,6 @@ import static com.linkedin.venice.controllerapi.ControllerRoute.LIST_BOOTSTRAPPI
 
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.controller.Admin;
-import com.linkedin.venice.controller.VeniceControllerRequestHandler;
 import com.linkedin.venice.controllerapi.MultiVersionStatusResponse;
 import java.util.Optional;
 import spark.Request;

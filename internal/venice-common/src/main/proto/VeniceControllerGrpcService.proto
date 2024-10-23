@@ -7,21 +7,92 @@ import "google/rpc/error_details.proto";
 option java_multiple_files = true;
 
 service VeniceControllerGrpcService {
+
+  // Partially migrated to gRPC and but old HTTP is not updated to use the common path
+  // Defined but not implemented
+  rpc getStoresInCluster(GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
+  rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
+
   // --- Fully supported on gRPC and to use the common path; except for accessPermission check ---
+  // RPC for getting the leader controller
+  rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
+
   rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
   rpc updateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
   rpc getAclForStore(GetAclForStoreGrpcRequest) returns (GetAclForStoreGrpcResponse);
   rpc deleteAclForStore(DeleteAclForStoreGrpcRequest) returns (DeleteAclForStoreGrpcResponse);
   rpc checkResourceCleanupForStoreCreation(CheckResourceCleanupForStoreCreationGrpcRequest) returns (CheckResourceCleanupForStoreCreationGrpcResponse) {}
 
+  rpc getAdminCommandExecutionStatus(AdminCommandExecutionStatusGrpcRequest) returns (AdminCommandExecutionStatusGrpcResponse) {}
+  rpc getLastSuccessfulAdminCommandExecutionId(LastSuccessfulAdminCommandExecutionGrpcRequest) returns (LastSuccessfulAdminCommandExecutionGrpcResponse) {}
 
-  // Partially migrated to gRPC and but old HTTP is not updated to use the common path
-  // Defined but not implemented
-  rpc getStoresInCluster(GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
-  rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
-  // RPC for getting the leader controller
-  rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
+  rpc getAdminTopicMetadata(AdminTopicMetadataGrpcRequest) returns (AdminTopicMetadataGrpcResponse) {}
+  rpc updateAdminTopicMetadata(UpdateAdminTopicMetadataGrpcRequest) returns (UpdateAdminTopicMetadataGrpcResponse) {}
+
+  rpc discoverClusterForStore(DiscoverClusterGrpcRequest) returns (DiscoverClusterGrpcResponse) {}
 }
+
+message DiscoverClusterGrpcRequest {
+  string storeName = 1;
+}
+
+message DiscoverClusterGrpcResponse {
+  string clusterName = 1;
+  string storeName = 2;
+  string d2Service = 3;
+  string serverD2Service = 4;
+  string zkAddress = 5;
+  string pubSubBootstrapServers = 6;
+}
+
+message AdminTopicMetadataGrpcRequest {
+  string clusterName = 1;
+  optional string storeName = 2;
+}
+
+message AdminTopicMetadataGrpcResponse {
+  string clusterName = 1;
+  optional string storeName = 2;
+  int64 executionId = 3;
+  optional int64 offset = 4;
+  optional int64 upstreamOffset = 5;
+}
+
+message UpdateAdminTopicMetadataGrpcRequest {
+  string clusterName = 1;
+  optional string storeName = 2;
+  int64 executionId = 3;
+  optional int64 offset = 4;
+  optional int64 upstreamOffset = 5;
+}
+
+message UpdateAdminTopicMetadataGrpcResponse {
+  string clusterName = 1;
+  optional string storeName = 2;
+}
+
+message AdminCommandExecutionStatusGrpcRequest {
+  string clusterName = 1;
+  int64 adminCommandExecutionId = 2;
+}
+
+message AdminCommandExecutionStatusGrpcResponse {
+  string clusterName = 1;
+  int64 adminCommandExecutionId = 2;
+  string operation = 3;
+  string startTime = 4;
+  map<string, string> fabricToExecutionStatusMap = 5;
+}
+
+message LastSuccessfulAdminCommandExecutionGrpcRequest {
+  string clusterName = 1;
+}
+
+message LastSuccessfulAdminCommandExecutionGrpcResponse {
+  string clusterName = 1;
+  int64 lastSuccessfulAdminCommandExecutionId = 2;
+}
+
 
 message ClusterStoreGrpcInfo {
   string clusterName = 1;

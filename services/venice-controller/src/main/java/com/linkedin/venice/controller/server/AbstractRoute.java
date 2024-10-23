@@ -6,7 +6,6 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.NAME;
 import com.linkedin.venice.acl.AclException;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.authorization.Method;
-import com.linkedin.venice.controller.VeniceControllerRequestHandler;
 import com.linkedin.venice.exceptions.VeniceException;
 import java.security.cert.X509Certificate;
 import java.util.Optional;

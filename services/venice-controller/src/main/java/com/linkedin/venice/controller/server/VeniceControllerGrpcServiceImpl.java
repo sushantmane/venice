@@ -1,31 +1,47 @@
-package com.linkedin.venice.controller;
+package com.linkedin.venice.controller.server;
 
 import static com.linkedin.venice.controllerapi.transport.GrpcRequestResponseConverter.getClusterStoreGrpcInfo;
 import static com.linkedin.venice.controllerapi.transport.GrpcRequestResponseConverter.getControllerRequest;
 
+import com.linkedin.venice.LastSucceedExecutionIdResponse;
 import com.linkedin.venice.controllerapi.AclResponse;
+import com.linkedin.venice.controllerapi.AdminCommandExecution;
+import com.linkedin.venice.controllerapi.AdminCommandExecutionStatus;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
+import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
+import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
+import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcRequest;
+import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcResponse;
+import com.linkedin.venice.protocols.AdminTopicMetadataGrpcRequest;
+import com.linkedin.venice.protocols.AdminTopicMetadataGrpcResponse;
 import com.linkedin.venice.protocols.CheckResourceCleanupForStoreCreationGrpcRequest;
 import com.linkedin.venice.protocols.CheckResourceCleanupForStoreCreationGrpcResponse;
 import com.linkedin.venice.protocols.CreateStoreGrpcRequest;
 import com.linkedin.venice.protocols.CreateStoreGrpcResponse;
 import com.linkedin.venice.protocols.DeleteAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.DeleteAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.DiscoverClusterGrpcRequest;
+import com.linkedin.venice.protocols.DiscoverClusterGrpcResponse;
 import com.linkedin.venice.protocols.GetAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.GetAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.LastSuccessfulAdminCommandExecutionGrpcRequest;
+import com.linkedin.venice.protocols.LastSuccessfulAdminCommandExecutionGrpcResponse;
 import com.linkedin.venice.protocols.LeaderControllerGrpcRequest;
 import com.linkedin.venice.protocols.LeaderControllerGrpcResponse;
 import com.linkedin.venice.protocols.UpdateAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.UpdateAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.UpdateAdminTopicMetadataGrpcRequest;
+import com.linkedin.venice.protocols.UpdateAdminTopicMetadataGrpcResponse;
 import com.linkedin.venice.protocols.VeniceControllerGrpcServiceGrpc.VeniceControllerGrpcServiceImplBase;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -241,5 +257,90 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
               .withCause(e)
               .asRuntimeException());
     }
+  }
+
+  @Override
+  public void getAdminCommandExecutionStatus(
+      AdminCommandExecutionStatusGrpcRequest request,
+      StreamObserver<AdminCommandExecutionStatusGrpcResponse> responseObserver) {
+    String clusterName = request.getClusterName();
+    long executionId = request.getAdminCommandExecutionId();
+    LOGGER.debug(
+        "Received gRPC request to get admin command execution status for executionId: {} in cluster: {}",
+        executionId,
+        clusterName);
+    try {
+      AdminCommandExecutionResponse response = new AdminCommandExecutionResponse();
+      requestHandler
+          .getAdminCommandExecutionStatus(new AdminCommandExecutionStatusRequest(clusterName, executionId), response);
+      AdminCommandExecutionStatusGrpcResponse.Builder responseBuilder =
+          AdminCommandExecutionStatusGrpcResponse.newBuilder();
+      responseBuilder.setClusterName(response.getCluster());
+      AdminCommandExecution adminCommandExecution = response.getExecution();
+      responseBuilder.setOperation(adminCommandExecution.getOperation());
+      responseBuilder.setAdminCommandExecutionId(adminCommandExecution.getExecutionId());
+      responseBuilder.setStartTime(adminCommandExecution.getStartTime());
+      for (Map.Entry<String, AdminCommandExecutionStatus> entry: adminCommandExecution.getFabricToExecutionStatusMap()
+          .entrySet()) {
+        responseBuilder.putFabricToExecutionStatusMap(entry.getKey(), entry.getValue().name());
+      }
+      responseObserver.onNext(responseBuilder.build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error(
+          "Error while getting admin command execution status for executionId: {} in cluster: {}",
+          executionId,
+          clusterName,
+          e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while getting admin command execution status")
+              .withCause(e)
+              .asRuntimeException());
+    }
+  }
+
+  @Override
+  public void getLastSuccessfulAdminCommandExecutionId(
+      LastSuccessfulAdminCommandExecutionGrpcRequest request,
+      StreamObserver<LastSuccessfulAdminCommandExecutionGrpcResponse> responseObserver) {
+    String clusterName = request.getClusterName();
+    LOGGER
+        .debug("Received gRPC request to get last successful admin command execution id for cluster: {}", clusterName);
+    try {
+      LastSucceedExecutionIdResponse response = new LastSucceedExecutionIdResponse();
+      requestHandler.getLastSucceedExecutionId(new ControllerRequest(clusterName), response);
+      responseObserver.onNext(
+          LastSuccessfulAdminCommandExecutionGrpcResponse.newBuilder()
+              .setClusterName(response.getCluster())
+              .setLastSuccessfulAdminCommandExecutionId(response.getLastSucceedExecutionId())
+              .build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error("Error while getting last successful admin command execution id for cluster: {}", clusterName, e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while getting last successful admin command execution id")
+              .withCause(e)
+              .asRuntimeException());
+    }
+  }
+
+  @Override
+  public void getAdminTopicMetadata(
+      AdminTopicMetadataGrpcRequest request,
+      StreamObserver<AdminTopicMetadataGrpcResponse> responseObserver) {
+  }
+
+  @Override
+  public void updateAdminTopicMetadata(
+      UpdateAdminTopicMetadataGrpcRequest request,
+      StreamObserver<UpdateAdminTopicMetadataGrpcResponse> responseObserver) {
+  }
+
+  @Override
+  public void discoverClusterForStore(
+      DiscoverClusterGrpcRequest request,
+      StreamObserver<DiscoverClusterGrpcResponse> responseObserver) {
   }
 }
