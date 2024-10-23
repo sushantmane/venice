@@ -8,15 +8,18 @@ import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.AdminCommandExecution;
 import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.ControllerResponse;
+import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
+import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Instance;
+import com.linkedin.venice.utils.Pair;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -162,5 +165,19 @@ public class VeniceControllerRequestHandler {
     LOGGER.info("Getting last succeeded execution id in cluster: {}", clusterName);
     long lastSucceedExecutionId = admin.getLastSucceedExecutionId(clusterName);
     response.setLastSucceedExecutionId(lastSucceedExecutionId);
+  }
+
+  public void getClusterDiscovery(ClusterDiscoveryRequest request, D2ServiceDiscoveryResponse response) {
+    String storeName = request.getStoreName();
+    response.setName(storeName);
+    LOGGER.info("Discovering cluster for store: {}", storeName);
+    Pair<String, String> clusterToD2Pair = admin.discoverCluster(storeName);
+    response.setCluster(clusterToD2Pair.getFirst());
+    response.setD2Service(clusterToD2Pair.getSecond());
+    response.setServerD2Service(admin.getServerD2Service(clusterToD2Pair.getFirst()));
+  }
+
+  public Admin getAdmin() {
+    return admin;
   }
 }

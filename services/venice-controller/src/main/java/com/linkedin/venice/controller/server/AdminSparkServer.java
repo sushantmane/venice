@@ -533,7 +533,7 @@ public class AdminSparkServer extends AbstractVeniceService {
 
     httpService.get(
         CLUSTER_DISCOVERY.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, ClusterDiscovery.discoverCluster(admin)));
+        new VeniceParentControllerRegionStateHandler(admin, ClusterDiscovery.discoverCluster(requestHandler, admin)));
     httpService.get(
         LIST_BOOTSTRAPPING_VERSIONS.getPath(),
         new VeniceParentControllerRegionStateHandler(admin, versionRoute.listBootstrappingVersions(admin)));

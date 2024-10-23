@@ -8,9 +8,11 @@ import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.AdminCommandExecution;
 import com.linkedin.venice.controllerapi.AdminCommandExecutionStatus;
 import com.linkedin.venice.controllerapi.ControllerResponse;
+import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
+import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
@@ -328,19 +330,51 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
 
   @Override
   public void getAdminTopicMetadata(
-      AdminTopicMetadataGrpcRequest request,
+      AdminTopicMetadataGrpcRequest grpcRequest,
       StreamObserver<AdminTopicMetadataGrpcResponse> responseObserver) {
   }
 
   @Override
   public void updateAdminTopicMetadata(
-      UpdateAdminTopicMetadataGrpcRequest request,
+      UpdateAdminTopicMetadataGrpcRequest grpcRequest,
       StreamObserver<UpdateAdminTopicMetadataGrpcResponse> responseObserver) {
   }
 
   @Override
   public void discoverClusterForStore(
-      DiscoverClusterGrpcRequest request,
+      DiscoverClusterGrpcRequest grpcRequest,
       StreamObserver<DiscoverClusterGrpcResponse> responseObserver) {
+    String storeName = grpcRequest.getStoreName();
+    LOGGER.debug("Received gRPC request to discover cluster for store: {}", storeName);
+    try {
+      D2ServiceDiscoveryResponse response = new D2ServiceDiscoveryResponse();
+      requestHandler.getClusterDiscovery(new ClusterDiscoveryRequest(grpcRequest.getStoreName()), response);
+      DiscoverClusterGrpcResponse.Builder responseBuilder =
+          DiscoverClusterGrpcResponse.newBuilder().setStoreName(response.getName());
+      if (response.getCluster() != null) {
+        responseBuilder.setClusterName(response.getCluster());
+      }
+      if (response.getD2Service() != null) {
+        responseBuilder.setD2Service(response.getD2Service());
+      }
+      if (response.getServerD2Service() != null) {
+        responseBuilder.setServerD2Service(response.getServerD2Service());
+      }
+      if (response.getZkAddress() != null) {
+        responseBuilder.setZkAddress(response.getZkAddress());
+      }
+      if (response.getKafkaBootstrapServers() != null) {
+        responseBuilder.setPubSubBootstrapServers(response.getKafkaBootstrapServers());
+      }
+      responseObserver.onNext(responseBuilder.build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error("Error while discovering cluster for store: {}", storeName, e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while discovering cluster for store")
+              .withCause(e)
+              .asRuntimeException());
+    }
   }
 }
