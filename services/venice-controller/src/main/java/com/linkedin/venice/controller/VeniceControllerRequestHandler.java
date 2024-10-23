@@ -45,7 +45,7 @@ public class VeniceControllerRequestHandler {
 
   // visibility: package-private
   boolean isSslEnabled() {
-    return false;
+    return sslEnabled;
   }
 
   /**
