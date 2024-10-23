@@ -6,6 +6,25 @@ import "google/rpc/error_details.proto";
 
 option java_multiple_files = true;
 
+//1. AdminCommandExecutionRoutes: DONE
+//2. AdminTopicMetadataRoutes
+//3. ClusterDiscovery: DONE
+//4. ClusterRoutes
+//5. ControllerRoutes
+//6. CreateStore: DONE
+//7. CreateVersion
+//8. DataRecoveryRoutes
+//9. JobRoutes
+//10. MigrationRoutes
+//11. NewClusterBuildOutRoutes
+//12. NodesAndReplicas
+//13. RoutersClusterConfigRoutes
+//14. SchemaRoutes
+//15. SkipAdminRoute
+//16. StoragePersonaRoutes
+//17. StoresRoutes
+//18. VersionRoute: DONE
+
 service VeniceControllerGrpcService {
 
   rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
@@ -30,7 +49,6 @@ service VeniceControllerGrpcService {
 
   // VersionRoute
   rpc listBootstrappingVersions(ListBootstrappingVersionsGrpcRequest) returns (ListBootstrappingVersionsGrpcResponse) {}
-
 }
 
 message ListBootstrappingVersionsGrpcRequest {
