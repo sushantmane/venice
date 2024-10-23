@@ -27,9 +27,7 @@ public class NewStoreRequest extends ControllerRequest {
       String valueSchema,
       String accessPermissions,
       boolean isSystemStore) {
-    super(
-        requireNonNull(clusterName, "Cluster name is mandatory for creating a store"),
-        requireNonNull(storeName, "Store name is mandatory for creating a store"));
+    super(clusterName, storeName);
     this.keySchema = requireNonNull(keySchema, "Key schema is mandatory for creating a store");
     this.valueSchema = requireNonNull(valueSchema, "Value schema is mandatory for creating a store");
     this.owner = owner;
@@ -42,39 +40,19 @@ public class NewStoreRequest extends ControllerRequest {
     return owner;
   }
 
-  public void setOwner(String owner) {
-    this.owner = owner;
-  }
-
   public String getKeySchema() {
     return keySchema;
-  }
-
-  public void setKeySchema(String keySchema) {
-    this.keySchema = keySchema;
   }
 
   public String getValueSchema() {
     return valueSchema;
   }
 
-  public void setValueSchema(String valueSchema) {
-    this.valueSchema = valueSchema;
-  }
-
   public String getAccessPermissions() {
     return accessPermissions;
   }
 
-  public void setAccessPermissions(String accessPermissions) {
-    this.accessPermissions = accessPermissions;
-  }
-
   public boolean isSystemStore() {
     return isSystemStore;
-  }
-
-  public void setSystemStore(boolean isSystemStore) {
-    this.isSystemStore = isSystemStore;
   }
 }

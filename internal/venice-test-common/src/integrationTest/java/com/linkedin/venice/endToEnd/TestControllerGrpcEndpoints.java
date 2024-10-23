@@ -8,6 +8,7 @@ import com.linkedin.venice.controllerapi.StoreResponse;
 import com.linkedin.venice.integration.utils.ServiceFactory;
 import com.linkedin.venice.integration.utils.VeniceClusterCreateOptions;
 import com.linkedin.venice.integration.utils.VeniceClusterWrapper;
+import com.linkedin.venice.protocols.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.CreateStoreGrpcRequest;
 import com.linkedin.venice.protocols.CreateStoreGrpcResponse;
 import com.linkedin.venice.protocols.VeniceControllerGrpcServiceGrpc;
@@ -49,10 +50,13 @@ public class TestControllerGrpcEndpoints {
   public void testGrpcEndpoints() {
     String storeName = Utils.getUniqueString("store");
     String controllerGrpcUrl = veniceCluster.getLeaderVeniceController().getControllerGrpcUrl();
-
-    CreateStoreGrpcRequest createStoreGrpcRequest = CreateStoreGrpcRequest.newBuilder()
+    ClusterStoreGrpcInfo clusterStoreGrpcInfo = ClusterStoreGrpcInfo.newBuilder()
         .setClusterName(veniceCluster.getClusterName())
         .setStoreName(storeName)
+        .build();
+
+    CreateStoreGrpcRequest createStoreGrpcRequest = CreateStoreGrpcRequest.newBuilder()
+        .setClusterStoreInfo(clusterStoreGrpcInfo)
         .setOwner("owner")
         .setKeySchema(DEFAULT_KEY_SCHEMA)
         .setValueSchema("\"string\"")
@@ -78,9 +82,12 @@ public class TestControllerGrpcEndpoints {
     VeniceControllerGrpcServiceGrpc.VeniceControllerGrpcServiceBlockingStub controllerGrpcServiceBlockingStub =
         VeniceControllerGrpcServiceGrpc.newBlockingStub(channel);
 
-    CreateStoreGrpcRequest createStoreGrpcRequest = CreateStoreGrpcRequest.newBuilder()
+    ClusterStoreGrpcInfo clusterStoreGrpcInfo = ClusterStoreGrpcInfo.newBuilder()
         .setClusterName(veniceCluster.getClusterName())
         .setStoreName(storeName)
+        .build();
+    CreateStoreGrpcRequest createStoreGrpcRequest = CreateStoreGrpcRequest.newBuilder()
+        .setClusterStoreInfo(clusterStoreGrpcInfo)
         .setOwner("owner")
         .setKeySchema(DEFAULT_KEY_SCHEMA)
         .setValueSchema("\"string\"")

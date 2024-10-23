@@ -5,6 +5,7 @@ import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
+import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import com.linkedin.venice.meta.Instance;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -61,8 +62,17 @@ public class VeniceControllerRequestHandler {
     LOGGER.info("Successfully created store: {} in cluster: {}", storeName, clusterName);
   }
 
-  public void updateAclForStore(String cluster, String storeName, String accessPermissions, AclResponse response) {
+  public void updateAclForStore(UpdateAclForStoreRequest request, AclResponse response) {
+    String cluster = request.getClusterName();
+    String storeName = request.getStoreName();
+    String accessPermissions = request.getAccessPermissions();
+    LOGGER.info(
+        "Updating ACL for store: {} in cluster: {} with access permissions: {}",
+        storeName,
+        cluster,
+        accessPermissions);
     admin.updateAclForStore(cluster, storeName, accessPermissions);
+    LOGGER.info("Successfully updated ACL for store: {} in cluster: {}", storeName, cluster);
     response.setCluster(cluster);
     response.setName(storeName);
   }

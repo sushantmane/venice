@@ -5,9 +5,11 @@ import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
+import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import com.linkedin.venice.protocols.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.CreateStoreGrpcRequest;
 import com.linkedin.venice.protocols.CreateStoreGrpcResponse;
+import com.linkedin.venice.protocols.UpdateAclForStoreGrpcRequest;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.StatusProto;
@@ -42,15 +44,23 @@ public class GrpcRequestResponseConverter {
   }
 
   public static NewStoreRequest convertGrpcRequestToNewStoreRequest(CreateStoreGrpcRequest grpcRequest) {
-    String accessPermissions = grpcRequest.hasAccessPermission() ? grpcRequest.getAccessPermission() : null;
     return new NewStoreRequest(
         grpcRequest.getClusterStoreInfo().getClusterName(),
         grpcRequest.getClusterStoreInfo().getStoreName(),
-        grpcRequest.getOwner(),
+        grpcRequest.hasOwner() ? grpcRequest.getOwner() : null,
         grpcRequest.getKeySchema(),
         grpcRequest.getValueSchema(),
-        accessPermissions,
+        grpcRequest.hasAccessPermission() ? grpcRequest.getAccessPermission() : null,
         grpcRequest.getIsSystemStore());
+  }
+
+  // UpdateAclForStoreRequest
+  public static UpdateAclForStoreRequest convertGrpcRequestToUpdateAclForStoreRequest(
+      UpdateAclForStoreGrpcRequest grpcRequest) {
+    return new UpdateAclForStoreRequest(
+        grpcRequest.getClusterStoreInfo().getClusterName(),
+        grpcRequest.getClusterStoreInfo().getStoreName(),
+        grpcRequest.getAccessPermissions());
   }
 
   public static ClusterStoreGrpcInfo getClusterStoreGrpcInfo(ControllerResponse response) {

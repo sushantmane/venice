@@ -7,17 +7,19 @@ import "google/rpc/error_details.proto";
 option java_multiple_files = true;
 
 service VeniceControllerGrpcService {
-  // Fully supported on gRPC and to use the common path
+  // --- Fully supported on gRPC and to use the common path; except for accessPermission check ---
+
+  // RPC for creating a store
   rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
+  // RPC for updating ACL for a store
+  rpc updateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
 
   // Partially migrated to gRPC and but old HTTP is not updated to use the common path
   // Defined but not implemented
   rpc getStoresInCluster(GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
   rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
   // RPC for getting the leader controller
-  rpc GetLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
-  // RPC for updating ACL for a store
-  rpc UpdateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
+  rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
 }
 
 message ClusterStoreGrpcInfo {
@@ -42,13 +44,12 @@ message CreateStoreGrpcResponse {
 // Request for updating ACL for a store
 message UpdateAclForStoreGrpcRequest {
   ClusterStoreGrpcInfo clusterStoreInfo = 1;
-  string accessPermission = 3;
+  string accessPermissions = 3;
 }
 
 // Response after updating ACL for a store
 message UpdateAclForStoreGrpcResponse {
-  string clusterName = 1;          // The cluster name
-  string storeName = 2;            // The store name
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
 }
 
 message VeniceControllerGrpcError {
