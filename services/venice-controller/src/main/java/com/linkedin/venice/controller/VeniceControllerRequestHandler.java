@@ -1,7 +1,9 @@
 package com.linkedin.venice.controller;
 
 import com.linkedin.venice.controllerapi.AclResponse;
+import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
+import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.meta.Instance;
 import java.util.Optional;
@@ -19,6 +21,8 @@ public class VeniceControllerRequestHandler {
   private final Admin admin;
   private final boolean sslEnabled;
 
+  public static final String DEFAULT_STORE_OWNER = "";
+
   public VeniceControllerRequestHandler(ControllerRequestHandlerDependencies dependencies) {
     this.admin = dependencies.getAdmin();
     this.sslEnabled = dependencies.isSslEnabled();
@@ -28,25 +32,39 @@ public class VeniceControllerRequestHandler {
    * Creates a new store in the specified Venice cluster with the provided parameters.
    * @param request the request object containing all necessary details for the creation of the store
    */
-  public void createStore(NewStoreRequest request) {
+  public void createStore(NewStoreRequest request, NewStoreResponse response) {
+    ControllerEndpointParamValidator.validateNewStoreRequest(request);
+
+    String clusterName = request.getClusterName();
+    String storeName = request.getStoreName();
+    String keySchema = request.getKeySchema();
+    String valueSchema = request.getValueSchema();
+    String owner = request.getOwner() == null ? DEFAULT_STORE_OWNER : request.getOwner();
+    Optional<String> accessPermissions = Optional.ofNullable(request.getAccessPermissions());
+    boolean isSystemStore = request.isSystemStore();
+
     LOGGER.info(
         "Creating store: {} in cluster: {} with owner: {} and key schema: {} and value schema: {} and isSystemStore: {} and access permissions: {}",
-        request.getStoreName(),
-        request.getClusterName(),
-        request.getOwner(),
-        request.getKeySchema(),
-        request.getValueSchema(),
-        request.isSystemStore(),
-        request.getAccessPermissions());
-    admin.createStore(
-        request.getClusterName(),
-        request.getStoreName(),
-        request.getOwner(),
-        request.getKeySchema(),
-        request.getValueSchema(),
-        request.isSystemStore(),
-        Optional.ofNullable(request.getAccessPermissions()));
-    LOGGER.info("Store: {} created successfully in cluster: {}", request.getStoreName(), request.getClusterName());
+        storeName,
+        clusterName,
+        owner,
+        keySchema,
+        valueSchema,
+        isSystemStore,
+        accessPermissions);
+
+    admin.createStore(clusterName, storeName, owner, keySchema, valueSchema, isSystemStore, accessPermissions);
+
+    response.setCluster(clusterName);
+    response.setName(storeName);
+    response.setOwner(owner);
+    LOGGER.info("Successfully created store: {} in cluster: {}", storeName, clusterName);
+  }
+
+  public void updateAclForStore(String cluster, String storeName, String accessPermissions, AclResponse response) {
+    admin.updateAclForStore(cluster, storeName, accessPermissions);
+    response.setCluster(cluster);
+    response.setName(storeName);
   }
 
   public void getLeaderController(String clusterName, LeaderControllerResponse response) {
@@ -59,12 +77,6 @@ public class VeniceControllerRequestHandler {
     }
     response.setGrpcUrl(leaderController.getGrpcUrl());
     response.setSecureGrpcUrl(leaderController.getGrpcSslUrl());
-  }
-
-  public void updateAclForStore(String cluster, String storeName, String accessPermissions, AclResponse response) {
-    response.setCluster(cluster);
-    response.setName(storeName);
-    admin.updateAclForStore(cluster, storeName, accessPermissions);
   }
 
   // visibility: package-private

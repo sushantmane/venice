@@ -7,22 +7,42 @@ import "google/rpc/error_details.proto";
 option java_multiple_files = true;
 
 service VeniceControllerGrpcService {
-  rpc getStoresInCluster (GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
+  // Fully supported on gRPC and to use the common path
   rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
-  rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
 
+  // Partially migrated to gRPC and but old HTTP is not updated to use the common path
+  // Defined but not implemented
+  rpc getStoresInCluster(GetStoresInClusterGrpcRequest) returns (GetStoresInClusterGrpcResponse) {}
+  rpc queryJobStatus(QueryJobStatusGrpcRequest) returns (QueryJobStatusGrpcResponse) {}
   // RPC for getting the leader controller
   rpc GetLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
-
   // RPC for updating ACL for a store
   rpc UpdateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
 }
 
+message ClusterStoreGrpcInfo {
+  string clusterName = 1;
+  string storeName = 2;
+}
+
+message CreateStoreGrpcRequest {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  string keySchema = 2;
+  string valueSchema = 3;
+  optional string owner = 4;
+  optional bool isSystemStore = 5;
+  optional string accessPermission = 6;
+}
+
+message CreateStoreGrpcResponse {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  string owner = 2;
+}
+
 // Request for updating ACL for a store
 message UpdateAclForStoreGrpcRequest {
-  string clusterName = 1;          // The cluster name
-  string storeName = 2;            // The store name
-  string accessPermission = 3;     // The new access permission to set
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  string accessPermission = 3;
 }
 
 // Response after updating ACL for a store
@@ -65,20 +85,6 @@ message StoreInfoGrpc {
 
 message GetStoresInClusterGrpcResponse {
   repeated StoreInfoGrpc stores = 1;
-}
-
-message CreateStoreGrpcRequest {
-  string clusterName = 1;
-  string storeName = 2;
-  string keySchema = 3;
-  string valueSchema = 4;
-  string owner = 5;
-  bool isSystemStore = 6;
-  optional string accessPermission = 7;
-}
-
-message CreateStoreGrpcResponse {
-  string owner = 1;
 }
 
 message QueryJobStatusGrpcRequest {

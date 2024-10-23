@@ -44,34 +44,23 @@ public class CreateStore extends AbstractRoute {
         if (!checkIsAllowListUser(request, veniceResponse, () -> isAllowListUser(request))) {
           return;
         }
+
+        // Validate request parameters
         AdminSparkServer.validateParams(request, NEW_STORE.getParams(), admin);
+
+        // Extract the parameters from the request
         String clusterName = request.queryParams(CLUSTER);
         String storeName = request.queryParams(NAME);
         String keySchema = request.queryParams(KEY_SCHEMA);
         String valueSchema = request.queryParams(VALUE_SCHEMA);
         boolean isSystemStore = Boolean.parseBoolean(request.queryParams(IS_SYSTEM_STORE));
-
         String owner = AdminSparkServer.getOptionalParameterValue(request, OWNER);
-        if (owner == null) {
-          owner = "";
-        }
-
         String accessPerm = request.queryParams(ACCESS_PERMISSION);
-        Optional<String> accessPermissions = Optional.ofNullable(accessPerm);
 
-        veniceResponse.setCluster(clusterName);
-        veniceResponse.setName(storeName);
-        veniceResponse.setOwner(owner);
-
-        NewStoreRequest storeRequest = new NewStoreRequest(
-            clusterName,
-            storeName,
-            owner,
-            keySchema,
-            valueSchema,
-            accessPermissions.orElse(null),
-            isSystemStore);
-        requestHandler.createStore(storeRequest);
+        // Construct the request object and call the handler
+        NewStoreRequest storeRequest =
+            new NewStoreRequest(clusterName, storeName, owner, keySchema, valueSchema, accessPerm, isSystemStore);
+        requestHandler.createStore(storeRequest, veniceResponse);
       }
     };
   }
@@ -89,8 +78,7 @@ public class CreateStore extends AbstractRoute {
         String cluster = request.queryParams(CLUSTER);
         String storeName = request.queryParams(NAME);
         String accessPermissions = request.queryParams(ACCESS_PERMISSION);
-        responseObject.setCluster(cluster);
-        responseObject.setName(storeName);
+
         requestHandler.updateAclForStore(cluster, storeName, accessPermissions, responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);

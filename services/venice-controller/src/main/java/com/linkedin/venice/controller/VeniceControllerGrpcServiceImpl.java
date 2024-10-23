@@ -4,6 +4,7 @@ import com.google.protobuf.Any;
 import com.google.rpc.Code;
 import com.google.rpc.ErrorInfo;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
+import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.transport.GrpcRequestResponseConverter;
 import com.linkedin.venice.protocols.CreateStoreGrpcRequest;
@@ -29,21 +30,30 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
 
   public VeniceControllerGrpcServiceImpl(VeniceControllerRequestHandler requestHandler) {
     this.requestHandler = requestHandler;
-    LOGGER.info("gRPC:: VeniceControllerGrpcServiceImpl initialized");
   }
 
   @Override
-  public void createStore(CreateStoreGrpcRequest request, StreamObserver<CreateStoreGrpcResponse> responseObserver) {
-    String clusterName = request.getClusterName();
-    String storeName = request.getStoreName();
-    LOGGER.info("Received gRPC request to create store: {} in cluster: {}", storeName, clusterName);
+  public void createStore(
+      CreateStoreGrpcRequest grpcRequest,
+      StreamObserver<CreateStoreGrpcResponse> responseObserver) {
+    String clusterName = grpcRequest.getClusterStoreInfo().getClusterName();
+    String storeName = grpcRequest.getClusterStoreInfo().getStoreName();
+    LOGGER.debug("Received gRPC request to create store: {} in cluster: {}", storeName, clusterName);
     try {
-      NewStoreRequest newStoreRequest = GrpcRequestResponseConverter.convertGrpcRequestToNewStoreRequest(request);
-      CreateStoreGrpcResponse.Builder responseBuilder = CreateStoreGrpcResponse.newBuilder();
-      requestHandler.createStore(newStoreRequest);
-      LOGGER.info("Created store: {} in cluster: {}", storeName, clusterName);
-      responseBuilder.setOwner(newStoreRequest.getOwner());
-      responseObserver.onNext(responseBuilder.build());
+      // Convert the gRPC request to the internal request object
+      NewStoreRequest request = GrpcRequestResponseConverter.convertGrpcRequestToNewStoreRequest(grpcRequest);
+
+      // Create the store using the internal request object
+      NewStoreResponse response = new NewStoreResponse();
+      requestHandler.createStore(request, response);
+
+      // Convert the internal response object to the gRPC response object
+      CreateStoreGrpcResponse.Builder grpcResponseBuilder = CreateStoreGrpcResponse.newBuilder();
+      grpcResponseBuilder.setClusterStoreInfo(GrpcRequestResponseConverter.getClusterStoreGrpcInfo(response));
+      grpcResponseBuilder.setOwner(response.getOwner());
+
+      // Send the gRPC response
+      responseObserver.onNext(grpcResponseBuilder.build());
       responseObserver.onCompleted();
     } catch (Exception e) {
       // Log the error with structured details

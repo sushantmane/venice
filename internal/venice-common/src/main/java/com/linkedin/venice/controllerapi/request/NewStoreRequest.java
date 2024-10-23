@@ -1,6 +1,8 @@
 package com.linkedin.venice.controllerapi.request;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
+
+import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 
 
 /**
@@ -9,7 +11,6 @@ import java.util.Objects;
  * schema definitions, and access permissions.
  */
 public class NewStoreRequest extends ControllerRequest {
-  private final String storeName;
   private String owner;
   private String keySchema;
   private String valueSchema;
@@ -26,17 +27,15 @@ public class NewStoreRequest extends ControllerRequest {
       String valueSchema,
       String accessPermissions,
       boolean isSystemStore) {
-    super(clusterName);
-    this.storeName = Objects.requireNonNull(storeName, "Store name cannot be null when creating a new store");
+    super(
+        requireNonNull(clusterName, "Cluster name is mandatory for creating a store"),
+        requireNonNull(storeName, "Store name is mandatory for creating a store"));
+    this.keySchema = requireNonNull(keySchema, "Key schema is mandatory for creating a store");
+    this.valueSchema = requireNonNull(valueSchema, "Value schema is mandatory for creating a store");
     this.owner = owner;
-    this.keySchema = keySchema;
-    this.valueSchema = valueSchema;
     this.accessPermissions = accessPermissions;
     this.isSystemStore = isSystemStore;
-  }
-
-  public String getStoreName() {
-    return storeName;
+    ControllerEndpointParamValidator.validateNewStoreRequest(this);
   }
 
   public String getOwner() {
