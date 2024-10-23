@@ -1,5 +1,6 @@
 package com.linkedin.venice.controller;
 
+import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.meta.Instance;
@@ -58,6 +59,12 @@ public class VeniceControllerRequestHandler {
     }
     response.setGrpcUrl(leaderController.getGrpcUrl());
     response.setSecureGrpcUrl(leaderController.getGrpcSslUrl());
+  }
+
+  public void updateAclForStore(String cluster, String storeName, String accessPermissions, AclResponse response) {
+    response.setCluster(cluster);
+    response.setName(storeName);
+    admin.updateAclForStore(cluster, storeName, accessPermissions);
   }
 
   // visibility: package-private

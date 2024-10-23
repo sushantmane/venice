@@ -13,6 +13,22 @@ service VeniceControllerGrpcService {
 
   // RPC for getting the leader controller
   rpc GetLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
+
+  // RPC for updating ACL for a store
+  rpc UpdateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
+}
+
+// Request for updating ACL for a store
+message UpdateAclForStoreGrpcRequest {
+  string clusterName = 1;          // The cluster name
+  string storeName = 2;            // The store name
+  string accessPermission = 3;     // The new access permission to set
+}
+
+// Response after updating ACL for a store
+message UpdateAclForStoreGrpcResponse {
+  string clusterName = 1;          // The cluster name
+  string storeName = 2;            // The store name
 }
 
 message VeniceControllerGrpcError {

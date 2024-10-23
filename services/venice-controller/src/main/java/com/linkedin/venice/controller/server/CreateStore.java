@@ -91,7 +91,7 @@ public class CreateStore extends AbstractRoute {
         String accessPermissions = request.queryParams(ACCESS_PERMISSION);
         responseObject.setCluster(cluster);
         responseObject.setName(storeName);
-        admin.updateAclForStore(cluster, storeName, accessPermissions);
+        requestHandler.updateAclForStore(cluster, storeName, accessPermissions, responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
