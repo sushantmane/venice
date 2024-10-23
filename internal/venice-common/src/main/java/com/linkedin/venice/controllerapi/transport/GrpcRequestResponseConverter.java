@@ -4,6 +4,7 @@ import com.google.rpc.ErrorInfo;
 import com.linkedin.venice.client.exceptions.VeniceClientException;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
+import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import com.linkedin.venice.protocols.ClusterStoreGrpcInfo;
@@ -72,6 +73,10 @@ public class GrpcRequestResponseConverter {
       builder.setStoreName(response.getName());
     }
     return builder.build();
+  }
+
+  public static ControllerRequest getControllerRequest(ClusterStoreGrpcInfo clusterStoreGrpcInfo) {
+    return new ControllerRequest(clusterStoreGrpcInfo.getClusterName(), clusterStoreGrpcInfo.getStoreName());
   }
 
   /**

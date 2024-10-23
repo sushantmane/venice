@@ -2,8 +2,10 @@ package com.linkedin.venice.controller;
 
 import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
+import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
+import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import com.linkedin.venice.meta.Instance;
@@ -27,6 +29,23 @@ public class VeniceControllerRequestHandler {
   public VeniceControllerRequestHandler(ControllerRequestHandlerDependencies dependencies) {
     this.admin = dependencies.getAdmin();
     this.sslEnabled = dependencies.isSslEnabled();
+  }
+
+  public void getLeaderController(String clusterName, LeaderControllerResponse response) {
+    Instance leaderController = admin.getLeaderController(clusterName);
+    response.setCluster(clusterName);
+    response.setUrl(leaderController.getUrl(isSslEnabled()));
+    if (leaderController.getPort() != leaderController.getSslPort()) {
+      // Controller is SSL Enabled
+      response.setSecureUrl(leaderController.getUrl(true));
+    }
+    response.setGrpcUrl(leaderController.getGrpcUrl());
+    response.setSecureGrpcUrl(leaderController.getGrpcSslUrl());
+  }
+
+  // visibility: package-private
+  boolean isSslEnabled() {
+    return false;
   }
 
   /**
@@ -77,20 +96,33 @@ public class VeniceControllerRequestHandler {
     response.setName(storeName);
   }
 
-  public void getLeaderController(String clusterName, LeaderControllerResponse response) {
-    Instance leaderController = admin.getLeaderController(clusterName);
+  public void getAclForStore(ControllerRequest request, AclResponse response) {
+    String clusterName = request.getClusterName();
+    String storeName = request.getStoreName();
+    LOGGER.info("Getting ACL for store: {} in cluster: {}", storeName, clusterName);
+    String accessPermissions = admin.getAclForStore(clusterName, storeName);
     response.setCluster(clusterName);
-    response.setUrl(leaderController.getUrl(isSslEnabled()));
-    if (leaderController.getPort() != leaderController.getSslPort()) {
-      // Controller is SSL Enabled
-      response.setSecureUrl(leaderController.getUrl(true));
-    }
-    response.setGrpcUrl(leaderController.getGrpcUrl());
-    response.setSecureGrpcUrl(leaderController.getGrpcSslUrl());
+    response.setName(storeName);
+    response.setAccessPermissions(accessPermissions);
   }
 
-  // visibility: package-private
-  boolean isSslEnabled() {
-    return sslEnabled;
+  public void deleteAclForStore(ControllerRequest controllerRequest, AclResponse responseObject) {
+    String clusterName = controllerRequest.getClusterName();
+    String storeName = controllerRequest.getStoreName();
+    LOGGER.info("Deleting ACL for store: {} in cluster: {}", storeName, clusterName);
+    admin.deleteAclForStore(clusterName, storeName);
+    responseObject.setCluster(clusterName);
+    responseObject.setName(storeName);
+  }
+
+  public void checkResourceCleanupBeforeStoreCreation(
+      ControllerRequest controllerRequest,
+      ControllerResponse controllerResponse) {
+    String clusterName = controllerRequest.getClusterName();
+    String storeName = controllerRequest.getStoreName();
+    LOGGER.info("Checking resource cleanup before creating store: {} in cluster: {}", storeName, clusterName);
+    admin.checkResourceCleanupBeforeStoreCreation(clusterName, storeName);
+    controllerResponse.setCluster(clusterName);
+    controllerResponse.setName(storeName);
   }
 }

@@ -11,17 +11,20 @@ import static java.util.Objects.requireNonNull;
  * All required parameters should be passed to and validated within the constructor of the extending class.
  */
 public class ControllerRequest {
+  private static final String MISSING_CLUSTER_NAME = "Cluster name is missing in the request. It is mandatory";
+  private static final String MISSING_STORE_NAME = "Store name is missing in the request. It is mandatory";
+
   private final String clusterName;
   private final String storeName;
 
   public ControllerRequest(String clusterName) {
-    this.clusterName = requireNonNull(clusterName, "Cluster name is mandatory for creating a store");
+    this.clusterName = requireNonNull(clusterName, MISSING_CLUSTER_NAME);
     this.storeName = null;
   }
 
   public ControllerRequest(String clusterName, String storeName) {
-    this.clusterName = requireNonNull(clusterName, "Cluster name is mandatory for updating ACL for a store");
-    this.storeName = requireNonNull(storeName, "Store name is mandatory for updating ACL for a store");
+    this.clusterName = requireNonNull(clusterName, MISSING_CLUSTER_NAME);
+    this.storeName = requireNonNull(storeName, MISSING_STORE_NAME);
   }
 
   public String getClusterName() {

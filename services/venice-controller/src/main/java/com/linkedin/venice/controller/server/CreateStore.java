@@ -19,6 +19,7 @@ import com.linkedin.venice.controller.VeniceControllerRequestHandler;
 import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
+import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
 import java.util.Optional;
@@ -94,13 +95,9 @@ public class CreateStore extends AbstractRoute {
       try {
         // TODO need security validation here?
         AdminSparkServer.validateParams(request, GET_ACL.getParams(), admin);
-        String cluster = request.queryParams(CLUSTER);
-        String storeName = request.queryParams(NAME);
-        responseObject.setCluster(cluster);
-        responseObject.setName(storeName);
-
-        String accessPerm = admin.getAclForStore(cluster, storeName);
-        responseObject.setAccessPermissions(accessPerm);
+        requestHandler.getAclForStore(
+            new ControllerRequest(request.queryParams(CLUSTER), request.queryParams(NAME)),
+            responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
@@ -119,11 +116,9 @@ public class CreateStore extends AbstractRoute {
       try {
         // TODO need security validation here?
         AdminSparkServer.validateParams(request, DELETE_ACL.getParams(), admin);
-        String cluster = request.queryParams(CLUSTER);
-        String storeName = request.queryParams(NAME);
-        responseObject.setCluster(cluster);
-        responseObject.setName(storeName);
-        admin.deleteAclForStore(cluster, storeName);
+        requestHandler.deleteAclForStore(
+            new ControllerRequest(request.queryParams(CLUSTER), request.queryParams(NAME)),
+            responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
@@ -141,11 +136,9 @@ public class CreateStore extends AbstractRoute {
       response.type(HttpConstants.JSON);
       try {
         AdminSparkServer.validateParams(request, GET_ACL.getParams(), admin);
-        String cluster = request.queryParams(CLUSTER);
-        String storeName = request.queryParams(NAME);
-        controllerResponse.setCluster(cluster);
-        controllerResponse.setName(storeName);
-        admin.checkResourceCleanupBeforeStoreCreation(cluster, storeName);
+        requestHandler.checkResourceCleanupBeforeStoreCreation(
+            new ControllerRequest(request.queryParams(CLUSTER), request.queryParams(NAME)),
+            controllerResponse);
       } catch (Throwable e) {
         controllerResponse.setError(e);
         AdminSparkServer.handleError(e, request, response);
@@ -153,5 +146,4 @@ public class CreateStore extends AbstractRoute {
       return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(controllerResponse);
     };
   }
-
 }

@@ -8,11 +8,12 @@ option java_multiple_files = true;
 
 service VeniceControllerGrpcService {
   // --- Fully supported on gRPC and to use the common path; except for accessPermission check ---
-
-  // RPC for creating a store
   rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
-  // RPC for updating ACL for a store
   rpc updateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
+  rpc getAclForStore(GetAclForStoreGrpcRequest) returns (GetAclForStoreGrpcResponse);
+  rpc deleteAclForStore(DeleteAclForStoreGrpcRequest) returns (DeleteAclForStoreGrpcResponse);
+  rpc checkResourceCleanupForStoreCreation(CheckResourceCleanupForStoreCreationGrpcRequest) returns (CheckResourceCleanupForStoreCreationGrpcResponse) {}
+
 
   // Partially migrated to gRPC and but old HTTP is not updated to use the common path
   // Defined but not implemented
@@ -41,14 +42,37 @@ message CreateStoreGrpcResponse {
   string owner = 2;
 }
 
-// Request for updating ACL for a store
 message UpdateAclForStoreGrpcRequest {
   ClusterStoreGrpcInfo clusterStoreInfo = 1;
   string accessPermissions = 3;
 }
 
-// Response after updating ACL for a store
 message UpdateAclForStoreGrpcResponse {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+}
+
+message GetAclForStoreGrpcRequest {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+}
+
+message GetAclForStoreGrpcResponse {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  string accessPermissions = 2;
+}
+
+message DeleteAclForStoreGrpcRequest {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+}
+
+message DeleteAclForStoreGrpcResponse {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+}
+
+message CheckResourceCleanupForStoreCreationGrpcRequest {
+  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+}
+
+message CheckResourceCleanupForStoreCreationGrpcResponse {
   ClusterStoreGrpcInfo clusterStoreInfo = 1;
 }
 
