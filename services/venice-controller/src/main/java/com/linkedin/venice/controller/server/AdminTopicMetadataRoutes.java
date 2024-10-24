@@ -14,6 +14,7 @@ import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controllerapi.AdminTopicMetadataResponse;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.request.AdminTopicMetadataRequest;
+import com.linkedin.venice.controllerapi.request.UpdateAdminTopicMetadataRequest;
 import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.exceptions.VeniceException;
 import java.util.Optional;
@@ -64,28 +65,14 @@ public class AdminTopicMetadataRoutes extends AbstractRoute {
           responseObject.setErrorType(ErrorType.BAD_REQUEST);
           return AdminSparkServer.OBJECT_MAPPER.writeValueAsString(responseObject);
         }
-
         AdminSparkServer.validateParams(request, UPDATE_ADMIN_TOPIC_METADATA.getParams(), admin);
-        String clusterName = request.queryParams(CLUSTER);
-        long executionId = Long.parseLong(request.queryParams(EXECUTION_ID));
-        Optional<String> storeName = Optional.ofNullable(request.queryParams(NAME));
-        Optional<Long> offset = Optional.ofNullable(request.queryParams(OFFSET)).map(Long::parseLong);
-        Optional<Long> upstreamOffset = Optional.ofNullable(request.queryParams(UPSTREAM_OFFSET)).map(Long::parseLong);
-
-        if (storeName.isPresent()) {
-          if (offset.isPresent() || upstreamOffset.isPresent()) {
-            throw new VeniceException("There is no store-level offsets to be updated");
-          }
-        } else {
-          if (!offset.isPresent() || !upstreamOffset.isPresent()) {
-            throw new VeniceException("Offsets must be provided to update cluster-level admin topic metadata");
-          }
-        }
-
-        responseObject.setCluster(clusterName);
-        storeName.ifPresent(responseObject::setName);
-
-        admin.updateAdminTopicMetadata(clusterName, executionId, storeName, offset, upstreamOffset);
+        UpdateAdminTopicMetadataRequest updateAdminTopicMetadataRequest = new UpdateAdminTopicMetadataRequest(
+            request.queryParams(CLUSTER),
+            request.queryParams(NAME),
+            request.queryParams(EXECUTION_ID),
+            request.queryParams(OFFSET),
+            request.queryParams(UPSTREAM_OFFSET));
+        requestHandler.updateAdminTopicMetadata(updateAdminTopicMetadataRequest, responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(new VeniceException(e), request, response);

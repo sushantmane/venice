@@ -7,7 +7,7 @@ import "google/rpc/error_details.proto";
 option java_multiple_files = true;
 
 //1. AdminCommandExecutionRoutes: DONE
-//2. AdminTopicMetadataRoutes
+//2. AdminTopicMetadataRoutes: DONE
 //3. ClusterDiscovery: DONE
 //4. ClusterRoutes
 //5. ControllerRoutes

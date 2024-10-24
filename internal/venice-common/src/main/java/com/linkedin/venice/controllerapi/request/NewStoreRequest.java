@@ -1,10 +1,5 @@
 package com.linkedin.venice.controllerapi.request;
 
-import static java.util.Objects.requireNonNull;
-
-import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
-
-
 /**
  * Represents a request to create a new store in the specified Venice cluster with the provided parameters.
  * This class encapsulates all necessary details for the creation of a store, including its name, owner,
@@ -28,12 +23,11 @@ public class NewStoreRequest extends ControllerRequest {
       String accessPermissions,
       boolean isSystemStore) {
     super(clusterName, storeName);
-    this.keySchema = requireNonNull(keySchema, "Key schema is mandatory for creating a store");
-    this.valueSchema = requireNonNull(valueSchema, "Value schema is mandatory for creating a store");
+    this.keySchema = validateParam(keySchema, "Key schema");
+    this.valueSchema = validateParam(valueSchema, "Value schema");
     this.owner = owner;
     this.accessPermissions = accessPermissions;
     this.isSystemStore = isSystemStore;
-    ControllerEndpointParamValidator.validateNewStoreRequest(this);
   }
 
   public String getOwner() {

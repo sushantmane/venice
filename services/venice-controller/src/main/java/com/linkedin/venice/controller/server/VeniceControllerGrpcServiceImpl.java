@@ -19,6 +19,7 @@ import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
+import com.linkedin.venice.controllerapi.request.UpdateAdminTopicMetadataRequest;
 import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
 import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcRequest;
 import com.linkedin.venice.protocols.AdminCommandExecutionStatusGrpcResponse;
@@ -378,6 +379,43 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
   public void updateAdminTopicMetadata(
       UpdateAdminTopicMetadataGrpcRequest grpcRequest,
       StreamObserver<UpdateAdminTopicMetadataGrpcResponse> responseObserver) {
+    String clusterName = grpcRequest.getClusterName();
+    String storeName = null;
+    if (grpcRequest.hasStoreName()) {
+      storeName = grpcRequest.getStoreName();
+    }
+    Long executionId = grpcRequest.getExecutionId();
+    Long offset = grpcRequest.hasOffset() ? grpcRequest.getOffset() : null;
+    Long upstreamOffset = grpcRequest.hasUpstreamOffset() ? grpcRequest.getUpstreamOffset() : null;
+    LOGGER.debug(
+        "Received gRPC request to update admin topic metadata for cluster: {}{}",
+        clusterName,
+        storeName != null ? " and store: " + storeName : "");
+    try {
+      ControllerResponse response = new ControllerResponse();
+      requestHandler.updateAdminTopicMetadata(
+          new UpdateAdminTopicMetadataRequest(clusterName, storeName, executionId, offset, upstreamOffset),
+          response);
+
+      UpdateAdminTopicMetadataGrpcResponse.Builder responseBuilder =
+          UpdateAdminTopicMetadataGrpcResponse.newBuilder().setClusterName(response.getCluster());
+      if (response.getName() != null) {
+        responseBuilder.setStoreName(response.getName());
+      }
+      responseObserver.onNext(responseBuilder.build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error(
+          "Error while updating admin topic metadata for cluster: {}{}",
+          clusterName,
+          storeName != null ? " and store: " + storeName : "",
+          e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while updating admin topic metadata")
+              .withCause(e)
+              .asRuntimeException());
+    }
   }
 
   @Override

@@ -20,6 +20,7 @@ import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.request.UpdateAclForStoreRequest;
+import com.linkedin.venice.controllerapi.request.UpdateAdminTopicMetadataRequest;
 import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Instance;
@@ -208,5 +209,35 @@ public class VeniceControllerRequestHandler {
       response.setOffset(offsets.getFirst());
       response.setUpstreamOffset(offsets.getSecond());
     }
+  }
+
+  public void updateAdminTopicMetadata(UpdateAdminTopicMetadataRequest request, ControllerResponse response) {
+    String clusterName = request.getClusterName();
+    long executionId = request.getExecutionId();
+    String storeName = request.getStoreName();
+    Long offset = request.getOffset();
+    Long upstreamOffset = request.getUpstreamOffset();
+
+    response.setCluster(clusterName);
+    if (storeName != null) {
+      response.setName(storeName);
+    }
+
+    if (storeName != null) {
+      if (offset != null || upstreamOffset != null) {
+        throw new VeniceException("There is no store-level offsets to be updated");
+      }
+    } else {
+      if (offset == null || upstreamOffset == null) {
+        throw new VeniceException("Offsets must be provided to update cluster-level admin topic metadata");
+      }
+    }
+
+    admin.updateAdminTopicMetadata(
+        clusterName,
+        executionId,
+        Optional.ofNullable(storeName),
+        Optional.ofNullable(offset),
+        Optional.ofNullable(upstreamOffset));
   }
 }
