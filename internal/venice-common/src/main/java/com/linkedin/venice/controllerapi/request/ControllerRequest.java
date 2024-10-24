@@ -14,8 +14,8 @@ public class ControllerRequest {
   private static final String MISSING_CLUSTER_NAME = "Cluster name is missing in the request. It is mandatory";
   private static final String MISSING_STORE_NAME = "Store name is missing in the request. It is mandatory";
 
-  private final String clusterName;
-  private final String storeName;
+  protected String clusterName;
+  protected String storeName;
 
   public ControllerRequest(String clusterName) {
     this.clusterName = requireNonNull(clusterName, MISSING_CLUSTER_NAME);

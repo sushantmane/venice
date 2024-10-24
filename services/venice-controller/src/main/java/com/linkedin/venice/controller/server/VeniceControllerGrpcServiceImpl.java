@@ -7,12 +7,14 @@ import com.linkedin.venice.LastSucceedExecutionIdResponse;
 import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.AdminCommandExecution;
 import com.linkedin.venice.controllerapi.AdminCommandExecutionStatus;
+import com.linkedin.venice.controllerapi.AdminTopicMetadataResponse;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
 import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.MultiVersionStatusResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
+import com.linkedin.venice.controllerapi.request.AdminTopicMetadataRequest;
 import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
@@ -336,6 +338,40 @@ public class VeniceControllerGrpcServiceImpl extends VeniceControllerGrpcService
   public void getAdminTopicMetadata(
       AdminTopicMetadataGrpcRequest grpcRequest,
       StreamObserver<AdminTopicMetadataGrpcResponse> responseObserver) {
+    String clusterName = grpcRequest.getClusterName();
+    String storeName = null;
+    if (grpcRequest.hasStoreName()) {
+      storeName = grpcRequest.getStoreName();
+    }
+    LOGGER.debug(
+        "Received gRPC request to get admin topic metadata for cluster: {}{}",
+        clusterName,
+        storeName != null ? " and store: " + storeName : "");
+    try {
+      AdminTopicMetadataResponse response = new AdminTopicMetadataResponse();
+      requestHandler.getAdminTopicMetadata(new AdminTopicMetadataRequest(clusterName, storeName), response);
+      AdminTopicMetadataGrpcResponse.Builder responseBuilder = AdminTopicMetadataGrpcResponse.newBuilder()
+          .setClusterName(response.getCluster())
+          .setExecutionId(response.getExecutionId());
+      if (response.getName() != null) {
+        responseBuilder.setStoreName(response.getName());
+      } else {
+        responseBuilder.setOffset(response.getOffset()).setUpstreamOffset(response.getUpstreamOffset());
+      }
+      responseObserver.onNext(responseBuilder.build());
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      LOGGER.error(
+          "Error while getting admin topic metadata for cluster: {}{}",
+          clusterName,
+          storeName != null ? " and store: " + storeName : "",
+          e);
+      responseObserver.onError(
+          Status.fromCode(Code.INTERNAL)
+              .withDescription("Error while getting admin topic metadata")
+              .withCause(e)
+              .asRuntimeException());
+    }
   }
 
   @Override

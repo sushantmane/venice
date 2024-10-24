@@ -11,13 +11,11 @@ import static com.linkedin.venice.controllerapi.ControllerRoute.UPDATE_ADMIN_TOP
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.controller.Admin;
-import com.linkedin.venice.controller.AdminTopicMetadataAccessor;
 import com.linkedin.venice.controllerapi.AdminTopicMetadataResponse;
 import com.linkedin.venice.controllerapi.ControllerResponse;
+import com.linkedin.venice.controllerapi.request.AdminTopicMetadataRequest;
 import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.utils.Pair;
-import java.util.Map;
 import java.util.Optional;
 import org.apache.http.HttpStatus;
 import spark.Route;
@@ -41,20 +39,9 @@ public class AdminTopicMetadataRoutes extends AbstractRoute {
       try {
         // No ACL check on getting admin topic metadata
         AdminSparkServer.validateParams(request, GET_ADMIN_TOPIC_METADATA.getParams(), admin);
-        String clusterName = request.queryParams(CLUSTER);
-        Optional<String> storeName = Optional.ofNullable(request.queryParams(NAME));
-
-        responseObject.setCluster(clusterName);
-        storeName.ifPresent(responseObject::setName);
-
-        Map<String, Long> metadata = admin.getAdminTopicMetadata(clusterName, storeName);
-
-        responseObject.setExecutionId(AdminTopicMetadataAccessor.getExecutionId(metadata));
-        if (!storeName.isPresent()) {
-          Pair<Long, Long> offsets = AdminTopicMetadataAccessor.getOffsets(metadata);
-          responseObject.setOffset(offsets.getFirst());
-          responseObject.setUpstreamOffset(offsets.getSecond());
-        }
+        AdminTopicMetadataRequest adminTopicMetadataRequest =
+            new AdminTopicMetadataRequest(request.queryParams(CLUSTER), request.queryParams(NAME));
+        requestHandler.getAdminTopicMetadata(adminTopicMetadataRequest, responseObject);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(new VeniceException(e), request, response);

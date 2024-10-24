@@ -3,9 +3,11 @@ package com.linkedin.venice.controller.server;
 import com.linkedin.venice.LastSucceedExecutionIdResponse;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.AdminCommandExecutionTracker;
+import com.linkedin.venice.controller.AdminTopicMetadataAccessor;
 import com.linkedin.venice.controller.ControllerRequestHandlerDependencies;
 import com.linkedin.venice.controllerapi.AclResponse;
 import com.linkedin.venice.controllerapi.AdminCommandExecution;
+import com.linkedin.venice.controllerapi.AdminTopicMetadataResponse;
 import com.linkedin.venice.controllerapi.ControllerEndpointParamValidator;
 import com.linkedin.venice.controllerapi.ControllerResponse;
 import com.linkedin.venice.controllerapi.D2ServiceDiscoveryResponse;
@@ -13,6 +15,7 @@ import com.linkedin.venice.controllerapi.LeaderControllerResponse;
 import com.linkedin.venice.controllerapi.MultiVersionStatusResponse;
 import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.controllerapi.request.AdminCommandExecutionStatusRequest;
+import com.linkedin.venice.controllerapi.request.AdminTopicMetadataRequest;
 import com.linkedin.venice.controllerapi.request.ClusterDiscoveryRequest;
 import com.linkedin.venice.controllerapi.request.ControllerRequest;
 import com.linkedin.venice.controllerapi.request.NewStoreRequest;
@@ -21,6 +24,7 @@ import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Instance;
 import com.linkedin.venice.utils.Pair;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -183,5 +187,26 @@ public class VeniceControllerRequestHandler {
     response.setCluster(clusterName);
     LOGGER.info("Listing bootstrapping versions for cluster: {}", clusterName);
     response.setVersionStatusMap(admin.findAllBootstrappingVersions(clusterName));
+  }
+
+  public void getAdminTopicMetadata(AdminTopicMetadataRequest request, AdminTopicMetadataResponse response) {
+    String clusterName = request.getClusterName();
+    String storeName = request.getStoreName();
+    response.setCluster(clusterName);
+    if (storeName != null) {
+      response.setName(storeName);
+    }
+    LOGGER.info(
+        "Getting admin topic metadata for cluster: {}{}",
+        clusterName,
+        storeName != null ? " and store: " + storeName : "");
+
+    Map<String, Long> metadata = admin.getAdminTopicMetadata(clusterName, Optional.ofNullable(storeName));
+    response.setExecutionId(AdminTopicMetadataAccessor.getExecutionId(metadata));
+    if (storeName == null) {
+      Pair<Long, Long> offsets = AdminTopicMetadataAccessor.getOffsets(metadata);
+      response.setOffset(offsets.getFirst());
+      response.setUpstreamOffset(offsets.getSecond());
+    }
   }
 }
