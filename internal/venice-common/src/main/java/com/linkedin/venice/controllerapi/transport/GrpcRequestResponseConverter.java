@@ -77,6 +77,8 @@ public class GrpcRequestResponseConverter {
 
   public static NewStoreResponse fromGrpcResponse(CreateStoreGrpcResponse grpcResponse) {
     NewStoreResponse response = new NewStoreResponse();
+    response.setCluster(grpcResponse.getClusterStoreInfo().getClusterName());
+    response.setName(grpcResponse.getClusterStoreInfo().getStoreName());
     response.setOwner(grpcResponse.getOwner());
     return response;
   }
