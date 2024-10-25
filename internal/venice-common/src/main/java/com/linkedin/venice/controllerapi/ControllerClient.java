@@ -18,11 +18,14 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.FABRIC;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.FABRIC_A;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.FABRIC_B;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.HEARTBEAT_TIMESTAMP;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.INCLUDE_SYSTEM_STORES;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.INCREMENTAL_PUSH_VERSION;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.IS_SYSTEM_STORE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.IS_WRITE_COMPUTE_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.KAFKA_TOPIC_LOG_COMPACTION_ENABLED;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.KAFKA_TOPIC_MIN_IN_SYNC_REPLICA;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.KAFKA_TOPIC_RETENTION_IN_MS;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.KEY_SCHEMA;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.LOCKED_NODE_ID_LIST_SEPARATOR;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.LOCKED_STORAGE_NODE_IDS;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NAME;
@@ -56,6 +59,8 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.SOURCE_FA
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.SOURCE_GRID_FABRIC;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STATUS;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORAGE_NODE_ID;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_CONFIG_NAME_FILTER;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_CONFIG_VALUE_FILTER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_SIZE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_TYPE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.TARGETED_REGIONS;
@@ -69,16 +74,7 @@ import static com.linkedin.venice.meta.Version.PushType;
 
 import com.linkedin.venice.HttpConstants;
 import com.linkedin.venice.LastSucceedExecutionIdResponse;
-import com.linkedin.venice.controllerapi.request.DiscoverLeaderControllerRequest;
-import com.linkedin.venice.controllerapi.request.EmptyPushRequest;
-import com.linkedin.venice.controllerapi.request.GetStoreRequest;
-import com.linkedin.venice.controllerapi.request.ListStoresRequest;
-import com.linkedin.venice.controllerapi.request.NewStoreRequest;
 import com.linkedin.venice.controllerapi.routes.AdminCommandExecutionResponse;
-import com.linkedin.venice.controllerapi.transport.ControllerGrpcTransport;
-import com.linkedin.venice.controllerapi.transport.ControllerHttpTransport;
-import com.linkedin.venice.controllerapi.transport.ControllerTransportAdapter;
-import com.linkedin.venice.controllerapi.transport.ControllerTransportAdapterConfigs;
 import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceHttpException;
@@ -116,95 +112,34 @@ import org.apache.logging.log4j.Logger;
 public class ControllerClient implements Closeable {
   private static final Logger LOGGER = LogManager.getLogger(ControllerClient.class);
 
-  public static final int DEFAULT_MAX_ATTEMPTS = 10;
-  public static final int QUERY_JOB_STATUS_TIMEOUT = 60 * Time.MS_PER_SECOND;
-  public static final int DEFAULT_REQUEST_TIMEOUT_MS = 600 * Time.MS_PER_SECOND;
+  private static final int DEFAULT_MAX_ATTEMPTS = 10;
+  private static final int QUERY_JOB_STATUS_TIMEOUT = 60 * Time.MS_PER_SECOND;
+  private static final int DEFAULT_REQUEST_TIMEOUT_MS = 600 * Time.MS_PER_SECOND;
   private final Optional<SSLFactory> sslFactory;
   private final String clusterName;
   private final VeniceJsonSerializer<Version> versionVeniceJsonSerializer = new VeniceJsonSerializer<>(Version.class);
   private String leaderControllerUrl;
   private final List<String> controllerDiscoveryUrls;
-  private final ControllerTransportAdapter transportAdapter;
 
   public ControllerClient(String clusterName, String discoveryUrls) {
-    this(clusterName, discoveryUrls, Optional.empty(), null);
-  }
-
-  public ControllerClient(String clusterName, String discoveryUrls, Optional<SSLFactory> sslFactory) {
-    this(clusterName, discoveryUrls, sslFactory, null);
-  }
-
-  public ControllerClient(String clusterName, String discoveryUrls, String grpcUrl) {
-    this(clusterName, discoveryUrls, Optional.empty(), grpcUrl);
-  }
-
-  public ControllerClient(String clusterName, String discoveryUrls, Optional<SSLFactory> sslFactory, String grpcUrl) {
-    this(
-        clusterName,
-        discoveryUrls,
-        sslFactory,
-        createTransportAdapter(clusterName, discoveryUrls, sslFactory, grpcUrl),
-        grpcUrl);
+    this(clusterName, discoveryUrls, Optional.empty());
   }
 
   /**
-   * Private constructor that sets up the transport adapter based on the provided settings.
-   * @param clusterName the name of the Venice cluster.
-   * @param discoveryUrls comma-delimited URLs for finding the leader controller.
-   * @param sslFactory optional SSLFactory.
-   * @param transportAdapter the transport adapter (HTTP or gRPC).
+   * @param discoveryUrls comma-delimited urls to find leader controller.
    */
-  private ControllerClient(
-      String clusterName,
-      String discoveryUrls,
-      Optional<SSLFactory> sslFactory,
-      ControllerTransportAdapter transportAdapter,
-      String grpcUrl) {
+  public ControllerClient(String clusterName, String discoveryUrls, Optional<SSLFactory> sslFactory) {
     if (StringUtils.isEmpty(discoveryUrls)) {
       throw new VeniceException("Controller discovery url list is empty: " + discoveryUrls);
     }
 
     this.sslFactory = sslFactory;
     this.clusterName = clusterName;
-    this.controllerDiscoveryUrls = getControllerDiscoveryUrls(discoveryUrls);
+    this.controllerDiscoveryUrls =
+        Arrays.stream(discoveryUrls.split(",")).map(String::trim).collect(Collectors.toList());
     if (this.controllerDiscoveryUrls.isEmpty()) {
       throw new VeniceException("Controller discovery url list is empty");
     }
-
-    this.transportAdapter = transportAdapter;
-  }
-
-  /**
-   * Factory method to create the appropriate transport adapter.
-   * @return a new instance of ControllerTransportAdapter.
-   */
-  private static ControllerTransportAdapter createTransportAdapter(
-      String clusterName,
-      String discoveryUrls,
-      Optional<SSLFactory> sslFactory,
-      String grpcUrl) {
-    ControllerTransportAdapterConfigs configs =
-        new ControllerTransportAdapterConfigs.Builder().setClusterName(clusterName)
-            .setControllerDiscoveryUrls(getControllerDiscoveryUrls(discoveryUrls))
-            .setSslFactory(sslFactory.orElse(null))
-            .setControllerGrpcUrl(grpcUrl)
-            .build();
-
-    if (grpcUrl != null) {
-      System.out.println(
-          "Using gRPC transport for controller client with direct urls: " + discoveryUrls + " and grpcUrl: " + grpcUrl);
-      LOGGER.info(
-          "Using gRPC transport for controller client with direct urls: {} and grpcUrl: {}",
-          discoveryUrls,
-          grpcUrl);
-      return new ControllerGrpcTransport(configs, new ControllerHttpTransport(configs));
-    } else {
-      return new ControllerHttpTransport(configs);
-    }
-  }
-
-  private static List<String> getControllerDiscoveryUrls(String discoveryUrls) {
-    return Arrays.stream(discoveryUrls.split(",")).map(String::trim).collect(Collectors.toList());
   }
 
   /**
@@ -236,7 +171,7 @@ public class ControllerClient implements Closeable {
       String clusterName,
       String discoveryUrls,
       Optional<SSLFactory> sslFactory) {
-    return ControllerClientFactory.getControllerClient(clusterName, discoveryUrls, sslFactory, null);
+    return ControllerClientFactory.getControllerClient(clusterName, discoveryUrls, sslFactory);
   }
 
   @Override
@@ -293,17 +228,9 @@ public class ControllerClient implements Closeable {
     throw new VeniceException(message, lastException);
   }
 
-  public String getLeaderControllerGrpcUrl() {
-    return transportAdapter.discoverLeaderController(new DiscoverLeaderControllerRequest(clusterName)).getGrpcUrl();
-  }
-
-  public String getLeaderControllerSecureGrpcUrl() {
-    return transportAdapter.discoverLeaderController(new DiscoverLeaderControllerRequest(clusterName))
-        .getSecureGrpcUrl();
-  }
-
   public StoreResponse getStore(String storeName) {
-    return transportAdapter.getStore(new GetStoreRequest(clusterName, storeName));
+    QueryParams params = newParams().add(NAME, storeName);
+    return request(ControllerRoute.STORE, params, StoreResponse.class);
   }
 
   public StoreResponse getStore(String storeName, int timeoutMs) {
@@ -609,11 +536,15 @@ public class ControllerClient implements Closeable {
 
   public VersionCreationResponse emptyPush(String storeName, String pushJobId, long storeSize) {
     // TODO: Store size is not used anymore. Remove it after the next round of controller deployment.
-    return transportAdapter.emptyPush(new EmptyPushRequest(clusterName, storeName, pushJobId));
+    QueryParams params =
+        newParams().add(NAME, storeName).add(PUSH_JOB_ID, pushJobId).add(STORE_SIZE, Long.toString(storeSize));
+    return request(ControllerRoute.EMPTY_PUSH, params, VersionCreationResponse.class);
   }
 
   public NewStoreResponse createNewStore(String storeName, String owner, String keySchema, String valueSchema) {
-    return this.createNewStore(storeName, owner, keySchema, valueSchema, null, false);
+    QueryParams params =
+        newParams().add(NAME, storeName).add(OWNER, owner).add(KEY_SCHEMA, keySchema).add(VALUE_SCHEMA, valueSchema);
+    return request(ControllerRoute.NEW_STORE, params, NewStoreResponse.class);
   }
 
   public NewStoreResponse createNewStore(
@@ -622,23 +553,21 @@ public class ControllerClient implements Closeable {
       String keySchema,
       String valueSchema,
       String accessPermissions) {
-    return this.createNewStore(storeName, owner, keySchema, valueSchema, accessPermissions, false);
+    QueryParams params = newParams().add(NAME, storeName)
+        .add(OWNER, owner)
+        .add(KEY_SCHEMA, keySchema)
+        .add(VALUE_SCHEMA, valueSchema)
+        .add(ACCESS_PERMISSION, accessPermissions);
+    return request(ControllerRoute.NEW_STORE, params, NewStoreResponse.class);
   }
 
   public NewStoreResponse createNewSystemStore(String storeName, String owner, String keySchema, String valueSchema) {
-    return this.createNewStore(storeName, owner, keySchema, valueSchema, null, true);
-  }
-
-  public NewStoreResponse createNewStore(
-      String storeName,
-      String owner,
-      String keySchema,
-      String valueSchema,
-      String accessPermissions,
-      boolean isSystemStore) {
-    NewStoreRequest newStoreRequest =
-        new NewStoreRequest(clusterName, storeName, owner, keySchema, valueSchema, accessPermissions, isSystemStore);
-    return transportAdapter.createNewStore(newStoreRequest);
+    QueryParams params = newParams().add(NAME, storeName)
+        .add(OWNER, owner)
+        .add(KEY_SCHEMA, keySchema)
+        .add(VALUE_SCHEMA, valueSchema)
+        .add(IS_SYSTEM_STORE, true);
+    return request(ControllerRoute.NEW_STORE, params, NewStoreResponse.class);
   }
 
   public StoreMigrationResponse isStoreMigrationAllowed() {
@@ -909,12 +838,18 @@ public class ControllerClient implements Closeable {
       boolean includeSystemStores,
       Optional<String> configNameFilter,
       Optional<String> configValueFilter) {
-    return transportAdapter.listStores(
-        new ListStoresRequest(
-            clusterName,
-            includeSystemStores,
-            configNameFilter.orElse(null),
-            configValueFilter.orElse(null)));
+    QueryParams queryParams = newParams().add(INCLUDE_SYSTEM_STORES, includeSystemStores);
+    if (configNameFilter.isPresent() ^ configValueFilter.isPresent()) {
+      throw new VeniceException(
+          "Missing argument: "
+              + (configNameFilter.isPresent() ? "store-config-value-filter" : "store-config-name-filter"));
+    }
+    if (includeSystemStores && configNameFilter.isPresent()) {
+      throw new VeniceException("Doesn't support config filtering on system store yet.");
+    }
+    configNameFilter.ifPresent(c -> queryParams.add(STORE_CONFIG_NAME_FILTER, c));
+    configValueFilter.ifPresent(c -> queryParams.add(STORE_CONFIG_VALUE_FILTER, c));
+    return request(ControllerRoute.LIST_STORES, queryParams, MultiStoreResponse.class);
   }
 
   public MultiStoreStatusResponse listStoresStatuses() {
