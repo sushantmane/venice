@@ -99,6 +99,21 @@ jobs:
           name: ${{ github.job }}-jdk${{ matrix.jdk }}
           path: ${{ github.job }}-jdk${{ matrix.jdk }}-logs.tar.gz
           retention-days: 30
+      - name: Search all test XML files
+        id: process_test_xml
+        run: |
+          FILES=$(find . -name "TEST-*.xml" | tr '\n' ',' | sed 's/,$//')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          for file in $(echo $FILES | tr ',' ' '); do
+            # Process each file
+            echo "Processing $file"
+          done
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ${{ steps.process_test_xml.outputs.files }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   StaticAnalysisAndUnitTestsCompletionCheck:
     strategy:
