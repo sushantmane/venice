@@ -108,4 +108,8 @@ public class VeniceGrpcServer {
       server.shutdown();
     }
   }
+
+  public Server getServer() {
+    return server;
+  }
 }
