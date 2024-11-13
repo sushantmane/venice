@@ -331,39 +331,87 @@ public class CreateVersionTest {
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
     doReturn(Optional.empty()).when(admin).getAggregateRealTimeTopicSource(CLUSTER_NAME);
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, null, false, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        null,
+        false,
+        true);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "default.src.region.com");
 
     // AA-all-region is disabled & NR is enabled * AGG RT address is set
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
     doReturn(Optional.of("agg.rt.region.com")).when(admin).getAggregateRealTimeTopicSource(CLUSTER_NAME);
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, null, false, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        null,
+        false,
+        true);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "agg.rt.region.com");
 
     // AA-all-region and NR are disabled
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, null, false, false);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        null,
+        false,
+        false);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "default.src.region.com");
 
     // AA-all-region is enabled and NR is disabled
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, null, true, false);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        null,
+        true,
+        false);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "default.src.region.com");
 
     // AA-all-region and NR are enabled AND emergencySourceRegion and pushJobSourceGridFabric are null
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, null, true, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        null,
+        true,
+        true);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "default.src.region.com");
 
     // AA-all-region and NR are enabled AND emergencySourceRegion is not set but pushJobSourceGridFabric is provided
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
     doReturn("vpj.src.region.com").when(admin).getNativeReplicationKafkaBootstrapServerAddress("dc-vpj");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, null, "dc-vpj", true, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        null,
+        "dc-vpj",
+        true,
+        true);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "vpj.src.region.com");
 
     // AA-all-region and NR are enabled AND emergencySourceRegion is set and pushJobSourceGridFabric is provided
@@ -374,6 +422,7 @@ public class CreateVersionTest {
         admin,
         creationResponse,
         CLUSTER_NAME,
+        STORE_NAME,
         "dc-e",
         "dc-vpj",
         true,
@@ -384,7 +433,15 @@ public class CreateVersionTest {
     creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("emergency.src.region.com");
     doReturn("emergency.src.region.com").when(admin).getNativeReplicationKafkaBootstrapServerAddress("dc-e");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, "dc-e", null, true, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        "dc-e",
+        null,
+        true,
+        true);
     assertEquals(creationResponse.getKafkaBootstrapServers(), "emergency.src.region.com");
   }
 
@@ -393,7 +450,15 @@ public class CreateVersionTest {
     VersionCreationResponse creationResponse = new VersionCreationResponse();
     creationResponse.setKafkaBootstrapServers("default.src.region.com");
     doReturn(null).when(admin).getNativeReplicationKafkaBootstrapServerAddress("dc1");
-    overrideSourceRegionAddressForIncrementalPushJob(admin, creationResponse, CLUSTER_NAME, "dc1", null, true, true);
+    overrideSourceRegionAddressForIncrementalPushJob(
+        admin,
+        creationResponse,
+        CLUSTER_NAME,
+        STORE_NAME,
+        "dc1",
+        null,
+        true,
+        true);
   }
 
   @Test

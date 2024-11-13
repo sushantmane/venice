@@ -17,9 +17,7 @@ import static com.linkedin.venice.vpj.VenicePushJobConstants.DEFAULT_VALUE_FIELD
 import static com.linkedin.venice.vpj.VenicePushJobConstants.INCREMENTAL_PUSH;
 import static com.linkedin.venice.vpj.VenicePushJobConstants.SEND_CONTROL_MESSAGES_DIRECTLY;
 import static com.linkedin.venice.vpj.VenicePushJobConstants.SOURCE_GRID_FABRIC;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
+import static org.testng.Assert.*;
 
 import com.linkedin.venice.controllerapi.ControllerClient;
 import com.linkedin.venice.controllerapi.StoreResponse;
@@ -36,8 +34,11 @@ import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.api.PubSubTopicPartition;
 import com.linkedin.venice.pubsub.manager.TopicManager;
+import com.linkedin.venice.samza.VeniceSystemFactory;
+import com.linkedin.venice.samza.VeniceSystemProducer;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.IntegrationTestPushUtils;
 import com.linkedin.venice.utils.TestUtils;
@@ -47,6 +48,7 @@ import com.linkedin.venice.utils.Utils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +57,7 @@ import java.util.function.Function;
 import org.apache.avro.Schema;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.samza.config.MapConfig;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -121,6 +124,152 @@ public class TestActiveActiveReplicationForIncPush {
   public void cleanUp() {
     multiRegionMultiClusterWrapper.close();
   }
+
+  @Test(timeOut = TEST_TIMEOUT)
+  public void testHybridStorePartitionCount() throws Exception {
+    File inputDirBatch = getTempDataDirectory();
+    String parentControllerUrls = multiRegionMultiClusterWrapper.getControllerConnectString();
+    String inputDirPathBatch = "file:" + inputDirBatch.getAbsolutePath();
+    Function<Integer, String> connectionString = i -> childDatacenters.get(i).getControllerConnectString();
+    try (ControllerClient parentControllerClient = new ControllerClient(clusterName, parentControllerUrls);
+        ControllerClient dc0ControllerClient = new ControllerClient(clusterName, connectionString.apply(0));
+        ControllerClient dc1ControllerClient = new ControllerClient(clusterName, connectionString.apply(1));
+        ControllerClient dc2ControllerClient = new ControllerClient(clusterName, connectionString.apply(2))) {
+      String storeName = Utils.getUniqueString("store");
+      Properties propsBatch =
+          IntegrationTestPushUtils.defaultVPJProps(multiRegionMultiClusterWrapper, inputDirPathBatch, storeName);
+      propsBatch.put(SEND_CONTROL_MESSAGES_DIRECTLY, true);
+      Schema recordSchema = TestWriteUtils.writeSimpleAvroFileWithStringToStringSchema(inputDirBatch);
+      String keySchemaStr = recordSchema.getField(DEFAULT_KEY_FIELD_PROP).schema().toString();
+      String valueSchemaStr = recordSchema.getField(DEFAULT_VALUE_FIELD_PROP).schema().toString();
+
+      TestUtils.assertCommand(parentControllerClient.createNewStore(storeName, "owner", keySchemaStr, valueSchemaStr));
+      UpdateStoreQueryParams updateStoreParams1 =
+          new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA).setPartitionCount(1);
+      TestUtils.assertCommand(parentControllerClient.updateStore(storeName, updateStoreParams1));
+
+      // Run a batch push first
+      try (VenicePushJob job = new VenicePushJob("Test push job batch with NR + A/A all fabrics", propsBatch)) {
+        job.run();
+      }
+
+      // wait until version is created
+      TestUtils.waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> {
+        StoreResponse storeResponse = assertCommand(parentControllerClient.getStore(storeName));
+        StoreInfo storeInfo = storeResponse.getStore();
+        assertNull(storeInfo.getHybridStoreConfig(), "Hybrid store config is not null.");
+        assertNotNull(storeInfo, "Store info is null.");
+        assertNotNull(storeInfo.getVersion(1), "Version 1 is not present.");
+        Optional<Version> version = storeInfo.getVersion(1);
+        assertTrue(version.isPresent(), "Version 1 is not present.");
+        assertNull(version.get().getHybridStoreConfig(), "Version level hybrid store config is not null.");
+      });
+
+      verifyHybridAndIncPushConfig(
+          storeName,
+          false,
+          false,
+          parentControllerClient,
+          dc0ControllerClient,
+          dc1ControllerClient,
+          dc2ControllerClient);
+
+      // Store Setup
+      UpdateStoreQueryParams updateStoreParams;
+
+      // Store Setup
+      updateStoreParams =
+          new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA).setPartitionCount(3);
+      TestUtils.assertCommand(parentControllerClient.updateStore(storeName, updateStoreParams));
+
+      updateStoreParams = new UpdateStoreQueryParams().setStorageQuotaInByte(Store.UNLIMITED_STORAGE_QUOTA)
+          .setHybridOffsetLagThreshold(TEST_TIMEOUT / 2)
+          .setHybridRewindSeconds(2L);
+      TestUtils.assertCommand(parentControllerClient.updateStore(storeName, updateStoreParams));
+      //
+      // // Run a batch push first
+      // try (VenicePushJob job = new VenicePushJob("Test push job batch with NR + A/A all fabrics", propsBatch)) {
+      // job.run();
+      // }
+
+      VeniceSystemFactory factory = new VeniceSystemFactory();
+      Map<String, String> samzaConfig = IntegrationTestPushUtils.getSamzaProducerConfig(childDatacenters, 1, storeName);
+      VeniceSystemProducer veniceProducer = factory.getClosableProducer("venice", new MapConfig(samzaConfig), null);
+      veniceProducer.start();
+
+      PubSubTopicRepository pubSubTopicRepository =
+          childDatacenters.get(1).getClusters().get(clusterName).getPubSubTopicRepository();
+      PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
+
+      // wait for 120 secs and check producer getTopicName
+      TestUtils.waitForNonDeterministicAssertion(2, TimeUnit.MINUTES, () -> {
+        Assert.assertEquals(veniceProducer.getTopicName(), realTimeTopic.getName());
+      });
+
+      try (TopicManager topicManager =
+          IntegrationTestPushUtils
+              .getTopicManagerRepo(
+                  PUBSUB_OPERATION_TIMEOUT_MS_DEFAULT_VALUE,
+                  100,
+                  0l,
+                  childDatacenters.get(1).getClusters().get(clusterName).getPubSubBrokerWrapper(),
+                  pubSubTopicRepository)
+              .getLocalTopicManager()) {
+        int partitionCount = topicManager.getPartitionCount(realTimeTopic);
+        assertEquals(partitionCount, 3, "Partition count is not 3.");
+      }
+
+      // Print all the kafka cluster URLs
+      LOGGER.info("KafkaURL {}:{}", dcNames[0], childDatacenters.get(0).getKafkaBrokerWrapper().getAddress());
+      LOGGER.info("KafkaURL {}:{}", dcNames[1], childDatacenters.get(1).getKafkaBrokerWrapper().getAddress());
+      LOGGER.info("KafkaURL {}:{}", dcNames[2], childDatacenters.get(2).getKafkaBrokerWrapper().getAddress());
+      LOGGER.info("KafkaURL {}:{}", parentRegionName, veniceParentDefaultKafka.getAddress());
+
+      // verify store configs
+      TestUtils.verifyDCConfigNativeAndActiveRepl(
+          storeName,
+          true,
+          true,
+          parentControllerClient,
+          dc0ControllerClient,
+          dc1ControllerClient,
+          dc2ControllerClient);
+
+      verifyHybridAndIncPushConfig(
+          storeName,
+          true,
+          true,
+          parentControllerClient,
+          dc0ControllerClient,
+          dc1ControllerClient,
+          dc2ControllerClient);
+
+      try (VenicePushJob job = new VenicePushJob("Test push job batch with NR + A/A all fabrics", propsBatch)) {
+        job.run();
+      }
+
+      // wait until version is created
+      TestUtils.waitForNonDeterministicAssertion(1, TimeUnit.MINUTES, () -> {
+        StoreResponse storeResponse = assertCommand(parentControllerClient.getStore(storeName));
+        StoreInfo storeInfo = storeResponse.getStore();
+        assertNotNull(storeInfo, "Store info is null.");
+        assertNotNull(storeInfo.getVersion(2), "Version 1 is not present.");
+      });
+    }
+  }
+
+  // private void startVeniceSystemProducers() {
+  // Map<VeniceMultiClusterWrapper, VeniceSystemProducer> systemProducerMap = new
+  // HashMap<>(NUMBER_OF_CHILD_DATACENTERS);
+  // VeniceSystemFactory factory = new VeniceSystemFactory();
+  // for (int dcId = 0; dcId < NUMBER_OF_CHILD_DATACENTERS; dcId++) {
+  // Map<String, String> samzaConfig =
+  // IntegrationTestPushUtils.getSamzaProducerConfig(childDatacenters, dcId, storeName);
+  // VeniceSystemProducer veniceProducer = factory.getClosableProducer("venice", new MapConfig(samzaConfig), null);
+  // veniceProducer.start();
+  // systemProducerMap.put(childDatacenters.get(dcId), veniceProducer);
+  // }
+  // }
 
   /**
    * The purpose of this test is to verify that incremental push with RT policy succeeds when A/A is enabled in all
