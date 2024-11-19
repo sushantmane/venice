@@ -47,6 +47,8 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.lazy.Lazy;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -224,18 +226,11 @@ public class CreateVersion extends AbstractRoute {
     return version.getCompressionStrategy();
   }
 
-  static String determineResponseTopic(
-      Admin admin,
-      String clusterName,
-      String storeName,
-      Version version,
-      PushType pushType) {
+  static String determineResponseTopic(String storeName, Version version, PushType pushType) {
     String responseTopic;
     if (pushType == PushType.INCREMENTAL) {
       // If incremental push with a dedicated real-time topic is enabled then use the separate real-time topic
       if (version.isSeparateRealTimeTopicEnabled()) {
-        // TODO: remove this from here
-        admin.getSeparateRealTimeTopic(clusterName, storeName);
         responseTopic = Version.composeSeparateRealTimeTopic(storeName);
       } else {
         responseTopic = Version.composeRealTimeTopic(storeName);
@@ -270,15 +265,6 @@ public class CreateVersion extends AbstractRoute {
     int partitionCount = response.getPartitions();
     int replicationFactor = response.getReplicas();
 
-    /**
-     * Before trying to get the version, create the RT topic in parent kafka since it's needed anyway in following cases.
-     * Otherwise topic existence check fails internally.
-     */
-    // TODO: don't create topic if there is no hybrid version
-    if (pushType.isIncremental() && request.isWriteComputeEnabled()) {
-      admin.getRealTimeTopic(clusterName, storeName);
-    }
-
     final Version version = admin.incrementVersionIdempotent(
         clusterName,
         storeName,
@@ -306,7 +292,7 @@ public class CreateVersion extends AbstractRoute {
     // Set the version number
     response.setVersion(version.getNumber());
     // Set the response topic
-    String responseTopic = determineResponseTopic(admin, clusterName, storeName, version, pushType);
+    String responseTopic = determineResponseTopic(storeName, version, pushType);
     response.setKafkaTopic(responseTopic);
     // Set the compression strategy
     response.setCompressionStrategy(getCompressionStrategy(version, responseTopic));
@@ -326,7 +312,7 @@ public class CreateVersion extends AbstractRoute {
   private void handleStreamPushType(
       Admin admin,
       Store store,
-      RequestTopicForPushRequest requestDetails,
+      RequestTopicForPushRequest request,
       VersionCreationResponse response,
       Lazy<Boolean> isActiveActiveReplicationEnabledInAllRegionAllVersions) {
     DataReplicationPolicy dataReplicationPolicy = store.getHybridStoreConfig().getDataReplicationPolicy();
@@ -367,31 +353,39 @@ public class CreateVersion extends AbstractRoute {
               store.getName());
         }
       }
+    }
 
-      // Check if the store has any hybrid versions; If there are no hybrid versions, reject the request
-      List<Version> versions = store.getVersions();
-      boolean hybridVersionFound = false;
-      for (Version v: versions) {
-        HybridStoreConfig hybridStoreConfig = v.getHybridStoreConfig();
-        if (hybridStoreConfig != null) {
-          hybridVersionFound = true;
-          break;
-        }
-      }
+    checkStoreReadinessForStreamingWrites(admin, store, request.getClusterName());
 
-      if (!hybridVersionFound) {
-        LOGGER.error(
-            "Request to get topic for STREAM push for store: {} is rejected as no hybrid version found",
-            store.getName());
-        throw new VeniceException(
-            "No hybrid version found for store: " + store.getName()
-                + ". Create a hybrid version before starting a stream push.");
+    response.setKafkaTopic(Version.composeRealTimeTopic(store.getName()));
+  }
+
+  void checkStoreReadinessForStreamingWrites(Admin admin, Store store, String clusterName) {
+    // Check if the store has any hybrid versions; If there are no hybrid versions, reject the request
+    List<Version> versions = new ArrayList<>(store.getVersions());
+    versions.sort(Comparator.comparingInt(Version::getNumber).reversed());
+    boolean hybridVersionFound = false;
+    Version versionToUseToGetPartitionCount = null;
+
+    for (Version version: versions) {
+      HybridStoreConfig hybridStoreConfig = version.getHybridStoreConfig();
+      if (hybridStoreConfig != null) {
+        hybridVersionFound = true;
+        versionToUseToGetPartitionCount = version;
+        break;
       }
     }
 
-    // TODO: fix this
-    String realTimeTopic = admin.getRealTimeTopic(requestDetails.getClusterName(), store.getName());
-    response.setKafkaTopic(realTimeTopic);
+    if (!hybridVersionFound) {
+      LOGGER.error(
+          "Request to get topic for STREAM push for store: {} is rejected as no hybrid version found",
+          store.getName());
+      throw new VeniceException(
+          "No hybrid version found for store: " + store.getName()
+              + ". Create a hybrid version before starting a stream push.");
+    }
+    int partitionCount = versionToUseToGetPartitionCount.getPartitionCount();
+    admin.getRealTimeTopic(clusterName, store.getName(), partitionCount);
   }
 
   /**

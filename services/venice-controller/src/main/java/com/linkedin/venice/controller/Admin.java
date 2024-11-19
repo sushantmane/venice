@@ -288,9 +288,9 @@ public interface Admin extends AutoCloseable, Closeable {
       String targetedRegions,
       int repushSourceVersion);
 
-  String getRealTimeTopic(String clusterName, String storeName);
+  String getRealTimeTopic(String clusterName, String storeName, Integer partitionCount);
 
-  String getSeparateRealTimeTopic(String clusterName, String storeName);
+  String getSeparateRealTimeTopic(String clusterName, String storeName, Integer partitionCount);
 
   /**
    * Right now, it will return the latest version recorded in parent controller. There are a couple of edge cases.

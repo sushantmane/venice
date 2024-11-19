@@ -266,11 +266,11 @@ class AbstractTestVeniceHelixAdmin {
       Assert.assertNotNull(store);
       Assert.assertEquals(store.getVersions().size(), 1);
     });
-    TestUtils.waitForNonDeterministicAssertion(
-        3,
-        TimeUnit.SECONDS,
-        () -> Assert.assertEquals(
-            veniceAdmin.getRealTimeTopic(clusterName, participantStoreName),
-            Version.composeRealTimeTopic(participantStoreName)));
+    TestUtils.waitForNonDeterministicAssertion(3, TimeUnit.SECONDS, () -> {
+      Store store = veniceAdmin.getStore(clusterName, participantStoreName);
+      Assert.assertEquals(
+          veniceAdmin.getRealTimeTopic(clusterName, participantStoreName, store.getPartitionCount()),
+          Version.composeRealTimeTopic(participantStoreName));
+    });
   }
 }
