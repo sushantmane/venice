@@ -3,36 +3,29 @@ package com.linkedin.venice.controller.server;
 import static com.linkedin.venice.HttpConstants.HTTP_GET;
 import static com.linkedin.venice.VeniceConstants.CONTROLLER_SSL_CERTIFICATE_ATTRIBUTE_NAME;
 import static com.linkedin.venice.controller.server.CreateVersion.overrideSourceRegionAddressForIncrementalPushJob;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.CLUSTER;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.HOSTNAME;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.NAME;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_ID;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_TYPE;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.REPUSH_SOURCE_VERSION;
-import static com.linkedin.venice.controllerapi.ControllerApiConstants.STORE_SIZE;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.*;
 import static com.linkedin.venice.controllerapi.ControllerRoute.REQUEST_TOPIC;
 import static com.linkedin.venice.meta.BufferReplayPolicy.REWIND_FROM_EOP;
 import static com.linkedin.venice.meta.DataReplicationPolicy.ACTIVE_ACTIVE;
 import static com.linkedin.venice.meta.DataReplicationPolicy.AGGREGATE;
 import static com.linkedin.venice.meta.DataReplicationPolicy.NONE;
 import static com.linkedin.venice.meta.DataReplicationPolicy.NON_AGGREGATE;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.expectThrows;
+import static org.testng.Assert.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkedin.venice.acl.DynamicAccessController;
 import com.linkedin.venice.controller.Admin;
+import com.linkedin.venice.controllerapi.RequestTopicForPushRequest;
 import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.exceptions.VeniceHttpException;
 import com.linkedin.venice.meta.HybridStoreConfigImpl;
 import com.linkedin.venice.meta.OfflinePushStrategy;
 import com.linkedin.venice.meta.PersistenceType;
@@ -46,11 +39,16 @@ import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.http.HttpStatus;
+import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -248,7 +246,7 @@ public class CreateVersionTest {
         OBJECT_MAPPER.readValue(result.toString(), VersionCreationResponse.class);
     assertTrue(versionCreateResponse.isError());
     assertTrue(versionCreateResponse.getError().contains("which does not have hybrid mode enabled"));
-    Assert.assertNull(versionCreateResponse.getKafkaTopic());
+    assertNull(versionCreateResponse.getKafkaTopic());
   }
 
   @Test
@@ -526,5 +524,86 @@ public class CreateVersionTest {
     Exception e2 =
         expectThrows(VeniceException.class, () -> createVersion.validatePushType(PushType.INCREMENTAL, store2));
     assertTrue(e2.getMessage().contains("which does not have incremental push enabled"));
+  }
+
+  @Test
+  public void testExtractOptionalParamsFromRequestTopicForPushingRequest() {
+    // Test case 1: Default values
+    Request mockRequest = mock(Request.class);
+    doCallRealMethod().when(mockRequest).queryParamOrDefault(anyString(), anyString());
+    doReturn(null).when(mockRequest).queryParams(any());
+
+    RequestTopicForPushRequest requestDetails =
+        new RequestTopicForPushRequest(CLUSTER_NAME, STORE_NAME, PushType.BATCH, JOB_ID);
+
+    CreateVersion.extractOptionalParamsFromRequestTopicRequest(mockRequest, requestDetails, false);
+
+    assertNotNull(requestDetails.getPartitioners(), "Default partitioners should not be null");
+    assertTrue(requestDetails.getPartitioners().isEmpty(), "Default partitioners should be empty");
+    assertFalse(requestDetails.isSendStartOfPush(), "Default sendStartOfPush should be false");
+    assertFalse(requestDetails.isSorted(), "Default sorted should be false");
+    assertFalse(requestDetails.isWriteComputeEnabled(), "Default writeComputeEnabled should be false");
+    assertEquals(
+        requestDetails.getRewindTimeInSecondsOverride(),
+        -1L,
+        "Default rewindTimeInSecondsOverride should be -1");
+    assertFalse(requestDetails.isDeferVersionSwap(), "Default deferVersionSwap should be false");
+    assertNull(requestDetails.getTargetedRegions(), "Default targetedRegions should be null");
+    assertEquals(requestDetails.getRepushSourceVersion(), -1, "Default repushSourceVersion should be -1");
+    assertNull(requestDetails.getSourceGridFabric(), "Default sourceGridFabric should be null");
+    assertNull(requestDetails.getCompressionDictionary(), "Default compressionDictionary should be null");
+    assertNull(requestDetails.getCertificateInRequest(), "Default certificateInRequest should be null");
+
+    // Test case 2: All optional parameters are set
+    mockRequest = Mockito.mock(Request.class);
+    doCallRealMethod().when(mockRequest).queryParamOrDefault(any(), any());
+    String customPartitioners = "f.q.c.n.P1,f.q.c.n.P2";
+    Set<String> expectedPartitioners = new HashSet<>(Arrays.asList("f.q.c.n.P1", "f.q.c.n.P2"));
+
+    when(mockRequest.queryParams(eq(PARTITIONERS))).thenReturn(customPartitioners);
+    when(mockRequest.queryParams(SEND_START_OF_PUSH)).thenReturn("true");
+    when(mockRequest.queryParams(PUSH_IN_SORTED_ORDER)).thenReturn("true");
+    when(mockRequest.queryParams(IS_WRITE_COMPUTE_ENABLED)).thenReturn("true");
+    when(mockRequest.queryParams(REWIND_TIME_IN_SECONDS_OVERRIDE)).thenReturn("120");
+    when(mockRequest.queryParams(DEFER_VERSION_SWAP)).thenReturn("true");
+    when(mockRequest.queryParams(TARGETED_REGIONS)).thenReturn("region-1");
+    when(mockRequest.queryParams(REPUSH_SOURCE_VERSION)).thenReturn("5");
+    when(mockRequest.queryParams(SOURCE_GRID_FABRIC)).thenReturn("grid-fabric");
+    when(mockRequest.queryParams(COMPRESSION_DICTIONARY)).thenReturn("XYZ");
+
+    requestDetails = new RequestTopicForPushRequest(CLUSTER_NAME, STORE_NAME, PushType.BATCH, JOB_ID);
+
+    CreateVersion.extractOptionalParamsFromRequestTopicRequest(mockRequest, requestDetails, false);
+
+    assertEquals(requestDetails.getPartitioners(), expectedPartitioners);
+    assertTrue(requestDetails.isSendStartOfPush());
+    assertTrue(requestDetails.isSorted());
+    assertTrue(requestDetails.isWriteComputeEnabled());
+    assertEquals(requestDetails.getRewindTimeInSecondsOverride(), 120L);
+    assertTrue(requestDetails.isDeferVersionSwap());
+    assertEquals(requestDetails.getTargetedRegions(), "region-1");
+    assertEquals(requestDetails.getRepushSourceVersion(), 5);
+    assertEquals(requestDetails.getSourceGridFabric(), "grid-fabric");
+    assertEquals(requestDetails.getCompressionDictionary(), "XYZ");
+
+    // Test case 3: check that the certificate is set in the request details when access control is enabled
+    HttpServletRequest mockHttpServletRequest = mock(HttpServletRequest.class);
+    X509Certificate[] mockCertificates = { mock(X509Certificate.class) };
+    when(mockHttpServletRequest.getAttribute(CONTROLLER_SSL_CERTIFICATE_ATTRIBUTE_NAME)).thenReturn(mockCertificates);
+    when(mockRequest.raw()).thenReturn(mockHttpServletRequest);
+    CreateVersion.extractOptionalParamsFromRequestTopicRequest(mockRequest, requestDetails, true);
+    assertEquals(requestDetails.getCertificateInRequest(), mockCertificates[0]);
+
+    // Test case 4: Invalid values for optional parameters
+    when(mockRequest.queryParams(SEND_START_OF_PUSH)).thenReturn("notBoolean");
+    when(mockRequest.queryParams(REWIND_TIME_IN_SECONDS_OVERRIDE)).thenReturn("invalidLong");
+
+    requestDetails = new RequestTopicForPushRequest(CLUSTER_NAME, STORE_NAME, PushType.BATCH, JOB_ID);
+    Request finalMockRequest = mockRequest;
+    RequestTopicForPushRequest finalRequestDetails = requestDetails;
+    VeniceHttpException e = expectThrows(
+        VeniceHttpException.class,
+        () -> CreateVersion.extractOptionalParamsFromRequestTopicRequest(finalMockRequest, finalRequestDetails, false));
+    assertEquals(e.getHttpStatusCode(), HttpStatus.SC_BAD_REQUEST);
   }
 }

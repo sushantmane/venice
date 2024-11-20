@@ -73,7 +73,7 @@ public class CreateVersion extends AbstractRoute {
     this.disableParentRequestTopicForStreamPushes = disableParentRequestTopicForStreamPushes;
   }
 
-  private static void extractOptionalParamsFromRequestTopicRequest(
+  static void extractOptionalParamsFromRequestTopicRequest(
       Request httpRequest,
       RequestTopicForPushRequest requestDetails,
       boolean isAclEnabled) {
