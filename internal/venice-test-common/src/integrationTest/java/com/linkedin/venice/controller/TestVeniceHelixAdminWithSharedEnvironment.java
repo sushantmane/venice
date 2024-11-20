@@ -1692,14 +1692,14 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
     // For incremental push policy INCREMENTAL_PUSH_SAME_AS_REAL_TIME, incremental push should succeed even if version
     // topic is truncated
     veniceAdmin.truncateKafkaTopic(Version.composeKafkaTopic(incrementalAndHybridEnabledStoreName, 1));
-    veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName);
+    veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName, "test-job-1");
 
     // For incremental push policy INCREMENTAL_PUSH_SAME_AS_REAL_TIME, incremental push should fail if rt topic is
     // truncated
     veniceAdmin.truncateKafkaTopic(rtTopic);
     Assert.assertThrows(
         VeniceException.class,
-        () -> veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName));
+        () -> veniceAdmin.getIncrementalPushVersion(clusterName, incrementalAndHybridEnabledStoreName, "test-job-1"));
   }
 
   @Test(timeOut = TOTAL_TIMEOUT_FOR_LONG_TEST_MS)

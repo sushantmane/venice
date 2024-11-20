@@ -41,15 +41,11 @@ import com.linkedin.venice.exceptions.VeniceHttpException;
 import com.linkedin.venice.exceptions.VeniceNoStoreException;
 import com.linkedin.venice.exceptions.VeniceUnsupportedOperationException;
 import com.linkedin.venice.meta.DataReplicationPolicy;
-import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.lazy.Lazy;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.http.HttpStatus;
@@ -355,37 +351,21 @@ public class CreateVersion extends AbstractRoute {
       }
     }
 
-    checkStoreReadinessForStreamingWrites(admin, store, request.getClusterName());
-
-    response.setKafkaTopic(Version.composeRealTimeTopic(store.getName()));
-  }
-
-  void checkStoreReadinessForStreamingWrites(Admin admin, Store store, String clusterName) {
-    // Check if the store has any hybrid versions; If there are no hybrid versions, reject the request
-    List<Version> versions = new ArrayList<>(store.getVersions());
-    versions.sort(Comparator.comparingInt(Version::getNumber).reversed());
-    boolean hybridVersionFound = false;
-    Version versionToUseToGetPartitionCount = null;
-
-    for (Version version: versions) {
-      HybridStoreConfig hybridStoreConfig = version.getHybridStoreConfig();
-      if (hybridStoreConfig != null) {
-        hybridVersionFound = true;
-        versionToUseToGetPartitionCount = version;
-        break;
-      }
-    }
-
-    if (!hybridVersionFound) {
+    Version referenceHybridVersion =
+        admin.getVersionForStreamingWrites(store.getName(), request.getClusterName(), request.getPushJobId());
+    if (referenceHybridVersion == null) {
       LOGGER.error(
-          "Request to get topic for STREAM push for store: {} is rejected as no hybrid version found",
-          store.getName());
+          "Request to get topic for STREAM push: {} for store: {} in cluster: {} is rejected as no hybrid version found",
+          request.getPushJobId(),
+          store.getName(),
+          request.getClusterName());
       throw new VeniceException(
           "No hybrid version found for store: " + store.getName()
               + ". Create a hybrid version before starting a stream push.");
     }
-    int partitionCount = versionToUseToGetPartitionCount.getPartitionCount();
-    admin.getRealTimeTopic(clusterName, store.getName(), partitionCount);
+    response.setPartitions(referenceHybridVersion.getPartitionCount());
+    response.setCompressionStrategy(CompressionStrategy.NO_OP);
+    response.setKafkaTopic(Version.composeRealTimeTopic(store.getName()));
   }
 
   /**
