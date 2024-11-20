@@ -3253,6 +3253,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    */
   @Override
   public Version getIncrementalPushVersion(String clusterName, String storeName, String pushJobId) {
+    boolean requiresVersionToBeOnline = !isParent();
     checkControllerLeadershipFor(clusterName);
     HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
     try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
@@ -3273,7 +3274,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       Version hybridVersion = null;
       versions.sort(Comparator.comparingInt(Version::getNumber).reversed());
       for (Version version: versions) {
-        if (version.getHybridStoreConfig() != null && version.getStatus() == ONLINE) {
+        if (version.getHybridStoreConfig() != null && (isParent() || version.getStatus() == ONLINE)) {
           hybridVersion = version;
           break;
         }
@@ -3338,14 +3339,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   @Override
   public Version getVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
-    return getVersionForStreamingWrites(clusterName, storeName, pushJobId, true);
-  }
-
-  protected Version getVersionForStreamingWrites(
-      String clusterName,
-      String storeName,
-      String pushJobId,
-      boolean requiresVersionToBeOnline) {
+    boolean requiresVersionToBeOnline = !isParent();
     checkControllerLeadershipFor(clusterName);
     HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
     try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
@@ -3403,11 +3397,19 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           pushJobId);
 
       int partitionCount = hybridVersion.getPartitionCount();
-      getRealTimeTopic(clusterName, storeName, partitionCount);
+      if (isParent()) {
+        /**
+         * Create RT topic here in parent region. For child regions, RT should always be created as part of
+         * {@link RealTimeTopicSwitcher#ensurePreconditions(PubSubTopic, PubSubTopic, Store, Optional)}
+         */
+        getRealTimeTopic(clusterName, storeName, partitionCount);
+      }
       PubSubTopic rtTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
-      if (!getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic) || isTopicTruncated(rtTopic.getName())) {
+      if (!getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic, partitionCount)
+          || isTopicTruncated(rtTopic.getName())) {
         LOGGER.error(
-            "Streaming writes: {} cannot be started for store: {} in cluster: {} because the topic: {} is either absent or being truncated",
+            "Streaming writes: {} cannot be started for store: {} in cluster: {} because the topic: {} is "
+                + "either absent or being truncated or has different partition count than hybrid version partition count",
             pushJobId,
             storeName,
             clusterName,
@@ -7470,7 +7472,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   void checkControllerLeadershipFor(String clusterName) {
     if (!isLeaderControllerFor(clusterName)) {
       throw new VeniceException(
-          "This controller:" + controllerName + " is not the leader controller for " + clusterName);
+          "This controller:" + controllerName + " is not the leader controller for cluster: " + clusterName);
     }
   }
 

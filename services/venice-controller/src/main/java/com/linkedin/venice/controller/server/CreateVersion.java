@@ -352,7 +352,7 @@ public class CreateVersion extends AbstractRoute {
     }
 
     Version referenceHybridVersion =
-        admin.getVersionForStreamingWrites(store.getName(), request.getClusterName(), request.getPushJobId());
+        admin.getVersionForStreamingWrites(request.getClusterName(), store.getName(), request.getPushJobId());
     if (referenceHybridVersion == null) {
       LOGGER.error(
           "Request to get topic for STREAM push: {} for store: {} in cluster: {} is rejected as no hybrid version found",
