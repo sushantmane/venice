@@ -28,6 +28,7 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.exceptions.VeniceHttpException;
 import com.linkedin.venice.meta.HybridStoreConfigImpl;
 import com.linkedin.venice.meta.OfflinePushStrategy;
+import com.linkedin.venice.meta.PartitionerConfig;
 import com.linkedin.venice.meta.PersistenceType;
 import com.linkedin.venice.meta.ReadStrategy;
 import com.linkedin.venice.meta.RoutingStrategy;
@@ -40,6 +41,7 @@ import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.ObjectMapperFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -605,5 +607,54 @@ public class CreateVersionTest {
         VeniceHttpException.class,
         () -> CreateVersion.extractOptionalParamsFromRequestTopicRequest(finalMockRequest, finalRequestDetails, false));
     assertEquals(e.getHttpStatusCode(), HttpStatus.SC_BAD_REQUEST);
+  }
+
+  @Test
+  public void testVerifyAndConfigurePartitionerSettings() {
+    VersionCreationResponse response = new VersionCreationResponse();
+    PartitionerConfig storePartitionerConfig = mock(PartitionerConfig.class);
+    when(storePartitionerConfig.getPartitionerClass()).thenReturn("f.q.c.n.DefaultPartitioner");
+
+    // Test Case 1: Null partitionersFromRequest (should pass)
+    Set<String> partitionersFromRequest = null;
+
+    try {
+      CreateVersion.verifyAndConfigurePartitionerSettings(storePartitionerConfig, partitionersFromRequest, response);
+    } catch (Exception e) {
+      fail("Null partitionersFromRequest should not throw an exception.");
+    }
+    assertEquals(response.getPartitionerClass(), "f.q.c.n.DefaultPartitioner");
+
+    // Test Case 2: Empty partitionersFromRequest (should pass)
+    response = new VersionCreationResponse();
+    partitionersFromRequest = Collections.emptySet();
+    try {
+      CreateVersion.verifyAndConfigurePartitionerSettings(storePartitionerConfig, partitionersFromRequest, response);
+    } catch (Exception e) {
+      fail("Empty partitionersFromRequest should not throw an exception.");
+    }
+    assertEquals(response.getPartitionerClass(), "f.q.c.n.DefaultPartitioner");
+
+    // Test Case 3: Matching partitioner in partitionersFromRequest (should pass)
+    response = new VersionCreationResponse();
+    partitionersFromRequest = new HashSet<>(Arrays.asList("f.q.c.n.DefaultPartitioner", "f.q.c.n.CustomPartitioner"));
+    try {
+      CreateVersion.verifyAndConfigurePartitionerSettings(storePartitionerConfig, partitionersFromRequest, response);
+    } catch (Exception e) {
+      fail("Matching partitioner should not throw an exception.");
+    }
+    assertEquals(response.getPartitionerClass(), "f.q.c.n.DefaultPartitioner");
+
+    // Test Case 4: Non-matching partitioner in partitionersFromRequest (should throw exception)
+    final VersionCreationResponse finalResponse = new VersionCreationResponse();
+    partitionersFromRequest = new HashSet<>(Collections.singletonList("f.q.c.n.CustomPartitioner"));
+    Set<String> finalPartitionersFromRequest = partitionersFromRequest;
+    Exception e = expectThrows(
+        VeniceException.class,
+        () -> CreateVersion.verifyAndConfigurePartitionerSettings(
+            storePartitionerConfig,
+            finalPartitionersFromRequest,
+            finalResponse));
+    assertTrue(e.getMessage().contains("cannot be found"));
   }
 }

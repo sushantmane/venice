@@ -46,6 +46,7 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.lazy.Lazy;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.http.HttpStatus;
@@ -126,10 +127,12 @@ public class CreateVersion extends AbstractRoute {
     }
   }
 
-  private static void configurePartitionerSettings(
+  static void verifyAndConfigurePartitionerSettings(
       PartitionerConfig storePartitionerConfig,
       Set<String> partitionersFromRequest,
       VersionCreationResponse response) {
+    verifyPartitioner(storePartitionerConfig, partitionersFromRequest);
+    partitionersFromRequest = partitionersFromRequest != null ? partitionersFromRequest : Collections.emptySet();
     // Get the first partitioner that matches the store partitioner
     for (String partitioner: partitionersFromRequest) {
       if (storePartitionerConfig.getPartitionerClass().equals(partitioner)) {
@@ -384,8 +387,7 @@ public class CreateVersion extends AbstractRoute {
     }
 
     // Verify and configure the partitioner
-    verifyPartitioner(store.getPartitionerConfig(), request.getPartitioners());
-    configurePartitionerSettings(store.getPartitionerConfig(), request.getPartitioners(), response);
+    verifyAndConfigurePartitionerSettings(store.getPartitionerConfig(), request.getPartitioners(), response);
 
     // Validate push type
     validatePushType(request.getPushType(), store);
