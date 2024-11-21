@@ -337,8 +337,10 @@ public class CreateVersion extends AbstractRoute {
       }
     }
 
-    Version referenceHybridVersion =
-        admin.getReferenceVersionForStreamingWrites(request.getClusterName(), store.getName(), request.getPushJobId());
+    Version referenceHybridVersion = admin.getReferenceVersionForStreamingWrites(
+        request.getClusterName(),
+        request.getStoreName(),
+        request.getPushJobId());
     if (referenceHybridVersion == null) {
       LOGGER.error(
           "Request to get topic for STREAM push: {} for store: {} in cluster: {} is rejected as no hybrid version found",
@@ -404,7 +406,6 @@ public class CreateVersion extends AbstractRoute {
 
     // Set the store's replication factor and partition count
     response.setReplicas(admin.getReplicationFactor(clusterName, storeName));
-    // TODO: Use partition count from version if it's available
     response.setPartitions(admin.calculateNumberOfPartitions(clusterName, storeName));
 
     boolean isSSL = admin.isSSLEnabledForPush(clusterName, storeName);

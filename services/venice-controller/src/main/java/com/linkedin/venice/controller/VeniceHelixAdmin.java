@@ -3339,7 +3339,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
   @Override
   public Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
-    boolean requiresVersionToBeOnline = !isParent();
+    boolean requiresVersionToBeOnline = true;
     checkControllerLeadershipFor(clusterName);
     HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
     try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
