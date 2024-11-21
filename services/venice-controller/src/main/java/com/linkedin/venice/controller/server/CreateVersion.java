@@ -251,23 +251,18 @@ public class CreateVersion extends AbstractRoute {
     String clusterName = request.getClusterName();
     String storeName = request.getStoreName();
     PushType pushType = request.getPushType();
-
     // Check if requestTopicForPush can be handled by child controllers for the given store
     if (!admin.whetherEnableBatchPushFromAdmin(storeName)) {
       throw new VeniceUnsupportedOperationException(
           request.getPushType().name(),
           "Please push data to Venice Parent Colo instead");
     }
-
-    int partitionCount = response.getPartitions();
-    int replicationFactor = response.getReplicas();
-
     final Version version = admin.incrementVersionIdempotent(
         clusterName,
         storeName,
         request.getPushJobId(),
-        partitionCount,
-        replicationFactor,
+        response.getPartitions(),
+        response.getReplicas(),
         pushType,
         request.isSendStartOfPush(),
         request.isSorted(),
@@ -282,18 +277,16 @@ public class CreateVersion extends AbstractRoute {
 
     // If Version partition count different from calculated partition count use the version count as store count
     // may have been updated later.
-    if (version.getPartitionCount() != partitionCount) {
+    if (version.getPartitionCount() != response.getPartitions()) {
       response.setPartitions(version.getPartitionCount());
     }
-
     // Set the version number
     response.setVersion(version.getNumber());
     // Set the response topic
-    String responseTopic = determineResponseTopic(storeName, version, pushType);
-    response.setKafkaTopic(responseTopic);
+    response.setKafkaTopic(determineResponseTopic(storeName, version, pushType));
     // Set the compression strategy
-    response.setCompressionStrategy(getCompressionStrategy(version, responseTopic));
-
+    response.setCompressionStrategy(getCompressionStrategy(version, response.getKafkaTopic()));
+    // Set the bootstrap servers
     configureSourceFabric(admin, version, isActiveActiveReplicationEnabledInAllRegions, request, response);
   }
 
