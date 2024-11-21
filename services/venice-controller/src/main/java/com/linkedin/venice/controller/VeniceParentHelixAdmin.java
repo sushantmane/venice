@@ -1720,8 +1720,8 @@ public class VeniceParentHelixAdmin implements Admin {
   }
 
   @Override
-  public Version getVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
-    return getVeniceHelixAdmin().getVersionForStreamingWrites(clusterName, storeName, pushJobId);
+  public Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
+    return getVeniceHelixAdmin().getReferenceVersionForStreamingWrites(clusterName, storeName, pushJobId);
   }
 
   // This method is only for internal / test use case

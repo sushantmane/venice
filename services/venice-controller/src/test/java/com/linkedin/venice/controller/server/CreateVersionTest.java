@@ -11,16 +11,12 @@ import static com.linkedin.venice.meta.DataReplicationPolicy.AGGREGATE;
 import static com.linkedin.venice.meta.DataReplicationPolicy.NONE;
 import static com.linkedin.venice.meta.DataReplicationPolicy.NON_AGGREGATE;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.testng.Assert.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkedin.venice.acl.DynamicAccessController;
+import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controllerapi.RequestTopicForPushRequest;
 import com.linkedin.venice.controllerapi.VersionCreationResponse;
@@ -39,6 +35,7 @@ import com.linkedin.venice.meta.VersionImpl;
 import com.linkedin.venice.meta.ZKStore;
 import com.linkedin.venice.utils.DataProviderUtils;
 import com.linkedin.venice.utils.ObjectMapperFactory;
+import com.linkedin.venice.utils.lazy.Lazy;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,7 +47,6 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.http.HttpStatus;
-import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -557,7 +553,7 @@ public class CreateVersionTest {
     assertNull(requestDetails.getCertificateInRequest(), "Default certificateInRequest should be null");
 
     // Test case 2: All optional parameters are set
-    mockRequest = Mockito.mock(Request.class);
+    mockRequest = mock(Request.class);
     doCallRealMethod().when(mockRequest).queryParamOrDefault(any(), any());
     String customPartitioners = "f.q.c.n.P1,f.q.c.n.P2";
     Set<String> expectedPartitioners = new HashSet<>(Arrays.asList("f.q.c.n.P1", "f.q.c.n.P2"));
@@ -656,5 +652,127 @@ public class CreateVersionTest {
             finalPartitionersFromRequest,
             finalResponse));
     assertTrue(e.getMessage().contains("cannot be found"));
+  }
+
+  @Test
+  public void testDetermineResponseTopic() {
+    String storeName = "test_store";
+    String vtName = Version.composeKafkaTopic(storeName, 1);
+    String rtName = Version.composeRealTimeTopic(storeName);
+    String srTopicName = Version.composeStreamReprocessingTopic(storeName, 1);
+    String separateRtName = Version.composeSeparateRealTimeTopic(storeName);
+
+    // Test Case 1: PushType.INCREMENTAL with separate real-time topic enabled
+    Version mockVersion1 = mock(Version.class);
+    when(mockVersion1.kafkaTopicName()).thenReturn(vtName);
+    when(mockVersion1.isSeparateRealTimeTopicEnabled()).thenReturn(true);
+    String result1 = CreateVersion.determineResponseTopic(storeName, mockVersion1, PushType.INCREMENTAL);
+    assertEquals(result1, separateRtName);
+
+    // Test Case 2: PushType.INCREMENTAL without separate real-time topic enabled
+    Version mockVersion2 = mock(Version.class);
+    when(mockVersion2.kafkaTopicName()).thenReturn(vtName);
+    when(mockVersion2.isSeparateRealTimeTopicEnabled()).thenReturn(false);
+    String result2 = CreateVersion.determineResponseTopic(storeName, mockVersion2, PushType.INCREMENTAL);
+    assertEquals(result2, rtName);
+
+    // Test Case 3: PushType.STREAM
+    Version mockVersion3 = mock(Version.class);
+    when(mockVersion3.kafkaTopicName()).thenReturn(vtName);
+    String result3 = CreateVersion.determineResponseTopic(storeName, mockVersion3, PushType.STREAM);
+    assertEquals(result3, rtName);
+
+    // Test Case 4: PushType.STREAM_REPROCESSING
+    Version mockVersion4 = mock(Version.class);
+    when(mockVersion4.kafkaTopicName()).thenReturn(vtName);
+    when(mockVersion4.getNumber()).thenReturn(1);
+    String result4 = CreateVersion.determineResponseTopic(storeName, mockVersion4, PushType.STREAM_REPROCESSING);
+    assertEquals(result4, srTopicName);
+
+    // Test Case 5: Default case with a Kafka topic
+    Version mockVersion5 = mock(Version.class);
+    when(mockVersion5.kafkaTopicName()).thenReturn(vtName);
+    String result5 = CreateVersion.determineResponseTopic(storeName, mockVersion5, PushType.BATCH);
+    assertEquals(result5, vtName);
+  }
+
+  @Test
+  public void testGetCompressionStrategy() {
+    // Test Case 1: Real-time topic returns NO_OP
+    Version mockVersion1 = mock(Version.class);
+    String responseTopic1 = Version.composeRealTimeTopic("test_store");
+    CompressionStrategy result1 = CreateVersion.getCompressionStrategy(mockVersion1, responseTopic1);
+    assertEquals(result1, CompressionStrategy.NO_OP);
+
+    // Test Case 2: Non-real-time topic returns version's compression strategy
+    Version mockVersion2 = mock(Version.class);
+    String responseTopic2 = Version.composeKafkaTopic("test_store", 1);
+    when(mockVersion2.getCompressionStrategy()).thenReturn(CompressionStrategy.GZIP);
+    CompressionStrategy result2 = CreateVersion.getCompressionStrategy(mockVersion2, responseTopic2);
+    assertEquals(result2, CompressionStrategy.GZIP);
+  }
+
+  @Test
+  public void testConfigureSourceFabric() {
+    // Test Case 1: Native replication enabled and non-incremental push type
+    Admin mockAdmin1 = mock(Admin.class);
+    Version mockVersion1 = mock(Version.class);
+    Lazy<Boolean> mockLazy1 = mock(Lazy.class);
+    RequestTopicForPushRequest mockRequest1 = mock(RequestTopicForPushRequest.class);
+    VersionCreationResponse mockResponse1 = new VersionCreationResponse();
+
+    when(mockVersion1.isNativeReplicationEnabled()).thenReturn(true);
+    when(mockVersion1.getPushStreamSourceAddress()).thenReturn("bootstrapServer1");
+    when(mockVersion1.getNativeReplicationSourceFabric()).thenReturn("sourceFabric1");
+    when(mockRequest1.getPushType()).thenReturn(PushType.BATCH);
+
+    CreateVersion.configureSourceFabric(mockAdmin1, mockVersion1, mockLazy1, mockRequest1, mockResponse1);
+
+    assertEquals(mockResponse1.getKafkaBootstrapServers(), "bootstrapServer1");
+    assertEquals(mockResponse1.getKafkaSourceRegion(), "sourceFabric1");
+
+    // Test Case 2: Native replication enabled with null PushStreamSourceAddress
+    Admin mockAdmin2 = mock(Admin.class);
+    Version mockVersion2 = mock(Version.class);
+    Lazy<Boolean> mockLazy2 = mock(Lazy.class);
+    RequestTopicForPushRequest mockRequest2 = mock(RequestTopicForPushRequest.class);
+    VersionCreationResponse mockResponse2 = new VersionCreationResponse();
+
+    when(mockVersion2.isNativeReplicationEnabled()).thenReturn(true);
+    when(mockVersion2.getPushStreamSourceAddress()).thenReturn(null);
+    when(mockVersion2.getNativeReplicationSourceFabric()).thenReturn("sourceFabric2");
+    when(mockRequest2.getPushType()).thenReturn(PushType.BATCH);
+
+    CreateVersion.configureSourceFabric(mockAdmin2, mockVersion2, mockLazy2, mockRequest2, mockResponse2);
+
+    assertNull(mockResponse2.getKafkaBootstrapServers());
+    assertEquals(mockResponse2.getKafkaSourceRegion(), "sourceFabric2");
+
+    // Test Case 3: Incremental push with parent admin and override source region
+    Admin mockAdmin3 = mock(Admin.class);
+    Version mockVersion3 = mock(Version.class);
+    Lazy<Boolean> mockLazy3 = mock(Lazy.class);
+    RequestTopicForPushRequest mockRequest3 = mock(RequestTopicForPushRequest.class);
+    VersionCreationResponse mockResponse3 = new VersionCreationResponse();
+
+    when(mockAdmin3.isParent()).thenReturn(true);
+    when(mockVersion3.isNativeReplicationEnabled()).thenReturn(true);
+    when(mockRequest3.getPushType()).thenReturn(PushType.INCREMENTAL);
+    when(mockRequest3.getClusterName()).thenReturn("testCluster");
+    when(mockRequest3.getStoreName()).thenReturn("testStore");
+    when(mockRequest3.getEmergencySourceRegion()).thenReturn("emergencyRegion");
+    when(mockRequest3.getSourceGridFabric()).thenReturn("gridFabric");
+    when(mockLazy3.get()).thenReturn(true);
+
+    when(mockAdmin3.getNativeReplicationKafkaBootstrapServerAddress("emergencyRegion"))
+        .thenReturn("emergencyRegionAddress");
+
+    CreateVersion.configureSourceFabric(mockAdmin3, mockVersion3, mockLazy3, mockRequest3, mockResponse3);
+
+    assertEquals(mockResponse3.getKafkaBootstrapServers(), "emergencyRegionAddress");
+
+    // No specific assertions here since `overrideSourceRegionAddressForIncrementalPushJob` is mocked,
+    // but you can verify if the mock was called with appropriate parameters.
+    verify(mockAdmin3, times(1)).isParent();
   }
 }

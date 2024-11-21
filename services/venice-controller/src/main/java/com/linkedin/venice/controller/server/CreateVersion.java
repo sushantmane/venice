@@ -76,19 +76,19 @@ public class CreateVersion extends AbstractRoute {
 
   static void extractOptionalParamsFromRequestTopicRequest(
       Request httpRequest,
-      RequestTopicForPushRequest requestDetails,
+      RequestTopicForPushRequest request,
       boolean isAclEnabled) {
-    requestDetails.setPartitioners(httpRequest.queryParamOrDefault(PARTITIONERS, null));
+    request.setPartitioners(httpRequest.queryParamOrDefault(PARTITIONERS, null));
 
-    requestDetails.setSendStartOfPush(
+    request.setSendStartOfPush(
         Utils.parseBooleanFromString(httpRequest.queryParamOrDefault(SEND_START_OF_PUSH, "false"), SEND_START_OF_PUSH));
 
-    requestDetails.setSorted(
+    request.setSorted(
         Utils.parseBooleanFromString(
             httpRequest.queryParamOrDefault(PUSH_IN_SORTED_ORDER, "false"),
             PUSH_IN_SORTED_ORDER));
 
-    requestDetails.setWriteComputeEnabled(
+    request.setWriteComputeEnabled(
         Utils.parseBooleanFromString(
             httpRequest.queryParamOrDefault(IS_WRITE_COMPUTE_ENABLED, "false"),
             IS_WRITE_COMPUTE_ENABLED));
@@ -96,26 +96,25 @@ public class CreateVersion extends AbstractRoute {
     /*
      * Version-level rewind time override, and it is only valid for hybrid stores.
      */
-    requestDetails.setRewindTimeInSecondsOverride(
+    request.setRewindTimeInSecondsOverride(
         Long.parseLong(httpRequest.queryParamOrDefault(REWIND_TIME_IN_SECONDS_OVERRIDE, "-1")));
 
     /*
      * Version level override to defer marking this new version to the serving version post push completion.
      */
-    requestDetails.setDeferVersionSwap(
+    request.setDeferVersionSwap(
         Utils.parseBooleanFromString(httpRequest.queryParamOrDefault(DEFER_VERSION_SWAP, "false"), DEFER_VERSION_SWAP));
 
-    requestDetails.setTargetedRegions(httpRequest.queryParamOrDefault(TARGETED_REGIONS, null));
+    request.setTargetedRegions(httpRequest.queryParamOrDefault(TARGETED_REGIONS, null));
 
-    requestDetails
-        .setRepushSourceVersion(Integer.parseInt(httpRequest.queryParamOrDefault(REPUSH_SOURCE_VERSION, "-1")));
+    request.setRepushSourceVersion(Integer.parseInt(httpRequest.queryParamOrDefault(REPUSH_SOURCE_VERSION, "-1")));
 
-    requestDetails.setSourceGridFabric(httpRequest.queryParamOrDefault(SOURCE_GRID_FABRIC, null));
+    request.setSourceGridFabric(httpRequest.queryParamOrDefault(SOURCE_GRID_FABRIC, null));
 
-    requestDetails.setCompressionDictionary(httpRequest.queryParamOrDefault(COMPRESSION_DICTIONARY, null));
+    request.setCompressionDictionary(httpRequest.queryParamOrDefault(COMPRESSION_DICTIONARY, null));
 
     // Retrieve certificate from request if ACL is enabled
-    requestDetails.setCertificateInRequest(isAclEnabled ? getCertificate(httpRequest) : null);
+    request.setCertificateInRequest(isAclEnabled ? getCertificate(httpRequest) : null);
   }
 
   private static void verifyPartitioner(PartitionerConfig storePartitionerConfig, Set<String> partitionersFromRequest) {
@@ -184,12 +183,10 @@ public class CreateVersion extends AbstractRoute {
   public static void configureSourceFabric(
       Admin admin,
       Version version,
-      PushType pushType,
-      String clusterName,
-      String storeName,
       Lazy<Boolean> isActiveActiveReplicationEnabledInAllRegions,
       RequestTopicForPushRequest request,
       VersionCreationResponse response) {
+    PushType pushType = request.getPushType();
     // Handle native replication for non-incremental push types
     if (version.isNativeReplicationEnabled() && !pushType.isIncremental()) {
       String childDataCenterKafkaBootstrapServer = version.getPushStreamSourceAddress();
@@ -204,17 +201,18 @@ public class CreateVersion extends AbstractRoute {
       overrideSourceRegionAddressForIncrementalPushJob(
           admin,
           response,
-          clusterName,
-          storeName,
+          request.getClusterName(),
+          request.getStoreName(),
           request.getEmergencySourceRegion(),
           request.getSourceGridFabric(),
           isActiveActiveReplicationEnabledInAllRegions.get(),
           version.isNativeReplicationEnabled());
       LOGGER.info(
-          "Incremental push job final source region address is: {} for store: {} cluster: {}",
+          "Using source region: {} for incremental push job: {} on store: {} cluster: {}",
           response.getKafkaBootstrapServers(),
-          storeName,
-          clusterName);
+          request.getPushJobId(),
+          request.getStoreName(),
+          request.getClusterName());
     }
   }
 
@@ -296,15 +294,7 @@ public class CreateVersion extends AbstractRoute {
     // Set the compression strategy
     response.setCompressionStrategy(getCompressionStrategy(version, responseTopic));
 
-    configureSourceFabric(
-        admin,
-        version,
-        pushType,
-        clusterName,
-        storeName,
-        isActiveActiveReplicationEnabledInAllRegions,
-        request,
-        response);
+    configureSourceFabric(admin, version, isActiveActiveReplicationEnabledInAllRegions, request, response);
   }
 
   // PushType.STREAM
@@ -355,7 +345,7 @@ public class CreateVersion extends AbstractRoute {
     }
 
     Version referenceHybridVersion =
-        admin.getVersionForStreamingWrites(request.getClusterName(), store.getName(), request.getPushJobId());
+        admin.getReferenceVersionForStreamingWrites(request.getClusterName(), store.getName(), request.getPushJobId());
     if (referenceHybridVersion == null) {
       LOGGER.error(
           "Request to get topic for STREAM push: {} for store: {} in cluster: {} is rejected as no hybrid version found",

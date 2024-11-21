@@ -290,7 +290,7 @@ public interface Admin extends AutoCloseable, Closeable {
 
   Version getIncrementalPushVersion(String clusterName, String storeName, String pushJobId);
 
-  Version getVersionForStreamingWrites(String clusterName, String storeName, String pushJobId);
+  Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId);
 
   int getCurrentVersion(String clusterName, String storeName);
 

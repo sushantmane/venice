@@ -3338,7 +3338,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   @Override
-  public Version getVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
+  public Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
     boolean requiresVersionToBeOnline = !isParent();
     checkControllerLeadershipFor(clusterName);
     HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
