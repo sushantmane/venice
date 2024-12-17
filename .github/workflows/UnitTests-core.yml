@@ -59,7 +59,6 @@ jobs:
           comment: true
           annotate_only: true
           flaky_summary: true
-          check_retries: true
           commit: ${{github.event.workflow_run.head_sha}}
           detailed_summary: true
           report_paths: '**/build/test-results/test/TEST-*.xml'
