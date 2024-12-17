@@ -15,13 +15,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 8, 11, 17 ]
+        jdk: [ 17 ]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
       checks: write
       id-token: write
+      pull-requests: write # only required if `comment: true` was enabled
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,9 +53,16 @@ jobs:
       - name: Publish Test Report
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
-        uses: mikepenz/action-junit-report@v3
+        uses: mikepenz/action-junit-report@v5
         if: always() # always run even if the previous step fails
         with:
+          check_name: 'Unit Test Report'
+          comment: true
+          annotate_only: true
+          flaky_summary: true
+          check_retries: true
+          commit: ${{github.event.workflow_run.head_sha}}
+          detailed_summary: true
           report_paths: '**/build/test-results/test/TEST-*.xml'
       - name: Upload Build Artifacts
         if: success() || failure()
