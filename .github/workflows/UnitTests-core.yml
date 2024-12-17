@@ -41,7 +41,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Run Unit Tests with Code Coverage
-        run: ./gradlew  -DmaxParallelForks=2 --parallel --continue -x :internal:venice-avro-compatibility-test:test  ${{ inputs.arg }}
+        run: ./gradlew  -DmaxParallelForks=4 --parallel --continue -x :internal:venice-avro-compatibility-test:test  ${{ inputs.arg }}
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -59,6 +59,7 @@ jobs:
           check_name: 'Unit Test Report'
           comment: true
           annotate_only: true
+          check_retries: true
           flaky_summary: true
           commit: ${{github.event.workflow_run.head_sha}}
           detailed_summary: true
