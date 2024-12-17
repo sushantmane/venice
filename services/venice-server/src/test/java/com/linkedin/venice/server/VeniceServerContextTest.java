@@ -53,17 +53,4 @@ public class VeniceServerContextTest {
     assertEquals(veniceServerContext.getClientConfigForConsumer(), clientConfigForConsumerMock);
     assertEquals(veniceServerContext.getIcProvider(), icProviderMock);
   }
-
-  // // random test that fails
-  @Test
-  public void testFailure21() {
-    int i = 45;
-    assertEquals(i, 405);
-  }
-
-  @Test
-  public void testFailure22() {
-    int i = 45;
-    assertEquals(i, 4025);
-  }
 }
