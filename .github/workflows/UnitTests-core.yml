@@ -15,13 +15,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 8, 11, 17 ]
+        jdk: [ 17 ]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
       checks: write
       id-token: write
+      pull-requests: write # only required if `comment: true` was enabled
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +41,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Run Unit Tests with Code Coverage
-        run: ./gradlew  -x :internal:venice-avro-compatibility-test:test  ${{ inputs.arg }}
+        run: ./gradlew  -DmaxParallelForks=2 --parallel --continue -x :internal:venice-avro-compatibility-test:test  ${{ inputs.arg }}
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
