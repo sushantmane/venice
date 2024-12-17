@@ -23,10 +23,7 @@ jobs:
    uses: ./.github/workflows/UnitTests-core.yml
    with:
     artifact_suffix: internal
-    arg: :internal:venice-client-common:jacocoTestCoverageVerification :internal:venice-client-common:diffCoverage
-     :internal:venice-common:jacocoTestCoverageVerification :internal:venice-common:diffCoverage
-     :internal:venice-jdk-compatibility-test:jacocoTestCoverageVerification :internal:venice-jdk-compatibility-test:diffCoverage
-     :internal:venice-test-common:jacocoTestCoverageVerification :internal:venice-test-common:diffCoverage --continue
+    arg: :clients:da-vinci-client:jacocoTestCoverageVerification :clients:da-vinci-client:diffCoverage --continue
 
 
   StaticAnalysisAndUnitTestsCompletionCheck:
