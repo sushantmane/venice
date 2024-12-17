@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import com.linkedin.venice.utils.DoubleAndBooleanConsumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.IntConsumer;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 
@@ -36,5 +37,18 @@ public class ResponseStatsUtilTest {
     doubleAndBooleanConsumer = mock(DoubleAndBooleanConsumer.class);
     ResponseStatsUtil.consumeDoubleAndBooleanIfAbove(doubleAndBooleanConsumer, 0.0, true, 0.0);
     verify(doubleAndBooleanConsumer, never()).accept(1.0, true);
+  }
+
+  @Test
+  public void testFailure() {
+    int i = 45;
+    Assert.assertEquals(i, 405);
+  }
+
+  // random test that fails
+  @Test
+  public void testFailure2() {
+    int i = 45;
+    Assert.assertEquals(i, 405);
   }
 }
