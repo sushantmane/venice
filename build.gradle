@@ -17,8 +17,7 @@ plugins {
   id 'me.champeau.jmh' version '0.6.7' apply false
   id 'io.github.lhotari.gradle-nar-plugin' version '0.5.1' apply false
   id 'com.google.protobuf' version '0.9.3' apply false
-  // Checker Framework pluggable type-checking
-  id 'org.checkerframework' version '0.6.47'
+  id 'org.checkerframework' version '0.6.47' // Checker Framework pluggable type-checking
 }
 
 apply from: "$rootDir/gradle/helper/git.gradle"
@@ -195,19 +194,6 @@ subprojects {
     plugin 'com.github.spotbugs'
     plugin 'org.gradle.test-retry'
     plugin 'org.checkerframework'
-  }
-
-
-//  checkerFramework {
-//    checkers = ['org.checkerframework.checker.nullness.NullnessChecker']
-//  }
-
-  if (name == 'da-vinci-client') {
-    apply plugin: 'org.checkerframework'
-
-    checkerFramework {
-      checkers = ['org.checkerframework.checker.nullness.NullnessChecker']
-    }
   }
 
   if (isLeafSubModule) {
@@ -836,18 +822,11 @@ gradle.taskGraph.whenReady {
   verifyJdkVersion
 }
 
-//checkerFramework {
-//  checkers = [
-//      'org.checkerframework.checker.nullness.NullnessChecker'
-//  ]
-//}
-
-
 task listSubprojects {
   doLast {
-    println "Subprojects in this build:"
+    println "Subprojects:"
     subprojects.each { subproject ->
-      println "- ${subproject.name}"
+      println "${subproject.name}"
     }
   }
 }
