@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub;
 
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientRetriableException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
+import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.utils.Time;
 import java.time.Duration;
 import java.util.Arrays;
@@ -60,6 +61,13 @@ public class PubSubConstants {
 
   public static final List<Class<? extends Throwable>> CREATE_TOPIC_RETRIABLE_EXCEPTIONS =
       Collections.unmodifiableList(Arrays.asList(PubSubOpTimeoutException.class, PubSubClientRetriableException.class));
+
+  public static final List<Class<? extends Throwable>> TOPIC_METADATA_OP_RETRIABLE_EXCEPTIONS =
+      Collections.unmodifiableList(
+          Arrays.asList(
+              PubSubTopicDoesNotExistException.class,
+              PubSubOpTimeoutException.class,
+              PubSubClientRetriableException.class));
 
   /**
    * Default value of sleep interval for polling topic deletion status from ZK.

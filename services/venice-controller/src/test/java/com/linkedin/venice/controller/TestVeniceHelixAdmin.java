@@ -1,6 +1,7 @@
 package com.linkedin.venice.controller;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
@@ -8,10 +9,14 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.controller.stats.DisabledPartitionStats;
 import com.linkedin.venice.helix.HelixExternalViewRepository;
+import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.PartitionAssignment;
 import com.linkedin.venice.meta.ReadWriteStoreRepository;
 import com.linkedin.venice.meta.Store;
@@ -123,5 +128,45 @@ public class TestVeniceHelixAdmin {
     daVinciStatus = ExecutionStatus.DVC_INGESTION_ERROR_DISK_FULL;
     overallStatus = VeniceHelixAdmin.getOverallPushStatus(veniceStatus, daVinciStatus);
     assertEquals(overallStatus, ExecutionStatus.DVC_INGESTION_ERROR_DISK_FULL);
+  }
+
+  @Test
+  public void testIsRealTimeTopicRequired() {
+    VeniceHelixAdmin veniceHelixAdmin = mock(VeniceHelixAdmin.class);
+    doCallRealMethod().when(veniceHelixAdmin).isRealTimeTopicRequired(any(Store.class), any(Version.class));
+    Store store = mock(Store.class, RETURNS_DEEP_STUBS);
+    Version version = mock(Version.class);
+
+    // Case 1: Store is not hybrid
+    doReturn(false).when(store).isHybrid();
+    assertFalse(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
+
+    // Case 2: Store is hybrid and version is not hybrid
+    doReturn(true).when(store).isHybrid();
+    doReturn(false).when(version).isHybrid();
+
+    // Case 3: Both store and version are hybrid && controller is child
+    doReturn(true).when(store).isHybrid();
+    doReturn(true).when(version).isHybrid();
+    assertTrue(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
+    doReturn(false).when(veniceHelixAdmin).isParent();
+    assertTrue(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
+
+    // Case 4: Both store and version are hybrid && controller is parent && AA is enabled
+    doReturn(true).when(veniceHelixAdmin).isParent();
+    doReturn(true).when(store).isActiveActiveReplicationEnabled();
+    assertFalse(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
+
+    // Case 5: Both store and version are hybrid && controller is parent && AA is disabled and IncPush is enabled
+    doReturn(false).when(store).isActiveActiveReplicationEnabled();
+    doReturn(true).when(store).isIncrementalPushEnabled();
+    when(store.getHybridStoreConfig().getDataReplicationPolicy()).thenReturn(DataReplicationPolicy.NON_AGGREGATE);
+    assertTrue(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
+
+    // Case 6: Both store and version are hybrid && controller is parent && AA is disabled and IncPush is disabled but
+    // DRP is AGGREGATE
+    doReturn(false).when(store).isIncrementalPushEnabled();
+    when(store.getHybridStoreConfig().getDataReplicationPolicy()).thenReturn(DataReplicationPolicy.AGGREGATE);
+    assertTrue(veniceHelixAdmin.isRealTimeTopicRequired(store, version));
   }
 }
