@@ -3034,7 +3034,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         clusterName);
     String storeName = store.getName();
     // Create real-time topic if it doesn't exist; otherwise, update the retention time if necessary
-    PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(version));
+    PubSubTopic realTimeTopic = getPubSubTopicRepository().getTopic(Utils.getRealTimeTopicName(version));
     createOrUpdateRealTimeTopic(clusterName, store, version, realTimeTopic);
 
     // Create separate real-time topic if it doesn't exist; otherwise, update the retention time if necessary
@@ -3044,7 +3044,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           clusterName,
           store,
           version,
-          pubSubTopicRepository.getTopic(Version.composeSeparateRealTimeTopic(storeName)));
+          getPubSubTopicRepository().getTopic(Version.composeSeparateRealTimeTopic(storeName)));
     }
   }
 
@@ -3069,9 +3069,9 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     int expectedNumOfPartitions = version.getPartitionCount();
     TopicManager topicManager = getTopicManager();
     if (topicManager.containsTopic(realTimeTopic)) {
-      validateAndUpdateTopic(realTimeTopic, store, version, expectedNumOfPartitions, getTopicManager());
+      validateAndUpdateTopic(realTimeTopic, store, version, expectedNumOfPartitions, topicManager);
     } else {
-      VeniceControllerClusterConfig clusterConfig = multiClusterConfigs.getControllerConfig(clusterName);
+      VeniceControllerClusterConfig clusterConfig = getControllerConfig(clusterName);
       topicManager.createTopic(
           realTimeTopic,
           expectedNumOfPartitions,
@@ -3104,7 +3104,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
    * @param topicManager the {@link TopicManager} used for topic management operations
    * @throws VeniceException if the partition count of the topic does not match the expected partition count
    */
-  private void validateAndUpdateTopic(
+  void validateAndUpdateTopic(
       PubSubTopic realTimeTopic,
       Store store,
       Version version,
@@ -8806,6 +8806,10 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   // Visible for testing
   VeniceControllerMultiClusterConfig getMultiClusterConfigs() {
     return multiClusterConfigs;
+  }
+
+  VeniceControllerClusterConfig getControllerConfig(String clusterName) {
+    return multiClusterConfigs.getControllerConfig(clusterName);
   }
 
   // Only for testing
