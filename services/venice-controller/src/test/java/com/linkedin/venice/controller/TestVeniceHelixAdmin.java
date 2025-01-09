@@ -86,7 +86,7 @@ public class TestVeniceHelixAdmin {
    * This test verify that in function {@link VeniceHelixAdmin#setUpMetaStoreAndMayProduceSnapshot},
    * meta store RT topic creation has to happen before any writings to meta store's rt topic.
    * As of today, topic creation and checks to make sure that RT exists are handled in function
-   * {@link VeniceHelixAdmin#getRealTimeTopic}. On the other hand, as {@link VeniceHelixAdmin#storeMetadataUpdate}
+   * {@link VeniceHelixAdmin#ensureRealTimeTopicExistsForUserSystemStores}. On the other hand, as {@link VeniceHelixAdmin#storeMetadataUpdate}
    * writes to the same RT topic, it should happen after the above function. The following test enforces
    * such order at the statement level.
    *
@@ -94,9 +94,9 @@ public class TestVeniceHelixAdmin {
    * it is okay to relax on the ordering enforcement or delete the unit test if necessary.
    */
   @Test
-  public void enforceRealTimeTopicCreationBeforeWriting() {
+  public void enforceRealTimeTopicCreationBeforeWritingToMetaSystemStore() {
     VeniceHelixAdmin veniceHelixAdmin = mock(VeniceHelixAdmin.class);
-    doReturn("test_rt").when(veniceHelixAdmin).getRealTimeTopic(anyString(), anyString(), any());
+    doNothing().when(veniceHelixAdmin).ensureRealTimeTopicExistsForUserSystemStores(anyString(), anyString());
     doCallRealMethod().when(veniceHelixAdmin).setUpMetaStoreAndMayProduceSnapshot(anyString(), anyString());
 
     InOrder inorder = inOrder(veniceHelixAdmin);
@@ -112,8 +112,9 @@ public class TestVeniceHelixAdmin {
 
     veniceHelixAdmin.setUpMetaStoreAndMayProduceSnapshot(anyString(), anyString());
 
-    // Enforce that getRealTimeTopic happens before storeMetadataUpdate. See the above comments for the reasons.
-    inorder.verify(veniceHelixAdmin).getRealTimeTopic(anyString(), anyString(), any());
+    // Enforce that ensureRealTimeTopicExistsForUserSystemStores happens before storeMetadataUpdate. See the above
+    // comments for the reasons.
+    inorder.verify(veniceHelixAdmin).ensureRealTimeTopicExistsForUserSystemStores(anyString(), anyString());
     inorder.verify(veniceHelixAdmin).storeMetadataUpdate(anyString(), anyString(), any());
   }
 

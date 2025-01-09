@@ -3298,115 +3298,65 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   /**
-   * Get the real time topic name for a given store. If the topic is not created in Kafka, it creates the
-   * real time topic and returns the topic name.
-   * @param clusterName name of the Venice cluster.
-   * @param store name of the store.
-   * @return name of the store's real time topic name.
+   * Ensures that a real-time topic exists for the given user system store.
+   * If the topic does not already exist in PubSub, it creates the real-time topic
+   * and returns the topic name. This method is specific to user system stores,
+   * where real-time topics are eagerly created by the controller to prevent
+   * blocking of threads that produce data to these stores.
+   *
+   * @param clusterName the name of the Venice cluster.
+   * @param storeName the name of the store.
+   * @return the name of the store's real-time topic.
+   * @throws VeniceNoStoreException if the store does not exist in the specified cluster.
+   * @throws VeniceException if the store is not a user system store or if the partition count is invalid.
    */
-  public String getRealTimeTopic(String clusterName, Store store, Integer expectedPartitionCount) {
-    PubSubTopic realTimeTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(store));
-    ensureRealTimeTopicIsReady(clusterName, realTimeTopic, expectedPartitionCount);
-    return realTimeTopic.getName();
-  }
-
-  public String getRealTimeTopic(String clusterName, String storeName, Integer expectedPartitionCount) {
+  void ensureRealTimeTopicExistsForUserSystemStores(String clusterName, String storeName) {
+    checkControllerLeadershipFor(clusterName);
     Store store = getStore(clusterName, storeName);
     if (store == null) {
-      throw new VeniceNoStoreException(storeName, clusterName);
+      throw new VeniceNoStoreException(storeName, clusterName, "Real-time check failed.");
     }
-    return getRealTimeTopic(clusterName, store, expectedPartitionCount);
-  }
-
-  public String getSeparateRealTimeTopic(String clusterName, String storeName, Integer expectedPartitionCount) {
-    PubSubTopic incrementalPushRealTimeTopic =
-        pubSubTopicRepository.getTopic(Version.composeSeparateRealTimeTopic(storeName));
-    ensureRealTimeTopicIsReady(clusterName, incrementalPushRealTimeTopic, expectedPartitionCount);
-    return incrementalPushRealTimeTopic.getName();
-  }
-
-  private void ensureRealTimeTopicIsReady(
-      String clusterName,
-      PubSubTopic realTimeTopic,
-      Integer expectedPartitionCount) {
-    checkControllerLeadershipFor(clusterName);
+    if (!store.isSystemStore()) {
+      LOGGER.error("Failed to create real time topic for store: {} because it is not a user system store.", storeName);
+      throw new VeniceException(
+          "Failed to create real time topic for store: " + storeName + " because it is not a user system store.");
+    }
+    PubSubTopic realTimeTopic = getPubSubTopicRepository().getTopic(Utils.getRealTimeTopicName(store));
     TopicManager topicManager = getTopicManager();
-    String storeName = realTimeTopic.getStoreName();
-    if (!topicManager.containsTopic(realTimeTopic)) {
-      HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
-      try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreWriteLock(storeName)) {
-        boolean isRealTimeTopicCreated = topicManager.containsTopic(realTimeTopic);
-        if (isRealTimeTopicCreated && expectedPartitionCount != null) {
-          int actualPartitionCount = topicManager.getPartitionCount(realTimeTopic);
-          if (actualPartitionCount == expectedPartitionCount) {
-            // Topic is already created with the expected partition count
-            return;
-          }
+    if (topicManager.containsTopic(realTimeTopic)) {
+      return;
+    }
 
-          LOGGER.error(
-              "Real time topic: {} has partition count: {} but expected partition count is: {}",
-              realTimeTopic.getName(),
-              actualPartitionCount,
-              expectedPartitionCount);
-          throw new VeniceException(
-              "Real time topic " + realTimeTopic.getName() + " has partition count " + actualPartitionCount
-                  + " but expected partition count is " + expectedPartitionCount);
-        } else if (isRealTimeTopicCreated) {
-          // real-time topic exists but
-          return;
-        }
-
-        ReadWriteStoreRepository repository = resources.getStoreMetadataRepository();
-        Store store = repository.getStore(storeName);
-        if (store == null) {
-          throwStoreDoesNotExist(clusterName, storeName);
-        }
-        if (!store.isHybrid() && !store.isWriteComputationEnabled() && !store.isSystemStore()) {
-          logAndThrow("Store " + storeName + " is not hybrid, refusing to return a realtime topic");
-        }
-        Version version = store.getVersion(store.getLargestUsedVersionNumber());
-        int partitionCount = version != null ? version.getPartitionCount() : 0;
-        // during transition to version based partition count, some old stores may have partition count on the store
-        // config only.
-        if (partitionCount == 0) {
-          // Now store-level partition count is set when a store is converted to hybrid
-          partitionCount = store.getPartitionCount();
-          if (partitionCount == 0) {
-            if (version == null) {
-              throw new VeniceException("Store: " + storeName + " is not initialized with a version yet");
-            } else {
-              throw new VeniceException("Store: " + storeName + " has partition count set to 0");
-            }
-          }
-        }
-
-        if (expectedPartitionCount != null && partitionCount != expectedPartitionCount) {
-          LOGGER.error(
-              "Version partition count: {} does not match expected partition count: {} "
-                  + "for store: {}. Will use expected partition count to create real time topic",
-              partitionCount,
-              expectedPartitionCount,
-              storeName);
-          partitionCount = expectedPartitionCount;
-        }
-
-        VeniceControllerClusterConfig clusterConfig = getHelixVeniceClusterResources(clusterName).getConfig();
-        getTopicManager().createTopic(
-            realTimeTopic,
-            partitionCount,
-            clusterConfig.getKafkaReplicationFactorRTTopics(),
-            store.getRetentionTime(),
-            false,
-            // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
-            clusterConfig.getMinInSyncReplicasRealTimeTopics(),
-            false);
-        // TODO: if there is an online version from a batch push before this store was hybrid then we won't start
-        // replicating to it. A new version must be created.
-        LOGGER.warn(
-            "Creating real time topic per topic request for store: {}. "
-                + "Buffer replay won't start for any existing versions",
-            storeName);
+    HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
+    try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreWriteLock(storeName)) {
+      // check again that the real-time topic does not exist
+      if (topicManager.containsTopic(realTimeTopic)) {
+        return;
       }
+      Version version = store.getVersion(store.getLargestUsedVersionNumber());
+      int partitionCount = version != null ? version.getPartitionCount() : store.getPartitionCount();
+      if (partitionCount == 0) {
+        LOGGER.error(
+            "Failed to create real time topic for user system store: {} because both store and version have partition count set to 0.",
+            storeName);
+        throw new VeniceException(
+            "Failed to create real time topic for user system store: " + storeName
+                + " because both store and version have partition count set to 0.");
+      }
+      VeniceControllerClusterConfig clusterConfig = getControllerConfig(clusterName);
+      LOGGER.info(
+          "Creating real time topic for user system store: {} with partition count: {}",
+          storeName,
+          partitionCount);
+      getTopicManager().createTopic(
+          realTimeTopic,
+          partitionCount,
+          clusterConfig.getKafkaReplicationFactorRTTopics(),
+          store.getRetentionTime(),
+          false,
+          // Note: do not enable RT compaction! Might make jobs in Online/Offline model stuck
+          clusterConfig.getMinInSyncReplicasRealTimeTopics(),
+          false);
     }
   }
 
@@ -3585,8 +3535,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
          * Create RT topic here in parent region. For child regions, RT should always be created as part of
          * {@link RealTimeTopicSwitcher#ensurePreconditions(PubSubTopic, PubSubTopic, Store, Optional)}
          */
-        // getRealTimeTopic(clusterName, storeName, partitionCount);
-        System.out.println("getRealTimeTopic");
+        // ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName, partitionCount);
+        System.out.println("ensureRealTimeTopicExistsForUserSystemStores");
       }
       PubSubTopic rtTopic = pubSubTopicRepository.getTopic(Version.composeRealTimeTopic(storeName));
       if (!getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic, partitionCount)
@@ -4578,7 +4528,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       preCheckStorePartitionCountUpdate(clusterName, store, partitionCount);
       // Do not update the partitionCount on the store.version as version config is immutable. The
       // version.getPartitionCount()
-      // is read only in getRealTimeTopic and createInternalStore creation, so modifying currentVersion should not have
+      // is read only in ensureRealTimeTopicExistsForUserSystemStores and createInternalStore creation, so modifying
+      // currentVersion should not have
       // any effect.
       if (store.isHybrid()
           && multiClusterConfigs.getControllerConfig(clusterName).isHybridStorePartitionCountUpdateEnabled()) {
@@ -8355,7 +8306,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
 
     if (!isParent()) {
       // We do not materialize PS3 for parent region. Hence, skip RT topic creation.
-      getRealTimeTopic(clusterName, daVinciPushStatusStoreName, null);
+      ensureRealTimeTopicExistsForUserSystemStores(clusterName, daVinciPushStatusStoreName);
     }
     if (!store.isDaVinciPushStatusStoreEnabled()) {
       storeMetadataUpdate(clusterName, storeName, (s) -> {
@@ -8378,11 +8329,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       throwStoreDoesNotExist(clusterName, regularStoreName);
     }
 
-    // Make sure RT topic exists before producing. There's no write to parent region meta store RT, but we still create
-    // the RT topic to be consistent in case it was not auto-materialized
+    // Make sure RT topic exists before producing.
     if (!isParent()) {
-      // We do not materialize PS3 for parent region. Hence, skip RT topic creation.
-      getRealTimeTopic(clusterName, VeniceSystemStoreType.META_STORE.getSystemStoreName(regularStoreName), null);
+      // We do not materialize meta store for parent region. Hence, skip RT topic creation.
+      ensureRealTimeTopicExistsForUserSystemStores(
+          clusterName,
+          VeniceSystemStoreType.META_STORE.getSystemStoreName(regularStoreName));
     }
 
     // Update the store flag to enable meta system store.
