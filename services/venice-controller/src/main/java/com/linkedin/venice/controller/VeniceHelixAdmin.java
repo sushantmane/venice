@@ -3433,43 +3433,50 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           clusterName,
           pushJobId);
 
-      // If real-time topic is not required, no need to check for its presence
-      if (!isRealTimeTopicRequired(store, hybridVersion)) {
-        return hybridVersion;
+      // If real-time topic is required, validate that it exists and is in a good state
+      if (isRealTimeTopicRequired(store, hybridVersion)) {
+        validateTopicForIncrementalPush(clusterName, store, hybridVersion, pushJobId);
       }
 
-      PubSubTopic rtTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(store));
-      if (!getTopicManager().containsTopicAndAllPartitionsAreOnline(rtTopic) || isTopicTruncated(rtTopic.getName())) {
-        LOGGER.error(
-            "Incremental push: {} cannot be started for store: {} in cluster: {} because the topic: {} is either absent or being truncated",
-            pushJobId,
-            storeName,
-            clusterName,
-            rtTopic);
-        resources.getVeniceAdminStats().recordUnexpectedTopicAbsenceCount();
-        throw new VeniceException(
-            "Incremental push cannot be started for store: " + storeName + " in cluster: " + clusterName
-                + " because the topic: " + rtTopic + " is either absent or being truncated");
-      }
-
-      if (hybridVersion.isSeparateRealTimeTopicEnabled()) {
-        PubSubTopic separateRtTopic = pubSubTopicRepository.getTopic(Version.composeSeparateRealTimeTopic(storeName));
-        if (!getTopicManager().containsTopicAndAllPartitionsAreOnline(separateRtTopic)
-            || isTopicTruncated(separateRtTopic.getName())) {
-          LOGGER.error(
-              "Incremental push: {} cannot be started for store: {} in cluster: {} because the topic: {} is either absent or being truncated",
-              pushJobId,
-              storeName,
-              clusterName,
-              separateRtTopic);
-          resources.getVeniceAdminStats().recordUnexpectedTopicAbsenceCount();
-          throw new VeniceException(
-              "Incremental push cannot be started for store: " + storeName + " in cluster: " + clusterName
-                  + " because the topic: " + separateRtTopic + " is either absent or being truncated");
-        }
-      }
       return hybridVersion;
     }
+  }
+
+  void validateTopicForIncrementalPush(
+      String clusterName,
+      Store store,
+      Version referenceHybridVersion,
+      String pushJobId) {
+    PubSubTopicRepository topicRepository = getPubSubTopicRepository();
+    if (referenceHybridVersion.isSeparateRealTimeTopicEnabled()) {
+      PubSubTopic separateRtTopic = topicRepository.getTopic(Version.composeSeparateRealTimeTopic(store.getName()));
+      validateTopicPresenceAndStateForIncrementalPush(pushJobId, store.getName(), clusterName, separateRtTopic);
+      // We can consider short-circuiting here if the separate real-time topic is enabled and
+      // the topic is in a good state
+    }
+
+    PubSubTopic rtTopic = topicRepository.getTopic(Utils.getRealTimeTopicName(referenceHybridVersion));
+    validateTopicPresenceAndStateForIncrementalPush(pushJobId, store.getName(), clusterName, rtTopic);
+  }
+
+  private void validateTopicPresenceAndStateForIncrementalPush(
+      String pushJobId,
+      String storeName,
+      String clusterName,
+      PubSubTopic topic) {
+    if (getTopicManager().containsTopicAndAllPartitionsAreOnline(topic) || isTopicTruncated(topic.getName())) {
+      return;
+    }
+    LOGGER.error(
+        "Incremental push: {} cannot be started for store: {} in cluster: {} because the topic: {} is either absent or being truncated",
+        pushJobId,
+        storeName,
+        clusterName,
+        topic);
+    getHelixVeniceClusterResources(clusterName).getVeniceAdminStats().recordUnexpectedTopicAbsenceCount();
+    throw new VeniceException(
+        "Incremental push cannot be started for store: " + storeName + " in cluster: " + clusterName
+            + " because the topic: " + topic + " is either absent or being truncated");
   }
 
   @Override
