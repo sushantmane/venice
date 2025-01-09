@@ -11,9 +11,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
+import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.ConfigKeys;
+import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.common.VeniceSystemStoreUtils;
 import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.controller.exception.HelixClusterMaintenanceModeException;
@@ -641,37 +644,48 @@ public class TestVeniceHelixAdminWithSharedEnvironment extends AbstractTestVenic
 
   }
 
-  // @Test(timeOut = TOTAL_TIMEOUT_FOR_LONG_TEST_MS)
-  // public void testGetRealTimeTopic() {
-  // String storeName = Utils.getUniqueString("store");
-  //
-  // // Must not be able to get a real time topic until the store is created
-  // Assert.assertThrows(VeniceNoStoreException.class, () ->
-  // veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName, null));
-  //
-  // veniceAdmin.createStore(clusterName, storeName, "owner", KEY_SCHEMA, VALUE_SCHEMA);
-  // Store store = veniceAdmin.getStore(clusterName, storeName);
-  // veniceAdmin.updateStore(
-  // clusterName,
-  // storeName,
-  // new UpdateStoreQueryParams().setHybridRewindSeconds(25L).setHybridOffsetLagThreshold(100L)); // make store
-  // // hybrid
-  //
-  // try {
-  // veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName, null);
-  // Assert.fail("Must not be able to get a real time topic until the store is initialized with a version");
-  // } catch (VeniceException e) {
-  // Assert.assertTrue(
-  // e.getMessage().contains("is not initialized with a version"),
-  // "Got unexpected error message: " + e.getMessage());
-  // }
-  //
-  // int partitions = 2; // TODO verify partition count for RT topic.
-  // veniceAdmin.incrementVersionIdempotent(clusterName, storeName, Version.guidBasedDummyPushId(), partitions, 1);
-  //
-  // String rtTopic = veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName, partitions);
-  // Assert.assertEquals(rtTopic, Utils.getRealTimeTopicName(store));
-  // }
+  @Test(timeOut = TOTAL_TIMEOUT_FOR_LONG_TEST_MS)
+  public void testEnsureRealTimeTopicExistsForUserSystemStores() {
+    String storeName = Utils.getUniqueString("store");
+    String metaStoreName = VeniceSystemStoreType.META_STORE.getSystemStoreName(storeName);
+
+    Exception notSystemStoreException = Assert.expectThrows(
+        VeniceNoStoreException.class,
+        () -> veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, metaStoreName));
+    assertTrue(
+        notSystemStoreException.getMessage().contains("does not exist in"),
+        "Got unexpected error message: " + notSystemStoreException.getMessage());
+
+    veniceAdmin.createStore(clusterName, storeName, "owner", KEY_SCHEMA, VALUE_SCHEMA);
+    Store userStore = veniceAdmin.getStore(clusterName, storeName);
+    assertNotNull(userStore, "User store should be created and not null");
+    veniceAdmin.updateStore(
+        clusterName,
+        storeName,
+        new UpdateStoreQueryParams().setHybridRewindSeconds(25L).setHybridOffsetLagThreshold(100L));
+
+    Exception exception = Assert.expectThrows(
+        VeniceException.class,
+        () -> veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName));
+    assertTrue(
+        exception.getMessage().contains("not a user system store"),
+        "Got unexpected error message: " + notSystemStoreException.getMessage());
+
+    String pushStatusStoreName = VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE.getSystemStoreName(storeName);
+    Store pushStatusStore = veniceAdmin.getStore(clusterName, pushStatusStoreName);
+    PubSubTopic pushStatusRealTimeTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(pushStatusStore));
+    assertNotNull(pushStatusStore, "Push status store should not be created yet");
+    TestUtils.waitForNonDeterministicCompletion(
+        30,
+        TimeUnit.SECONDS,
+        () -> !veniceAdmin.getTopicManager().containsTopic(pushStatusRealTimeTopic));
+
+    veniceAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, pushStatusStoreName);
+    TestUtils.waitForNonDeterministicCompletion(
+        30,
+        TimeUnit.SECONDS,
+        () -> veniceAdmin.getTopicManager().containsTopic(pushStatusRealTimeTopic));
+  }
 
   @Test(timeOut = TOTAL_TIMEOUT_FOR_LONG_TEST_MS)
   public void testGetAndCompareStorageNodeStatusForStorageNode() throws Exception {

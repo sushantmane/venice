@@ -3314,9 +3314,11 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     checkControllerLeadershipFor(clusterName);
     Store store = getStore(clusterName, storeName);
     if (store == null) {
-      throw new VeniceNoStoreException(storeName, clusterName, "Real-time check failed.");
+      throw new VeniceNoStoreException(storeName, clusterName);
     }
-    if (!store.isSystemStore()) {
+    VeniceSystemStoreType systemStoreType = VeniceSystemStoreType.getSystemStoreType(storeName);
+    if (VeniceSystemStoreType.META_STORE != systemStoreType
+        && VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE != systemStoreType) {
       LOGGER.error("Failed to create real time topic for store: {} because it is not a user system store.", storeName);
       throw new VeniceException(
           "Failed to create real time topic for store: " + storeName + " because it is not a user system store.");

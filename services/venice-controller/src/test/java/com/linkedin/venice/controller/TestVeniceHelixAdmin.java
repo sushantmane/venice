@@ -21,6 +21,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
+import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.controller.stats.DisabledPartitionStats;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixExternalViewRepository;
@@ -34,7 +35,9 @@ import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.manager.TopicManager;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.utils.HelixUtils;
+import com.linkedin.venice.utils.locks.ClusterLockManager;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -302,5 +305,124 @@ public class TestVeniceHelixAdmin {
     when(topicManager.updateTopicRetentionWithRetries(eq(realTimeTopic), anyLong())).thenReturn(true);
     veniceHelixAdmin.validateAndUpdateTopic(realTimeTopic, store, version, expectedNumOfPartitions, topicManager);
     verify(topicManager, times(1)).updateTopicRetentionWithRetries(eq(realTimeTopic), anyLong());
+  }
+
+  @Test
+  public void testEnsureRealTimeTopicExistsForUserSystemStores() {
+    String clusterName = "testCluster";
+    String storeName = "testStore";
+    String systemStoreName = VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE.getSystemStoreName(storeName);
+    int partitionCount = 10;
+    Store userStore = mock(Store.class, RETURNS_DEEP_STUBS);
+    when(userStore.getName()).thenReturn(storeName);
+    Version version = mock(Version.class);
+    when(version.getStoreName()).thenReturn(storeName);
+    when(version.getPartitionCount()).thenReturn(partitionCount);
+    when(userStore.getPartitionCount()).thenReturn(partitionCount);
+    TopicManager topicManager = mock(TopicManager.class);
+    PubSubTopicRepository pubSubTopicRepository = new PubSubTopicRepository();
+    VeniceHelixAdmin veniceHelixAdmin = mock(VeniceHelixAdmin.class);
+    doReturn(topicManager).when(veniceHelixAdmin).getTopicManager();
+    doReturn(pubSubTopicRepository).when(veniceHelixAdmin).getPubSubTopicRepository();
+
+    // Case 1: Store does not exist
+    doReturn(null).when(veniceHelixAdmin).getStore(clusterName, storeName);
+    doNothing().when(veniceHelixAdmin).checkControllerLeadershipFor(clusterName);
+    doCallRealMethod().when(veniceHelixAdmin).ensureRealTimeTopicExistsForUserSystemStores(anyString(), anyString());
+    Exception notFoundException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName));
+    assertTrue(
+        notFoundException.getMessage().contains("does not exist in"),
+        "Actual message: " + notFoundException.getMessage());
+
+    // Case 2: Store exists, but it's not user system store
+    doReturn(userStore).when(veniceHelixAdmin).getStore(clusterName, storeName);
+    Exception notUserSystemStoreException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, storeName));
+    assertTrue(
+        notUserSystemStoreException.getMessage().contains("is not a user system store"),
+        "Actual message: " + notUserSystemStoreException.getMessage());
+
+    // Case 3: Store exists, it's a user system store, but real-time topic already exists
+    Store systemStore = mock(Store.class, RETURNS_DEEP_STUBS);
+    doReturn(systemStoreName).when(systemStore).getName();
+    doReturn(Collections.emptyList()).when(systemStore).getVersions();
+    doReturn(systemStore).when(veniceHelixAdmin).getStore(clusterName, systemStoreName);
+    doReturn(true).when(topicManager).containsTopic(any(PubSubTopic.class));
+    veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, systemStoreName);
+    verify(topicManager, times(1)).containsTopic(any(PubSubTopic.class));
+
+    HelixVeniceClusterResources veniceClusterResources = mock(HelixVeniceClusterResources.class);
+    doReturn(veniceClusterResources).when(veniceHelixAdmin).getHelixVeniceClusterResources(clusterName);
+    ClusterLockManager clusterLockManager = mock(ClusterLockManager.class);
+    when(veniceClusterResources.getClusterLockManager()).thenReturn(clusterLockManager);
+
+    // Case 4: Store exists, it's a user system store, first check if real-time topic exists returns false but
+    // later RT topic was created
+    topicManager = mock(TopicManager.class);
+    doReturn(topicManager).when(veniceHelixAdmin).getTopicManager();
+    doReturn(false).doReturn(true).when(topicManager).containsTopic(any(PubSubTopic.class));
+    veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, systemStoreName);
+    verify(topicManager, times(2)).containsTopic(any(PubSubTopic.class));
+    verify(topicManager, never()).createTopic(
+        any(PubSubTopic.class),
+        anyInt(),
+        anyInt(),
+        anyLong(),
+        anyBoolean(),
+        any(Optional.class),
+        anyBoolean());
+
+    // Case 5: Store exists, it's a user system store, but real-time topic does not exist and there are no versions
+    // and store partition count is zero
+    doReturn(0).when(systemStore).getPartitionCount();
+    doReturn(false).when(topicManager).containsTopic(any(PubSubTopic.class));
+    Exception zeroPartitionCountException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, systemStoreName));
+    assertTrue(
+        zeroPartitionCountException.getMessage().contains("partition count set to 0"),
+        "Actual message: " + zeroPartitionCountException.getMessage());
+
+    // Case 6: Store exists, it's a user system store, but real-time topic does not exist and there are no versions
+    // hence create a new real-time topic should use store's partition count
+
+    doReturn(false).when(topicManager).containsTopic(any(PubSubTopic.class));
+    doReturn(null).when(systemStore).getVersion(anyInt());
+    doReturn(5).when(systemStore).getPartitionCount();
+    VeniceControllerClusterConfig clusterConfig = mock(VeniceControllerClusterConfig.class);
+    when(veniceHelixAdmin.getControllerConfig(clusterName)).thenReturn(clusterConfig);
+    veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, systemStoreName);
+    ArgumentCaptor<Integer> partitionCountArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
+    verify(topicManager, times(1)).createTopic(
+        any(PubSubTopic.class),
+        partitionCountArgumentCaptor.capture(),
+        anyInt(),
+        anyLong(),
+        anyBoolean(),
+        any(Optional.class),
+        anyBoolean());
+    assertEquals(partitionCountArgumentCaptor.getValue().intValue(), 5);
+
+    // Case 7: Store exists, it's a user system store, but real-time topic does not exist and there are versions
+    version = mock(Version.class);
+    topicManager = mock(TopicManager.class);
+    doReturn(topicManager).when(veniceHelixAdmin).getTopicManager();
+    doReturn(false).when(topicManager).containsTopic(any(PubSubTopic.class));
+    doReturn(version).when(systemStore).getVersion(anyInt());
+    doReturn(10).when(version).getPartitionCount();
+    veniceHelixAdmin.ensureRealTimeTopicExistsForUserSystemStores(clusterName, systemStoreName);
+    partitionCountArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
+    verify(topicManager, times(1)).createTopic(
+        any(PubSubTopic.class),
+        partitionCountArgumentCaptor.capture(),
+        anyInt(),
+        anyLong(),
+        anyBoolean(),
+        any(Optional.class),
+        anyBoolean());
+    assertEquals(partitionCountArgumentCaptor.getValue().intValue(), 10);
   }
 }
