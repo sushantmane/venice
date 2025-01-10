@@ -3382,36 +3382,61 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     }
   }
 
-  /**
-   * @see Admin#getIncrementalPushVersion(String, String, String)
-   */
+  @Override
+  public Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
+    checkControllerLeadershipFor(clusterName);
+    HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
+    try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
+      validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, PushType.STREAM);
+      Store store = resources.getStoreMetadataRepository().getStore(storeName);
+      Version hybridVersion = getReferenceHybridVersionForRealTimeWrites(clusterName, store, pushJobId);
+      if (!isParent()) {
+        PubSubTopic rtTopic = getPubSubTopicRepository().getTopic(Utils.getRealTimeTopicName(hybridVersion));
+        int partitionCount = hybridVersion.getPartitionCount();
+        validateTopicPresenceAndState(clusterName, storeName, pushJobId, PushType.STREAM, rtTopic, partitionCount);
+      }
+      return hybridVersion;
+    }
+  }
+
   @Override
   public Version getIncrementalPushVersion(String clusterName, String storeName, String pushJobId) {
     checkControllerLeadershipFor(clusterName);
     HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
     try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
+      validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, PushType.INCREMENTAL);
       Store store = resources.getStoreMetadataRepository().getStore(storeName);
-      if (store == null) {
-        LOGGER.error(
-            "Unable to locate version for incremental push: {}. Store: {} does not exist in cluster: {}",
-            pushJobId,
-            storeName,
-            clusterName);
-        throwStoreDoesNotExist(clusterName, storeName);
-      }
-
-      if (!store.isIncrementalPushEnabled()) {
-        throw new VeniceException("Incremental push is not enabled for store: " + storeName);
-      }
-
       Version hybridVersion = getReferenceHybridVersionForRealTimeWrites(clusterName, store, pushJobId);
-
       // If real-time topic is required, validate that it exists and is in a good state
       if (isRealTimeTopicRequired(store, hybridVersion)) {
         validateTopicForIncrementalPush(clusterName, store, hybridVersion, pushJobId);
       }
-
       return hybridVersion;
+    }
+  }
+
+  void validateStoreSetupForRTWrites(String clusterName, String storeName, String pushJobId, PushType pushType) {
+    Store store = getHelixVeniceClusterResources(clusterName).getStoreMetadataRepository().getStore(storeName);
+    if (store == null) {
+      throwStoreDoesNotExist(clusterName, storeName);
+    }
+    if (!store.isHybrid()) {
+      LOGGER.error(
+          "{} push writes with pushJobId: {} on store: {} in cluster: {} are not allowed because it is not a hybrid store",
+          pushType,
+          pushJobId,
+          storeName,
+          clusterName);
+      throw new VeniceException(
+          "Store: " + storeName + " is not a hybrid store and cannot be used for " + pushType + " writes");
+    }
+    if (pushType == PushType.INCREMENTAL && !store.isIncrementalPushEnabled()) {
+      LOGGER.error(
+          "Incremental push with pushJobId: {} on store: {} in cluster: {} is not allowed because incremental push is not enabled",
+          pushJobId,
+          storeName,
+          clusterName);
+      throw new VeniceException("Store: " + storeName + " is not an incremental push store");
     }
   }
 
@@ -3499,35 +3524,6 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         pushJobId);
     LOGGER.error(logMessage);
     throw new VeniceException(logMessage);
-  }
-
-  @Override
-  public Version getReferenceVersionForStreamingWrites(String clusterName, String storeName, String pushJobId) {
-    checkControllerLeadershipFor(clusterName);
-    HelixVeniceClusterResources resources = getHelixVeniceClusterResources(clusterName);
-    try (AutoCloseableLock ignore = resources.getClusterLockManager().createStoreReadLock(storeName)) {
-      Store store = resources.getStoreMetadataRepository().getStore(storeName);
-      if (store == null) {
-        throwStoreDoesNotExist(clusterName, storeName);
-      }
-      if (!store.isHybrid()) {
-        LOGGER.warn(
-            "Rejecting request for streaming writes with pushJobId: {} for store: {} in cluster: {} because it is not a hybrid store",
-            pushJobId,
-            storeName,
-            clusterName);
-        throw new VeniceException(
-            "Store: " + storeName + " is not a hybrid store and cannot be used for streaming writes");
-      }
-
-      Version hybridVersion = getReferenceHybridVersionForRealTimeWrites(clusterName, store, pushJobId);
-      if (!isParent()) {
-        PubSubTopic rtTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(hybridVersion));
-        int partitionCount = hybridVersion.getPartitionCount();
-        validateTopicPresenceAndState(clusterName, storeName, pushJobId, PushType.STREAM, rtTopic, partitionCount);
-      }
-      return hybridVersion;
-    }
   }
 
   /**

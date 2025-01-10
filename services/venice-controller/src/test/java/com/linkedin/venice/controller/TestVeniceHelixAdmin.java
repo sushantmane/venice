@@ -1,5 +1,6 @@
 package com.linkedin.venice.controller;
 
+import static com.linkedin.venice.meta.Version.PushType.*;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -23,6 +24,7 @@ import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.controller.stats.DisabledPartitionStats;
+import com.linkedin.venice.controller.stats.VeniceAdminStats;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixExternalViewRepository;
 import com.linkedin.venice.meta.DataReplicationPolicy;
@@ -30,6 +32,7 @@ import com.linkedin.venice.meta.PartitionAssignment;
 import com.linkedin.venice.meta.ReadWriteStoreRepository;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.meta.Version.PushType;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.manager.TopicManager;
@@ -424,5 +427,130 @@ public class TestVeniceHelixAdmin {
         any(Optional.class),
         anyBoolean());
     assertEquals(partitionCountArgumentCaptor.getValue().intValue(), 10);
+  }
+
+  @Test
+  public void testValidateStoreSetupForRTWrites() {
+    String clusterName = "testCluster";
+    String storeName = "testStore";
+    String pushJobId = "pushJob123";
+    VeniceHelixAdmin veniceHelixAdmin = mock(VeniceHelixAdmin.class);
+    Store store = mock(Store.class, RETURNS_DEEP_STUBS);
+    HelixVeniceClusterResources helixVeniceClusterResources = mock(HelixVeniceClusterResources.class);
+    ReadWriteStoreRepository storeMetadataRepository = mock(ReadWriteStoreRepository.class);
+
+    // Mock the method chain
+    doReturn(helixVeniceClusterResources).when(veniceHelixAdmin).getHelixVeniceClusterResources(clusterName);
+    doReturn(storeMetadataRepository).when(helixVeniceClusterResources).getStoreMetadataRepository();
+    doReturn(store).when(storeMetadataRepository).getStore(storeName);
+
+    doCallRealMethod().when(veniceHelixAdmin)
+        .validateStoreSetupForRTWrites(anyString(), anyString(), anyString(), any(PushType.class));
+
+    // Case 1: Store does not exist
+    doReturn(null).when(storeMetadataRepository).getStore(storeName);
+    Exception storeNotFoundException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, STREAM));
+    assertTrue(
+        storeNotFoundException.getMessage().contains("does not exist"),
+        "Actual message: " + storeNotFoundException.getMessage());
+
+    // Case 2: Store exists but is not hybrid
+    doReturn(store).when(storeMetadataRepository).getStore(storeName);
+    doReturn(false).when(store).isHybrid();
+    Exception nonHybridStoreException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, STREAM));
+    assertTrue(
+        nonHybridStoreException.getMessage().contains("is not a hybrid store"),
+        "Actual message: " + nonHybridStoreException.getMessage());
+
+    // Case 3: Store is hybrid but pushType is INCREMENTAL and incremental push is not enabled
+    doReturn(true).when(store).isHybrid();
+    doReturn(false).when(store).isIncrementalPushEnabled();
+    Exception incrementalPushNotEnabledException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, INCREMENTAL));
+    assertTrue(
+        incrementalPushNotEnabledException.getMessage().contains("is not an incremental push store"),
+        "Actual message: " + incrementalPushNotEnabledException.getMessage());
+    verify(store, times(1)).isIncrementalPushEnabled();
+
+    // Case 4: Store is hybrid and pushType is INCREMENTAL with incremental push enabled
+    doReturn(true).when(store).isIncrementalPushEnabled();
+    veniceHelixAdmin.validateStoreSetupForRTWrites(clusterName, storeName, pushJobId, INCREMENTAL);
+    verify(store, times(2)).isIncrementalPushEnabled();
+  }
+
+  @Test
+  public void testValidateTopicPresenceAndState() {
+    String clusterName = "testCluster";
+    String storeName = "testStore";
+    String pushJobId = "pushJob123";
+    PubSubTopic topic = mock(PubSubTopic.class);
+    int partitionCount = 10;
+    VeniceHelixAdmin veniceHelixAdmin = mock(VeniceHelixAdmin.class);
+
+    TopicManager topicManager = mock(TopicManager.class);
+    HelixVeniceClusterResources helixVeniceClusterResources = mock(HelixVeniceClusterResources.class);
+    VeniceAdminStats veniceAdminStats = mock(VeniceAdminStats.class);
+
+    doReturn(topicManager).when(veniceHelixAdmin).getTopicManager();
+    doReturn(helixVeniceClusterResources).when(veniceHelixAdmin).getHelixVeniceClusterResources(clusterName);
+    doReturn(veniceAdminStats).when(helixVeniceClusterResources).getVeniceAdminStats();
+
+    doCallRealMethod().when(veniceHelixAdmin)
+        .validateTopicPresenceAndState(
+            anyString(),
+            anyString(),
+            anyString(),
+            any(PushType.class),
+            any(PubSubTopic.class),
+            anyInt());
+
+    // Case 1: Topic exists, all partitions are online, and topic is not truncated
+    when(topicManager.containsTopicAndAllPartitionsAreOnline(topic, partitionCount)).thenReturn(true);
+    when(veniceHelixAdmin.isTopicTruncated(topic.getName())).thenReturn(false);
+    veniceHelixAdmin
+        .validateTopicPresenceAndState(clusterName, storeName, pushJobId, PushType.BATCH, topic, partitionCount);
+    verify(topicManager, times(1)).containsTopicAndAllPartitionsAreOnline(topic, partitionCount);
+    verify(veniceHelixAdmin, times(1)).isTopicTruncated(topic.getName());
+
+    // Case 2: Topic does not exist or not all partitions are online
+    doReturn(false).when(topicManager).containsTopicAndAllPartitionsAreOnline(topic, partitionCount);
+    Exception topicAbsentException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin
+            .validateTopicPresenceAndState(clusterName, storeName, pushJobId, PushType.BATCH, topic, partitionCount));
+    assertTrue(
+        topicAbsentException.getMessage().contains("is either absent or being truncated"),
+        "Actual message: " + topicAbsentException.getMessage());
+    verify(veniceAdminStats, times(1)).recordUnexpectedTopicAbsenceCount();
+
+    // Case 3: Topic exists, all partitions are online, but topic is truncated
+    when(topicManager.containsTopicAndAllPartitionsAreOnline(topic, partitionCount)).thenReturn(true);
+    when(veniceHelixAdmin.isTopicTruncated(topic.getName())).thenReturn(true);
+    Exception topicTruncatedException = expectThrows(
+        VeniceException.class,
+        () -> veniceHelixAdmin.validateTopicPresenceAndState(
+            clusterName,
+            storeName,
+            pushJobId,
+            PushType.INCREMENTAL,
+            topic,
+            partitionCount));
+    assertTrue(
+        topicTruncatedException.getMessage().contains("is either absent or being truncated"),
+        "Actual message: " + topicTruncatedException.getMessage());
+    verify(veniceAdminStats, times(2)).recordUnexpectedTopicAbsenceCount();
+
+    // Case 4: Validate behavior with different PushType (e.g., INCREMENTAL)
+    when(topicManager.containsTopicAndAllPartitionsAreOnline(topic, partitionCount)).thenReturn(true);
+    when(veniceHelixAdmin.isTopicTruncated(topic.getName())).thenReturn(false);
+    veniceHelixAdmin
+        .validateTopicPresenceAndState(clusterName, storeName, pushJobId, PushType.INCREMENTAL, topic, partitionCount);
+    verify(topicManager, times(4)).containsTopicAndAllPartitionsAreOnline(topic, partitionCount);
+    verify(veniceHelixAdmin, times(3)).isTopicTruncated(topic.getName());
   }
 }
