@@ -34,7 +34,7 @@ public class TestControllerSecureGrpcServer {
     sslFactory = SslUtils.getVeniceLocalSslFactory();
     grpcSecureServerPort = TestUtils.getFreePort();
     VeniceGrpcServerConfig grpcSecureServerConfig =
-        new VeniceGrpcServerConfig.Builder().setService(new VeniceControllerGrpcSecureServiceTestImpl())
+        new VeniceGrpcServerConfig.Builder().addService(new VeniceControllerGrpcSecureServiceTestImpl())
             .setPort(grpcSecureServerPort)
             .setNumThreads(2)
             .setSslFactory(sslFactory)

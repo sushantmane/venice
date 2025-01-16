@@ -291,7 +291,7 @@ public class VeniceController {
 
     adminGrpcServer = new VeniceGrpcServer(
         new VeniceGrpcServerConfig.Builder().setPort(multiClusterConfigs.getAdminGrpcPort())
-            .setService(grpcService)
+            .addService(grpcService)
             .setExecutor(grpcExecutor)
             .setInterceptors(interceptors)
             .build());
@@ -304,7 +304,7 @@ public class VeniceController {
       VeniceControllerGrpcServiceImpl secureGrpcService = new VeniceControllerGrpcServiceImpl(secureRequestHandler);
       adminSecureGrpcServer = new VeniceGrpcServer(
           new VeniceGrpcServerConfig.Builder().setPort(multiClusterConfigs.getAdminSecureGrpcPort())
-              .setService(secureGrpcService)
+              .addService(secureGrpcService)
               .setExecutor(grpcExecutor)
               .setSslFactory(sslFactory)
               .setInterceptors(interceptors)
