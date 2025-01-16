@@ -12,7 +12,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
-import com.linkedin.venice.controllerapi.transport.GrpcRequestResponseConverter;
+import com.linkedin.venice.controller.grpc.GrpcRequestResponseConverter;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.protocols.controller.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.controller.ControllerGrpcErrorType;
@@ -249,6 +249,6 @@ public class VeniceControllerGrpcServiceImplTest {
     assertEquals(errorInfo4.getErrorType(), ControllerGrpcErrorType.UNAUTHORIZED);
     assertTrue(
         errorInfo4.getErrorMessage().contains("Only admin users are allowed to run"),
-        "Acual: " + errorInfo4.getErrorMessage());
+        "Actual: " + errorInfo4.getErrorMessage());
   }
 }

@@ -28,16 +28,26 @@ public class VeniceControllerRequestHandler {
   private final Admin admin;
   private final boolean sslEnabled;
   private final VeniceControllerAccessManager accessManager;
+  private final StoreRequestHandler storeRequestHandler;
 
   public VeniceControllerRequestHandler(ControllerRequestHandlerDependencies dependencies) {
     this.admin = dependencies.getAdmin();
     this.sslEnabled = dependencies.isSslEnabled();
     this.accessManager = dependencies.getControllerAccessManager();
+    this.storeRequestHandler = new StoreRequestHandler(dependencies);
   }
 
   // visibility: package-private
   boolean isSslEnabled() {
     return sslEnabled;
+  }
+
+  public Admin getAdmin() {
+    return admin;
+  }
+
+  public StoreRequestHandler getStoreRequestHandler() {
+    return storeRequestHandler;
   }
 
   /**

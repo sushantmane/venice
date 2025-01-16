@@ -83,12 +83,12 @@ public class TestControllerGrpcEndpoints {
         veniceCluster.getLeaderVeniceController().getControllerSecureGrpcUrl());
 
     // Test 2: createStore
+    ClusterStoreGrpcInfo storeGrpcInfo = ClusterStoreGrpcInfo.newBuilder()
+        .setClusterName(veniceCluster.getClusterName())
+        .setStoreName(storeName)
+        .build();
     CreateStoreGrpcRequest createStoreGrpcRequest = CreateStoreGrpcRequest.newBuilder()
-        .setClusterStoreInfo(
-            ClusterStoreGrpcInfo.newBuilder()
-                .setClusterName(veniceCluster.getClusterName())
-                .setStoreName(storeName)
-                .build())
+        .setClusterStoreInfo(storeGrpcInfo)
         .setOwner("owner")
         .setKeySchema(DEFAULT_KEY_SCHEMA)
         .setValueSchema("\"string\"")
