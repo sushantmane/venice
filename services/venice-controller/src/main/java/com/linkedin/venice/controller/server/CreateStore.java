@@ -76,7 +76,7 @@ public class CreateStore extends AbstractRoute {
   /**
    * @see Admin#updateAclForStore(String, String, String)
    */
-  public Route updateAclForStore(Admin admin) {
+  public Route updateAclForStore(Admin admin, VeniceControllerRequestHandler requestHandler) {
     return (request, response) -> {
       AclResponse responseObject = new AclResponse();
       response.type(HttpConstants.JSON);
