@@ -555,13 +555,19 @@ public class AdminSparkServer extends AbstractVeniceService {
             storesRoutes.enableActiveActiveReplicationForCluster(admin)));
     httpService.post(
         UPDATE_ACL.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.updateAclForStore(admin, requestHandler)));
+        new VeniceParentControllerRegionStateHandler(
+            admin,
+            createStoreRoute.updateAclForStore(admin, requestHandler.getStoreRequestHandler())));
     httpService.get(
         GET_ACL.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.getAclForStore(admin)));
+        new VeniceParentControllerRegionStateHandler(
+            admin,
+            createStoreRoute.getAclForStore(admin, requestHandler.getStoreRequestHandler())));
     httpService.get(
         DELETE_ACL.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.deleteAclForStore(admin)));
+        new VeniceParentControllerRegionStateHandler(
+            admin,
+            createStoreRoute.deleteAclForStore(admin, requestHandler.getStoreRequestHandler())));
     httpService.get(
         GET_DELETABLE_STORE_TOPICS.getPath(),
         new VeniceParentControllerRegionStateHandler(admin, storesRoutes.getDeletableStoreTopics(admin)));

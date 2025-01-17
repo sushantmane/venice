@@ -22,6 +22,10 @@ import com.linkedin.venice.controllerapi.NewStoreResponse;
 import com.linkedin.venice.protocols.controller.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.controller.CreateStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.CreateStoreGrpcResponse;
+import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcRequest;
+import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcRequest;
+import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.controller.UpdateAclForStoreGrpcRequest;
 import java.util.Optional;
 import spark.Request;
 import spark.Route;
@@ -76,7 +80,7 @@ public class CreateStore extends AbstractRoute {
   /**
    * @see Admin#updateAclForStore(String, String, String)
    */
-  public Route updateAclForStore(Admin admin, VeniceControllerRequestHandler requestHandler) {
+  public Route updateAclForStore(Admin admin, StoreRequestHandler requestHandler) {
     return (request, response) -> {
       AclResponse responseObject = new AclResponse();
       response.type(HttpConstants.JSON);
@@ -86,9 +90,16 @@ public class CreateStore extends AbstractRoute {
         String cluster = request.queryParams(CLUSTER);
         String storeName = request.queryParams(NAME);
         String accessPermissions = request.queryParams(ACCESS_PERMISSION);
+        ClusterStoreGrpcInfo storeInfo =
+            ClusterStoreGrpcInfo.newBuilder().setClusterName(cluster).setStoreName(storeName).build();
+        UpdateAclForStoreGrpcRequest.Builder requestBuilder =
+            UpdateAclForStoreGrpcRequest.newBuilder().setStoreInfo(storeInfo);
+        if (accessPermissions != null) {
+          requestBuilder.setAccessPermissions(accessPermissions);
+        }
+        requestHandler.updateAclForStore(requestBuilder.build());
         responseObject.setCluster(cluster);
         responseObject.setName(storeName);
-        admin.updateAclForStore(cluster, storeName, accessPermissions);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
@@ -100,7 +111,7 @@ public class CreateStore extends AbstractRoute {
   /**
    * @see Admin#getAclForStore(String, String)
    */
-  public Route getAclForStore(Admin admin) {
+  public Route getAclForStore(Admin admin, StoreRequestHandler requestHandler) {
     return (request, response) -> {
       AclResponse responseObject = new AclResponse();
       response.type(HttpConstants.JSON);
@@ -111,9 +122,12 @@ public class CreateStore extends AbstractRoute {
         String storeName = request.queryParams(NAME);
         responseObject.setCluster(cluster);
         responseObject.setName(storeName);
-
-        String accessPerm = admin.getAclForStore(cluster, storeName);
-        responseObject.setAccessPermissions(accessPerm);
+        ClusterStoreGrpcInfo storeInfo =
+            ClusterStoreGrpcInfo.newBuilder().setClusterName(cluster).setStoreName(storeName).build();
+        GetAclForStoreGrpcRequest internalRequest =
+            GetAclForStoreGrpcRequest.newBuilder().setStoreInfo(storeInfo).build();
+        GetAclForStoreGrpcResponse internalResponse = requestHandler.getAclForStore(internalRequest);
+        responseObject.setAccessPermissions(internalResponse.getAccessPermissions());
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
@@ -125,7 +139,7 @@ public class CreateStore extends AbstractRoute {
   /**
    * @see Admin#deleteAclForStore(String, String)
    */
-  public Route deleteAclForStore(Admin admin) {
+  public Route deleteAclForStore(Admin admin, StoreRequestHandler requestHandler) {
     return (request, response) -> {
       AclResponse responseObject = new AclResponse();
       response.type(HttpConstants.JSON);
@@ -136,7 +150,9 @@ public class CreateStore extends AbstractRoute {
         String storeName = request.queryParams(NAME);
         responseObject.setCluster(cluster);
         responseObject.setName(storeName);
-        admin.deleteAclForStore(cluster, storeName);
+        ClusterStoreGrpcInfo storeInfo =
+            ClusterStoreGrpcInfo.newBuilder().setClusterName(cluster).setStoreName(storeName).build();
+        requestHandler.deleteAclForStore(DeleteAclForStoreGrpcRequest.newBuilder().setStoreInfo(storeInfo).build());
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);
