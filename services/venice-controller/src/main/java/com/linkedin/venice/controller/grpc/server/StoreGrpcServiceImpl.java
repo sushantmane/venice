@@ -1,10 +1,12 @@
 package com.linkedin.venice.controller.grpc.server;
 
 import com.linkedin.venice.controller.server.StoreRequestHandler;
+import com.linkedin.venice.protocols.controller.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcResponse;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.controller.ResourceCleanupCheckGrpcResponse;
 import com.linkedin.venice.protocols.controller.StoreGrpcServiceGrpc;
 import com.linkedin.venice.protocols.controller.StoreGrpcServiceGrpc.StoreGrpcServiceImplBase;
 import com.linkedin.venice.protocols.controller.UpdateAclForStoreGrpcRequest;
@@ -56,5 +58,27 @@ public class StoreGrpcServiceImpl extends StoreGrpcServiceImplBase {
         () -> storeRequestHandler.deleteAclForStore(request),
         responseObserver,
         request.getStoreInfo());
+  }
+
+  @Override
+  public void checkResourceCleanupForStoreCreation(
+      ClusterStoreGrpcInfo request,
+      StreamObserver<ResourceCleanupCheckGrpcResponse> responseObserver) {
+    LOGGER.debug("Received checkResourceCleanupForStoreCreation with args: {}", request);
+    ControllerGrpcServerUtils
+        .handleRequest(StoreGrpcServiceGrpc.getCheckResourceCleanupForStoreCreationMethod(), () -> {
+          ResourceCleanupCheckGrpcResponse.Builder responseBuilder =
+              ResourceCleanupCheckGrpcResponse.newBuilder().setStoreInfo(request);
+          try {
+            storeRequestHandler.checkResourceCleanupForStoreCreation(request);
+            responseBuilder.setHasLingeringResources(false);
+          } catch (Exception e) {
+            responseBuilder.setHasLingeringResources(true);
+            if (e.getMessage() != null) {
+              responseBuilder.setDescription(e.getMessage());
+            }
+          }
+          return responseBuilder.build();
+        }, responseObserver, request);
   }
 }

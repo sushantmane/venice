@@ -1,9 +1,12 @@
 package com.linkedin.venice.controller.grpc.server;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
@@ -17,6 +20,7 @@ import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcResponse;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcResponse;
+import com.linkedin.venice.protocols.controller.ResourceCleanupCheckGrpcResponse;
 import com.linkedin.venice.protocols.controller.StoreGrpcServiceGrpc;
 import com.linkedin.venice.protocols.controller.StoreGrpcServiceGrpc.StoreGrpcServiceBlockingStub;
 import com.linkedin.venice.protocols.controller.UpdateAclForStoreGrpcRequest;
@@ -158,5 +162,38 @@ public class StoreGrpcServiceImplTest {
     assertEquals(errorInfo.getErrorType(), ControllerGrpcErrorType.GENERAL_ERROR);
     assertNotNull(errorInfo, "Error info should not be null");
     assertTrue(errorInfo.getErrorMessage().contains("Failed to delete ACL"));
+  }
+
+  @Test
+  public void testCheckResourceCleanupForStoreCreationSuccess() {
+    ClusterStoreGrpcInfo request =
+        ClusterStoreGrpcInfo.newBuilder().setClusterName(TEST_CLUSTER).setStoreName(TEST_STORE).build();
+
+    // No lingering resources
+    doNothing().when(storeRequestHandler).checkResourceCleanupForStoreCreation(any(ClusterStoreGrpcInfo.class));
+    ResourceCleanupCheckGrpcResponse response =
+        storeGrpcServiceBlockingStub.checkResourceCleanupForStoreCreation(request);
+    assertNotNull(response, "Response should not be null");
+    assertEquals(response.getStoreInfo(), request, "Store info should match");
+    assertFalse(response.getHasLingeringResources(), "Lingering resources should be false");
+
+    // Lingering resources
+    String exceptionMessage = "Lingering resources detected";
+    doThrow(new VeniceException(exceptionMessage)).when(storeRequestHandler)
+        .checkResourceCleanupForStoreCreation(any(ClusterStoreGrpcInfo.class));
+    response = storeGrpcServiceBlockingStub.checkResourceCleanupForStoreCreation(request);
+    assertNotNull(response, "Response should not be null");
+    assertEquals(response.getStoreInfo(), request, "Store info should match");
+    assertTrue(response.getHasLingeringResources(), "Lingering resources should be true");
+    assertEquals(response.getDescription(), exceptionMessage, "Description should match");
+
+    // null exception message
+    doThrow(new VeniceException()).when(storeRequestHandler)
+        .checkResourceCleanupForStoreCreation(any(ClusterStoreGrpcInfo.class));
+    response = storeGrpcServiceBlockingStub.checkResourceCleanupForStoreCreation(request);
+    assertNotNull(response, "Response should not be null");
+    assertEquals(response.getStoreInfo(), request, "Store info should match");
+    assertTrue(response.getHasLingeringResources(), "Lingering resources should be true");
+    assertTrue(response.getDescription().isEmpty(), "Description should be empty");
   }
 }

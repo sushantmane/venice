@@ -164,7 +164,7 @@ public class CreateStore extends AbstractRoute {
   /**
    * @see Admin#checkResourceCleanupBeforeStoreCreation(String, String)
    */
-  public Route checkResourceCleanupForStoreCreation(Admin admin) {
+  public Route checkResourceCleanupForStoreCreation(Admin admin, StoreRequestHandler requestHandler) {
     return (request, response) -> {
       ControllerResponse controllerResponse = new ControllerResponse();
       response.type(HttpConstants.JSON);
@@ -174,7 +174,8 @@ public class CreateStore extends AbstractRoute {
         String storeName = request.queryParams(NAME);
         controllerResponse.setCluster(cluster);
         controllerResponse.setName(storeName);
-        admin.checkResourceCleanupBeforeStoreCreation(cluster, storeName);
+        requestHandler.checkResourceCleanupForStoreCreation(
+            ClusterStoreGrpcInfo.newBuilder().setClusterName(cluster).setStoreName(storeName).build());
       } catch (Throwable e) {
         controllerResponse.setError(e);
         AdminSparkServer.handleError(e, request, response);

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -304,7 +305,6 @@ public class CreateStoreTest {
     QueryParamsMap paramsMap = mock(QueryParamsMap.class);
     doReturn(new HashMap<>()).when(paramsMap).toMap();
     doReturn(paramsMap).when(request).queryMap();
-
     when(request.queryParams(CLUSTER)).thenReturn(CLUSTER_NAME);
     when(request.queryParams(NAME)).thenReturn(STORE_NAME);
 
@@ -316,5 +316,34 @@ public class CreateStoreTest {
     verify(mockAdmin, times(1)).deleteAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
     assertNotNull(aclResponse.getError());
     assertTrue(aclResponse.getError().contains("Internal error"), "Actual:" + aclResponse.getError());
+  }
+
+  @Test
+  public void testCheckResourceCleanupForStoreCreation() throws Exception {
+    QueryParamsMap paramsMap = mock(QueryParamsMap.class);
+    doReturn(new HashMap<>()).when(paramsMap).toMap();
+    doReturn(paramsMap).when(request).queryMap();
+    when(request.queryParams(CLUSTER)).thenReturn(CLUSTER_NAME);
+    when(request.queryParams(NAME)).thenReturn(STORE_NAME);
+
+    doNothing().when(mockAdmin).checkResourceCleanupBeforeStoreCreation(eq(CLUSTER_NAME), eq(STORE_NAME));
+
+    Route route =
+        new CreateStore(false, Optional.empty()).checkResourceCleanupForStoreCreation(mockAdmin, storeRequestHandler);
+    ControllerResponse controllerResponse =
+        OBJECT_MAPPER.readValue(route.handle(request, response).toString(), ControllerResponse.class);
+
+    assertEquals(controllerResponse.getCluster(), CLUSTER_NAME);
+    assertEquals(controllerResponse.getName(), STORE_NAME);
+    assertFalse(controllerResponse.isError());
+    verify(mockAdmin, times(1)).checkResourceCleanupBeforeStoreCreation(eq(CLUSTER_NAME), eq(STORE_NAME));
+    verify(response, never()).status(HttpStatus.SC_BAD_REQUEST);
+
+    // Test when there are lingering resources
+    doThrow(new RuntimeException("Lingering resources found")).when(mockAdmin)
+        .checkResourceCleanupBeforeStoreCreation(eq(CLUSTER_NAME), eq(STORE_NAME));
+    controllerResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), ControllerResponse.class);
+    assertTrue(controllerResponse.isError());
+    assertTrue(controllerResponse.getError().contains("Lingering resources found"));
   }
 }

@@ -1,11 +1,13 @@
 package com.linkedin.venice.controller.server;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.ControllerRequestHandlerDependencies;
@@ -98,5 +100,21 @@ public class StoreRequestHandlerTest {
     verify(admin, times(1)).deleteAclForStore("testCluster", "testStore");
     assertEquals(response.getStoreInfo().getClusterName(), "testCluster");
     assertEquals(response.getStoreInfo().getStoreName(), "testStore");
+  }
+
+  @Test
+  public void testCheckResourceCleanupForStoreCreation() {
+    // No lingering resources
+    ClusterStoreGrpcInfo request =
+        ClusterStoreGrpcInfo.newBuilder().setClusterName("testCluster").setStoreName("testStore").build();
+    storeRequestHandler.checkResourceCleanupForStoreCreation(request);
+    verify(admin, times(1)).checkResourceCleanupBeforeStoreCreation("testCluster", "testStore");
+
+    // Lingering resources hence throws exception
+    doThrow(new RuntimeException("Lingering resources found")).when(admin)
+        .checkResourceCleanupBeforeStoreCreation("testCluster", "testStore");
+    Exception e =
+        expectThrows(RuntimeException.class, () -> storeRequestHandler.checkResourceCleanupForStoreCreation(request));
+    assertEquals(e.getMessage(), "Lingering resources found");
   }
 }

@@ -61,4 +61,13 @@ public class StoreRequestHandler {
     admin.deleteAclForStore(storeInfo.getClusterName(), storeInfo.getStoreName());
     return DeleteAclForStoreGrpcResponse.newBuilder().setStoreInfo(storeInfo).build();
   }
+
+  public void checkResourceCleanupForStoreCreation(ClusterStoreGrpcInfo request) {
+    ControllerRequestParamValidator.validateClusterStoreInfo(request);
+    LOGGER.info(
+        "Checking resource cleanup for store: {} in cluster: {}",
+        request.getStoreName(),
+        request.getClusterName());
+    admin.checkResourceCleanupBeforeStoreCreation(request.getClusterName(), request.getStoreName());
+  }
 }
