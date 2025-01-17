@@ -555,7 +555,7 @@ public class AdminSparkServer extends AbstractVeniceService {
             storesRoutes.enableActiveActiveReplicationForCluster(admin)));
     httpService.post(
         UPDATE_ACL.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.updateAclForStore(admin)));
+        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.updateAclForStore(admin, requestHandler)));
     httpService.get(
         GET_ACL.getPath(),
         new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.getAclForStore(admin)));

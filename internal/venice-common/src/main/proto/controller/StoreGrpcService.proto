@@ -6,34 +6,34 @@ import "controller/ControllerGrpcRequestContext.proto";
 
 option java_multiple_files = true;
 
-service StoreAclGrpcService {
+service StoreGrpcService {
   rpc updateAclForStore(UpdateAclForStoreGrpcRequest) returns (UpdateAclForStoreGrpcResponse);
   rpc getAclForStore(GetAclForStoreGrpcRequest) returns (GetAclForStoreGrpcResponse);
   rpc deleteAclForStore(DeleteAclForStoreGrpcRequest) returns (DeleteAclForStoreGrpcResponse);
 }
 
 message UpdateAclForStoreGrpcRequest {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
   string accessPermissions = 3;
 }
 
 message UpdateAclForStoreGrpcResponse {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
 }
 
 message GetAclForStoreGrpcRequest {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
 }
 
 message GetAclForStoreGrpcResponse {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
   string accessPermissions = 2;
 }
 
 message DeleteAclForStoreGrpcRequest {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
 }
 
 message DeleteAclForStoreGrpcResponse {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
+  ClusterStoreGrpcInfo storeInfo = 1;
 }
