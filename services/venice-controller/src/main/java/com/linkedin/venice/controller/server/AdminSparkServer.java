@@ -366,7 +366,9 @@ public class AdminSparkServer extends AbstractVeniceService {
         new VeniceParentControllerRegionStateHandler(admin, createVersion.addVersionAndStartIngestion(admin)));
     httpService.post(
         NEW_STORE.getPath(),
-        new VeniceParentControllerRegionStateHandler(admin, createStoreRoute.createStore(admin, requestHandler)));
+        new VeniceParentControllerRegionStateHandler(
+            admin,
+            createStoreRoute.createStore(admin, requestHandler.getStoreRequestHandler())));
     httpService.get(
         CHECK_RESOURCE_CLEANUP_FOR_STORE_CREATION.getPath(),
         new VeniceParentControllerRegionStateHandler(

@@ -12,12 +12,15 @@ import static org.testng.Assert.expectThrows;
 import com.linkedin.venice.controller.Admin;
 import com.linkedin.venice.controller.ControllerRequestHandlerDependencies;
 import com.linkedin.venice.protocols.controller.ClusterStoreGrpcInfo;
+import com.linkedin.venice.protocols.controller.CreateStoreGrpcRequest;
+import com.linkedin.venice.protocols.controller.CreateStoreGrpcResponse;
 import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.DeleteAclForStoreGrpcResponse;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.GetAclForStoreGrpcResponse;
 import com.linkedin.venice.protocols.controller.UpdateAclForStoreGrpcRequest;
 import com.linkedin.venice.protocols.controller.UpdateAclForStoreGrpcResponse;
+import java.util.Optional;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -32,6 +35,57 @@ public class StoreRequestHandlerTest {
     ControllerRequestHandlerDependencies dependencies = mock(ControllerRequestHandlerDependencies.class);
     when(dependencies.getAdmin()).thenReturn(admin);
     storeRequestHandler = new StoreRequestHandler(dependencies);
+  }
+
+  @Test
+  public void testCreateStore() {
+    CreateStoreGrpcRequest request = CreateStoreGrpcRequest.newBuilder()
+        .setStoreInfo(ClusterStoreGrpcInfo.newBuilder().setClusterName("testCluster").setStoreName("testStore").build())
+        .setKeySchema("testKeySchema")
+        .setValueSchema("testValueSchema")
+        .setOwner("testOwner")
+        .setAccessPermission("testAccessPermissions")
+        .setIsSystemStore(false)
+        .build();
+
+    CreateStoreGrpcResponse response = storeRequestHandler.createStore(request);
+
+    verify(admin, times(1)).createStore(
+        "testCluster",
+        "testStore",
+        "testOwner",
+        "testKeySchema",
+        "testValueSchema",
+        false,
+        Optional.of("testAccessPermissions"));
+    assertEquals(response.getStoreInfo().getClusterName(), "testCluster");
+    assertEquals(response.getStoreInfo().getStoreName(), "testStore");
+    assertEquals(response.getOwner(), "testOwner");
+  }
+
+  @Test
+  public void testCreateStoreWithNullAccessPermissions() {
+    CreateStoreGrpcRequest request = CreateStoreGrpcRequest.newBuilder()
+        .setStoreInfo(ClusterStoreGrpcInfo.newBuilder().setClusterName("testCluster").setStoreName("testStore").build())
+        .setKeySchema("testKeySchema")
+        .setValueSchema("testValueSchema")
+        .setOwner("testOwner")
+        .setIsSystemStore(true)
+        .build();
+
+    CreateStoreGrpcResponse response = storeRequestHandler.createStore(request);
+
+    verify(admin, times(1)).createStore(
+        "testCluster",
+        "testStore",
+        "testOwner",
+        "testKeySchema",
+        "testValueSchema",
+        true,
+        Optional.empty());
+    assertEquals(response.getStoreInfo().getClusterName(), "testCluster");
+    assertEquals(response.getStoreInfo().getStoreName(), "testStore");
+    assertEquals(response.getOwner(), "testOwner");
   }
 
   @Test

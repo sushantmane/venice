@@ -50,9 +50,8 @@ public class CreateStoreTest {
   private static final String CLUSTER_NAME = Utils.getUniqueString("test-cluster");
   private static final String STORE_NAME = Utils.getUniqueString("test-store");
 
-  private VeniceControllerRequestHandler requestHandler;
   private Admin mockAdmin;
-  private StoreRequestHandler storeRequestHandler;
+  private StoreRequestHandler requestHandler;
   private Request request;
   private Response response;
 
@@ -64,8 +63,7 @@ public class CreateStoreTest {
     doReturn(true).when(mockAdmin).isLeaderControllerFor(CLUSTER_NAME);
     ControllerRequestHandlerDependencies dependencies = mock(ControllerRequestHandlerDependencies.class);
     doReturn(mockAdmin).when(dependencies).getAdmin();
-    requestHandler = new VeniceControllerRequestHandler(dependencies);
-    storeRequestHandler = requestHandler.getStoreRequestHandler();
+    requestHandler = new StoreRequestHandler(dependencies);
   }
 
   @Test
@@ -165,7 +163,7 @@ public class CreateStoreTest {
     when(request.queryParams(ACCESS_PERMISSION)).thenReturn(accessPermissions);
 
     doNothing().when(mockAdmin).updateAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME), eq(accessPermissions));
-    Route route = new CreateStore(false, Optional.empty()).updateAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).updateAclForStore(mockAdmin, requestHandler);
     AclResponse aclResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
     verify(mockAdmin, times(1)).updateAclForStore(CLUSTER_NAME, STORE_NAME, accessPermissions);
@@ -184,7 +182,7 @@ public class CreateStoreTest {
     when(request.queryParams(ACCESS_PERMISSION)).thenReturn(null);
 
     doNothing().when(mockAdmin).updateAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME), any());
-    Route route = new CreateStore(false, Optional.empty()).updateAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).updateAclForStore(mockAdmin, requestHandler);
 
     ControllerResponse controllerResponse =
         OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
@@ -204,7 +202,7 @@ public class CreateStoreTest {
     when(request.queryParams(CLUSTER)).thenReturn(CLUSTER_NAME);
     when(request.queryParams(NAME)).thenReturn(STORE_NAME);
     when(mockAdmin.getAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME))).thenReturn("read,write");
-    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, requestHandler);
     AclResponse aclResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
     verify(mockAdmin, times(1)).getAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
@@ -225,7 +223,7 @@ public class CreateStoreTest {
     when(request.queryParams(CLUSTER)).thenReturn(null); // Missing cluster parameter
     when(request.queryParams(NAME)).thenReturn(STORE_NAME);
 
-    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, requestHandler);
     ControllerResponse controllerResponse =
         OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
@@ -249,7 +247,7 @@ public class CreateStoreTest {
     // Simulate an exception in request handler
     doThrow(new RuntimeException("Internal error")).when(mockAdmin).getAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
 
-    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).getAclForStore(mockAdmin, requestHandler);
     AclResponse aclResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
     verify(mockAdmin, times(1)).getAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
@@ -268,7 +266,7 @@ public class CreateStoreTest {
 
     doNothing().when(mockAdmin).deleteAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
 
-    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, requestHandler);
     AclResponse aclResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
     verify(mockAdmin, times(1)).deleteAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
@@ -288,7 +286,7 @@ public class CreateStoreTest {
     when(request.queryParams(CLUSTER)).thenReturn(CLUSTER_NAME);
     when(request.queryParams(NAME)).thenReturn(null); // Missing store name
 
-    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, requestHandler);
     ControllerResponse controllerResponse =
         OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
@@ -310,7 +308,7 @@ public class CreateStoreTest {
 
     doThrow(new RuntimeException("Internal error")).when(mockAdmin).deleteAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
 
-    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, storeRequestHandler);
+    Route route = new CreateStore(false, Optional.empty()).deleteAclForStore(mockAdmin, requestHandler);
     AclResponse aclResponse = OBJECT_MAPPER.readValue(route.handle(request, response).toString(), AclResponse.class);
 
     verify(mockAdmin, times(1)).deleteAclForStore(eq(CLUSTER_NAME), eq(STORE_NAME));
@@ -329,7 +327,7 @@ public class CreateStoreTest {
     doNothing().when(mockAdmin).checkResourceCleanupBeforeStoreCreation(eq(CLUSTER_NAME), eq(STORE_NAME));
 
     Route route =
-        new CreateStore(false, Optional.empty()).checkResourceCleanupForStoreCreation(mockAdmin, storeRequestHandler);
+        new CreateStore(false, Optional.empty()).checkResourceCleanupForStoreCreation(mockAdmin, requestHandler);
     ControllerResponse controllerResponse =
         OBJECT_MAPPER.readValue(route.handle(request, response).toString(), ControllerResponse.class);
 

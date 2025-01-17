@@ -286,8 +286,9 @@ public class VeniceController {
     interceptors.add(parentControllerRegionValidationInterceptor);
 
     VeniceControllerGrpcServiceImpl grpcService = new VeniceControllerGrpcServiceImpl(unsecureRequestHandler);
-    StoreGrpcServiceImpl storeAclGrpcServiceGrpc =
-        new StoreGrpcServiceImpl(unsecureRequestHandler.getStoreRequestHandler());
+    StoreGrpcServiceImpl storeAclGrpcServiceGrpc = new StoreGrpcServiceImpl(
+        unsecureRequestHandler.getStoreRequestHandler(),
+        unsecureRequestHandler.getControllerAccessManager());
     grpcExecutor = ThreadPoolFactory.createThreadPool(
         multiClusterConfigs.getGrpcServerThreadCount(),
         CONTROLLER_GRPC_SERVER_THREAD_NAME,
@@ -308,8 +309,9 @@ public class VeniceController {
           multiClusterConfigs.getSslConfig().get().getSslProperties(),
           multiClusterConfigs.getSslFactoryClassName());
       VeniceControllerGrpcServiceImpl secureGrpcService = new VeniceControllerGrpcServiceImpl(secureRequestHandler);
-      StoreGrpcServiceImpl secureStoreAclGrpcService =
-          new StoreGrpcServiceImpl(secureRequestHandler.getStoreRequestHandler());
+      StoreGrpcServiceImpl secureStoreAclGrpcService = new StoreGrpcServiceImpl(
+          secureRequestHandler.getStoreRequestHandler(),
+          secureRequestHandler.getControllerAccessManager());
       adminSecureGrpcServer = new VeniceGrpcServer(
           new VeniceGrpcServerConfig.Builder().setPort(multiClusterConfigs.getAdminSecureGrpcPort())
               .addService(secureGrpcService)

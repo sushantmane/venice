@@ -14,9 +14,6 @@ service VeniceControllerGrpcService {
 
   // ControllerRoutes
   rpc getLeaderController(LeaderControllerGrpcRequest) returns (LeaderControllerGrpcResponse);
-
-  // CreateStore
-  rpc createStore(CreateStoreGrpcRequest) returns (CreateStoreGrpcResponse) {}
 }
 
 message DiscoverClusterGrpcRequest {
@@ -30,21 +27,6 @@ message DiscoverClusterGrpcResponse {
   string serverD2Service = 4;
   optional string zkAddress = 5;
   optional string pubSubBootstrapServers = 6;
-}
-
-
-message CreateStoreGrpcRequest {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
-  string keySchema = 2;
-  string valueSchema = 3;
-  optional string owner = 4;
-  optional bool isSystemStore = 5;
-  optional string accessPermission = 6;
-}
-
-message CreateStoreGrpcResponse {
-  ClusterStoreGrpcInfo clusterStoreInfo = 1;
-  string owner = 2;
 }
 
 message LeaderControllerGrpcRequest {

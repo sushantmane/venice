@@ -1,9 +1,13 @@
 package com.linkedin.venice.controller.grpc.server;
 
+import static com.linkedin.venice.controller.grpc.ControllerGrpcConstants.GRPC_CONTROLLER_CLIENT_DETAILS;
+
 import com.linkedin.venice.controller.grpc.GrpcRequestResponseConverter;
+import com.linkedin.venice.controller.server.VeniceControllerAccessManager;
 import com.linkedin.venice.exceptions.VeniceUnauthorizedAccessException;
 import com.linkedin.venice.protocols.controller.ClusterStoreGrpcInfo;
 import com.linkedin.venice.protocols.controller.ControllerGrpcErrorType;
+import io.grpc.Context;
 import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -72,5 +76,21 @@ public class ControllerGrpcServerUtils {
           storeName,
           responseObserver);
     }
+  }
+
+  protected static GrpcControllerClientDetails getClientDetails(Context context) {
+    GrpcControllerClientDetails clientDetails = GRPC_CONTROLLER_CLIENT_DETAILS.get(context);
+    if (clientDetails == null) {
+      clientDetails = GrpcControllerClientDetails.UNDEFINED_CLIENT_DETAILS;
+    }
+    return clientDetails;
+  }
+
+  public static boolean isAllowListUser(
+      VeniceControllerAccessManager accessManager,
+      String resourceName,
+      Context context) {
+    GrpcControllerClientDetails clientDetails = getClientDetails(context);
+    return accessManager.isAllowListUser(resourceName, clientDetails.getClientCertificate());
   }
 }
