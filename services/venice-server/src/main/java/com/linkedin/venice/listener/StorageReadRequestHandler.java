@@ -459,34 +459,40 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
   }
 
   public CompletableFuture<ReadResponse> handleSingleGetRequest(GetRouterRequest request) {
-    final int queueLen = this.executor.getQueue().size();
+    final int queueLen = this.executor.getQueueLength();
     final long preSubmissionTimeNs = System.nanoTime();
-    return CompletableFuture.supplyAsync(() -> {
-      if (request.shouldRequestBeTerminatedEarly()) {
-        throw new VeniceRequestEarlyTerminationException(request.getStoreName());
+    CompletableFuture<ReadResponse> responseFuture = new CompletableFuture<>();
+    executor.executeUserRead(() -> {
+      try {
+        if (request.shouldRequestBeTerminatedEarly()) {
+          throw new VeniceRequestEarlyTerminationException(request.getStoreName());
+        }
+
+        double submissionWaitTime = LatencyUtils.getElapsedTimeFromNSToMS(preSubmissionTimeNs);
+
+        String topic = request.getResourceName();
+        PerStoreVersionState perStoreVersionState = getPerStoreVersionState(topic);
+        byte[] key = request.getKeyBytes();
+
+        AbstractStorageEngine storageEngine = perStoreVersionState.storageEngine;
+        boolean isChunked = storageEngine.isChunked();
+        SingleGetResponseWrapper response = new SingleGetResponseWrapper();
+        response.setCompressionStrategy(storageEngine.getCompressionStrategy());
+
+        ValueRecord valueRecord =
+            SingleGetChunkingAdapter.get(storageEngine, request.getPartition(), key, isChunked, response.getStats());
+        response.setValueRecord(valueRecord);
+
+        response.getStats().addKeySize(key.length);
+        response.getStats().setStorageExecutionSubmissionWaitTime(submissionWaitTime);
+        response.getStats().setStorageExecutionQueueLen(queueLen);
+
+        responseFuture.complete(response);
+      } catch (Exception e) {
+        throw new CompletionException(e);
       }
-
-      double submissionWaitTime = LatencyUtils.getElapsedTimeFromNSToMS(preSubmissionTimeNs);
-
-      String topic = request.getResourceName();
-      PerStoreVersionState perStoreVersionState = getPerStoreVersionState(topic);
-      byte[] key = request.getKeyBytes();
-
-      AbstractStorageEngine storageEngine = perStoreVersionState.storageEngine;
-      boolean isChunked = storageEngine.isChunked();
-      SingleGetResponseWrapper response = new SingleGetResponseWrapper();
-      response.setCompressionStrategy(storageEngine.getCompressionStrategy());
-
-      ValueRecord valueRecord =
-          SingleGetChunkingAdapter.get(storageEngine, request.getPartition(), key, isChunked, response.getStats());
-      response.setValueRecord(valueRecord);
-
-      response.getStats().addKeySize(key.length);
-      response.getStats().setStorageExecutionSubmissionWaitTime(submissionWaitTime);
-      response.getStats().setStorageExecutionQueueLen(queueLen);
-
-      return response;
-    }, executor);
+    });
+    return responseFuture;
   }
 
   private CompletableFuture<ReadResponse> handleMultiGetRequestInParallel(MultiGetRouterRequestWrapper request) {
@@ -528,7 +534,6 @@ public class StorageReadRequestHandler extends ChannelInboundHandlerAdapter {
     responseWrapper.setCompressionStrategy(compressionStrategy);
 
     CompletableFuture<Void>[] chunkFutures = new CompletableFuture[chunkCount];
-
     final int queueLen = threadPoolExecutor.getQueue().size();
     final long preSubmissionTimeNs = System.nanoTime();
     for (int cur = 0; cur < chunkCount; ++cur) {
