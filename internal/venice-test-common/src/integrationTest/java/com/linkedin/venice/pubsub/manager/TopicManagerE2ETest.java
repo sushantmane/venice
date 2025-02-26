@@ -96,6 +96,7 @@ public class TopicManagerE2ETest {
         () -> pubSubClientsFactory.getProducerAdapterFactory()
             .create(
                 new PubSubProducerAdapterContext.Builder().setVeniceProperties(veniceProperties)
+                    .setBrokerAddress(pubSubBrokerWrapper.getAddress())
                     .setProducerName(clientId)
                     .build()));
     pubSubAdminAdapterLazy =

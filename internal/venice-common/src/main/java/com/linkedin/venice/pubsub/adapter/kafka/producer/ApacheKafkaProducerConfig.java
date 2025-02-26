@@ -37,7 +37,6 @@ public class ApacheKafkaProducerConfig {
   public static final String KAFKA_LINGER_MS = KAFKA_CONFIG_PREFIX + ProducerConfig.LINGER_MS_CONFIG;
   public static final String KAFKA_BUFFER_MEMORY = KAFKA_CONFIG_PREFIX + ProducerConfig.BUFFER_MEMORY_CONFIG;
   public static final String KAFKA_CLIENT_ID = KAFKA_CONFIG_PREFIX + ProducerConfig.CLIENT_ID_CONFIG;
-  public static final String KAFKA_COMPRESSION_TYPE = KAFKA_CONFIG_PREFIX + ProducerConfig.COMPRESSION_TYPE_CONFIG;
   public static final String KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS =
       KAFKA_CONFIG_PREFIX + ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG;
   public static final String KAFKA_PRODUCER_REQUEST_TIMEOUT_MS =

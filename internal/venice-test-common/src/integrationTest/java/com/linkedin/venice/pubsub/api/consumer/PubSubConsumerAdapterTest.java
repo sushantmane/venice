@@ -121,6 +121,7 @@ public class PubSubConsumerAdapterTest {
             .create(
                 new PubSubProducerAdapterContext.Builder().setVeniceProperties(veniceProperties)
                     .setProducerName(clientId)
+                    .setBrokerAddress(pubSubBrokerWrapper.getAddress())
                     .build()));
     pubSubAdminAdapterLazy =
         Lazy.of(() -> pubSubClientsFactory.getAdminAdapterFactory().create(veniceProperties, pubSubTopicRepository));
