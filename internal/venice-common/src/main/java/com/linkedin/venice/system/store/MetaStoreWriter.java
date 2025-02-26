@@ -225,7 +225,7 @@ public class MetaStoreWriter implements Closeable {
    * by child controllers only.
    */
   public void writeStoreClusterConfig(StoreConfig storeConfig) {
-    write(storeConfig.getStoreName(), MetaStoreDataType.STORE_CLUSTER_CONFIG, () -> new HashMap<>() {
+    write(storeConfig.getStoreName(), MetaStoreDataType.STORE_CLUSTER_CONFIG, () -> new HashMap<String, String>() {
       {
         put(KEY_STRING_STORE_NAME, storeConfig.getStoreName());
       }

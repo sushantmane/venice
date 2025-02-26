@@ -9,6 +9,13 @@ public interface PubSubProduceResult {
    */
   long getOffset();
 
+  // @UnderDevelopment
+  // default PubSubPosition getPubSubPosition() {
+  // throw new UnsupportedOperationException("Not yet implemented");
+  // }
+
+  PubSubPosition getPubSubPosition();
+
   /**
    * Sum of the size of the serialized, uncompressed key and value in bytes.
    */

@@ -73,13 +73,19 @@ public class VeniceWriterFactory {
   private PubSubProducerAdapter buildPubSubProducerAdapter(VeniceWriterOptions options) {
     VeniceProperties props = venicePropertiesLazy.get();
     String targetBrokerAddress = options.getBrokerAddress() == null ? defaultBrokerAddress : options.getBrokerAddress();
+    /**
+     * TODO(sushantmane): Re-enable this to ensure that the broker address is set in the producer context.
+     *     Objects.requireNonNull(
+     *         targetBrokerAddress,
+     *         "Broker address is required to create a VeniceWriter. Please provide it in the options.");
+     */
     Objects.requireNonNull(
         targetBrokerAddress,
         "Broker address is required to create a VeniceWriter. Please provide it in the options.");
     PubSubProducerAdapterContext.Builder producerContext =
         new PubSubProducerAdapterContext.Builder().setVeniceProperties(props)
             .setProducerName(options.getTopicName())
-            .setBrokerAddress(options.getBrokerAddress())
+            .setBrokerAddress(targetBrokerAddress)
             .setMetricsRepository(metricsRepository)
             .setPubSubMessageSerializer(options.getPubSubMessageSerializer())
             .setProducerCompressionEnabled(options.isProducerCompressionEnabled());
