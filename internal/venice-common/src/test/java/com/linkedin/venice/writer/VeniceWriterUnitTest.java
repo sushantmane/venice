@@ -686,8 +686,8 @@ public class VeniceWriterUnitTest {
       when(mockedProducer.sendMessage(any(), any(), any(), any(), any(), any())).thenReturn(mockedFuture);
       final VeniceKafkaSerializer<Object> serializer = new VeniceAvroKafkaSerializer(TestWriteUtils.STRING_SCHEMA);
       final VeniceWriterOptions options = new VeniceWriterOptions.Builder("testTopic").setPartitionCount(1)
-          .setKeySerializer(serializer)
-          .setValueSerializer(serializer)
+          .setKeyPayloadSerializer(serializer)
+          .setValuePayloadSerializer(serializer)
           .build();
       VeniceProperties props = VeniceProperties.empty();
       final VeniceWriter<Object, Object, Object> writer = new VeniceWriter<>(options, props, mockedProducer);
@@ -703,6 +703,7 @@ public class VeniceWriterUnitTest {
       ArgumentCaptor<KafkaMessageEnvelope> kmeArgumentCaptor = ArgumentCaptor.forClass(KafkaMessageEnvelope.class);
       verify(mockedProducer, times(invocationCount))
           .sendMessage(any(), any(), keyArgumentCaptor.capture(), kmeArgumentCaptor.capture(), any(), any());
+      assertFalse(keyArgumentCaptor.getAllValues().isEmpty());
       keyArgumentCaptor.getAllValues().forEach(key -> assertTrue(key.isGlobalRtDiv() || key.isControlMessage()));
 
       for (KafkaMessageEnvelope kme: kmeArgumentCaptor.getAllValues()) {

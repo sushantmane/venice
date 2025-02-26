@@ -55,7 +55,8 @@ public class VeniceWriterFactory {
       LOGGER.info("No PubSubProducerAdapterFactory provided. Using ApacheKafkaProducerAdapterFactory as default.");
       producerAdapterFactory = new ApacheKafkaProducerAdapterFactory();
     }
-    defaultBrokerAddress = venicePropertiesLazy.get().getString(ConfigKeys.PUBSUB_BROKER_ADDRESS, "");
+    defaultBrokerAddress = venicePropertiesLazy.get()
+        .getStringWithAlternative(ConfigKeys.PUBSUB_BROKER_ADDRESS, ConfigKeys.KAFKA_BOOTSTRAP_SERVERS, "");
     this.producerAdapterFactory = producerAdapterFactory;
   }
 

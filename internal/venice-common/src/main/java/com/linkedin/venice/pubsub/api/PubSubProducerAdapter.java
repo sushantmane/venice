@@ -53,7 +53,7 @@ public interface PubSubProducerAdapter {
 
   @UnderDevelopment
   default CompletableFuture<PubSubProduceResult> sendMessage(
-      PubSubTopicPartition topicPartition,
+      PubSubTopicPartition pubSubTopicPartition,
       byte[] keyBytes,
       byte[] valueBytes,
       PubSubMessageHeaders pubSubMessageHeaders,
