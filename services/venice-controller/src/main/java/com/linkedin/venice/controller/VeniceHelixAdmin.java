@@ -2992,6 +2992,8 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
                 if (multiClusterConfigs.isParent() && version.isNativeReplicationEnabled()) {
                   // Produce directly into one of the child fabric
                   vwOptionsBuilder.setBrokerAddress(version.getPushStreamSourceAddress());
+                } else {
+                  vwOptionsBuilder.setBrokerAddress(getKafkaBootstrapServers(isSslToKafka()));
                 }
                 veniceWriter = getVeniceWriterFactory().createVeniceWriter(vwOptionsBuilder.build());
                 veniceWriter.broadcastStartOfPush(

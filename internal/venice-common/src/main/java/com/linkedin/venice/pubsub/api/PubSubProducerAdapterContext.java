@@ -157,6 +157,9 @@ public class PubSubProducerAdapterContext {
       if (compressionType == null) {
         compressionType = "gzip";
       }
+      if (!isProducerCompressionEnabled) {
+        compressionType = "none";
+      }
       return new PubSubProducerAdapterContext(this);
     }
   }

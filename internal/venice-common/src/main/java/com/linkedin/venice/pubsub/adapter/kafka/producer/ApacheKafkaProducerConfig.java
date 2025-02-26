@@ -92,8 +92,11 @@ public class ApacheKafkaProducerConfig {
       LOGGER.info("Will initialize a non-SSL Kafka producer");
     }
 
-    // Please do not remove the following configs unless you know what you are doing.
+    if (context.isProducerCompressionEnabled()) {
+      this.producerProperties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, context.getCompressionType());
+    }
 
+    // Please do not remove the following configs unless you know what you are doing.
     producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
     producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
   }

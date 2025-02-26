@@ -12,7 +12,6 @@ import static org.testng.Assert.assertTrue;
 
 import com.linkedin.venice.pubsub.PubSubProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
-import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterConcurrentDelegator;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
@@ -45,7 +44,6 @@ public class VeniceWriterFactoryTest {
       assertEquals(veniceWriter.getMaxRecordSizeBytes(), VeniceWriter.UNLIMITED_MAX_RECORD_SIZE);
       VeniceProperties capturedProperties = capturedProducerCtx.getVeniceProperties();
       assertNotNull(capturedProperties);
-      assertFalse(capturedProperties.containsKey(ApacheKafkaProducerConfig.KAFKA_COMPRESSION_TYPE));
     }
   }
 
