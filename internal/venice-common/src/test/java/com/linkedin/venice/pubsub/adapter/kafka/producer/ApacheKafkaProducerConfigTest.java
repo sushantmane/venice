@@ -3,6 +3,8 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA_LEGACY;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -34,11 +36,10 @@ public class ApacheKafkaProducerConfigTest {
   @Test
   public void testConfiguratorThrowsAnExceptionWhenBrokerAddressIsMissing() {
     VeniceProperties veniceProperties = VeniceProperties.empty();
-    PubSubProducerAdapterContext context =
-        new PubSubProducerAdapterContext.Builder().setVeniceProperties(veniceProperties)
-            .setProducerName(PRODUCER_NAME)
-            .setShouldValidateProducerConfigStrictly(true)
-            .build();
+    PubSubProducerAdapterContext context = mock(PubSubProducerAdapterContext.class);
+    when(context.getBrokerAddress()).thenReturn(null);
+    when(context.getVeniceProperties()).thenReturn(veniceProperties);
+    when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
     VeniceException e = expectThrows(VeniceException.class, () -> new ApacheKafkaProducerConfig(context));
     assertTrue(e.getMessage().contains("Required property: kafka.bootstrap.servers is missing"));
   }
@@ -48,20 +49,22 @@ public class ApacheKafkaProducerConfigTest {
     // broker address from props should be used
     Properties props = new Properties();
     props.put(KAFKA_BOOTSTRAP_SERVERS, KAFKA_BROKER_ADDR);
-    PubSubProducerAdapterContext.Builder contextBuilder =
-        new PubSubProducerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
-            .setShouldValidateProducerConfigStrictly(true);
-    ApacheKafkaProducerConfig producerConfig = new ApacheKafkaProducerConfig(contextBuilder.build());
+    PubSubProducerAdapterContext context = mock(PubSubProducerAdapterContext.class);
+    when(context.getBrokerAddress()).thenReturn(null);
+    when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
+    when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    ApacheKafkaProducerConfig producerConfig = new ApacheKafkaProducerConfig(context);
     assertNotNull(producerConfig);
     assertEquals(producerConfig.getBrokerAddress(), KAFKA_BROKER_ADDR);
     assertFalse(producerConfig.getProducerProperties().containsKey(ProducerConfig.CLIENT_ID_CONFIG));
 
     String overriddenBrokerAddress = "target.broker.com:8181";
-    contextBuilder.setBrokerAddress(overriddenBrokerAddress)
-        .setShouldValidateProducerConfigStrictly(false)
-        .setVeniceProperties(new VeniceProperties(props))
-        .setProducerName(PRODUCER_NAME);
-    ApacheKafkaProducerConfig producerConfig1 = new ApacheKafkaProducerConfig(contextBuilder.build());
+    context = mock(PubSubProducerAdapterContext.class);
+    when(context.getBrokerAddress()).thenReturn(overriddenBrokerAddress);
+    when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
+    when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
+    ApacheKafkaProducerConfig producerConfig1 = new ApacheKafkaProducerConfig(context);
     // broker address from props should be used
     assertEquals(producerConfig1.getBrokerAddress(), overriddenBrokerAddress);
     assertEquals(producerConfig1.getProducerProperties().getProperty(ProducerConfig.CLIENT_ID_CONFIG), PRODUCER_NAME);
@@ -74,10 +77,11 @@ public class ApacheKafkaProducerConfigTest {
     props.put(SSL_TO_KAFKA_LEGACY, true);
     props.put(KAFKA_BOOTSTRAP_SERVERS, KAFKA_BROKER_ADDR);
     props.put(SSL_KAFKA_BOOTSTRAP_SERVERS, "ssl.kafka.broker.com:8182");
-    PubSubProducerAdapterContext.Builder contextBuilder =
-        new PubSubProducerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
-            .setShouldValidateProducerConfigStrictly(true);
-    assertEquals(new ApacheKafkaProducerConfig(contextBuilder.build()).getBrokerAddress(), "ssl.kafka.broker.com:8182");
+    PubSubProducerAdapterContext context = mock(PubSubProducerAdapterContext.class);
+    when(context.getBrokerAddress()).thenReturn(null);
+    when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
+    when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    assertEquals(new ApacheKafkaProducerConfig(context).getBrokerAddress(), "ssl.kafka.broker.com:8182");
   }
 
   @Test
@@ -90,10 +94,12 @@ public class ApacheKafkaProducerConfigTest {
     props.put("kafka.sasl.jaas.config", SASL_JAAS_CONFIG);
     props.put("kafka.sasl.mechanism", SASL_MECHANISM);
     props.put("kafka.security.protocol", "SASL_SSL");
-    PubSubProducerAdapterContext.Builder contextBuilder =
-        new PubSubProducerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
-            .setShouldValidateProducerConfigStrictly(true);
-    ApacheKafkaProducerConfig apacheKafkaProducerConfig = new ApacheKafkaProducerConfig(contextBuilder.build());
+
+    PubSubProducerAdapterContext context = mock(PubSubProducerAdapterContext.class);
+    when(context.getBrokerAddress()).thenReturn(null);
+    when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
+    when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    ApacheKafkaProducerConfig apacheKafkaProducerConfig = new ApacheKafkaProducerConfig(context);
     Properties producerProperties = apacheKafkaProducerConfig.getProducerProperties();
     assertEquals(SASL_JAAS_CONFIG, producerProperties.get("sasl.jaas.config"));
     assertEquals(SASL_MECHANISM, producerProperties.get("sasl.mechanism"));
