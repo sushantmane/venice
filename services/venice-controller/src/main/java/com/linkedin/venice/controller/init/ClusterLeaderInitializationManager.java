@@ -1,9 +1,11 @@
 package com.linkedin.venice.controller.init;
 
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,6 +29,7 @@ public class ClusterLeaderInitializationManager implements ClusterLeaderInitiali
       new VeniceConcurrentHashMap<>();
   private final List<ClusterLeaderInitializationRoutine> initRoutines;
   private final boolean concurrentInit;
+  private final boolean blockUntilDone = true;
 
   public ClusterLeaderInitializationManager(
       List<ClusterLeaderInitializationRoutine> initRoutines,
@@ -47,9 +50,22 @@ public class ClusterLeaderInitializationManager implements ClusterLeaderInitiali
       initRoutines.forEach(
           routine -> CompletableFuture
               .runAsync(() -> initRoutine(clusterToInit, initializedRoutinesForCluster, routine)));
+      List<CompletableFuture<Void>> futures = initRoutines.stream()
+          .map(
+              routine -> CompletableFuture
+                  .runAsync(() -> initRoutine(clusterToInit, initializedRoutinesForCluster, routine)))
+          .collect(Collectors.toList());
+      waitForCompletionIfNeeded(futures, blockUntilDone);
     } else {
-      CompletableFuture.runAsync(
+      CompletableFuture<Void> future = CompletableFuture.runAsync(
           () -> initRoutines.forEach(routine -> initRoutine(clusterToInit, initializedRoutinesForCluster, routine)));
+      waitForCompletionIfNeeded(Collections.singletonList(future), blockUntilDone);
+    }
+  }
+
+  private void waitForCompletionIfNeeded(List<CompletableFuture<Void>> futures, boolean blockUntilDone) {
+    if (blockUntilDone) {
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
   }
 
