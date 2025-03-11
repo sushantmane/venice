@@ -54,6 +54,7 @@ import com.linkedin.venice.common.VeniceSystemStoreUtils;
 import com.linkedin.venice.compression.CompressionStrategy;
 import com.linkedin.venice.compression.VeniceCompressor;
 import com.linkedin.venice.exceptions.DiskLimitExhaustedException;
+import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.exceptions.MemoryLimitExhaustedException;
 import com.linkedin.venice.exceptions.PersistenceFailureException;
 import com.linkedin.venice.exceptions.VeniceChecksumException;
@@ -375,6 +376,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
   protected Lazy<CountDownLatch> gracefulShutdownLatch = Lazy.of(() -> new CountDownLatch(1));
   protected Lazy<ZKHelixAdmin> zkHelixAdmin;
   protected final String hostName;
+  private final VeniceSystemStoreType systemStoreType;
 
   public StoreIngestionTask(
       StorageService storageService,
@@ -409,6 +411,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
     this.storeName = versionTopic.getStoreName();
     this.isUserSystemStore = VeniceSystemStoreUtils.isUserSystemStore(storeName);
     this.isSystemStore = VeniceSystemStoreUtils.isSystemStore(storeName);
+    this.systemStoreType = VeniceSystemStoreType.getSystemStoreType(storeName);
     this.realTimeTopic = pubSubTopicRepository.getTopic(Utils.getRealTimeTopicName(version));
     this.separateRealTimeTopic = version.isSeparateRealTimeTopicEnabled()
         ? pubSubTopicRepository.getTopic(Version.composeSeparateRealTimeTopic(storeName))
@@ -1688,7 +1691,8 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
       versionedIngestionStats.resetIngestionTaskPushTimeoutGauge(storeName, versionNumber);
 
       while (isRunning()) {
-        Store store = storeRepository.getStoreOrThrow(storeName);
+        Store store = Objects
+            .requireNonNull(storeRepository.getStore(storeName, systemStoreType), ErrorType.STORE_NOT_FOUND.name());
         refreshIngestionContextIfChanged(store);
         processConsumerActions(store);
         checkLongRunningTaskState();

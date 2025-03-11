@@ -1,6 +1,7 @@
 package com.linkedin.venice.meta;
 
 import com.linkedin.venice.VeniceResource;
+import com.linkedin.venice.common.VeniceSystemStoreType;
 import com.linkedin.venice.exceptions.VeniceNoStoreException;
 import com.linkedin.venice.utils.Pair;
 import com.linkedin.venice.utils.Utils;
@@ -21,6 +22,10 @@ public interface ReadOnlyStoreRepository extends VeniceResource {
    * @return Store for given name.
    */
   Store getStore(String storeName);
+
+  default Store getStore(String storeName, VeniceSystemStoreType systemStoreType) {
+    return getStore(storeName);
+  }
 
   Store getStoreOrThrow(String storeName) throws VeniceNoStoreException;
 

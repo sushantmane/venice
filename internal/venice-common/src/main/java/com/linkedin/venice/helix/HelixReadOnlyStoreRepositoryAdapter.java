@@ -57,6 +57,22 @@ public class HelixReadOnlyStoreRepositoryAdapter implements ReadOnlyStoreReposit
   @Override
   public Store getStore(String storeName) {
     VeniceSystemStoreType systemStoreType = VeniceSystemStoreType.getSystemStoreType(storeName);
+    return getStoreByTypeFromRepo(storeName, systemStoreType);
+  }
+
+  @Override
+  public Store getStore(String storeName, VeniceSystemStoreType systemStoreType) {
+    return getStoreByTypeFromRepo(storeName, systemStoreType);
+  }
+
+  /**
+   * Retrieves a store from the repository based on its type.
+   *
+   * @param storeName The name of the store to retrieve.
+   * @param systemStoreType The {@link VeniceSystemStoreType} of the store. If {@code null}, the store is treated as a regular user store.
+   * @return The {@link Store} instance if found; otherwise, {@code null}.
+   */
+  private Store getStoreByTypeFromRepo(String storeName, VeniceSystemStoreType systemStoreType) {
     if (forwardToRegularRepository(systemStoreType)) {
       return regularStoreRepository.getStore(storeName);
     }
