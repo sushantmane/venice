@@ -38,6 +38,8 @@ import static com.linkedin.venice.vpj.VenicePushJobConstants.REWIND_TIME_IN_SECO
 import static com.linkedin.venice.vpj.VenicePushJobConstants.SOURCE_KAFKA;
 import static com.linkedin.venice.vpj.VenicePushJobConstants.SPARK_NATIVE_INPUT_FORMAT_ENABLED;
 import static com.linkedin.venice.vpj.VenicePushJobConstants.VENICE_STORE_NAME_PROP;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -118,7 +120,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -144,7 +145,7 @@ public class PartialUpdateTest {
   private static final int NUMBER_OF_CHILD_DATACENTERS = 2;
   private static final int NUMBER_OF_CLUSTERS = 1;
   private static final int TEST_TIMEOUT_MS = 180_000;
-  private static final int ASSERTION_TIMEOUT_MS = 30_000;
+  private static final int ASSERTION_TIMEOUT_MS = 60_000;
 
   private static final int REPLICATION_FACTOR = 2;
   private static final String CLUSTER_NAME = "venice-cluster0";
@@ -224,8 +225,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
       SystemProducer veniceProducer = getSamzaProducer(veniceCluster, storeName, Version.PushType.STREAM);
@@ -253,12 +254,12 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 2),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceCluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             GenericRecord value = (GenericRecord) storeReader.get(keyRecord).get();
             assertNotNull(value, "key " + keyRecord + " should not be missing!");
@@ -282,10 +283,10 @@ public class PartialUpdateTest {
         TestUtils.waitForNonDeterministicPushCompletion(
             Version.composeKafkaTopic(storeName, 3),
             parentControllerClient,
-            30,
-            TimeUnit.SECONDS);
+            ASSERTION_TIMEOUT_MS,
+            MILLISECONDS);
 
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             GenericRecord value = (GenericRecord) storeReader.get(keyRecord).get();
             assertNotNull(value, "key " + keyRecord + " should not be missing!");
@@ -302,7 +303,7 @@ public class PartialUpdateTest {
             .build();
         sendStreamingRecord(veniceProducer, storeName, keyRecord, partialUpdateRecord);
         sendStreamingRecord(veniceProducer, storeName, checkpointKeyRecord, partialUpdateRecord);
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             GenericRecord value = (GenericRecord) storeReader.get(checkpointKeyRecord).get();
             assertNotNull(value, "key " + checkpointKeyRecord + " should not be missing!");
@@ -310,7 +311,7 @@ public class PartialUpdateTest {
             throw new VeniceException(e);
           }
         });
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             GenericRecord value = (GenericRecord) storeReader.get(keyRecord).get();
             assertNotNull(value, "key " + keyRecord + " should not be missing!");
@@ -359,8 +360,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          60,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       // VPJ push
       String childControllerUrl = childDatacenters.get(0).getRandomController().getControllerUrl();
@@ -371,7 +372,7 @@ public class PartialUpdateTest {
       veniceClusterWrapper.waitVersion(storeName, 1);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             for (int i = 1; i < 100; i++) {
               String key = String.valueOf(i);
@@ -421,8 +422,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       assertCommand(parentControllerClient.addValueSchema(storeName, schemaV2.toString()));
       UpdateStoreQueryParams updateStoreParams2 = new UpdateStoreQueryParams().setWriteComputationEnabled(true);
@@ -436,8 +437,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 2),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
     VeniceClusterWrapper veniceClusterWrapper = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
     SystemProducer veniceProducer = getSamzaProducer(veniceClusterWrapper, storeName, Version.PushType.STREAM);
@@ -455,7 +456,7 @@ public class PartialUpdateTest {
 
     try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
         ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
-      TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
         try {
           GenericRecord value = readValue(storeReader, key);
           assertNotNull(value, "Key " + key + " should not be missing!");
@@ -508,8 +509,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           response.getKafkaTopic(),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       // VPJ push
       String childControllerUrl = childDatacenters.get(0).getRandomController().getControllerUrl();
@@ -521,7 +522,7 @@ public class PartialUpdateTest {
 
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             for (int i = 1; i < 100; i++) {
               String key = String.valueOf(i);
@@ -593,7 +594,7 @@ public class PartialUpdateTest {
 
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             for (int i = 1; i < 100; i++) {
               String key = String.valueOf(i);
@@ -659,7 +660,7 @@ public class PartialUpdateTest {
 
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
           try {
             for (int i = 1; i < 100; i++) {
               String key = String.valueOf(i);
@@ -710,8 +711,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
@@ -738,7 +739,7 @@ public class PartialUpdateTest {
             i);
       }
       // Verify the value record has been partially updated.
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key);
           boolean nullRecord = (valueRecord == null);
@@ -777,7 +778,7 @@ public class PartialUpdateTest {
           updateCount - 1);
 
       // Verify the value record has been partially updated.
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key);
           boolean nullRecord = (valueRecord == null);
@@ -792,7 +793,7 @@ public class PartialUpdateTest {
         }
       });
 
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, MILLISECONDS, true, () -> {
         Assert.assertNotNull(valueManifest);
         validateChunksFromManifests(kafkaTopic_v1, 0, valueManifest, null, (valueChunkBytes, rmdChunkBytes) -> {
           Assert.assertNull(valueChunkBytes);
@@ -850,8 +851,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
       assertTrue(parentControllerClient.getStore(storeName).getStore().isRmdChunkingEnabled());
       assertTrue(parentControllerClient.getStore(storeName).getStore().getVersion(1).get().isRmdChunkingEnabled());
     }
@@ -880,7 +881,7 @@ public class PartialUpdateTest {
             i);
       }
       // Verify the value record has been partially updated.
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key);
           boolean nullRecord = (valueRecord == null);
@@ -918,7 +919,7 @@ public class PartialUpdateTest {
           totalUpdateCount - 1);
 
       // Verify the value record has been partially updated.
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key);
           boolean nullRecord = (valueRecord == null);
@@ -939,7 +940,7 @@ public class PartialUpdateTest {
             (List<Long>) collectionFieldTimestampRecord.get(ACTIVE_ELEM_TS_FIELD_NAME);
         assertEquals(activeElementsTimestamps.size(), totalUpdateCount * singleUpdateEntryCount);
       });
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, MILLISECONDS, true, () -> {
         Assert.assertNotNull(valueManifest);
         Assert.assertNotNull(rmdManifest);
         validateChunksFromManifests(kafkaTopic_v1, 0, valueManifest, rmdManifest, (valueChunkBytes, rmdChunkBytes) -> {
@@ -968,11 +969,11 @@ public class PartialUpdateTest {
           new ControllerClient("venice-cluster0", childDatacenters.get(0).getControllerConnectString());
       TestUtils.waitForNonDeterministicAssertion(
           5,
-          TimeUnit.SECONDS,
+          SECONDS,
           () -> Assert.assertEquals(controllerClient.getStore(storeName).getStore().getCurrentVersion(), 2));
       veniceCluster.refreshAllRouterMetaData();
 
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key);
           boolean nullRecord = (valueRecord == null);
@@ -998,7 +999,7 @@ public class PartialUpdateTest {
       // Send DELETE record that partially removes data.
       sendStreamingDeleteRecord(veniceProducer, storeName, key, (totalUpdateCount - 1) * 10L);
 
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, MILLISECONDS, true, () -> {
         GenericRecord valueRecord = readValue(storeReader, key);
         boolean nullRecord = (valueRecord == null);
         assertFalse(nullRecord);
@@ -1018,7 +1019,7 @@ public class PartialUpdateTest {
 
       // Send DELETE record that fully removes data.
       sendStreamingDeleteRecord(veniceProducer, storeName, key, totalUpdateCount * 10L);
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS, MILLISECONDS, true, () -> {
         GenericRecord valueRecord = readValue(storeReader, key);
         boolean nullRecord = (valueRecord == null);
         assertTrue(nullRecord);
@@ -1064,8 +1065,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
@@ -1087,7 +1088,7 @@ public class PartialUpdateTest {
         sendStreamingRecord(veniceProducer, storeName, key + i, value);
       }
       // Verify the value record has been partially updated.
-      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, TimeUnit.MILLISECONDS, true, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(TEST_TIMEOUT_MS * 2, MILLISECONDS, true, true, () -> {
         try {
           for (int i = 0; i < totalUpdateCount; i++) {
             GenericRecord valueRecord = readValue(storeReader, key + i);
@@ -1109,8 +1110,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           response.getKafkaTopic(),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     String baseMetricName = "." + storeName + "_current--duplicate_msg.DIVStatsGauge";
@@ -1160,8 +1161,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
@@ -1223,7 +1224,7 @@ public class PartialUpdateTest {
      */
     try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
         ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceCluster.getRandomRouterURL()))) {
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         try {
           GenericRecord valueRecord = readValue(storeReader, key1);
           assertNotNull(valueRecord);
@@ -1289,8 +1290,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 2),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     /**
@@ -1298,7 +1299,7 @@ public class PartialUpdateTest {
      */
     try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
         ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceCluster.getRandomRouterURL()))) {
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         try {
           // Key 1 is partially preserved.
           GenericRecord valueRecord = readValue(storeReader, key1);
@@ -1391,9 +1392,9 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           storeVersionTopicV1.getName(),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         verifyConsumerThreadPoolFor(
             multiRegionMultiClusterWrapper,
             CLUSTER_NAME,
@@ -1419,7 +1420,7 @@ public class PartialUpdateTest {
       updateStoreResponse = parentControllerClient
           .retryableRequest(5, c -> c.updateStore(storeName, updateStoreParamsEnableWriteCompute));
       assertFalse(updateStoreResponse.isError(), "Update store got error: " + updateStoreResponse.getError());
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         verifyConsumerThreadPoolFor(
             multiRegionMultiClusterWrapper,
             CLUSTER_NAME,
@@ -1445,7 +1446,7 @@ public class PartialUpdateTest {
       updateStoreResponse = parentControllerClient
           .retryableRequest(5, c -> c.updateStore(storeName, updateStoreParamsDisableWriteCompute));
       assertFalse(updateStoreResponse.isError(), "Update store got error: " + updateStoreResponse.getError());
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         verifyConsumerThreadPoolFor(
             multiRegionMultiClusterWrapper,
             CLUSTER_NAME,
@@ -1482,9 +1483,9 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           storeVersionTopicV2.getName(),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
-      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
+      TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
         // Version 1 has active-active and write compute disabled, so each server host will ingest from local data
         // center for leader.
         verifyConsumerThreadPoolFor(
@@ -1538,7 +1539,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             GenericRecord valueRecord = readValue(storeReader, key1);
             assertNotNull(valueRecord);
@@ -1575,11 +1576,11 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           storeVersionTopicV3.getName(),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
     PubSubTopicPartition storeVersionTopicPartitionV3 = new PubSubTopicPartitionImpl(storeVersionTopicV3, 0);
-    TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+    TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
       // Version 2 become backup version.
       verifyConsumerThreadPoolFor(
           multiRegionMultiClusterWrapper,
@@ -1623,7 +1624,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             GenericRecord valueRecord = readValue(storeReader, key1);
             assertNotNull(valueRecord);
@@ -1665,7 +1666,7 @@ public class PartialUpdateTest {
         Version.composeKafkaTopic(storeName, 1),
         parentControllerClient,
         60,
-        TimeUnit.SECONDS);
+        SECONDS);
   }
 
   @Test(timeOut = TEST_TIMEOUT_MS)
@@ -1698,8 +1699,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
@@ -1721,7 +1722,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             GenericRecord valueRecord = readValue(storeReader, key1);
             assertNotNull(valueRecord);
@@ -1765,7 +1766,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             GenericRecord valueRecord = readValue(storeReader, key2);
             assertNull(valueRecord);
@@ -1816,8 +1817,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
 
     VeniceClusterWrapper veniceCluster = childDatacenters.get(0).getClusters().get(CLUSTER_NAME);
@@ -1843,14 +1844,14 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 2),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
     }
     for (int i = 0; i < NUMBER_OF_CHILD_DATACENTERS; i++) {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             // Key 1 is deleted.
             GenericRecord valueRecord = readValue(storeReader, key1);
@@ -1874,7 +1875,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             // Key 1 is deleted.
             GenericRecord valueRecord = readValue(storeReader, key1);
@@ -1898,7 +1899,7 @@ public class PartialUpdateTest {
       VeniceClusterWrapper cluster = childDatacenters.get(i).getClusters().get(CLUSTER_NAME);
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(cluster.getRandomRouterURL()))) {
-        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, TimeUnit.MILLISECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(ASSERTION_TIMEOUT_MS, MILLISECONDS, true, () -> {
           try {
             // Key 1 is preserved.
             GenericRecord valueRecord = readValue(storeReader, key1);
@@ -1977,8 +1978,8 @@ public class PartialUpdateTest {
       TestUtils.waitForNonDeterministicPushCompletion(
           Version.composeKafkaTopic(storeName, 1),
           parentControllerClient,
-          30,
-          TimeUnit.SECONDS);
+          ASSERTION_TIMEOUT_MS,
+          MILLISECONDS);
 
       assertCommand(parentControllerClient.addValueSchema(storeName, valueSchemaV2.toString()));
     }
@@ -1998,7 +1999,7 @@ public class PartialUpdateTest {
       sendStreamingRecord(veniceProducer, storeName, key, value);
 
       // Verify the Put has been persisted
-      TestUtils.waitForNonDeterministicAssertion(120, TimeUnit.SECONDS, () -> {
+      TestUtils.waitForNonDeterministicAssertion(120, SECONDS, () -> {
         try {
           GenericRecord retrievedValue = readValue(storeReader, key);
           assertNotNull(retrievedValue);
@@ -2020,7 +2021,7 @@ public class PartialUpdateTest {
       sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord);
 
       // Verify the value record has been partially updated and it uses V3 superset value schema now.
-      TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, () -> {
+      TestUtils.waitForNonDeterministicAssertion(60, SECONDS, () -> {
         try {
           GenericRecord retrievedValue = readValue(storeReader, key);
           assertNotNull(retrievedValue);
@@ -2109,7 +2110,7 @@ public class PartialUpdateTest {
             ClientConfig.defaultGenericClientConfig(storeName)
                 .setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
           // Verify records (note, records 1-100 have been pushed)
-          TestUtils.waitForNonDeterministicAssertion(10, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(10, SECONDS, true, () -> {
             try {
               for (int i = 1; i < 100; i++) {
                 String key = String.valueOf(i);
@@ -2146,7 +2147,7 @@ public class PartialUpdateTest {
           sendStreamingRecord(veniceProducer, storeName, key, value);
 
           // Verify the streaming record
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNotNull(retrievedValue, "Key " + key + " should not be missing!");
@@ -2168,7 +2169,7 @@ public class PartialUpdateTest {
 
           sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord);
           // Verify the update
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNotNull(retrievedValue, "Key " + key + " should not be missing!");
@@ -2189,7 +2190,7 @@ public class PartialUpdateTest {
           GenericRecord partialUpdateRecord1 = updateBuilder.build();
           sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord1);
           // Verify the update
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNotNull(retrievedValue, "Key " + key + " should not be missing!");
@@ -2203,7 +2204,7 @@ public class PartialUpdateTest {
           // Delete the record
           sendStreamingRecord(veniceProducer, storeName, key, null);
           // Verify the delete
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNull(retrievedValue, "Key " + key + " should be missing!");
@@ -2226,7 +2227,7 @@ public class PartialUpdateTest {
 
           sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord2);
           // Verify the update
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNotNull(retrievedValue, "Key " + key + " should not be missing!");
@@ -2247,7 +2248,7 @@ public class PartialUpdateTest {
           GenericRecord partialUpdateRecord3 = updateBuilder.build();
           sendStreamingRecord(veniceProducer, storeName, key, partialUpdateRecord3);
           // Verify the update
-          TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+          TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
             try {
               GenericRecord retrievedValue = readValue(storeReader, key);
               assertNotNull(retrievedValue, "Key " + key + " should not be missing!");
@@ -2347,7 +2348,7 @@ public class PartialUpdateTest {
       try (AvroGenericStoreClient<Object, Object> storeReader = ClientFactory.getAndStartGenericAvroClient(
           ClientConfig.defaultGenericClientConfig(storeName).setVeniceURL(veniceClusterWrapper.getRandomRouterURL()))) {
         // Verify everything made it
-        TestUtils.waitForNonDeterministicAssertion(60, TimeUnit.SECONDS, true, () -> {
+        TestUtils.waitForNonDeterministicAssertion(60, SECONDS, true, () -> {
           try {
             for (int i = 0; i < 10; i++) {
               GenericRecord retrievedValue = readValue(storeReader, Integer.toString(i));
@@ -2377,7 +2378,7 @@ public class PartialUpdateTest {
       job.run();
       TestUtils.waitForNonDeterministicCompletion(
           60,
-          TimeUnit.SECONDS,
+          SECONDS,
           () -> controllerClient.getStore((String) vpjProperties.get(VENICE_STORE_NAME_PROP))
               .getStore()
               .getCurrentVersion() == expectedVersionNumber);
