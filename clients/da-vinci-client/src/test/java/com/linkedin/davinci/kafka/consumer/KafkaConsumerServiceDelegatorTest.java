@@ -538,6 +538,7 @@ public class KafkaConsumerServiceDelegatorTest {
         new LandFillObjectPool<>(KafkaMessageEnvelope::new),
         new LandFillObjectPool<>(KafkaMessageEnvelope::new));
     KafkaConsumerService consumerService = new PartitionWiseKafkaConsumerService(
+        testKafkaUrl,
         ConsumerPoolType.REGULAR_POOL,
         factory,
         properties,
@@ -546,7 +547,6 @@ public class KafkaConsumerServiceDelegatorTest {
         mock(IngestionThrottler.class),
         mock(KafkaClusterBasedRecordThrottler.class),
         mockMetricsRepository,
-        "test_kafka_cluster_alias",
         TimeUnit.MINUTES.toMillis(1),
         mock(StaleTopicChecker.class),
         false,

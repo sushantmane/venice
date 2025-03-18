@@ -1,6 +1,5 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -27,7 +26,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Queue;
 import java.util.function.BooleanSupplier;
 import org.testng.Assert;
@@ -60,10 +58,6 @@ public class PushTimeoutTest {
     StorageService storageService = mock(StorageService.class);
     Store mockStore = builder.getMetadataRepo().getStoreOrThrow(storeName);
     Version version = mockStore.getVersion(versionNumber);
-
-    Properties mockKafkaConsumerProperties = mock(Properties.class);
-    doReturn("localhost").when(mockKafkaConsumerProperties).getProperty(eq(KAFKA_BOOTSTRAP_SERVERS));
-
     VeniceStoreVersionConfig mockVeniceStoreVersionConfig = mock(VeniceStoreVersionConfig.class);
     String versionTopic = version.kafkaTopicName();
     doReturn(versionTopic).when(mockVeniceStoreVersionConfig).getStoreVersionName();
@@ -73,14 +67,14 @@ public class PushTimeoutTest {
         builder,
         mockStore,
         version,
-        mockKafkaConsumerProperties,
         mock(BooleanSupplier.class),
         mockVeniceStoreVersionConfig,
         0,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        "localhost");
 
     leaderFollowerStoreIngestionTask
         .subscribePartition(new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic(versionTopic), 0));
@@ -125,9 +119,6 @@ public class PushTimeoutTest {
     Store mockStore = builder.getMetadataRepo().getStoreOrThrow(storeName);
     Version version = mockStore.getVersion(versionNumber);
 
-    Properties mockKafkaConsumerProperties = mock(Properties.class);
-    doReturn("localhost").when(mockKafkaConsumerProperties).getProperty(eq(KAFKA_BOOTSTRAP_SERVERS));
-
     VeniceStoreVersionConfig mockVeniceStoreVersionConfig = mock(VeniceStoreVersionConfig.class);
     String versionTopic = version.kafkaTopicName();
     doReturn(versionTopic).when(mockVeniceStoreVersionConfig).getStoreVersionName();
@@ -152,14 +143,14 @@ public class PushTimeoutTest {
         builder,
         mockStore,
         version,
-        mockKafkaConsumerProperties,
         mock(BooleanSupplier.class),
         mockVeniceStoreVersionConfig,
         0,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        "localhost");
 
     leaderFollowerStoreIngestionTask
         .subscribePartition(new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic(versionTopic), 0));

@@ -1,15 +1,14 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_CLIENT_ID_CONFIG;
-
 import com.linkedin.davinci.ingestion.consumption.ConsumedDataReceiver;
 import com.linkedin.davinci.stats.AggKafkaConsumerServiceStats;
 import com.linkedin.davinci.utils.IndexedHashMap;
 import com.linkedin.davinci.utils.IndexedMap;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
+import com.linkedin.venice.pubsub.PubSubUtil;
 import com.linkedin.venice.pubsub.api.DefaultPubSubMessage;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
@@ -68,7 +67,7 @@ import org.apache.logging.log4j.Logger;
  * @see AggKafkaConsumerService which wraps one instance of this class per Kafka cluster.
  */
 public abstract class KafkaConsumerService extends AbstractKafkaConsumerService {
-  protected final String kafkaUrl;
+  protected final String pubSubBrokerAddress;
   protected final String kafkaUrlForLogger;
   protected final ConsumerPoolType poolType;
   protected final AggKafkaConsumerServiceStats aggStats;
@@ -94,6 +93,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
    * @param statsOverride injection of stats, for test purposes
    */
   protected KafkaConsumerService(
+      final String pubSubBrokerAddress,
       final ConsumerPoolType poolType,
       final PubSubConsumerAdapterFactory pubSubConsumerAdapterFactory,
       final Properties consumerProperties,
@@ -102,7 +102,6 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
       final IngestionThrottler ingestionThrottler,
       final KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
       final MetricsRepository metricsRepository,
-      final String kafkaClusterAlias,
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final StaleTopicChecker staleTopicChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
@@ -112,14 +111,18 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
       final boolean isKafkaConsumerOffsetCollectionEnabled,
       final ReadOnlyStoreRepository metadataRepository,
       final boolean isUnregisterMetricForDeletedStoreEnabled) {
-    this.kafkaUrl = consumerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
-    this.kafkaUrlForLogger = Utils.getSanitizedStringForLogger(kafkaUrl);
+    // todo(sushantmane): remove the need to update the properties here
+    VeniceProperties consumerVeniceProperties =
+        new VeniceProperties(PubSubUtil.addPubSubBrokerAddress(consumerProperties, pubSubBrokerAddress));
+    this.pubSubBrokerAddress = pubSubBrokerAddress;
+    this.kafkaUrlForLogger = Utils.getSanitizedStringForLogger(pubSubBrokerAddress);
     this.LOGGER = LogManager.getLogger(
         KafkaConsumerService.class.getSimpleName() + " [" + kafkaUrlForLogger + "-" + poolType.getStatSuffix() + "]");
     this.poolType = poolType;
 
     // Initialize consumers and consumerExecutor
-    String consumerNamePrefix = "venice-shared-consumer-for-" + kafkaUrl + '-' + poolType.getStatSuffix();
+    String consumerNamePrefix =
+        "venice-shared-consumer-for-" + this.pubSubBrokerAddress + '-' + poolType.getStatSuffix();
     threadFactory = new RandomAccessDaemonThreadFactory(consumerNamePrefix);
     consumerExecutor = Executors.newFixedThreadPool(numOfConsumersPerKafkaCluster, threadFactory);
     this.consumerToConsumptionTask = new IndexedHashMap<>(numOfConsumersPerKafkaCluster);
@@ -127,7 +130,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
         ? statsOverride
         : createAggKafkaConsumerServiceStats(
             metricsRepository,
-            kafkaClusterAlias,
+            pubSubBrokerAddress + poolType.getStatSuffix(),
             this::getMaxElapsedTimeMSSinceLastPollInConsumerPool,
             metadataRepository,
             isUnregisterMetricForDeletedStoreEnabled);
@@ -135,20 +138,22 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
       /**
        * We need to assign a unique client id across all the storage nodes, otherwise, they will fail into the same throttling bucket.
        */
-      consumerProperties.setProperty(KAFKA_CLIENT_ID_CONFIG, getUniqueClientId(kafkaUrl, i, poolType));
+      PubSubConsumerAdapterContext pubSubConsumerAdapterContext =
+          new PubSubConsumerAdapterContext.Builder().setBrokerAddress(this.pubSubBrokerAddress)
+              .setVeniceProperties(consumerVeniceProperties)
+              .setConsumerName(getUniqueClientId(this.pubSubBrokerAddress, i, poolType))
+              .setIsOffsetCollectionEnabled(isKafkaConsumerOffsetCollectionEnabled)
+              .setPubSubMessageDeserializer(pubSubDeserializer)
+              .build();
       SharedKafkaConsumer pubSubConsumer = new SharedKafkaConsumer(
-          pubSubConsumerAdapterFactory.create(
-              new VeniceProperties(consumerProperties),
-              isKafkaConsumerOffsetCollectionEnabled,
-              pubSubDeserializer,
-              null),
+          pubSubConsumerAdapterFactory.create(pubSubConsumerAdapterContext),
           aggStats,
           this::recordPartitionsPerConsumerSensor,
           this::handleUnsubscription);
 
       Supplier<Map<PubSubTopicPartition, List<DefaultPubSubMessage>>> pollFunction =
           liveConfigBasedKafkaThrottlingEnabled
-              ? () -> kafkaClusterBasedRecordThrottler.poll(pubSubConsumer, kafkaUrl, readCycleDelayMs)
+              ? () -> kafkaClusterBasedRecordThrottler.poll(pubSubConsumer, this.pubSubBrokerAddress, readCycleDelayMs)
               : () -> pubSubConsumer.poll(readCycleDelayMs);
       final IntConsumer bandwidthThrottlerFunction =
           totalBytes -> ingestionThrottler.maybeThrottleBandwidth(totalBytes);
@@ -315,7 +320,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
   public boolean startInner() {
     consumerToConsumptionTask.values().forEach(consumerExecutor::submit);
     consumerExecutor.shutdown();
-    LOGGER.info("KafkaConsumerService started for {}", kafkaUrl);
+    LOGGER.info("KafkaConsumerService started for {}", pubSubBrokerAddress);
     return true;
   }
 
@@ -387,7 +392,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
     }
     aggStats.recordTotalConsumerIdleTime(maxElapsedTimeSinceLastPollInConsumerPool);
     if (maxElapsedTimeSinceLastPollInConsumerPool > Time.MS_PER_MINUTE) {
-      String slowestTaskIdString = kafkaUrl + slowestTaskId;
+      String slowestTaskIdString = pubSubBrokerAddress + slowestTaskId;
       if (!REDUNDANT_LOGGING_FILTER.isRedundantException(slowestTaskIdString)) {
         /**
          * We assume task id is the same as the number for thread. This is because both of them
@@ -406,7 +411,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
         // log the slowest consumer id if it couldn't make any progress in a minute!
         LOGGER.warn(
             "Shared consumer ({} - task {}) couldn't make any progress for over {} ms, thread name: {}, stack trace:\n{}, consumer info:\n{}",
-            kafkaUrl,
+            pubSubBrokerAddress,
             slowestTaskId,
             maxElapsedTimeSinceLastPollInConsumerPool,
             slowestThread != null ? slowestThread.getName() : null,
@@ -428,7 +433,8 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
     if (consumer == null) {
       // Defensive code. Shouldn't happen except in case of a regression.
       throw new VeniceException(
-          "Shared consumer must exist for version topic: " + versionTopic + " in Kafka cluster: " + kafkaUrl);
+          "Shared consumer must exist for version topic: " + versionTopic + " in Kafka cluster: "
+              + pubSubBrokerAddress);
     }
     /**
      * It is possible that when one {@link StoreIngestionTask} thread finishes unsubscribing a topic partition but not
@@ -455,6 +461,7 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
 
   interface KCSConstructor {
     KafkaConsumerService construct(
+        String pubSubBrokerAddress,
         ConsumerPoolType poolType,
         PubSubConsumerAdapterFactory consumerFactory,
         Properties consumerProperties,
@@ -463,7 +470,6 @@ public abstract class KafkaConsumerService extends AbstractKafkaConsumerService 
         IngestionThrottler ingestionThrottler,
         KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
         MetricsRepository metricsRepository,
-        String kafkaClusterAlias,
         long sharedConsumerNonExistingTopicCleanupDelayMS,
         StaleTopicChecker staleTopicChecker,
         boolean liveConfigBasedKafkaThrottlingEnabled,

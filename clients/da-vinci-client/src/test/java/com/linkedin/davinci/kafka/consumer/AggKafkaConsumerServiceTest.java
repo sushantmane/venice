@@ -4,7 +4,6 @@ import static com.linkedin.davinci.kafka.consumer.KafkaConsumerService.ConsumerA
 import static com.linkedin.davinci.kafka.consumer.KafkaConsumerServiceDelegator.ConsumerPoolStrategyType.DEFAULT;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -18,6 +17,7 @@ import static org.testng.Assert.assertEquals;
 import com.linkedin.davinci.config.VeniceServerConfig;
 import com.linkedin.davinci.stats.StuckConsumerRepairStats;
 import com.linkedin.venice.meta.ReadOnlyStoreRepository;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
@@ -89,7 +89,7 @@ public class AggKafkaConsumerServiceTest {
     Sensor dummySensor = mock(Sensor.class);
     when(metricsRepository.sensor(anyString(), any())).thenReturn(dummySensor);
     PubSubConsumerAdapter adapter = mock(PubSubConsumerAdapter.class);
-    when(consumerFactory.create(any(), anyBoolean(), any(), any())).thenReturn(adapter);
+    when(consumerFactory.create(any(PubSubConsumerAdapterContext.class))).thenReturn(adapter);
     aggKafkaConsumerService = new AggKafkaConsumerService(
         consumerFactory,
         pubSubPropertiesSupplier,
@@ -101,7 +101,8 @@ public class AggKafkaConsumerServiceTest {
         pubSubDeserializer,
         killIngestionTaskRunnable,
         t -> false,
-        metadataRepository);
+        metadataRepository,
+        PUBSUB_URL);
   }
 
   // test subscribeConsumerFor

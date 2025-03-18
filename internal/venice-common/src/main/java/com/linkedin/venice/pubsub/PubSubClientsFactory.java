@@ -26,10 +26,6 @@ import org.apache.logging.log4j.Logger;
 public class PubSubClientsFactory {
   private static final Logger LOGGER = LogManager.getLogger(PubSubClientsFactory.class);
 
-  private enum FactoryType {
-    PRODUCER, CONSUMER, ADMIN
-  }
-
   private final PubSubProducerAdapterFactory producerAdapterFactory;
   private final PubSubConsumerAdapterFactory consumerAdapterFactory;
   private final PubSubAdminAdapterFactory adminAdapterFactory;
@@ -69,7 +65,7 @@ public class PubSubClientsFactory {
         veniceProperties,
         PUB_SUB_PRODUCER_ADAPTER_FACTORY_CLASS,
         ApacheKafkaProducerAdapterFactory.class.getName(),
-        FactoryType.PRODUCER);
+        PubSubClientType.PRODUCER);
   }
 
   public static PubSubConsumerAdapterFactory<PubSubConsumerAdapter> createConsumerFactory(
@@ -78,7 +74,7 @@ public class PubSubClientsFactory {
         veniceProperties,
         PUB_SUB_CONSUMER_ADAPTER_FACTORY_CLASS,
         ApacheKafkaConsumerAdapterFactory.class.getName(),
-        FactoryType.CONSUMER);
+        PubSubClientType.CONSUMER);
   }
 
   public static PubSubAdminAdapterFactory<PubSubAdminAdapter> createAdminFactory(VeniceProperties veniceProperties) {
@@ -86,7 +82,7 @@ public class PubSubClientsFactory {
         veniceProperties,
         PUB_SUB_ADMIN_ADAPTER_FACTORY_CLASS,
         ApacheKafkaAdminAdapterFactory.class.getName(),
-        FactoryType.ADMIN);
+        PubSubClientType.ADMIN);
   }
 
   public static PubSubAdminAdapterFactory<PubSubAdminAdapter> createSourceOfTruthAdminFactory(
@@ -95,21 +91,21 @@ public class PubSubClientsFactory {
         veniceProperties,
         PUB_SUB_SOURCE_OF_TRUTH_ADMIN_ADAPTER_FACTORY_CLASS,
         ApacheKafkaAdminAdapterFactory.class.getName(),
-        FactoryType.ADMIN);
+        PubSubClientType.ADMIN);
   }
 
   private static <T> T createFactory(
       VeniceProperties properties,
       String configKey,
       String defaultClassName,
-      FactoryType factoryType) {
+      PubSubClientType pubSubClientType) {
     String className;
     if (properties.containsKey(configKey)) {
       className = properties.getString(configKey);
-      LOGGER.debug("Creating pub-sub {} adapter factory instance for class: {}", factoryType, className);
+      LOGGER.debug("Creating pub-sub {} adapter factory instance for class: {}", pubSubClientType, className);
     } else {
       className = defaultClassName;
-      LOGGER.debug("Creating pub-sub {} adapter factory instance with default class: {}", factoryType, className);
+      LOGGER.debug("Creating pub-sub {} adapter factory instance with default class: {}", pubSubClientType, className);
     }
 
     return createInstance(className);

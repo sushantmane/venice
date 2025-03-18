@@ -33,6 +33,7 @@ public class StoreAwarePartitionWiseKafkaConsumerService extends PartitionWiseKa
       new VeniceConcurrentHashMap<>();
 
   StoreAwarePartitionWiseKafkaConsumerService(
+      final String pubSubBrokerAddress,
       final ConsumerPoolType poolType,
       final PubSubConsumerAdapterFactory consumerFactory,
       final Properties consumerProperties,
@@ -41,7 +42,6 @@ public class StoreAwarePartitionWiseKafkaConsumerService extends PartitionWiseKa
       final IngestionThrottler ingestionThrottler,
       final KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
       final MetricsRepository metricsRepository,
-      final String kafkaClusterAlias,
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final StaleTopicChecker staleTopicChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
@@ -52,6 +52,7 @@ public class StoreAwarePartitionWiseKafkaConsumerService extends PartitionWiseKa
       final ReadOnlyStoreRepository metadataRepository,
       final boolean isUnregisterMetricForDeletedStoreEnabled) {
     super(
+        pubSubBrokerAddress,
         poolType,
         consumerFactory,
         consumerProperties,
@@ -60,7 +61,6 @@ public class StoreAwarePartitionWiseKafkaConsumerService extends PartitionWiseKa
         ingestionThrottler,
         kafkaClusterBasedRecordThrottler,
         metricsRepository,
-        kafkaClusterAlias,
         sharedConsumerNonExistingTopicCleanupDelayMS,
         staleTopicChecker,
         liveConfigBasedKafkaThrottlingEnabled,

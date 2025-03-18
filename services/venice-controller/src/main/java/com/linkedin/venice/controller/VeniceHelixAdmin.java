@@ -163,11 +163,11 @@ import com.linkedin.venice.participant.protocol.enums.ParticipantMessageType;
 import com.linkedin.venice.persona.StoragePersona;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
-import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
+import com.linkedin.venice.pubsub.api.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubOpTimeoutException;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubTopicDoesNotExistException;
 import com.linkedin.venice.pubsub.manager.TopicManager;
@@ -775,8 +775,10 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   }
 
   private VeniceProperties getPubSubSSLPropertiesFromControllerConfig(String pubSubBootstrapServers) {
+    // get the common config; get properties; clone the properties; set the bootstrap servers; create controller config
+    // and return
+    // the properties
     VeniceControllerClusterConfig controllerConfig = multiClusterConfigs.getCommonConfig();
-
     VeniceProperties originalPros = controllerConfig.getProps();
     Properties clonedProperties = originalPros.toProperties();
     if (originalPros.getBooleanWithAlternative(KAFKA_OVER_SSL, SSL_TO_KAFKA_LEGACY, false)) {
@@ -785,6 +787,7 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       clonedProperties.setProperty(KAFKA_BOOTSTRAP_SERVERS, pubSubBootstrapServers);
     }
     controllerConfig = new VeniceControllerClusterConfig(new VeniceProperties(clonedProperties));
+
     Properties properties = multiClusterConfigs.getCommonConfig().getProps().getPropertiesCopy();
     ApacheKafkaProducerConfig.copyKafkaSASLProperties(originalPros, properties, false);
     if (ApacheKafkaUtils.isKafkaSSLProtocol(controllerConfig.getKafkaSecurityProtocol())) {

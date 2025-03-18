@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -36,9 +37,7 @@ public class PartitionConsumptionState {
   private static final int MAX_INCREMENTAL_PUSH_ENTRY_NUM = 50;
   private static final String PREVIOUSLY_READY_TO_SERVE = "previouslyReadyToServe";
   private static final String TRUE = "true";
-
-  private final String replicaId;
-  private final int partition;
+  private final PubSubTopicPartition replicaVersionTopicPartition;
   private final boolean hybrid;
   private final OffsetRecord offsetRecord;
 
@@ -226,9 +225,11 @@ public class PartitionConsumptionState {
   // veniceWriterLazyRef could be set and get in different threads, mark it volatile.
   private volatile Lazy<VeniceWriter<byte[], byte[], byte[]>> veniceWriterLazyRef;
 
-  public PartitionConsumptionState(String replicaId, int partition, OffsetRecord offsetRecord, boolean hybrid) {
-    this.replicaId = replicaId;
-    this.partition = partition;
+  public PartitionConsumptionState(
+      PubSubTopicPartition versionTopicPartition,
+      OffsetRecord offsetRecord,
+      boolean hybrid) {
+    this.replicaVersionTopicPartition = validateVersionTopicPartitionForReplica(versionTopicPartition);
     this.hybrid = hybrid;
     this.offsetRecord = offsetRecord;
     this.errorReported = false;
@@ -272,8 +273,22 @@ public class PartitionConsumptionState {
     this.pendingReportIncPushVersionList = offsetRecord.getPendingReportIncPushVersionList();
   }
 
+  private static PubSubTopicPartition validateVersionTopicPartitionForReplica(PubSubTopicPartition topicPartition) {
+    Objects.requireNonNull(
+        topicPartition,
+        "Topic partition cannot be null when creating PartitionConsumptionState for a replica");
+
+    if (!topicPartition.getPubSubTopic().isVersionTopic()) {
+      throw new IllegalArgumentException(
+          "Expected a version topic partition when creating PartitionConsumptionState for a replica, but got: "
+              + topicPartition);
+    }
+
+    return topicPartition;
+  }
+
   public int getPartition() {
-    return this.partition;
+    return this.replicaVersionTopicPartition.getPartitionNumber();
   }
 
   public CompletableFuture<Void> getLastVTProduceCallFuture() {
@@ -388,7 +403,7 @@ public class PartitionConsumptionState {
   public String toString() {
     return new StringBuilder().append("PCS{")
         .append("replicaId=")
-        .append(replicaId)
+        .append(getReplicaId())
         .append(", hybrid=")
         .append(hybrid)
         .append(", latestProcessedLocalVersionTopicOffset=")
@@ -871,7 +886,11 @@ public class PartitionConsumptionState {
   }
 
   public String getReplicaId() {
-    return replicaId;
+    return this.replicaVersionTopicPartition.toString();
+  }
+
+  public PubSubTopicPartition getReplicaVersionTopicPartition() {
+    return this.replicaVersionTopicPartition;
   }
 
   public void addIncPushVersionToPendingReportList(String incPushVersion) {

@@ -1,7 +1,8 @@
-package com.linkedin.venice.pubsub.api;
+package com.linkedin.venice.pubsub;
 
 import com.linkedin.venice.exceptions.VeniceException;
-import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.api.PubSubMessageSerializer;
+import com.linkedin.venice.pubsub.api.PubSubSecurityProtocol;
 import com.linkedin.venice.utils.VeniceProperties;
 import io.tehuti.metrics.MetricsRepository;
 
@@ -159,6 +160,9 @@ public class PubSubProducerAdapterContext {
       } else if (compressionType == null) {
         compressionType = "gzip";
       }
+
+      producerName = PubSubUtil.generatePubSubClientId(PubSubClientType.PRODUCER, producerName, brokerAddress);
+
       return new PubSubProducerAdapterContext(this);
     }
   }

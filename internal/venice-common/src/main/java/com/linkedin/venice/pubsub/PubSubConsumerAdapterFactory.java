@@ -15,6 +15,7 @@ import java.io.Closeable;
  */
 public interface PubSubConsumerAdapterFactory<ADAPTER extends PubSubConsumerAdapter> extends Closeable {
   /**
+   * @Deprecated use {@link #create(PubSubConsumerAdapterContext)} instead.
    *
    * @param veniceProperties            A copy of venice properties. Relevant consumer configs will be extracted from
    *                                    veniceProperties using prefix matching. For example, to construct kafka consumer
@@ -25,11 +26,20 @@ public interface PubSubConsumerAdapterFactory<ADAPTER extends PubSubConsumerAdap
    *                                    for consumer thread.
    * @return                            Returns an instance of a consumer adapter
    */
+  @Deprecated
   ADAPTER create(
       VeniceProperties veniceProperties,
       boolean isOffsetCollectionEnabled,
       PubSubMessageDeserializer pubSubMessageDeserializer,
       String consumerName);
+
+  default ADAPTER create(PubSubConsumerAdapterContext context) {
+    return create(
+        context.getVeniceProperties(),
+        context.isOffsetCollectionEnabled(),
+        context.getPubSubMessageDeserializer(),
+        context.getConsumerName());
+  }
 
   String getName();
 }

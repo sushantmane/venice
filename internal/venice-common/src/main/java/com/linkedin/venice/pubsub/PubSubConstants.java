@@ -38,6 +38,11 @@ public class PubSubConstants {
 
   public static final String PUBSUB_CONSUMER_POSITION_RESET_STRATEGY =
       PUBSUB_CLIENT_CONFIG_PREFIX + "consumer.position.reset.strategy";
+
+  /**
+   * In Venice, the default value for the PubSub consumer position reset strategy is set to "earliest"
+   * to prevent data loss in cases where the offset is overshot during topic subscription.
+   */
   public static final String PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE = "earliest";
 
   public static final long PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE = 300;

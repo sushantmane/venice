@@ -9,7 +9,6 @@ import static com.linkedin.venice.ConfigKeys.HEARTBEAT_CYCLE;
 import static com.linkedin.venice.ConfigKeys.HEARTBEAT_TIMEOUT;
 import static com.linkedin.venice.ConfigKeys.HELIX_HYBRID_STORE_QUOTA_ENABLED;
 import static com.linkedin.venice.ConfigKeys.IDENTITY_PARSER_CLASS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_OVER_SSL;
 import static com.linkedin.venice.ConfigKeys.KEY_VALUE_PROFILING_ENABLED;
 import static com.linkedin.venice.ConfigKeys.LISTENER_HOSTNAME;
@@ -102,6 +101,7 @@ import static com.linkedin.venice.ConfigKeys.UNREGISTER_METRIC_FOR_DELETED_STORE
 import static com.linkedin.venice.ConfigKeys.ZOOKEEPER_ADDRESS;
 import static com.linkedin.venice.helix.HelixInstanceConfigRepository.GROUP_FIELD_NAME_IN_DOMAIN;
 import static com.linkedin.venice.helix.HelixInstanceConfigRepository.ZONE_FIELD_NAME_IN_DOMAIN;
+import static com.linkedin.venice.pubsub.PubSubUtil.getPubSubBrokerAddress;
 import static com.linkedin.venice.router.api.VeniceMultiKeyRoutingStrategy.LEAST_LOADED_ROUTING;
 import static com.linkedin.venice.router.api.routing.helix.HelixGroupSelectionStrategyEnum.LEAST_LOADED;
 
@@ -244,7 +244,7 @@ public class VeniceRouterConfig implements RouterRetryConfig {
       hostname = props.getString(LISTENER_HOSTNAME, () -> Utils.getHostName());
       sslPort = props.getInt(LISTENER_SSL_PORT);
       zkConnection = props.getString(ZOOKEEPER_ADDRESS);
-      kafkaBootstrapServers = props.getString(KAFKA_BOOTSTRAP_SERVERS);
+      kafkaBootstrapServers = getPubSubBrokerAddress(props);
       sslToKafka = props.getBooleanWithAlternative(KAFKA_OVER_SSL, SSL_TO_KAFKA_LEGACY, false);
       heartbeatTimeoutMs = props.getDouble(HEARTBEAT_TIMEOUT, TimeUnit.MINUTES.toMillis(1));
       heartbeatCycleMs = props.getLong(HEARTBEAT_CYCLE, TimeUnit.SECONDS.toMillis(5));

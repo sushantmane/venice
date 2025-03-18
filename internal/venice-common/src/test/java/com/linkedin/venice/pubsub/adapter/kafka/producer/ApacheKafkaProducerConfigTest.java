@@ -14,7 +14,7 @@ import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubConstants;
-import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
+import com.linkedin.venice.pubsub.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
 import java.util.function.BiConsumer;

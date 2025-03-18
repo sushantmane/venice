@@ -1,6 +1,5 @@
 package com.linkedin.venice;
 
-import static com.linkedin.venice.ConfigKeys.KAFKA_AUTO_OFFSET_RESET_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_ENABLE_AUTO_COMMIT_CONFIG;
 
@@ -126,7 +125,6 @@ public class DumpAdminMessages {
     }
 
     pubSubConsumerProperties.setProperty(KAFKA_BOOTSTRAP_SERVERS, kafkaUrl);
-    pubSubConsumerProperties.setProperty(KAFKA_AUTO_OFFSET_RESET_CONFIG, "earliest");
     pubSubConsumerProperties.setProperty(KAFKA_ENABLE_AUTO_COMMIT_CONFIG, "false");
     return pubSubConsumerProperties;
   }

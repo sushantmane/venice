@@ -875,9 +875,6 @@ public abstract class StoreIngestionTaskTest {
         recordTransformerConfig,
         offsetRecord).build();
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
-
     zkHelixAdmin = mock(ZKHelixAdmin.class);
     doNothing().when(zkHelixAdmin).setPartitionsToError(anyString(), anyString(), anyString(), anyList());
     storeIngestionTaskUnderTest = spy(
@@ -885,14 +882,14 @@ public abstract class StoreIngestionTaskTest {
             storageService,
             mockStore,
             version,
-            kafkaProps,
             isCurrentVersion,
             storeConfig,
             PARTITION_FOO,
             false,
             Optional.empty(),
             recordTransformerConfig,
-            Lazy.of(() -> zkHelixAdmin)));
+            Lazy.of(() -> zkHelixAdmin),
+            inMemoryLocalKafkaBroker.getKafkaBootstrapServer()));
 
     Future testSubscribeTaskFuture = null;
     try {
@@ -1074,6 +1071,7 @@ public abstract class StoreIngestionTaskTest {
     Properties localKafkaProps = new Properties();
     localKafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     localKafkaConsumerService = getConsumerAssignmentStrategy().constructor.construct(
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer(),
         ConsumerPoolType.REGULAR_POOL,
         mockFactory,
         localKafkaProps,
@@ -1082,7 +1080,6 @@ public abstract class StoreIngestionTaskTest {
         mockIngestionThrottler,
         kafkaClusterBasedRecordThrottler,
         mockMetricRepo,
-        inMemoryLocalKafkaBroker.getKafkaBootstrapServer(),
         1000,
         mock(StaleTopicChecker.class),
         isLiveConfigEnabled,
@@ -1097,6 +1094,7 @@ public abstract class StoreIngestionTaskTest {
     Properties remoteKafkaProps = new Properties();
     remoteKafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryRemoteKafkaBroker.getKafkaBootstrapServer());
     remoteKafkaConsumerService = getConsumerAssignmentStrategy().constructor.construct(
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer(),
         ConsumerPoolType.REGULAR_POOL,
         mockFactory,
         remoteKafkaProps,
@@ -1105,7 +1103,6 @@ public abstract class StoreIngestionTaskTest {
         mockIngestionThrottler,
         kafkaClusterBasedRecordThrottler,
         mockMetricRepo,
-        inMemoryLocalKafkaBroker.getKafkaBootstrapServer(),
         1000,
         mock(StaleTopicChecker.class),
         isLiveConfigEnabled,
@@ -2812,22 +2809,20 @@ public abstract class StoreIngestionTaskTest {
         false,
         null,
         null).build();
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     storeIngestionTaskUnderTest = spy(
         ingestionTaskFactory.getNewIngestionTask(
             storageService,
             mockStore,
             version,
-            kafkaProps,
             isCurrentVersion,
             storeConfig,
             PARTITION_FOO,
             false,
             Optional.empty(),
             null,
-            null));
+            null,
+            inMemoryLocalKafkaBroker.getKafkaBootstrapServer()));
 
     Schema schema1 = Schema.parse(
         "{" + "\"fields\": ["
@@ -3024,21 +3019,18 @@ public abstract class StoreIngestionTaskTest {
         null,
         null).build();
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
-
     storeIngestionTaskUnderTest = ingestionTaskFactory.getNewIngestionTask(
         storageService,
         mockStore,
         version,
-        kafkaProps,
         isCurrentVersion,
         storeConfig,
         PARTITION_FOO,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     AtomicLong remoteKafkaQuota = new AtomicLong(10);
 
@@ -3176,21 +3168,18 @@ public abstract class StoreIngestionTaskTest {
     doReturn(true).when(mockTopicManager).containsTopicCached(any());
     doReturn(true).when(mockTopicManagerRemoteKafka).containsTopicCached(any());
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
-
     storeIngestionTaskUnderTest = ingestionTaskFactory.getNewIngestionTask(
         storageService,
         mockStore,
         version,
-        kafkaProps,
         isCurrentVersion,
         storeConfig,
         PARTITION_FOO,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     String rtTopicName = Utils.getRealTimeTopicName(mockStore);
     PubSubTopic rtTopic = pubSubTopicRepository.getTopic(rtTopicName);
     TopicSwitch topicSwitchWithSourceRealTimeTopic = new TopicSwitch();
@@ -3295,8 +3284,8 @@ public abstract class StoreIngestionTaskTest {
     doReturn(150L).when(mockTopicManagerRemoteKafka).getLatestOffsetCached(any(), anyInt());
     doReturn(150L).when(aggKafkaConsumerService).getLatestOffsetBasedOnMetrics(anyString(), any(), any());
 
-    long endOffset =
-        storeIngestionTaskUnderTest.getTopicPartitionEndOffSet(localKafkaConsumerService.kafkaUrl, pubSubTopic, 1);
+    long endOffset = storeIngestionTaskUnderTest
+        .getTopicPartitionEndOffSet(localKafkaConsumerService.pubSubBrokerAddress, pubSubTopic, 1);
     assertEquals(endOffset, 150L);
     if (nodeType == NodeType.LEADER) {
       // case 6a: leader replica => partition is not ready to serve
@@ -3398,20 +3387,18 @@ public abstract class StoreIngestionTaskTest {
     doReturn(true).when(mockTopicManager).containsTopic(any());
     doReturn(true).when(mockTopicManagerRemoteKafka).containsTopic(any());
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     storeIngestionTaskUnderTest = ingestionTaskFactory.getNewIngestionTask(
         storageService,
         mockStore,
         version,
-        kafkaProps,
         isCurrentVersion,
         storeConfig,
         PARTITION_FOO,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     if (hybridConfig.equals(HYBRID) && nodeType.equals(LEADER) && isAaWCParallelProcessingEnabled()) {
       assertTrue(storeIngestionTaskUnderTest instanceof ActiveActiveStoreIngestionTask);
@@ -3471,12 +3458,12 @@ public abstract class StoreIngestionTaskTest {
       assertTrue(storeIngestionTaskUnderTest.isReadyToServe(mockPcsMultipleSourceKafkaServers));
     }
     doReturn(10L).when(aggKafkaConsumerService).getLatestOffsetBasedOnMetrics(anyString(), any(), any());
-    long endOffset =
-        storeIngestionTaskUnderTest.getTopicPartitionEndOffSet(localKafkaConsumerService.kafkaUrl, pubSubTopic, 0);
+    long endOffset = storeIngestionTaskUnderTest
+        .getTopicPartitionEndOffSet(localKafkaConsumerService.pubSubBrokerAddress, pubSubTopic, 0);
     assertEquals(endOffset, 10L);
     doReturn(-1L).when(aggKafkaConsumerService).getLatestOffsetBasedOnMetrics(anyString(), any(), any());
-    endOffset =
-        storeIngestionTaskUnderTest.getTopicPartitionEndOffSet(localKafkaConsumerService.kafkaUrl, pubSubTopic, 0);
+    endOffset = storeIngestionTaskUnderTest
+        .getTopicPartitionEndOffSet(localKafkaConsumerService.pubSubBrokerAddress, pubSubTopic, 0);
     assertEquals(endOffset, 0L);
   }
 
@@ -3546,20 +3533,18 @@ public abstract class StoreIngestionTaskTest {
     doReturn(true).when(mockTopicManager).containsTopic(any());
     doReturn(true).when(mockTopicManagerRemoteKafka).containsTopic(any());
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     storeIngestionTaskUnderTest = ingestionTaskFactory.getNewIngestionTask(
         storageService,
         mockStore,
         version,
-        kafkaProps,
         isCurrentVersion,
         storeConfig,
         PARTITION_FOO,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     PartitionConsumptionState mockPartitionConsumptionState = mock(PartitionConsumptionState.class);
     doCallRealMethod().when(mockPartitionConsumptionState).isLeaderCompleted();
@@ -3701,25 +3686,23 @@ public abstract class StoreIngestionTaskTest {
         null,
         null).setIsDaVinciClient(nodeType == DA_VINCI).setAggKafkaConsumerService(aggKafkaConsumerService).build();
 
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     LeaderFollowerStoreIngestionTask ingestionTask =
         (LeaderFollowerStoreIngestionTask) ingestionTaskFactory.getNewIngestionTask(
             storageService,
             mockStore,
             version,
-            kafkaProps,
             isCurrentVersion,
             storeConfig,
             PARTITION_FOO,
             false,
             Optional.empty(),
             null,
-            null);
+            null,
+            inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     OffsetRecord mockOffsetRecord = mock(OffsetRecord.class);
     PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(topic, PARTITION_FOO), PARTITION_FOO, mockOffsetRecord, true);
+        new PartitionConsumptionState(fooTopicPartition, mockOffsetRecord, true);
 
     long producerTimestamp = System.currentTimeMillis();
     LeaderMetadataWrapper mockLeaderMetadataWrapper = mock(LeaderMetadataWrapper.class);
@@ -3804,21 +3787,19 @@ public abstract class StoreIngestionTaskTest {
         false,
         null,
         null).setIsDaVinciClient(nodeType == DA_VINCI).build();
-    Properties kafkaProps = new Properties();
-    kafkaProps.put(KAFKA_BOOTSTRAP_SERVERS, inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
 
     storeIngestionTaskUnderTest = ingestionTaskFactory.getNewIngestionTask(
         storageService,
         mockStore,
         version,
-        kafkaProps,
         isCurrentVersion,
         storeConfig,
         PARTITION_FOO,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        inMemoryLocalKafkaBroker.getKafkaBootstrapServer());
     TopicManager mockTopicManagerRemoteKafka = mock(TopicManager.class);
     doReturn(mockTopicManagerRemoteKafka).when(mockTopicManagerRepository)
         .getTopicManager(inMemoryRemoteKafkaBroker.getKafkaBootstrapServer());
@@ -3863,9 +3844,6 @@ public abstract class StoreIngestionTaskTest {
     doReturn(mockVersion).when(mockStore).getVersion(1);
     doReturn(aaConfig == AA_ON).when(mockVersion).isActiveActiveReplicationEnabled();
 
-    Properties mockKafkaConsumerProperties = mock(Properties.class);
-    doReturn("localhost").when(mockKafkaConsumerProperties).getProperty(eq(KAFKA_BOOTSTRAP_SERVERS));
-
     VeniceServerConfig mockVeniceServerConfig = mock(VeniceServerConfig.class);
     doReturn(VeniceProperties.empty()).when(mockVeniceServerConfig).getClusterProperties();
     VeniceProperties mockVeniceProperties = mock(VeniceProperties.class);
@@ -3889,14 +3867,14 @@ public abstract class StoreIngestionTaskTest {
             storageService,
             mockStore,
             mockVersion,
-            mockKafkaConsumerProperties,
             () -> true,
             mockVeniceStoreVersionConfig,
             0,
             false,
             Optional.empty(),
             null,
-            null);
+            null,
+            "localhost");
 
     TopicSwitch topicSwitch = new TopicSwitch();
     topicSwitch.sourceKafkaServers = Collections.singletonList("localhost");
@@ -4002,19 +3980,21 @@ public abstract class StoreIngestionTaskTest {
             builder,
             store,
             version,
-            mock(Properties.class),
             mock(BooleanSupplier.class),
             storeConfig,
             -1,
             false,
             Optional.empty(),
             null,
-            null));
+            null,
+            "localhost"));
 
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
-    doReturn(pubSubTopicRepository.getTopic(versionTopicName)).when(offsetRecord).getLeaderTopic(any());
+    PubSubTopicPartition topicPartition =
+        new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic(versionTopicName), 0);
+    doReturn(topicPartition.getPubSubTopic()).when(offsetRecord).getLeaderTopic(any());
     PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(versionTopicName, 0), 0, offsetRecord, false);
+        new PartitionConsumptionState(topicPartition, offsetRecord, false);
 
     long localVersionTopicOffset = 100L;
     long remoteVersionTopicOffset = 200L;
@@ -4255,14 +4235,14 @@ public abstract class StoreIngestionTaskTest {
             builder,
             store,
             version,
-            mock(Properties.class),
             mock(BooleanSupplier.class),
             storeConfig,
             -1,
             false,
             Optional.empty(),
             null,
-            null));
+            null,
+            "localhost"));
 
     // Simulate the version has been deleted.
     ingestionTask.setVersionRole(PartitionReplicaIngestionContext.VersionRole.BACKUP);
@@ -4408,7 +4388,7 @@ public abstract class StoreIngestionTaskTest {
               pubSubMessage,
               leaderProducedRecordContext,
               PARTITION_FOO,
-              localKafkaConsumerService.kafkaUrl,
+              localKafkaConsumerService.pubSubBrokerAddress,
               System.nanoTime(),
               System.currentTimeMillis());
         } catch (InterruptedException e) {
@@ -4637,18 +4617,19 @@ public abstract class StoreIngestionTaskTest {
         storageService,
         store,
         version,
-        new Properties(),
         isCurrentVersion,
         storeConfig,
         1,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        "localhost");
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
     doReturn(pubSubTopic).when(offsetRecord).getLeaderTopic(any());
+    PubSubTopicPartition topicPartition = new PubSubTopicPartitionImpl(pubSubTopic, 0);
     PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(pubSubTopic, 0), 0, offsetRecord, false);
+        new PartitionConsumptionState(topicPartition, offsetRecord, false);
 
     storeIngestionTaskUnderTest.updateLeaderTopicOnFollower(partitionConsumptionState);
     storeIngestionTaskUnderTest.startConsumingAsLeader(partitionConsumptionState);
@@ -4712,8 +4693,6 @@ public abstract class StoreIngestionTaskTest {
     } else {
       doReturn(null).when(mockVersion).getHybridStoreConfig();
     }
-    Properties mockKafkaConsumerProperties = mock(Properties.class);
-    doReturn("localhost").when(mockKafkaConsumerProperties).getProperty(eq(KAFKA_BOOTSTRAP_SERVERS));
     ReadOnlyStoreRepository mockReadOnlyStoreRepository = mock(ReadOnlyStoreRepository.class);
     doReturn(mockStore).when(mockReadOnlyStoreRepository).getStoreOrThrow(eq(storeName));
     doReturn(false).when(mockStore).isHybridStoreDiskQuotaEnabled();
@@ -4757,14 +4736,14 @@ public abstract class StoreIngestionTaskTest {
             storageService,
             mockStore,
             mockVersion,
-            mockKafkaConsumerProperties,
             () -> true,
             mockVeniceStoreVersionConfig,
             0,
             false,
             Optional.empty(),
             null,
-            null);
+            null,
+            "localhost");
 
     ingestionTask.setPartitionConsumptionState(0, pcs);
     ingestionTask.maybeSendIngestionHeartbeat();
@@ -4802,8 +4781,6 @@ public abstract class StoreIngestionTaskTest {
     doReturn(true).when(mockVersion).isUseVersionLevelHybridConfig();
     HybridStoreConfig mockHybridConfig = mock(HybridStoreConfig.class);
     doReturn(mockHybridConfig).when(mockVersion).getHybridStoreConfig();
-    Properties mockKafkaConsumerProperties = mock(Properties.class);
-    doReturn("localhost").when(mockKafkaConsumerProperties).getProperty(eq(KAFKA_BOOTSTRAP_SERVERS));
     ReadOnlyStoreRepository mockReadOnlyStoreRepository = mock(ReadOnlyStoreRepository.class);
     doReturn(mockStore).when(mockReadOnlyStoreRepository).getStoreOrThrow(eq(storeName));
     doReturn(false).when(mockStore).isHybridStoreDiskQuotaEnabled();
@@ -4854,14 +4831,14 @@ public abstract class StoreIngestionTaskTest {
             storageService,
             mockStore,
             mockVersion,
-            mockKafkaConsumerProperties,
             () -> true,
             mockVeniceStoreVersionConfig,
             0,
             false,
             Optional.empty(),
             null,
-            null);
+            null,
+            "localhost");
 
     ingestionTask.setPartitionConsumptionState(0, pcs0);
     ingestionTask.setPartitionConsumptionState(1, pcs1);
@@ -4978,7 +4955,7 @@ public abstract class StoreIngestionTaskTest {
             pubSubMessage,
             leaderProducedRecordContext,
             PARTITION_FOO,
-            localKafkaConsumerService.kafkaUrl,
+            localKafkaConsumerService.pubSubBrokerAddress,
             System.nanoTime(),
             System.currentTimeMillis());
       } catch (InterruptedException e) {
@@ -5060,7 +5037,7 @@ public abstract class StoreIngestionTaskTest {
             pubSubMessage,
             leaderProducedRecordContext,
             PARTITION_FOO,
-            localKafkaConsumerService.kafkaUrl,
+            localKafkaConsumerService.pubSubBrokerAddress,
             System.nanoTime(),
             System.currentTimeMillis());
       } catch (InterruptedException e) {
@@ -5130,7 +5107,7 @@ public abstract class StoreIngestionTaskTest {
             pubSubMessage,
             leaderProducedRecordContext,
             PARTITION_FOO,
-            localKafkaConsumerService.kafkaUrl,
+            localKafkaConsumerService.pubSubBrokerAddress,
             System.nanoTime(),
             System.currentTimeMillis());
       } catch (Exception e) {
@@ -5218,7 +5195,7 @@ public abstract class StoreIngestionTaskTest {
                   message,
                   leaderProducedRecordContext,
                   PARTITION_FOO,
-                  localKafkaConsumerService.kafkaUrl,
+                  localKafkaConsumerService.pubSubBrokerAddress,
                   System.nanoTime(),
                   System.currentTimeMillis());
             } catch (InterruptedException e) {
@@ -5557,14 +5534,14 @@ public abstract class StoreIngestionTaskTest {
             builder,
             store,
             version,
-            mock(Properties.class),
             mock(BooleanSupplier.class),
             storeConfig,
             -1,
             false,
             Optional.empty(),
             null,
-            null));
+            null,
+            "localhost"));
 
     // Create a DIV record.
     KafkaKey key = new KafkaKey(MessageType.GLOBAL_RT_DIV, "test_key".getBytes());
@@ -5756,20 +5733,21 @@ public abstract class StoreIngestionTaskTest {
         storageService,
         store,
         version,
-        new Properties(),
         isCurrentVersion,
         storeConfig,
         1,
         false,
         Optional.empty(),
         null,
-        null);
+        null,
+        "localhost");
     OffsetRecord offsetRecord = mock(OffsetRecord.class);
     doReturn(pubSubTopic).when(offsetRecord).getLeaderTopic(any());
     doReturn(false).when(offsetRecord).isEndOfPushReceived();
     doReturn(100L).when(offsetRecord).getOffsetLag();
+    PubSubTopicPartition topicPartition = new PubSubTopicPartitionImpl(pubSubTopic, 0);
     PartitionConsumptionState partitionConsumptionState =
-        new PartitionConsumptionState(Utils.getReplicaId(pubSubTopic, 0), 0, offsetRecord, true);
+        new PartitionConsumptionState(topicPartition, offsetRecord, true);
 
     KafkaMessageEnvelope kafkaMessageEnvelope = spy(Mockito.mock(KafkaMessageEnvelope.class));
     ProducerMetadata producerMetadata = new ProducerMetadata();

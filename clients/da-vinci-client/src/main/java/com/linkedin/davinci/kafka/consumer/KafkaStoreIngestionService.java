@@ -1,6 +1,5 @@
 package com.linkedin.davinci.kafka.consumer;
 
-import static com.linkedin.venice.ConfigKeys.KAFKA_AUTO_OFFSET_RESET_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_CLIENT_ID_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_ENABLE_AUTO_COMMIT_CONFIG;
@@ -10,6 +9,7 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MIN_BYTES_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_GROUP_ID_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_MAX_POLL_RECORDS_CONFIG;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.sleep;
 
@@ -101,6 +101,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Queue;
@@ -204,6 +205,12 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
 
   private final ScheduledExecutorService idleStoreIngestionTaskKillerExecutor;
 
+  /**
+   * The PubSub broker address for the local region.
+   * This should be a resolved address, meaning any alias has already been mapped to the primary broker address.
+   */
+  private final String localPubSubBrokerAddress;
+
   public KafkaStoreIngestionService(
       StorageService storageService,
       VeniceConfigLoader veniceConfigLoader,
@@ -243,10 +250,15 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     // Each topic that has any partition ingested by this class has its own lock.
     this.topicLockManager = new ResourceAutoClosableLockManager<>(ReentrantLock::new);
     this.serverConfig = veniceConfigLoader.getVeniceServerConfig();
+    this.localPubSubBrokerAddress = Objects.requireNonNull(
+        serverConfig.getKafkaClusterUrlResolver().apply(serverConfig.getKafkaBootstrapServers()),
+        "Local pubsub broker address should not be null");
     Properties veniceWriterProperties =
         veniceConfigLoader.getVeniceClusterConfig().getClusterProperties().toProperties();
+    veniceWriterProperties.put(
+        PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS,
+        serverConfig.shouldUseHighThroughputDefaultsForPubSubProducer());
 
-    veniceWriterProperties.put(PubSubConstants.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, "true");
     producerAdapterFactory = pubSubClientsFactory.getProducerAdapterFactory();
     VeniceWriterFactory veniceWriterFactory =
         new VeniceWriterFactory(veniceWriterProperties, producerAdapterFactory, metricsRepository);
@@ -281,6 +293,9 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler =
         new KafkaClusterBasedRecordThrottler(kafkaUrlToRecordsThrottler);
 
+    /**
+     * todo(sushantmane): Set precomputed configs for topic manager pubsub clients
+     */
     TopicManagerContext topicManagerContext =
         new TopicManagerContext.Builder().setPubSubTopicRepository(pubSubTopicRepository)
             .setMetricsRepository(metricsRepository)
@@ -291,8 +306,7 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
             .setTopicMetadataFetcherThreadPoolSize(serverConfig.getTopicManagerMetadataFetcherThreadPoolSize())
             .setTopicMetadataFetcherConsumerPoolSize(serverConfig.getTopicManagerMetadataFetcherConsumerPoolSize())
             .build();
-    this.topicManagerRepository =
-        new TopicManagerRepository(topicManagerContext, serverConfig.getKafkaBootstrapServers());
+    this.topicManagerRepository = new TopicManagerRepository(topicManagerContext, localPubSubBrokerAddress);
 
     VeniceNotifier notifier = new LogNotifier();
     this.leaderFollowerNotifiers.add(notifier);
@@ -418,7 +432,8 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
           }
           return version.isActiveActiveReplicationEnabled() || store.isWriteComputationEnabled();
         },
-        metadataRepo);
+        metadataRepo,
+        localPubSubBrokerAddress);
     /**
      * After initializing a {@link AggKafkaConsumerService} service, it doesn't contain KafkaConsumerService yet until
      * a new Kafka cluster is registered; here we explicitly create KafkaConsumerService for the local Kafka cluster.
@@ -581,14 +596,14 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
         storageService,
         store,
         version,
-        getKafkaConsumerProperties(veniceStoreVersionConfig),
         isVersionCurrent,
         veniceStoreVersionConfig,
         partitionId,
         isIsolatedIngestion,
         cacheBackend,
         recordTransformerConfig,
-        zkHelixAdmin);
+        zkHelixAdmin,
+        localPubSubBrokerAddress);
   }
 
   private static void shutdownExecutorService(ExecutorService executor, String name, boolean force) {
@@ -1188,17 +1203,20 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     return String.format(GROUP_ID_FORMAT, topic, Utils.getHostName());
   }
 
+  private static VeniceProperties getPropertiesForPubSubClients(boolean isRemotePubSubCluster) {
+    return null;
+  }
+
   /**
    * So far, this function is only targeted to be used by shared consumer.
    * @param serverConfig
    * @return
    */
-  private Properties getCommonKafkaConsumerProperties(VeniceServerConfig serverConfig) {
+  public static Properties getCommonKafkaConsumerProperties(VeniceServerConfig serverConfig) {
     Properties kafkaConsumerProperties = serverConfig.getClusterProperties().getPropertiesCopy();
     ApacheKafkaProducerConfig
         .copyKafkaSASLProperties(serverConfig.getClusterProperties(), kafkaConsumerProperties, false);
     kafkaConsumerProperties.setProperty(KAFKA_BOOTSTRAP_SERVERS, serverConfig.getKafkaBootstrapServers());
-    kafkaConsumerProperties.setProperty(KAFKA_AUTO_OFFSET_RESET_CONFIG, "earliest");
     // Venice is persisting offset in local offset db.
     kafkaConsumerProperties.setProperty(KAFKA_ENABLE_AUTO_COMMIT_CONFIG, "false");
     kafkaConsumerProperties
@@ -1260,9 +1278,10 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
   /**
    * @return Properties Kafka properties corresponding to the venice store.
    */
-  private Properties getKafkaConsumerProperties(VeniceStoreVersionConfig storeConfig) {
-    Properties kafkaConsumerProperties = getCommonKafkaConsumerProperties(storeConfig);
-    String groupId = getGroupId(storeConfig.getStoreVersionName());
+  public static Properties getKafkaConsumerProperties(VeniceServerConfig storeConfig) {
+    Properties kafkaConsumerProperties = KafkaStoreIngestionService.getCommonKafkaConsumerProperties(storeConfig);
+    // String groupId = getGroupId(storeConfig.getStoreVersionName());
+    String groupId = "fakeGroupId";
     kafkaConsumerProperties.setProperty(KAFKA_GROUP_ID_CONFIG, groupId);
     /**
      * Temporarily we are going to use group_id as client_id as well since it is unique in cluster level.

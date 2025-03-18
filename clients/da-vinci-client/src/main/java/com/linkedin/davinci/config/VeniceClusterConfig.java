@@ -19,10 +19,12 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_UNORDERED_RECORDS
 import static com.linkedin.venice.ConfigKeys.KAFKA_READ_CYCLE_DELAY_MS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_SECURITY_PROTOCOL;
 import static com.linkedin.venice.ConfigKeys.PERSISTENCE_TYPE;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_BROKER_ADDRESS;
 import static com.linkedin.venice.ConfigKeys.REFRESH_ATTEMPTS_FOR_ZK_RECONNECT;
 import static com.linkedin.venice.ConfigKeys.REFRESH_INTERVAL_FOR_ZK_RECONNECT_MS;
 import static com.linkedin.venice.ConfigKeys.ZOOKEEPER_ADDRESS;
 
+import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.SSLConfig;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.UndefinedPropertyException;
@@ -74,6 +76,7 @@ public class VeniceClusterConfig {
   private final long kafkaFetchMaxTimeMS;
   private final long kafkaFetchPartitionMaxSizePerSecond;
   private final String regionName;
+  private final boolean shouldUseHighThroughputDefaultsForPubSubProducer;
 
   /**
    * TODO: Encapsulate all these mappings into a "PubSubServiceRepo" which can hand out "PubSubService" objects
@@ -105,7 +108,8 @@ public class VeniceClusterConfig {
     } catch (UndefinedPropertyException ex) {
       throw new ConfigurationException("persistence type undefined", ex);
     }
-    String baseKafkaBootstrapServers = clusterProps.getString(KAFKA_BOOTSTRAP_SERVERS);
+    String baseKafkaBootstrapServers =
+        clusterProps.getStringWithAlternative(PUBSUB_BROKER_ADDRESS, KAFKA_BOOTSTRAP_SERVERS);
     if (baseKafkaBootstrapServers == null || baseKafkaBootstrapServers.isEmpty()) {
       throw new ConfigurationException("kafkaBootstrapServers can't be empty");
     }
@@ -131,6 +135,8 @@ public class VeniceClusterConfig {
     this.kafkaFetchMaxTimeMS = clusterProps.getLong(KAFKA_FETCH_MAX_WAIT_TIME_MS, 500);
     this.kafkaFetchPartitionMaxSizePerSecond = clusterProps
         .getSizeInBytes(KAFKA_FETCH_PARTITION_MAX_SIZE_PER_SEC, ConsumerConfig.DEFAULT_MAX_PARTITION_FETCH_BYTES);
+    this.shouldUseHighThroughputDefaultsForPubSubProducer =
+        clusterProps.getBoolean(ConfigKeys.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, true);
 
     this.regionName = RegionUtils.getLocalRegionName(clusterProps, false);
     LOGGER.info("Final region name for this node: {}", this.regionName);
@@ -395,5 +401,9 @@ public class VeniceClusterConfig {
     }
     String originalAlias = alias.substring(0, alias.length() - Utils.SEPARATE_TOPIC_SUFFIX.length());
     return kafkaClusterAliasToIdMap.getInt(originalAlias);
+  }
+
+  public boolean shouldUseHighThroughputDefaultsForPubSubProducer() {
+    return shouldUseHighThroughputDefaultsForPubSubProducer;
   }
 }

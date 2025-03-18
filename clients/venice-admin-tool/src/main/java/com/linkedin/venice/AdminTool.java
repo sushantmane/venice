@@ -79,7 +79,6 @@ import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.helix.HelixAdapterSerializer;
 import com.linkedin.venice.helix.HelixSchemaAccessor;
 import com.linkedin.venice.helix.ZkClientFactory;
-import com.linkedin.venice.kafka.protocol.KafkaMessageEnvelope;
 import com.linkedin.venice.meta.BackupStrategy;
 import com.linkedin.venice.meta.BufferReplayPolicy;
 import com.linkedin.venice.meta.DataReplicationPolicy;
@@ -91,6 +90,7 @@ import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.metadata.payload.StorePropertiesPayloadRecord;
 import com.linkedin.venice.metadata.response.MetadataResponseRecord;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
@@ -109,7 +109,6 @@ import com.linkedin.venice.serialization.KafkaKeySerializer;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
 import com.linkedin.venice.serialization.avro.KafkaValueSerializer;
-import com.linkedin.venice.serialization.avro.OptimizedKafkaValueSerializer;
 import com.linkedin.venice.serializer.FastSerializerDeserializerFactory;
 import com.linkedin.venice.serializer.RecordDeserializer;
 import com.linkedin.venice.utils.ObjectMapperFactory;
@@ -119,7 +118,6 @@ import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
 import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
-import com.linkedin.venice.utils.pools.LandFillObjectPool;
 import java.io.BufferedReader;
 import java.io.Console;
 import java.io.FileInputStream;
@@ -3616,12 +3614,15 @@ public class AdminTool {
   private static PubSubConsumerAdapter getConsumer(
       Properties consumerProps,
       PubSubClientsFactory pubSubClientsFactory) {
-    PubSubMessageDeserializer pubSubMessageDeserializer = new PubSubMessageDeserializer(
-        new OptimizedKafkaValueSerializer(),
-        new LandFillObjectPool<>(KafkaMessageEnvelope::new),
-        new LandFillObjectPool<>(KafkaMessageEnvelope::new));
-    return pubSubClientsFactory.getConsumerAdapterFactory()
-        .create(new VeniceProperties(consumerProps), false, pubSubMessageDeserializer, "admin-tool-topic-dumper");
+    VeniceProperties veniceProperties = new VeniceProperties(consumerProps);
+    String brokerAddress =
+        veniceProperties.getStringWithAlternative(ConfigKeys.PUBSUB_BROKER_ADDRESS, KAFKA_BOOTSTRAP_SERVERS);
+    PubSubConsumerAdapterContext context = new PubSubConsumerAdapterContext.Builder().setBrokerAddress(brokerAddress)
+        .setPubSubMessageDeserializer(PubSubMessageDeserializer.getOptimizedInstance())
+        .setVeniceProperties(veniceProperties)
+        .setConsumerName("topic-dumper")
+        .setIsOffsetCollectionEnabled(false)
+        .build();
+    return pubSubClientsFactory.getConsumerAdapterFactory().create(context);
   }
-
 }

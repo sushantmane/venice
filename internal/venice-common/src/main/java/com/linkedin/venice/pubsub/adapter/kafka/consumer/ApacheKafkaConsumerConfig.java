@@ -1,14 +1,20 @@
 package com.linkedin.venice.pubsub.adapter.kafka.consumer;
 
-import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
-import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.generateClientId;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
 
+import com.linkedin.venice.annotation.VisibleForTesting;
 import com.linkedin.venice.pubsub.PubSubConstants;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
+import com.linkedin.venice.pubsub.PubSubUtil;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
+import com.linkedin.venice.pubsub.adapter.kafka.TopicPartitionsOffsetsTracker;
+import com.linkedin.venice.pubsub.api.PubSubMessageDeserializer;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.logging.log4j.LogManager;
@@ -21,8 +27,6 @@ import org.apache.logging.log4j.Logger;
 public class ApacheKafkaConsumerConfig {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaConsumerConfig.class);
 
-  public static final String KAFKA_AUTO_OFFSET_RESET_CONFIG =
-      KAFKA_CONFIG_PREFIX + ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
   public static final String KAFKA_ENABLE_AUTO_COMMIT_CONFIG =
       KAFKA_CONFIG_PREFIX + ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
   public static final String KAFKA_FETCH_MIN_BYTES_CONFIG = KAFKA_CONFIG_PREFIX + ConsumerConfig.FETCH_MIN_BYTES_CONFIG;
@@ -37,6 +41,14 @@ public class ApacheKafkaConsumerConfig {
   public static final String KAFKA_GROUP_ID_CONFIG = KAFKA_CONFIG_PREFIX + ConsumerConfig.GROUP_ID_CONFIG;
   public static final int DEFAULT_RECEIVE_BUFFER_SIZE = 1024 * 1024;
 
+  /**
+   * Use the following prefix to get the consumer properties from the {@link VeniceProperties} object.
+   */
+  private static final String PUBSUB_KAFKA_CONSUMER_CONFIG_PREFIX =
+      PubSubUtil.getPubSubConsumerConfigPrefix(KAFKA_CONFIG_PREFIX);
+  private static final Set<String> KAFKA_CONSUMER_PREFIXES =
+      new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CONSUMER_CONFIG_PREFIX));
+
   private final Properties consumerProperties;
   private final boolean isSslEnabled;
   private final int consumerPollRetryTimes;
@@ -45,13 +57,18 @@ public class ApacheKafkaConsumerConfig {
   private final int topicQueryRetryIntervalMs;
   private final Duration defaultApiTimeout;
   private final boolean shouldCheckTopicExistenceBeforeConsuming;
+  private PubSubMessageDeserializer pubSubMessageDeserializer;
+  private TopicPartitionsOffsetsTracker offsetsTracker;
 
-  ApacheKafkaConsumerConfig(VeniceProperties veniceProperties, String consumerName) {
-    this.consumerProperties =
-        getValidConsumerProperties(veniceProperties.clipAndFilterNamespace(KAFKA_CONFIG_PREFIX).toProperties());
-    consumerProperties.put(
-        ConsumerConfig.CLIENT_ID_CONFIG,
-        generateClientId(consumerName, consumerProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG)));
+  ApacheKafkaConsumerConfig(PubSubConsumerAdapterContext context) {
+    VeniceProperties veniceProperties = context.getVeniceProperties();
+    String brokerAddress = context.getBrokerAddress();
+    pubSubMessageDeserializer = context.getPubSubMessageDeserializer();
+    offsetsTracker = context.isOffsetCollectionEnabled() ? new TopicPartitionsOffsetsTracker() : null;
+    consumerProperties =
+        getValidConsumerProperties(veniceProperties.clipAndFilterNamespace(KAFKA_CONSUMER_PREFIXES).toProperties());
+    consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
+    consumerProperties.put(ConsumerConfig.CLIENT_ID_CONFIG, context.getConsumerName());
 
     // Setup ssl config if needed.
     isSslEnabled = ApacheKafkaUtils.validateAndCopyKafkaSSLConfig(veniceProperties, this.consumerProperties);
@@ -60,16 +77,11 @@ public class ApacheKafkaConsumerConfig {
       consumerProperties.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_SIZE);
     }
 
-    if (!consumerProperties.containsKey(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
-        && veniceProperties.containsKey(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY)) {
-      consumerProperties.put(
-          ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-          veniceProperties.getString(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY));
-    }
-
     // Do not change the default value of the following two configs unless you know what you are doing.
     consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
     consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+
+    consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, context.getConsumerPositionResetStrategy());
 
     // Timeout for consumer APIs which do not have explicit timeout parameter AND have potential to get blocked;
     // When this is not specified, Kafka consumer will use default value of 1 minute.
@@ -132,6 +144,14 @@ public class ApacheKafkaConsumerConfig {
     return defaultApiTimeout;
   }
 
+  PubSubMessageDeserializer getPubSubMessageDeserializer() {
+    return pubSubMessageDeserializer;
+  }
+
+  TopicPartitionsOffsetsTracker getOffsetsTracker() {
+    return offsetsTracker;
+  }
+
   int getTopicQueryRetryTimes() {
     return topicQueryRetryTimes;
   }
@@ -152,5 +172,10 @@ public class ApacheKafkaConsumerConfig {
       }
     });
     return validProperties;
+  }
+
+  @VisibleForTesting
+  void setTopicPartitionsOffsetsTracker(TopicPartitionsOffsetsTracker offsetsTracker) {
+    this.offsetsTracker = offsetsTracker;
   }
 }

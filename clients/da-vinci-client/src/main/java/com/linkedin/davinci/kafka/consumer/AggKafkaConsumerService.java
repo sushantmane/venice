@@ -22,6 +22,7 @@ import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.RedundantExceptionFilter;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Utils;
+import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -31,6 +32,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -39,13 +41,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
 /**
- * {@link AggKafkaConsumerService} supports Kafka consumer pool for multiple Kafka clusters from different data centers;
- * for each Kafka bootstrap server url, {@link AggKafkaConsumerService} will create one {@link KafkaConsumerService}.
+ * {@link AggKafkaConsumerService} supports PubSub consumer pool for multiple PubSub clusters from different data centers;
+ * for each PubSub bootstrap server url, {@link AggKafkaConsumerService} will create one {@link KafkaConsumerService}.
  */
 public class AggKafkaConsumerService extends AbstractVeniceService {
   private static final Logger LOGGER = LogManager.getLogger(AggKafkaConsumerService.class);
@@ -65,11 +68,11 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
   private final KafkaConsumerService.ConsumerAssignmentStrategy sharedConsumerAssignmentStrategy;
   private final Map<String, AbstractKafkaConsumerService> kafkaServerToConsumerServiceMap =
       new VeniceConcurrentHashMap<>();
-  private final Map<String, String> kafkaClusterUrlToAliasMap;
   private final Object2IntMap<String> kafkaClusterUrlToIdMap;
   private final PubSubMessageDeserializer pubSubDeserializer;
   private final Function<String, String> kafkaClusterUrlResolver;
   private final PubSubPropertiesSupplier pubSubPropertiesSupplier;
+  private final String localPubSubBrokerAddress;
 
   private final Map<String, StoreIngestionTask> versionTopicStoreIngestionTaskMapping = new VeniceConcurrentHashMap<>();
   private ScheduledExecutorService stuckConsumerRepairExecutorService;
@@ -94,7 +97,8 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
       final PubSubMessageDeserializer pubSubDeserializer,
       Consumer<String> killIngestionTaskRunnable,
       Function<String, Boolean> isAAOrWCEnabledFunc,
-      ReadOnlyStoreRepository metadataRepository) {
+      ReadOnlyStoreRepository metadataRepository,
+      String localPubSubBrokerAddress) {
     this.serverConfig = serverConfig;
     this.consumerFactory = consumerFactory;
     this.readCycleDelayMs = serverConfig.getKafkaReadCycleDelayMs();
@@ -105,11 +109,12 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     this.staleTopicChecker = staleTopicChecker;
     this.liveConfigBasedKafkaThrottlingEnabled = serverConfig.isLiveConfigBasedKafkaThrottlingEnabled();
     this.sharedConsumerAssignmentStrategy = serverConfig.getSharedConsumerAssignmentStrategy();
-    this.kafkaClusterUrlToAliasMap = serverConfig.getKafkaClusterUrlToAliasMap();
     this.kafkaClusterUrlToIdMap = serverConfig.getKafkaClusterUrlToIdMap();
     this.isKafkaConsumerOffsetCollectionEnabled = serverConfig.isKafkaConsumerOffsetCollectionEnabled();
     this.pubSubDeserializer = pubSubDeserializer;
-    this.kafkaClusterUrlResolver = serverConfig.getKafkaClusterUrlResolver();
+    this.kafkaClusterUrlResolver =
+        Objects.requireNonNull(serverConfig.getKafkaClusterUrlResolver(), "PubSub URL resolver must be set");
+    this.localPubSubBrokerAddress = localPubSubBrokerAddress;
     this.metadataRepository = metadataRepository;
     if (serverConfig.isStuckConsumerRepairEnabled()) {
       this.stuckConsumerRepairExecutorService = Executors.newSingleThreadScheduledExecutor(
@@ -268,6 +273,24 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     return consumerService;
   }
 
+  public synchronized AbstractKafkaConsumerService createKafkaConsumerService(String pubSubBrokerAddress) {
+    if (StringUtils.isBlank(pubSubBrokerAddress)) {
+      throw new IllegalArgumentException(
+          "A non-empty PubSub broker address must be provided to create a PubSub consumer service");
+    }
+    String resolvedPubSubBrokerAddress = kafkaClusterUrlResolver.apply(pubSubBrokerAddress);
+    if (StringUtils.isBlank(resolvedPubSubBrokerAddress)) {
+      throw new IllegalArgumentException("Failed to resolve the PubSub broker address: " + pubSubBrokerAddress);
+    }
+
+    boolean isRemotePubSubClusterConsumer = !localPubSubBrokerAddress.equals(resolvedPubSubBrokerAddress);
+
+    VeniceProperties consumerProperties = isRemotePubSubClusterConsumer
+        ? serverConfig.getKafkaConsumerConfigsForRemoteConsumption()
+        : serverConfig.getKafkaConsumerConfigsForLocalConsumption();
+    return null;
+  }
+
   /**
    * Create a new {@link KafkaConsumerService} given consumerProperties which must contain a value for "bootstrap.servers".
    * If a {@link KafkaConsumerService} for the given "bootstrap.servers" (Kafka URL) has already been created, this method
@@ -279,21 +302,31 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     String kafkaUrl = consumerProperties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
     Properties properties = pubSubPropertiesSupplier.get(kafkaUrl).toProperties();
     consumerProperties.putAll(properties);
+
+    // at this point consumerProperties passed here are combined with the properties from pubSubPropertiesSupplier
+    // and properties from pubSubPropertiesSupplier take precedence over the consumerProperties
+
     if (kafkaUrl == null || kafkaUrl.isEmpty()) {
       throw new IllegalArgumentException("Kafka URL must be set in the consumer properties config. Got: " + kafkaUrl);
     }
-    String resolvedKafkaUrl = kafkaClusterUrlResolver == null ? kafkaUrl : kafkaClusterUrlResolver.apply(kafkaUrl);
-    final AbstractKafkaConsumerService alreadyCreatedConsumerService = getKafkaConsumerService(resolvedKafkaUrl);
+    String resolvedPubSubBrokerAddress =
+        kafkaClusterUrlResolver == null ? kafkaUrl : kafkaClusterUrlResolver.apply(kafkaUrl);
+    final AbstractKafkaConsumerService alreadyCreatedConsumerService =
+        getKafkaConsumerService(resolvedPubSubBrokerAddress);
     if (alreadyCreatedConsumerService != null) {
-      LOGGER.warn("KafkaConsumerService has already been created for Kafka cluster with URL: {}", resolvedKafkaUrl);
+      LOGGER.info(
+          "Using existing consumer service for PubSub cluster with primary pubsub broker address: {}, alias: {}",
+          resolvedPubSubBrokerAddress,
+          kafkaUrl);
       return alreadyCreatedConsumerService;
     }
 
     AbstractKafkaConsumerService consumerService = kafkaServerToConsumerServiceMap.computeIfAbsent(
-        resolvedKafkaUrl,
+        resolvedPubSubBrokerAddress,
         url -> new KafkaConsumerServiceDelegator(
             serverConfig,
             (poolSize, poolType) -> sharedConsumerAssignmentStrategy.constructor.construct(
+                resolvedPubSubBrokerAddress,
                 poolType,
                 consumerFactory,
                 consumerProperties,
@@ -302,7 +335,6 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
                 ingestionThrottler,
                 kafkaClusterBasedRecordThrottler,
                 metricsRepository,
-                kafkaClusterUrlToAliasMap.getOrDefault(url, url) + poolType.getStatSuffix(),
                 sharedConsumerNonExistingTopicCleanupDelayMS,
                 staleTopicChecker,
                 liveConfigBasedKafkaThrottlingEnabled,

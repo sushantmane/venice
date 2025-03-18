@@ -23,6 +23,7 @@ import static com.linkedin.venice.ConfigKeys.LOCAL_REGION_NAME;
 import static com.linkedin.venice.ConfigKeys.MAX_ONLINE_OFFLINE_STATE_TRANSITION_THREAD_NUMBER;
 import static com.linkedin.venice.ConfigKeys.PARTICIPANT_MESSAGE_CONSUMPTION_DELAY_MS;
 import static com.linkedin.venice.ConfigKeys.PERSISTENCE_TYPE;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_ADMIN_ADAPTER_FACTORY_CLASS;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_CONSUMER_ADAPTER_FACTORY_CLASS;
 import static com.linkedin.venice.ConfigKeys.PUB_SUB_PRODUCER_ADAPTER_FACTORY_CLASS;
@@ -222,6 +223,8 @@ public class VeniceServerWrapper extends ProcessWrapper implements MetricsAware 
           featureProperties.getProperty(
               GRPC_SERVER_WORKER_THREAD_COUNT,
               Integer.toString(Runtime.getRuntime().availableProcessors())));
+      boolean shouldUseHighThroughputDefaultsForProducer =
+          Boolean.parseBoolean(featureProperties.getProperty(PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, "false"));
       ClientConfig consumerClientConfig = (ClientConfig) featureProperties.get(CLIENT_CONFIG_FOR_CONSUMER);
 
       /** Create config directory under {@link dataDirectory} */
@@ -268,6 +271,7 @@ public class VeniceServerWrapper extends ProcessWrapper implements MetricsAware 
           .put(
               PUB_SUB_ADMIN_ADAPTER_FACTORY_CLASS,
               pubSubBrokerWrapper.getPubSubClientsFactory().getAdminAdapterFactory().getClass().getName())
+          .put(PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, shouldUseHighThroughputDefaultsForProducer)
           .put(SERVER_INGESTION_HEARTBEAT_INTERVAL_MS, 5000)
           .put(SERVER_LEADER_COMPLETE_STATE_CHECK_IN_FOLLOWER_VALID_INTERVAL_MS, 5000)
           .put(SERVER_RESUBSCRIPTION_TRIGGERED_BY_VERSION_INGESTION_CONTEXT_CHANGE_ENABLED, true)

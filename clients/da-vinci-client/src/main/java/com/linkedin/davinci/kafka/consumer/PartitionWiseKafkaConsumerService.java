@@ -40,6 +40,7 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
   private int shareConsumerIndex = 0;
 
   PartitionWiseKafkaConsumerService(
+      final String pubSubBrokerAddress,
       final ConsumerPoolType poolType,
       final PubSubConsumerAdapterFactory consumerFactory,
       final Properties consumerProperties,
@@ -48,7 +49,6 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
       final IngestionThrottler ingestionThrottler,
       final KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
       final MetricsRepository metricsRepository,
-      final String kafkaClusterAlias,
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final StaleTopicChecker staleTopicChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
@@ -59,6 +59,7 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
       final ReadOnlyStoreRepository metadataRepository,
       final boolean isUnregisterMetricForDeletedStoreEnabled) {
     this(
+        pubSubBrokerAddress,
         poolType,
         consumerFactory,
         consumerProperties,
@@ -67,7 +68,6 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
         ingestionThrottler,
         kafkaClusterBasedRecordThrottler,
         metricsRepository,
-        kafkaClusterAlias,
         sharedConsumerNonExistingTopicCleanupDelayMS,
         staleTopicChecker,
         liveConfigBasedKafkaThrottlingEnabled,
@@ -81,6 +81,7 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
   }
 
   PartitionWiseKafkaConsumerService(
+      final String pubSubBrokerAddress,
       final ConsumerPoolType poolType,
       final PubSubConsumerAdapterFactory consumerFactory,
       final Properties consumerProperties,
@@ -89,7 +90,6 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
       final IngestionThrottler ingestionThrottler,
       final KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
       final MetricsRepository metricsRepository,
-      final String kafkaClusterAlias,
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final StaleTopicChecker staleTopicChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
@@ -101,6 +101,7 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
       final boolean isUnregisterMetricForDeletedStoreEnabled,
       final String loggerNamePrefix) {
     super(
+        pubSubBrokerAddress,
         poolType,
         consumerFactory,
         consumerProperties,
@@ -109,7 +110,6 @@ public class PartitionWiseKafkaConsumerService extends KafkaConsumerService {
         ingestionThrottler,
         kafkaClusterBasedRecordThrottler,
         metricsRepository,
-        kafkaClusterAlias,
         sharedConsumerNonExistingTopicCleanupDelayMS,
         staleTopicChecker,
         liveConfigBasedKafkaThrottlingEnabled,

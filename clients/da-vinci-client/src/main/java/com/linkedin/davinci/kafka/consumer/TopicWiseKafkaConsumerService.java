@@ -34,6 +34,7 @@ public class TopicWiseKafkaConsumerService extends KafkaConsumerService {
   private final Logger LOGGER;
 
   TopicWiseKafkaConsumerService(
+      final String pubSubBrokerAddress,
       final ConsumerPoolType poolType,
       final PubSubConsumerAdapterFactory consumerFactory,
       final Properties consumerProperties,
@@ -42,7 +43,6 @@ public class TopicWiseKafkaConsumerService extends KafkaConsumerService {
       final IngestionThrottler ingestionThrottler,
       final KafkaClusterBasedRecordThrottler kafkaClusterBasedRecordThrottler,
       final MetricsRepository metricsRepository,
-      final String kafkaClusterAlias,
       final long sharedConsumerNonExistingTopicCleanupDelayMS,
       final StaleTopicChecker staleTopicChecker,
       final boolean liveConfigBasedKafkaThrottlingEnabled,
@@ -53,6 +53,7 @@ public class TopicWiseKafkaConsumerService extends KafkaConsumerService {
       final ReadOnlyStoreRepository metadataRepository,
       final boolean isUnregisterMetricForDeletedStoreEnabled) {
     super(
+        pubSubBrokerAddress,
         poolType,
         consumerFactory,
         consumerProperties,
@@ -61,7 +62,6 @@ public class TopicWiseKafkaConsumerService extends KafkaConsumerService {
         ingestionThrottler,
         kafkaClusterBasedRecordThrottler,
         metricsRepository,
-        kafkaClusterAlias,
         sharedConsumerNonExistingTopicCleanupDelayMS,
         staleTopicChecker,
         liveConfigBasedKafkaThrottlingEnabled,
