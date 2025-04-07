@@ -70,6 +70,7 @@ public class ApacheKafkaConsumerConfigTest {
     PubSubConsumerAdapterContext context =
         new PubSubConsumerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
             .setConsumerName("test")
+            .setBrokerAddress(KAFKA_BROKER_ADDR)
             .build();
     ApacheKafkaConsumerConfig apacheKafkaConsumerConfig = new ApacheKafkaConsumerConfig(context);
     Properties consumerProps = apacheKafkaConsumerConfig.getConsumerProperties();
@@ -82,6 +83,7 @@ public class ApacheKafkaConsumerConfigTest {
     props.put(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX + ConsumerConfig.RECEIVE_BUFFER_CONFIG, "98765");
     context = new PubSubConsumerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
         .setConsumerName("test")
+        .setBrokerAddress(KAFKA_BROKER_ADDR)
         .build();
     apacheKafkaConsumerConfig = new ApacheKafkaConsumerConfig(context);
     consumerProps = apacheKafkaConsumerConfig.getConsumerProperties();
@@ -102,6 +104,7 @@ public class ApacheKafkaConsumerConfigTest {
     PubSubConsumerAdapterContext context =
         new PubSubConsumerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(props))
             .setConsumerName("test")
+            .setBrokerAddress(KAFKA_BROKER_ADDR)
             .build();
     ApacheKafkaConsumerConfig apacheKafkaConsumerConfig = new ApacheKafkaConsumerConfig(context);
     Properties consumerProps = apacheKafkaConsumerConfig.getConsumerProperties();

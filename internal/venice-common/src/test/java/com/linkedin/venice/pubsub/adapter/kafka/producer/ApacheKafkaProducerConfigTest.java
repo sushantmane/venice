@@ -53,6 +53,7 @@ public class ApacheKafkaProducerConfigTest {
     props.put(KAFKA_BOOTSTRAP_SERVERS, KAFKA_BROKER_ADDR);
     PubSubProducerAdapterContext context = mock(PubSubProducerAdapterContext.class);
     when(context.getBrokerAddress()).thenReturn(null);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
     ApacheKafkaProducerConfig producerConfig = new ApacheKafkaProducerConfig(context);
@@ -84,6 +85,7 @@ public class ApacheKafkaProducerConfigTest {
     when(context.getBrokerAddress()).thenReturn(null);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     assertEquals(new ApacheKafkaProducerConfig(context).getBrokerAddress(), "ssl.kafka.broker.com:8182");
   }
 
@@ -102,6 +104,7 @@ public class ApacheKafkaProducerConfigTest {
     when(context.getBrokerAddress()).thenReturn(null);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     ApacheKafkaProducerConfig apacheKafkaProducerConfig = new ApacheKafkaProducerConfig(context);
     Properties producerProperties = apacheKafkaProducerConfig.getProducerProperties();
     assertEquals(SASL_JAAS_CONFIG, producerProperties.get("sasl.jaas.config"));

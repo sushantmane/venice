@@ -30,7 +30,7 @@ public class PubSubProducerAdapterContextTest {
         .setCompressionType("snappy")
         .build();
 
-    assertEquals(context.getProducerName(), "test-producer");
+    assertTrue(context.getProducerName().contains("test-producer"));
     assertEquals(context.getBrokerAddress(), "localhost:9092");
     assertEquals(context.getCompressionType(), "none");
     assertFalse(context.isProducerCompressionEnabled());
@@ -57,6 +57,6 @@ public class PubSubProducerAdapterContextTest {
     assertNull(context.getPubSubTopicRepository());
     assertTrue(context.shouldValidateProducerConfigStrictly());
     assertNull(context.getSecurityProtocol());
-    assertNull(context.getProducerName());
+    assertNotNull(context.getProducerName());
   }
 }

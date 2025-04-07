@@ -82,6 +82,7 @@ public class ApacheKafkaConsumerAdapterTest {
   private final PubSubTopicPartition pubSubTopicPartition =
       new PubSubTopicPartitionImpl(pubSubTopicRepository.getTopic("test"), 0);
   private final TopicPartition topicPartition = new TopicPartition("test", 0);
+  private final String kafkaBrokerAddr = "localhost:9092";
   private Consumer<byte[], byte[]> internalKafkaConsumer;
   private ApacheKafkaConsumerAdapter kafkaConsumerAdapter;
   private PubSubMessageDeserializer pubSubMessageDeserializer;
@@ -95,6 +96,7 @@ public class ApacheKafkaConsumerAdapterTest {
     topicPartitionsOffsetsTracker = mock(TopicPartitionsOffsetsTracker.class);
     PubSubConsumerAdapterContext context =
         new PubSubConsumerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(new Properties()))
+            .setBrokerAddress(kafkaBrokerAddr)
             .setConsumerName("testConsumer")
             .setPubSubMessageDeserializer(pubSubMessageDeserializer)
             .setIsOffsetCollectionEnabled(false)
