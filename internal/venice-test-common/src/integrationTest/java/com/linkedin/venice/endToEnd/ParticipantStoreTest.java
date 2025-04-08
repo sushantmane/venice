@@ -29,6 +29,7 @@ import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.participant.protocol.ParticipantMessageKey;
 import com.linkedin.venice.participant.protocol.ParticipantMessageValue;
 import com.linkedin.venice.participant.protocol.enums.ParticipantMessageType;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
@@ -109,7 +110,8 @@ public class ParticipantStoreTest {
         .get(metricPrefix + "--killed_push_jobs.Count")
         .value();
     assertEquals(killedPushJobCount, 0.0);
-    ControllerResponse response = parentControllerClient.killOfflinePushJob(topicName);
+    ControllerResponse response =
+        parentControllerClient.killOfflinePushJob(topicName, PushJobKillTrigger.USER_REQUEST, null);
     assertFalse(response.isError());
     verifyKillMessageInParticipantStore(topicName, true);
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
@@ -139,7 +141,8 @@ public class ParticipantStoreTest {
       // Verify the push job is STARTED.
       assertEquals(controllerClient.queryJobStatus(topicName).getStatus(), ExecutionStatus.STARTED.toString());
     });
-    ControllerResponse response = parentControllerClient.killOfflinePushJob(topicName);
+    ControllerResponse response =
+        parentControllerClient.killOfflinePushJob(topicName, PushJobKillTrigger.USER_REQUEST, null);
     assertFalse(response.isError());
     verifyKillMessageInParticipantStore(topicName, true);
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
@@ -180,7 +183,7 @@ public class ParticipantStoreTest {
               && storeInfo.getVersions().iterator().next().getStatus().equals(VersionStatus.ONLINE),
           "Waiting for a version to become online");
     });
-    parentControllerClient.killOfflinePushJob(topicNameForOnlineVersion);
+    parentControllerClient.killOfflinePushJob(topicNameForOnlineVersion, PushJobKillTrigger.USER_REQUEST, null);
 
     /**
      * Try to kill an ongoing push, since for the same store, all the admin messages are processed sequentially.
@@ -196,7 +199,8 @@ public class ParticipantStoreTest {
           controllerClient.queryJobStatus(topicNameForBootstrappingVersion).getStatus(),
           ExecutionStatus.STARTED.toString());
     });
-    ControllerResponse response = parentControllerClient.killOfflinePushJob(topicNameForBootstrappingVersion);
+    ControllerResponse response = parentControllerClient
+        .killOfflinePushJob(topicNameForBootstrappingVersion, PushJobKillTrigger.USER_REQUEST, null);
     assertFalse(response.isError());
     verifyKillMessageInParticipantStore(topicNameForBootstrappingVersion, true);
     TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {

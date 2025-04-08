@@ -120,6 +120,7 @@ import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.ViewConfig;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
@@ -850,8 +851,14 @@ public class VenicePushJob implements AutoCloseable {
             "Error before killing the failed push job; still issue the kill job command to clean up states in backend",
             ex);
       } finally {
+
+        boolean isSlaTimeout =
+            (e instanceof VeniceException && ((VeniceException) e).getErrorType() == ErrorType.SLA_TIMEOUT);
+        PushJobKillTrigger pushJobKillTrigger =
+            isSlaTimeout ? PushJobKillTrigger.SLA_VIOLATION : PushJobKillTrigger.PUSH_JOB_FAILED;
+        String details = e.getMessage() != null ? e.getMessage().substring(0, 4096) : "";
         try {
-          killJob(pushJobSetting, controllerClient);
+          killJob(pushJobSetting, controllerClient, pushJobKillTrigger, details);
           LOGGER.info("Successfully killed the failed push job.");
         } catch (Exception ex) {
           LOGGER.info("Failed to stop and cleanup the job. New pushes might be blocked.", ex);
@@ -2334,7 +2341,8 @@ public class VenicePushJob implements AutoCloseable {
       if (durationMs > TimeUnit.HOURS.toMillis(bootstrapToOnlineTimeoutInHours)) {
         throw new VeniceException(
             "Failing push-job for store " + VenicePushJob.this.pushJobSetting.storeResponse.getName()
-                + " which is still running after " + TimeUnit.MILLISECONDS.toHours(durationMs) + " hours.");
+                + " which is still running after " + TimeUnit.MILLISECONDS.toHours(durationMs) + " hours.",
+            ErrorType.SLA_TIMEOUT);
       }
       if (!overallStatus.equals(ExecutionStatus.UNKNOWN)) {
         unknownStateStartTimeMs = 0;
@@ -2508,7 +2516,7 @@ public class VenicePushJob implements AutoCloseable {
    * @throws Exception
    */
   public void cancel() {
-    killJob(pushJobSetting, controllerClient);
+    killJob(pushJobSetting, controllerClient, PushJobKillTrigger.USER_REQUEST, "User requested cancellation");
     if (StringUtils.isEmpty(pushJobSetting.topic)) {
       pushJobDetails.overallStatus.add(getPushJobDetailsStatusTuple(PushJobDetailsStatus.ERROR.getValue()));
     } else {
@@ -2518,7 +2526,11 @@ public class VenicePushJob implements AutoCloseable {
     sendPushJobDetailsToController();
   }
 
-  private void killJob(PushJobSetting pushJobSetting, ControllerClient controllerClient) {
+  private void killJob(
+      PushJobSetting pushJobSetting,
+      ControllerClient controllerClient,
+      PushJobKillTrigger trigger,
+      String reason) {
     // Attempting to kill job. There's a race condition, but meh. Better kill when you know it's running
     killComputeJob();
     if (!pushJobSetting.isIncrementalPush) {
@@ -2537,7 +2549,7 @@ public class VenicePushJob implements AutoCloseable {
         ControllerClient.retryableRequest(
             controllerClient,
             pushJobSetting.controllerRetries,
-            c -> c.killOfflinePushJob(pushJobSetting.topic));
+            c -> c.killOfflinePushJob(pushJobSetting.topic, trigger, reason));
         LOGGER.info("Offline push job has been killed, topic: {}", pushJobSetting.topic);
       }
     }

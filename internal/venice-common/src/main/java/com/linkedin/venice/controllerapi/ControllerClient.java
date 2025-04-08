@@ -41,6 +41,8 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.PERSONA_Q
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PERSONA_STORES;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_IN_SORTED_ORDER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_ID;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_KILL_DETAILS;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_KILL_TRIGGER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_STRATEGY;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_TYPE;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.READ_OPERATION;
@@ -86,6 +88,7 @@ import com.linkedin.venice.exceptions.VeniceHttpException;
 import com.linkedin.venice.helix.VeniceJsonSerializer;
 import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.schema.avro.DirectionalSchemaCompatibilityType;
 import com.linkedin.venice.security.SSLFactory;
@@ -662,13 +665,17 @@ public class ControllerClient implements Closeable {
     return rollForwardToFutureVersion(storeName, "");
   }
 
-  public ControllerResponse killOfflinePushJob(String kafkaTopic) {
+  public ControllerResponse killOfflinePushJob(String kafkaTopic, PushJobKillTrigger trigger, String details) {
     String store = Version.parseStoreFromKafkaTopicName(kafkaTopic);
     int versionNumber = Version.parseVersionFromKafkaTopicName(kafkaTopic);
     QueryParams params = newParams().add(TOPIC, kafkaTopic) // TODO: remove once the controller is deployed to handle
                                                             // store and version instead
         .add(NAME, store)
-        .add(VERSION, versionNumber);
+        .add(VERSION, versionNumber)
+        .add(PUSH_JOB_KILL_TRIGGER, trigger.name());
+    if (StringUtils.isNotEmpty(details)) {
+      params.add(PUSH_JOB_KILL_DETAILS, details);
+    }
     return request(ControllerRoute.KILL_OFFLINE_PUSH_JOB, params, ControllerResponse.class);
   }
 

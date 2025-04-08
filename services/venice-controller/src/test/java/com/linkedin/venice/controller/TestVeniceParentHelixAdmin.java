@@ -76,6 +76,7 @@ import com.linkedin.venice.meta.VersionImpl;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.meta.ViewConfigImpl;
 import com.linkedin.venice.meta.ZKStore;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.partitioner.InvalidKeySchemaPartitioner;
 import com.linkedin.venice.pubsub.adapter.SimplePubSubProduceResultImpl;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
@@ -797,7 +798,7 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     doReturn(store).when(internalAdmin).getStore(clusterName, pubSubTopic.getStoreName());
 
     parentAdmin.initStorageCluster(clusterName);
-    parentAdmin.killOfflinePush(clusterName, pubSubTopic.getName(), false);
+    parentAdmin.killOfflinePush(clusterName, pubSubTopic.getName(), PushJobKillTrigger.USER_REQUEST, "test", true);
 
     verify(internalAdmin).checkPreConditionForKillOfflinePush(clusterName, pubSubTopic.getName());
     verify(internalAdmin).truncateKafkaTopic(pubSubTopic.getName());
@@ -912,7 +913,12 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     }
 
     @Override
-    public void killOfflinePush(String clusterName, String kafkaTopic, boolean isForcedKill) {
+    public void killOfflinePush(
+        String clusterName,
+        String kafkaTopic,
+        PushJobKillTrigger trigger,
+        String details,
+        boolean isForcedKill) {
       storeVersionToKillJobStatus.put(kafkaTopic, true);
     }
 
@@ -1344,7 +1350,12 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
         null,
         -1);
 
-    verify(mockParentAdmin, times(1)).killOfflinePush(clusterName, version.kafkaTopicName(), true);
+    verify(mockParentAdmin, times(1)).killOfflinePush(
+        eq(clusterName),
+        eq(version.kafkaTopicName()),
+        any(PushJobKillTrigger.class),
+        anyString(),
+        eq(true));
   }
 
   @Test
@@ -1452,7 +1463,12 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
             null,
             -1));
 
-    verify(mockParentAdmin, never()).killOfflinePush(clusterName, version.kafkaTopicName(), true);
+    verify(mockParentAdmin, never()).killOfflinePush(
+        eq(clusterName),
+        eq(version.kafkaTopicName()),
+        any(PushJobKillTrigger.class),
+        anyString(),
+        eq(true));
   }
 
   @Test
@@ -1535,7 +1551,12 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
         null,
         -1);
 
-    verify(mockParentAdmin, never()).killOfflinePush(clusterName, version.kafkaTopicName(), true);
+    verify(mockParentAdmin, never()).killOfflinePush(
+        eq(clusterName),
+        eq(version.kafkaTopicName()),
+        any(PushJobKillTrigger.class),
+        anyString(),
+        eq(true));
   }
 
   @Test
@@ -2541,7 +2562,8 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     doReturn(null).when(internalAdmin).getInMemoryTopicCreationTime(Version.composeKafkaTopic(storeName, 1));
     currentPush = mockParentAdmin.getTopicForCurrentPushJob(clusterName, storeName, false, false);
     Assert.assertFalse(currentPush.isPresent());
-    verify(mockParentAdmin, times(1)).killOfflinePush(clusterName, latestTopic, true);
+    verify(mockParentAdmin, times(1))
+        .killOfflinePush(eq(clusterName), eq(latestTopic), any(PushJobKillTrigger.class), anyString(), eq(true));
 
     // If the topic has been created recently, an exception will be thrown to kill the request and killOfflinePush will
     // not be called
@@ -2550,7 +2572,8 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
     assertThrows(
         VeniceException.class,
         () -> mockParentAdmin.getTopicForCurrentPushJob(clusterName, storeName, false, false));
-    verify(mockParentAdmin, times(1)).killOfflinePush(clusterName, latestTopic, true);
+    verify(mockParentAdmin, times(1))
+        .killOfflinePush(eq(clusterName), eq(latestTopic), any(PushJobKillTrigger.class), anyString(), eq(true));
 
     // If a considerable time has passed since topic creation and the version creation still wasn't written to Zk, then,
     // the push should be killed
@@ -2558,7 +2581,9 @@ public class TestVeniceParentHelixAdmin extends AbstractTestVeniceParentHelixAdm
         .getInMemoryTopicCreationTime(Version.composeKafkaTopic(storeName, 1));
     currentPush = mockParentAdmin.getTopicForCurrentPushJob(clusterName, storeName, false, false);
     Assert.assertFalse(currentPush.isPresent());
-    verify(mockParentAdmin, times(2)).killOfflinePush(clusterName, latestTopic, true);
+    verify(mockParentAdmin, times(2))
+        .killOfflinePush(eq(clusterName), eq(latestTopic), any(PushJobKillTrigger.class), anyString(), eq(true));
+
   }
 
   @Test

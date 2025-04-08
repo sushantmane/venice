@@ -82,6 +82,8 @@ public class ControllerApiConstants {
   public static final String PARTITIONERS = "partitioners";
   public static final String COMPRESSION_DICTIONARY = "compression_dictionary";
   public static final String REMOTE_KAFKA_BOOTSTRAP_SERVERS = "remote_kafka_bootstrap_servers";
+  public static final String PUSH_JOB_KILL_TRIGGER = "push_job_kill_trigger";
+  public static final String PUSH_JOB_KILL_DETAILS = "push_job_kill_details";
 
   public static final String EXPECTED_ROUTER_COUNT = "expected_router_count";
 

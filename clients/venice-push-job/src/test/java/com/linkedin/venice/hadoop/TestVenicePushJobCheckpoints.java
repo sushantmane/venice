@@ -23,6 +23,7 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -47,6 +48,7 @@ import com.linkedin.venice.jobs.DataWriterComputeJob;
 import com.linkedin.venice.message.KafkaKey;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.partitioner.DefaultVenicePartitioner;
 import com.linkedin.venice.pushmonitor.ExecutionStatus;
 import com.linkedin.venice.schema.AvroSchemaParseUtils;
@@ -723,9 +725,7 @@ public class TestVenicePushJobCheckpoints {
     when(controllerClient.queryOverallJobStatus(anyString(), any(), any(), anyBoolean()))
         .thenReturn(jobStatusQueryResponse);
 
-    doAnswer(invocation -> {
-      return null;
-    }).when(controllerClient).killOfflinePushJob(anyString());
+    doNothing().when(controllerClient).killOfflinePushJob(anyString(), any(PushJobKillTrigger.class), any());
 
     ControllerResponse controllerResponse = mock(ControllerResponse.class);
     when(controllerResponse.isError()).thenReturn(false);

@@ -1122,7 +1122,7 @@ public abstract class AbstractPushMonitor
       aggPushHealthStats.recordFailedPush(storeName, getDurationInSec(pushStatus));
       // If we met some error to delete error version, we should not throw the exception out to fail this operation,
       // because it will be collected once a new push is completed for this store.
-      storeCleaner.deleteOneStoreVersion(clusterName, storeName, versionNumber);
+      storeCleaner.deleteOneStoreVersion(clusterName, storeName, versionNumber, false, true);
     } catch (Exception e) {
       LOGGER.warn(
           "Could not delete error version: {} for store: {} in cluster: {}",

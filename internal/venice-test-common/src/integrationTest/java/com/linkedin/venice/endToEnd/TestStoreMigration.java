@@ -61,9 +61,11 @@ import com.linkedin.venice.integration.utils.VeniceTwoLayerMultiRegionMultiClust
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.KillPushJob;
 import com.linkedin.venice.participant.protocol.ParticipantMessageKey;
 import com.linkedin.venice.participant.protocol.ParticipantMessageValue;
 import com.linkedin.venice.participant.protocol.enums.ParticipantMessageType;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.manager.TopicManager;
@@ -638,13 +640,22 @@ public class TestStoreMigration {
     VeniceHelixAdmin destClusterVhaDc0 = destClusterWrapper.getLeaderVeniceController().getVeniceHelixAdmin();
     assertFalse(destClusterVhaDc0.isParent());
     // add kill message to dest cluster
-    destClusterVhaDc0.sendKillMessageToParticipantStore(destClusterName, currentVersionTopicName);
+    destClusterVhaDc0
+        .sendKillMessageToParticipantStore(destClusterName, currentVersionTopicName, getKillPushJobMessage(storeName));
     // Verify the kill push message is in the participant message store.
     verifyKillMessageInParticipantStore(destClusterWrapper, currentVersionTopicName, true);
     // delete kill message from dest cluster
     destClusterVhaDc0.clearIngestionKillMessageAndVerify(destClusterName, currentVersionTopicName);
     // Verify the kill push message is removed from the participant message store.
     verifyKillMessageInParticipantStore(destClusterWrapper, currentVersionTopicName, false);
+  }
+
+  KillPushJob getKillPushJobMessage(String storeName) {
+    KillPushJob killPushJob = new KillPushJob();
+    killPushJob.setTimestamp(System.currentTimeMillis());
+    killPushJob.setTrigger(PushJobKillTrigger.USER_REQUEST.name());
+    killPushJob.setDetails("Kill push job for store: " + storeName);
+    return killPushJob;
   }
 
   /**
@@ -768,7 +779,10 @@ public class TestStoreMigration {
       VeniceHelixAdmin destClusterVhaDc0 = destClusterWrapper.getLeaderVeniceController().getVeniceHelixAdmin();
       assertFalse(destClusterVhaDc0.isParent());
       // add kill message to dest cluster
-      destClusterVhaDc0.sendKillMessageToParticipantStore(destClusterName, currentVersionTopicName);
+      destClusterVhaDc0.sendKillMessageToParticipantStore(
+          destClusterName,
+          currentVersionTopicName,
+          getKillPushJobMessage(storeName));
       // Verify the kill push message is in the participant message store.
       verifyKillMessageInParticipantStore(destClusterWrapper, currentVersionTopicName, true);
 

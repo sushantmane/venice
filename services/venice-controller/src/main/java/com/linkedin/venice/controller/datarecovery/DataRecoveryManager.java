@@ -125,7 +125,7 @@ public class DataRecoveryManager implements Closeable {
       veniceAdmin.setStoreCurrentVersion(clusterName, storeName, backupVersion);
       veniceAdmin.wipeCluster(clusterName, destinationFabric, Optional.of(storeName), Optional.of(versionNumber));
     } else {
-      veniceAdmin.deleteOneStoreVersion(clusterName, storeName, versionNumber);
+      veniceAdmin.deleteOneStoreVersion(clusterName, storeName, versionNumber, false, false);
       veniceAdmin.stopMonitorOfflinePush(clusterName, topic, true, true);
     }
     veniceAdmin.deleteParticipantStoreKillMessage(clusterName, topic);

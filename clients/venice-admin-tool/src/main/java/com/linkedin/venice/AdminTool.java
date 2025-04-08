@@ -89,6 +89,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.metadata.payload.StorePropertiesPayloadRecord;
 import com.linkedin.venice.metadata.response.MetadataResponseRecord;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
@@ -290,7 +291,8 @@ public class AdminTool {
           versionString = getRequiredArgument(cmd, Arg.VERSION, Command.KILL_JOB);
           version = Integer.parseInt(versionString);
           topicName = Version.composeKafkaTopic(storeName, version);
-          response = controllerClient.killOfflinePushJob(topicName);
+          response = controllerClient
+              .killOfflinePushJob(topicName, PushJobKillTrigger.USER_REQUEST, "User requested kill via CLI");
           printObject(response);
           break;
         case SKIP_ADMIN:

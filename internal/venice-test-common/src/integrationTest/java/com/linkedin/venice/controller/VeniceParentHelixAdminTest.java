@@ -42,6 +42,7 @@ import com.linkedin.venice.meta.ETLStoreConfig;
 import com.linkedin.venice.meta.HybridStoreConfig;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubTopic;
 import com.linkedin.venice.pubsub.manager.TopicManager;
@@ -192,7 +193,11 @@ public class VeniceParentHelixAdminTest {
         });
 
         // Need to kill the current version since it is not allowed to have multiple ongoing versions.
-        assertCommand(parentControllerClient.killOfflinePushJob(Version.composeKafkaTopic(storeName, 1)));
+        assertCommand(
+            parentControllerClient.killOfflinePushJob(
+                Version.composeKafkaTopic(storeName, 1),
+                PushJobKillTrigger.USER_REQUEST,
+                "Kill push job"));
         // Test add version with rewind time override
         assertCommand(
             parentControllerClient.requestTopicForWrites(

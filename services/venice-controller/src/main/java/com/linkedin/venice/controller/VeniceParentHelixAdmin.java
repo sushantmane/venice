@@ -205,6 +205,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.meta.VersionStatus;
 import com.linkedin.venice.meta.ViewConfig;
 import com.linkedin.venice.meta.ViewConfigImpl;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.persona.StoragePersona;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
@@ -1245,7 +1246,12 @@ public class VeniceParentHelixAdmin implements Admin {
                 "Failed to get version information but the topic exists and has been created recently. Try again after some time.");
           }
 
-          killOfflinePush(clusterName, latestTopicName, true);
+          killOfflinePush(
+              clusterName,
+              latestTopicName,
+              PushJobKillTrigger.LINGERING_VERSION_TOPIC,
+              "Version config is not found but topic exists",
+              true);
           LOGGER.info("Found topic: {} without the corresponding version, will kill it", latestTopicName);
           return Optional.empty();
         }
@@ -1557,7 +1563,14 @@ public class VeniceParentHelixAdmin implements Admin {
               currentPushTopic.get(),
               existingPushJobId,
               version.getCreatedTime());
-          killOfflinePush(clusterName, currentPushTopic.get(), true);
+          String details = "Found lingering topic: " + currentPushTopic.get() + " with push id: " + existingPushJobId
+              + ". Killing the lingering version that was created at: " + version.getCreatedTime();
+          killOfflinePush(
+              clusterName,
+              currentPushTopic.get(),
+              PushJobKillTrigger.LINGERING_VERSION_TOPIC,
+              details,
+              true);
         }
       } else if (isExistingPushJobARepush && !pushType.isIncremental() && !isIncomingPushJobARepush) {
         // Inc push policy INCREMENTAL_PUSH_SAME_AS_REAL_TIME with target version filtering is deprecated and not going
@@ -1570,7 +1583,9 @@ public class VeniceParentHelixAdmin implements Admin {
             existingPushJobId,
             pushJobId,
             storeName);
-        killOfflinePush(clusterName, currentPushTopic.get(), true);
+        String details = "Found running repush job with push id: " + existingPushJobId
+            + " and incoming push is a batch job or stream reprocessing job with push id: " + pushJobId;
+        killOfflinePush(clusterName, currentPushTopic.get(), PushJobKillTrigger.PREEMPTED_BY_FULL_PUSH, details, true);
       } else if (pushType.isIncremental()) {
         // No op. Allow concurrent inc push to RT to continue when there is an ongoing batch push
         LOGGER.info(
@@ -4258,10 +4273,15 @@ public class VeniceParentHelixAdmin implements Admin {
   }
 
   /**
-   * @see Admin#killOfflinePush(String, String, boolean)
+   * @see Admin#killOfflinePush(String, String, PushJobKillTrigger, String, boolean)
    */
   @Override
-  public void killOfflinePush(String clusterName, String kafkaTopic, boolean isForcedKill) {
+  public void killOfflinePush(
+      String clusterName,
+      String kafkaTopic,
+      PushJobKillTrigger trigger,
+      String details,
+      boolean isForcedKill) {
     String storeName = Version.parseStoreFromKafkaTopicName(kafkaTopic);
     if (getStore(clusterName, storeName) == null) {
       throw new VeniceNoStoreException(storeName, clusterName);
@@ -4299,6 +4319,8 @@ public class VeniceParentHelixAdmin implements Admin {
       KillOfflinePushJob killJob = (KillOfflinePushJob) AdminMessageType.KILL_OFFLINE_PUSH_JOB.getNewInstance();
       killJob.clusterName = clusterName;
       killJob.kafkaTopic = kafkaTopic;
+      killJob.trigger = trigger.name();
+      killJob.details = details;
       AdminOperation message = new AdminOperation();
       message.operationType = AdminMessageType.KILL_OFFLINE_PUSH_JOB.getValue();
       message.payloadUnion = killJob;

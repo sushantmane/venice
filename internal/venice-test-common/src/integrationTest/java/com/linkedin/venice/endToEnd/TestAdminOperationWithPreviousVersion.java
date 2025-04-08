@@ -41,6 +41,7 @@ import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.persona.StoragePersona;
 import com.linkedin.venice.schema.rmd.RmdSchemaEntry;
 import com.linkedin.venice.schema.rmd.RmdSchemaGenerator;
@@ -287,7 +288,8 @@ public class TestAdminOperationWithPreviousVersion {
           -1);
       // No wait to kill the push job
       // Kill push job
-      parentControllerClient.killOfflinePushJob(Version.composeKafkaTopic(storeName, 1));
+      parentControllerClient
+          .killOfflinePushJob(Version.composeKafkaTopic(storeName, 1), PushJobKillTrigger.USER_REQUEST, "test");
 
       // Check version
       for (ControllerClient childControllerClient: childControllerClients) {

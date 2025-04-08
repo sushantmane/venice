@@ -15,6 +15,7 @@ import com.linkedin.venice.integration.utils.VeniceMultiRegionClusterCreateOptio
 import com.linkedin.venice.integration.utils.VeniceTwoLayerMultiRegionMultiClusterWrapper;
 import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.utils.TestUtils;
 import com.linkedin.venice.utils.Time;
 import com.linkedin.venice.utils.Utils;
@@ -130,7 +131,8 @@ public class TestClusterLevelConfigForNativeReplication {
         new UpdateStoreQueryParams().setHybridRewindSeconds(1L).setHybridOffsetLagThreshold(1L));
     Assert.assertTrue(response.isError());
     Assert.assertTrue(response.getError().contains("Cannot convert to hybrid as there is already a pushjob running"));
-    parentControllerClient.killOfflinePushJob(Version.composeKafkaTopic(storeName, 1));
+    parentControllerClient
+        .killOfflinePushJob(Version.composeKafkaTopic(storeName, 1), PushJobKillTrigger.USER_REQUEST, "test");
   }
 
 }

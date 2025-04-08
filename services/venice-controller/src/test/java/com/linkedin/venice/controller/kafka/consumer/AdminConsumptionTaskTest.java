@@ -20,6 +20,7 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.VERSION;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.WRITE_COMPUTATION_ENABLED;
 import static com.linkedin.venice.meta.HybridStoreConfigImpl.DEFAULT_REAL_TIME_TOPIC_NAME;
 import static com.linkedin.venice.meta.Version.DEFAULT_RT_VERSION_NUMBER;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -73,6 +74,7 @@ import com.linkedin.venice.meta.Version;
 import com.linkedin.venice.offsets.InMemoryOffsetManager;
 import com.linkedin.venice.offsets.OffsetManager;
 import com.linkedin.venice.offsets.OffsetRecord;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
@@ -368,7 +370,8 @@ public class AdminConsumptionTaskTest {
     verify(mockKafkaConsumer, timeout(TIMEOUT)).subscribe(any(), anyLong());
     verify(mockKafkaConsumer, timeout(TIMEOUT)).unSubscribe(any());
     verify(admin, timeout(TIMEOUT)).createStore(clusterName, storeName, owner, keySchema, valueSchema, false);
-    verify(admin, timeout(TIMEOUT)).killOfflinePush(clusterName, storeTopicName, false);
+    verify(admin, timeout(TIMEOUT))
+        .killOfflinePush(eq(clusterName), eq(storeTopicName), any(PushJobKillTrigger.class), anyString(), eq(false));
   }
 
   @Test(timeOut = TIMEOUT)
@@ -624,7 +627,8 @@ public class AdminConsumptionTaskTest {
     verify(mockKafkaConsumer, timeout(TIMEOUT)).unSubscribe(any());
     verify(admin, timeout(TIMEOUT)).createStore(clusterName, storeName, owner, keySchema, valueSchema, false);
     // Kill message is before persisted offset
-    verify(admin, never()).killOfflinePush(clusterName, storeTopicName, false);
+    verify(admin, never())
+        .killOfflinePush(eq(clusterName), eq(storeTopicName), any(PushJobKillTrigger.class), anyString(), eq(false));
   }
 
   @Test(timeOut = TIMEOUT)
@@ -877,7 +881,8 @@ public class AdminConsumptionTaskTest {
     verify(admin, timeout(TIMEOUT).atLeastOnce()).isLeaderControllerFor(clusterName);
     verify(mockKafkaConsumer, timeout(TIMEOUT)).subscribe(any(), anyLong());
     verify(mockKafkaConsumer, timeout(TIMEOUT)).unSubscribe(any());
-    verify(admin, never()).killOfflinePush(clusterName, storeTopicName, false);
+    verify(admin, never())
+        .killOfflinePush(eq(clusterName), eq(storeTopicName), any(PushJobKillTrigger.class), anyString(), eq(false));
   }
 
   @Test
@@ -1380,7 +1385,8 @@ public class AdminConsumptionTaskTest {
         TimeUnit.MILLISECONDS,
         () -> Assert.assertEquals(getLastExecutionId(clusterName), 10L));
     // Duplicate messages from the rewind should be skipped.
-    verify(admin, times(10)).killOfflinePush(clusterName, topicName, false);
+    verify(admin, times(10))
+        .killOfflinePush(eq(clusterName), eq(topicName), any(PushJobKillTrigger.class), anyString(), eq(false));
     verify(stats, never()).recordFailedAdminConsumption();
     verify(stats, never()).recordAdminTopicDIVErrorReportCount();
     task.close();
@@ -1580,6 +1586,8 @@ public class AdminConsumptionTaskTest {
     KillOfflinePushJob killJob = (KillOfflinePushJob) AdminMessageType.KILL_OFFLINE_PUSH_JOB.getNewInstance();
     killJob.clusterName = clusterName;
     killJob.kafkaTopic = kafkaTopic;
+    killJob.trigger = PushJobKillTrigger.USER_REQUEST.name();
+    killJob.details = "test";
     AdminOperation adminMessage = new AdminOperation();
     adminMessage.operationType = AdminMessageType.KILL_OFFLINE_PUSH_JOB.getValue();
     adminMessage.payloadUnion = killJob;

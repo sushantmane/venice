@@ -26,6 +26,7 @@ import com.linkedin.venice.meta.StoreInfo;
 import com.linkedin.venice.meta.UncompletedPartition;
 import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.persona.StoragePersona;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
@@ -590,12 +591,22 @@ public interface Admin extends AutoCloseable, Closeable {
   Set<String> getAllowlist(String clusterName);
 
   /**
-   * Kill an offline push if it ran into errors or the corresponding version is being retired.
-   * @param clusterName
-   * @param kafkaTopic
-   * @param isForcedKill should be set to true when killing the push job for retiring the corresponding version.
+   * Terminates/kills a push job when it encounters an error, violates SLA, or is preempted by another push.
+   * This method is also used to kill a push job when retiring the associated version.
+   *
+   * @param clusterName       the name of the cluster where the offline push is running
+   * @param pubSubTopic       the name of the pubsub topic associated with the version
+   * @param trigger           the trigger that initiated the termination (e.g., user request, SLA violation,
+   *                          ingestion failure, or preemption by a full push)
+   * @param details           additional context or explanation for the termination (optional)
+   * @param isForcedKill      set to {@code true} if the push job is being terminated due to version retirement
    */
-  void killOfflinePush(String clusterName, String kafkaTopic, boolean isForcedKill);
+  void killOfflinePush(
+      String clusterName,
+      String pubSubTopic,
+      PushJobKillTrigger trigger,
+      String details,
+      boolean isForcedKill);
 
   /**
    * Query and return the current status of the given storage node. The "storage node status" is composed by "status" of all

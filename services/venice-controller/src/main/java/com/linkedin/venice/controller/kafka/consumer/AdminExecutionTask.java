@@ -51,6 +51,7 @@ import com.linkedin.venice.meta.DataReplicationPolicy;
 import com.linkedin.venice.meta.Store;
 import com.linkedin.venice.meta.VeniceUserStoreType;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.schema.SchemaEntry;
 import com.linkedin.venice.utils.CollectionUtils;
 import java.util.HashSet;
@@ -399,8 +400,10 @@ public class AdminExecutionTask implements Callable<Void> {
     }
     String clusterName = message.clusterName.toString();
     String kafkaTopic = message.kafkaTopic.toString();
-    admin.killOfflinePush(clusterName, kafkaTopic, false);
-
+    PushJobKillTrigger trigger =
+        message.trigger != null ? PushJobKillTrigger.valueOf(message.trigger.toString()) : null;
+    String details = message.details != null ? message.details.toString() : null;
+    admin.killOfflinePush(clusterName, kafkaTopic, trigger, details, false);
     LOGGER.info("Killed job with topic: {} in cluster: {}", kafkaTopic, clusterName);
   }
 

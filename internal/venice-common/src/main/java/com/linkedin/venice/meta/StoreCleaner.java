@@ -1,7 +1,12 @@
 package com.linkedin.venice.meta;
 
 public interface StoreCleaner {
-  void deleteOneStoreVersion(String clusterName, String storeName, int versionNumber);
+  void deleteOneStoreVersion(
+      String clusterName,
+      String storeName,
+      int versionNumber,
+      boolean isForcedDelete,
+      boolean deleteDueToError);
 
   void retireOldStoreVersions(
       String clusterName,
@@ -28,7 +33,7 @@ public interface StoreCleaner {
   /**
    * This purpose of the function is to delete the given resource from the Helix cluster.
    *
-   * Different from {@link #deleteOneStoreVersion(String, String, int)}, this function will not check
+   * Different from {@link #deleteOneStoreVersion(String, String, int, boolean, boolean)}, this function will not check
    * whether the store version is still a valid version inside Venice backend, and it will send the delete
    * request to Helix cluster directly. Do enough sanity check before calling this function.
    * @param clusterName The Venice cluster that the resource belongs to.

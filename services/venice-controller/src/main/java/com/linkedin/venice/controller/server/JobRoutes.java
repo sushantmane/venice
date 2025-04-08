@@ -4,6 +4,8 @@ import static com.linkedin.venice.controllerapi.ControllerApiConstants.CLUSTER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.FABRIC;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.INCREMENTAL_PUSH_VERSION;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.NAME;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_KILL_DETAILS;
+import static com.linkedin.venice.controllerapi.ControllerApiConstants.PUSH_JOB_KILL_TRIGGER;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.TARGETED_REGIONS;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.TARGET_REGION_PUSH_WITH_DEFERRED_SWAP;
 import static com.linkedin.venice.controllerapi.ControllerApiConstants.TOPIC;
@@ -22,6 +24,7 @@ import com.linkedin.venice.controllerapi.JobStatusQueryResponse;
 import com.linkedin.venice.controllerapi.routes.PushJobStatusUploadResponse;
 import com.linkedin.venice.exceptions.ErrorType;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.serialization.avro.AvroProtocolDefinition;
 import com.linkedin.venice.serialization.avro.InternalAvroSpecificSerializer;
 import com.linkedin.venice.status.protocol.PushJobDetails;
@@ -132,10 +135,18 @@ public class JobRoutes extends AbstractRoute {
         AdminSparkServer.validateParams(request, KILL_OFFLINE_PUSH_JOB.getParams(), admin);
         String cluster = request.queryParams(CLUSTER);
         String topic = request.queryParams(TOPIC);
+
+        /**
+         * Until all clients are updated to send the kill trigger, we will default to USER_REQUEST. This means
+         * push SLA violations will be reported as USER_REQUEST until all clients are updated.
+         */
+        PushJobKillTrigger killTrigger = PushJobKillTrigger
+            .valueOf(request.queryParamOrDefault(PUSH_JOB_KILL_TRIGGER, PushJobKillTrigger.USER_REQUEST.name()));
+        String killTriggerDetails = request.queryParams(PUSH_JOB_KILL_DETAILS);
         responseObject.setCluster(cluster);
         responseObject.setName(Version.parseStoreFromKafkaTopicName(topic));
 
-        admin.killOfflinePush(cluster, topic, false);
+        admin.killOfflinePush(cluster, topic, killTrigger, killTriggerDetails, false);
       } catch (Throwable e) {
         responseObject.setError(e);
         AdminSparkServer.handleError(e, request, response);

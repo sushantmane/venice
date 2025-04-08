@@ -28,6 +28,7 @@ import com.linkedin.venice.controllerapi.StoreResponse;
 import com.linkedin.venice.controllerapi.VersionCreationResponse;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.meta.Version;
+import com.linkedin.venice.participant.protocol.enums.PushJobKillTrigger;
 import com.linkedin.venice.partitioner.VenicePartitioner;
 import com.linkedin.venice.pubsub.api.PubSubProducerCallback;
 import com.linkedin.venice.pushmonitor.HybridStoreQuotaStatus;
@@ -656,7 +657,10 @@ public class VeniceSystemProducer implements SystemProducer, Closeable {
            * the containers send kill requests to controller at the same time to avoid hammering on controller.
            */
           Utils.sleep(ThreadLocalRandom.current().nextInt(30000));
-          this.controllerClient.retryableRequest(3, c -> c.killOfflinePushJob(versionTopic));
+          this.controllerClient.retryableRequest(
+              3,
+              c -> c
+                  .killOfflinePushJob(versionTopic, PushJobKillTrigger.USER_REQUEST, "Samza job killed the push job"));
           LOGGER.info("Offline push job has been killed, topic: {}", versionTopic);
       }
       Utils.closeQuietlyWithErrorLogged(pushMonitor.get());
