@@ -1,13 +1,6 @@
 package com.linkedin.davinci.kafka.consumer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_CLIENT_ID_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_BYTES_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_WAIT_MS_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MIN_BYTES_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_GROUP_ID_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_MAX_POLL_RECORDS_CONFIG;
 import static com.linkedin.venice.ConfigKeys.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.sleep;
@@ -1195,33 +1188,10 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     return versionedIngestionStats;
   }
 
-  /**
-   * @return Group Id for kafka consumer.
-   */
-  private static String getGroupId(String topic) {
-    return String.format(GROUP_ID_FORMAT, topic, Utils.getHostName());
-  }
-
-  private static VeniceProperties getPropertiesForPubSubClients(boolean isRemotePubSubCluster) {
-    return null;
-  }
-
-  /**
-   * So far, this function is only targeted to be used by shared consumer.
-   * @param serverConfig
-   * @return
-   */
   public static Properties getCommonKafkaConsumerProperties(VeniceServerConfig serverConfig) {
     Properties properties = serverConfig.getClusterProperties().getPropertiesCopy();
     ApacheKafkaProducerConfig.copyKafkaSASLProperties(serverConfig.getClusterProperties(), properties, false);
     properties.setProperty(KAFKA_BOOTSTRAP_SERVERS, serverConfig.getKafkaBootstrapServers());
-    properties.setProperty(KAFKA_FETCH_MIN_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMinSizePerSecond()));
-    properties.setProperty(KAFKA_FETCH_MAX_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxSizePerSecond()));
-    properties.setProperty(KAFKA_MAX_POLL_RECORDS_CONFIG, Integer.toString(serverConfig.getKafkaMaxPollRecords()));
-    properties.setProperty(KAFKA_FETCH_MAX_WAIT_MS_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxTimeMS()));
-    properties.setProperty(
-        KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG,
-        String.valueOf(serverConfig.getKafkaFetchPartitionMaxSizePerSecond()));
     properties.setProperty(
         PubSubConstants.PUBSUB_CONSUMER_POLL_RETRY_TIMES,
         String.valueOf(serverConfig.getPubSubConsumerPollRetryTimes()));
@@ -1261,23 +1231,6 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     }
     properties.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol.name());
     return new VeniceProperties(properties);
-  }
-
-  /**
-   * @return Properties Kafka properties corresponding to the venice store.
-   */
-  public static Properties getKafkaConsumerProperties(VeniceServerConfig storeConfig) {
-    Properties kafkaConsumerProperties = KafkaStoreIngestionService.getCommonKafkaConsumerProperties(storeConfig);
-    // String groupId = getGroupId(storeConfig.getStoreVersionName());
-    String groupId = "fakeGroupId";
-    kafkaConsumerProperties.setProperty(KAFKA_GROUP_ID_CONFIG, groupId);
-    /**
-     * Temporarily we are going to use group_id as client_id as well since it is unique in cluster level.
-     * With unique client_id, it will be easier for us to check Kafka consumer related metrics through JMX.
-     * TODO: Kafka is throttling based on client_id, need to investigate whether we should use Kafka throttling or not.
-     */
-    kafkaConsumerProperties.setProperty(KAFKA_CLIENT_ID_CONFIG, groupId);
-    return kafkaConsumerProperties;
   }
 
   public ByteBuffer getStoreVersionCompressionDictionary(String topicName) {

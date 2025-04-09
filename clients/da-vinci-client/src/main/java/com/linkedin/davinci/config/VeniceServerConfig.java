@@ -116,7 +116,6 @@ import static com.linkedin.venice.ConfigKeys.SERVER_INGESTION_ISOLATION_SERVICE_
 import static com.linkedin.venice.ConfigKeys.SERVER_INGESTION_MODE;
 import static com.linkedin.venice.ConfigKeys.SERVER_INGESTION_TASK_MAX_IDLE_COUNT;
 import static com.linkedin.venice.ConfigKeys.SERVER_KAFKA_CONSUMER_OFFSET_COLLECTION_ENABLED;
-import static com.linkedin.venice.ConfigKeys.SERVER_KAFKA_MAX_POLL_RECORDS;
 import static com.linkedin.venice.ConfigKeys.SERVER_LEADER_COMPLETE_STATE_CHECK_IN_FOLLOWER_ENABLED;
 import static com.linkedin.venice.ConfigKeys.SERVER_LEADER_COMPLETE_STATE_CHECK_IN_FOLLOWER_VALID_INTERVAL_MS;
 import static com.linkedin.venice.ConfigKeys.SERVER_LEAKED_RESOURCE_CLEANUP_ENABLED;
@@ -389,8 +388,6 @@ public class VeniceServerConfig extends VeniceClusterConfig {
   private final boolean serverCalculateQuotaUsageBasedOnPartitionsAssignmentEnabled;
 
   private final long nodeCapacityInRcu;
-
-  private final int kafkaMaxPollRecords;
 
   private final int pubSubConsumerPollRetryTimes;
 
@@ -731,7 +728,6 @@ public class VeniceServerConfig extends VeniceClusterConfig {
         serverProperties.getBoolean(SEVER_CALCULATE_QUOTA_USAGE_BASED_ON_PARTITIONS_ASSIGNMENT_ENABLED, true);
 
     nodeCapacityInRcu = serverProperties.getLong(SERVER_NODE_CAPACITY_RCU, 100000);
-    kafkaMaxPollRecords = serverProperties.getInt(SERVER_KAFKA_MAX_POLL_RECORDS, 100);
     pubSubConsumerPollRetryTimes = serverProperties.getInt(SERVER_PUBSUB_CONSUMER_POLL_RETRY_TIMES, 100);
     pubSubConsumerPollRetryBackoffMs = serverProperties.getInt(SERVER_PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS, 0);
     diskHealthCheckIntervalInMS =
@@ -1311,10 +1307,6 @@ public class VeniceServerConfig extends VeniceClusterConfig {
 
   public long getNodeCapacityInRcu() {
     return nodeCapacityInRcu;
-  }
-
-  public int getKafkaMaxPollRecords() {
-    return kafkaMaxPollRecords;
   }
 
   public int getPubSubConsumerPollRetryTimes() {

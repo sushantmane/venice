@@ -22,7 +22,6 @@ import com.linkedin.venice.utils.DaemonThreadFactory;
 import com.linkedin.venice.utils.RedundantExceptionFilter;
 import com.linkedin.venice.utils.SystemTime;
 import com.linkedin.venice.utils.Utils;
-import com.linkedin.venice.utils.VeniceProperties;
 import com.linkedin.venice.utils.concurrent.VeniceConcurrentHashMap;
 import io.tehuti.metrics.MetricsRepository;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -41,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -273,23 +271,23 @@ public class AggKafkaConsumerService extends AbstractVeniceService {
     return consumerService;
   }
 
-  public synchronized AbstractKafkaConsumerService createKafkaConsumerService(String pubSubBrokerAddress) {
-    if (StringUtils.isBlank(pubSubBrokerAddress)) {
-      throw new IllegalArgumentException(
-          "A non-empty PubSub broker address must be provided to create a PubSub consumer service");
-    }
-    String resolvedPubSubBrokerAddress = kafkaClusterUrlResolver.apply(pubSubBrokerAddress);
-    if (StringUtils.isBlank(resolvedPubSubBrokerAddress)) {
-      throw new IllegalArgumentException("Failed to resolve the PubSub broker address: " + pubSubBrokerAddress);
-    }
-
-    boolean isRemotePubSubClusterConsumer = !localPubSubBrokerAddress.equals(resolvedPubSubBrokerAddress);
-
-    VeniceProperties consumerProperties = isRemotePubSubClusterConsumer
-        ? serverConfig.getKafkaConsumerConfigsForRemoteConsumption()
-        : serverConfig.getKafkaConsumerConfigsForLocalConsumption();
-    return null;
-  }
+  // public synchronized AbstractKafkaConsumerService createKafkaConsumerService(String pubSubBrokerAddress) {
+  // if (StringUtils.isBlank(pubSubBrokerAddress)) {
+  // throw new IllegalArgumentException(
+  // "A non-empty PubSub broker address must be provided to create a PubSub consumer service");
+  // }
+  // String resolvedPubSubBrokerAddress = kafkaClusterUrlResolver.apply(pubSubBrokerAddress);
+  // if (StringUtils.isBlank(resolvedPubSubBrokerAddress)) {
+  // throw new IllegalArgumentException("Failed to resolve the PubSub broker address: " + pubSubBrokerAddress);
+  // }
+  //
+  // boolean isRemotePubSubClusterConsumer = !localPubSubBrokerAddress.equals(resolvedPubSubBrokerAddress);
+  //
+  // VeniceProperties consumerProperties = isRemotePubSubClusterConsumer
+  // ? serverConfig.getKafkaConsumerConfigsForRemoteConsumption()
+  // : serverConfig.getKafkaConsumerConfigsForLocalConsumption();
+  // return null;
+  // }
 
   /**
    * Create a new {@link KafkaConsumerService} given consumerProperties which must contain a value for "bootstrap.servers".

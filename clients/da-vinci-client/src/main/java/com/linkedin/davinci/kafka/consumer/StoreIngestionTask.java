@@ -4423,7 +4423,7 @@ public abstract class StoreIngestionTask implements Runnable, Closeable {
    * Override the {@link com.linkedin.venice.ConfigKeys#KAFKA_BOOTSTRAP_SERVERS} config with a remote Kafka bootstrap url.
    */
   protected Properties createKafkaConsumerProperties(String remoteKafkaSourceAddress, boolean consumeRemotely) {
-    Properties localConsumerProps = KafkaStoreIngestionService.getKafkaConsumerProperties(storeVersionConfig);
+    Properties localConsumerProps = KafkaStoreIngestionService.getCommonKafkaConsumerProperties(storeVersionConfig);
     Properties newConsumerProps = serverConfig.getClusterProperties().getPropertiesCopy();
     newConsumerProps.putAll(localConsumerProps);
     newConsumerProps.setProperty(KAFKA_BOOTSTRAP_SERVERS, remoteKafkaSourceAddress);

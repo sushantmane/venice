@@ -1,13 +1,12 @@
 package com.linkedin.venice.controller.kafka.consumer;
 
-import static com.linkedin.venice.ConfigKeys.KAFKA_CLIENT_ID_CONFIG;
-
 import com.linkedin.venice.controller.AdminTopicMetadataAccessor;
 import com.linkedin.venice.controller.VeniceControllerClusterConfig;
 import com.linkedin.venice.controller.VeniceHelixAdmin;
 import com.linkedin.venice.controller.ZkAdminTopicMetadataAccessor;
 import com.linkedin.venice.controller.stats.AdminConsumptionStats;
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
@@ -224,14 +223,31 @@ public class AdminConsumerService extends AbstractVeniceService {
   }
 
   private PubSubConsumerAdapter createKafkaConsumer(String clusterName) {
+    // Ensure that a remote broker address is provided when remote consumption is enabled
+    if (remoteConsumptionEnabled && !remoteKafkaServerUrl.isPresent()) {
+      throw new VeniceException(
+          "Remote consumption is enabled, but no remote PubSub broker address is provided for cluster: " + clusterName);
+    }
+
     String pubSubServerUrl = remoteConsumptionEnabled ? remoteKafkaServerUrl.get() : localKafkaServerUrl;
-    Properties kafkaConsumerProperties = admin.getPubSubSSLProperties(pubSubServerUrl).toProperties();
+
     /**
-     * {@link KAFKA_CLIENT_ID_CONFIG} can be used to identify different consumers while checking Kafka related metrics.
+     * TODO(sushantmane): Remove the way we create the consumer properties
      */
-    kafkaConsumerProperties.setProperty(KAFKA_CLIENT_ID_CONFIG, clusterName);
-    return consumerFactory
-        .create(new VeniceProperties(kafkaConsumerProperties), false, pubSubMessageDeserializer, clusterName);
+    Properties kafkaConsumerProperties = admin.getPubSubSSLProperties(pubSubServerUrl).toProperties();
+
+    // Build the consumer adapter context
+    PubSubConsumerAdapterContext context =
+        new PubSubConsumerAdapterContext.Builder().setVeniceProperties(new VeniceProperties(kafkaConsumerProperties))
+            .setConsumerName("admin-channel-consumer-for--" + clusterName)
+            .setBrokerAddress(pubSubServerUrl)
+            .setMetricsRepository(metricsRepository)
+            .setPubSubTopicRepository(pubSubTopicRepository)
+            .setIsOffsetCollectionEnabled(false)
+            .setPubSubMessageDeserializer(pubSubMessageDeserializer)
+            .build();
+
+    return consumerFactory.create(context);
   }
 
   // For testing only.

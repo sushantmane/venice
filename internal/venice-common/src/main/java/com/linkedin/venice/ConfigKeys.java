@@ -69,16 +69,6 @@ public class ConfigKeys {
   public static final String KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS =
       ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS;
 
-  // public static final String KAFKA_CLIENT_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_CLIENT_ID_CONFIG;
-  // public static final String KAFKA_GROUP_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_GROUP_ID_CONFIG;
-  // public static final String KAFKA_FETCH_MIN_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MIN_BYTES_CONFIG;
-  // public static final String KAFKA_FETCH_MAX_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_BYTES_CONFIG;
-  // public static final String KAFKA_MAX_POLL_RECORDS_CONFIG = ApacheKafkaConsumerConfig.KAFKA_MAX_POLL_RECORDS_CONFIG;
-  // public static final String KAFKA_FETCH_MAX_WAIT_MS_CONFIG =
-  // ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_WAIT_MS_CONFIG;
-  // public static final String KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG =
-  // ApacheKafkaConsumerConfig.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
-
   public static final String KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC =
       "kafka.admin.get.topic.config.max.retry.sec";
 
@@ -241,8 +231,7 @@ public class ConfigKeys {
   public static final String REFRESH_INTERVAL_FOR_ZK_RECONNECT_MS = "refresh.interval.for.zk.reconnect.ms";
   public static final String KAFKA_READ_CYCLE_DELAY_MS = "kafka.read.cycle.delay.ms";
   public static final String KAFKA_EMPTY_POLL_SLEEP_MS = "kafka.empty.poll.sleep.ms";
-  public static final String KAFKA_FETCH_MIN_SIZE_PER_SEC = "kafka.fetch.min.size.per.sec";
-  public static final String KAFKA_FETCH_MAX_SIZE_PER_SEC = "kafka.fetch.max.size.per.sec";
+
   public static final String KAFKA_FETCH_MAX_WAIT_TIME_MS = "kafka.fetch.max.wait.time.ms";
   public static final String KAFKA_FETCH_PARTITION_MAX_SIZE_PER_SEC = "kafka.fetch.partition.max.size.per.sec";
   public static final String PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS =
@@ -688,15 +677,6 @@ public class ConfigKeys {
    * Server quota enforcement capacity multiple.
    */
   public static final String SERVER_QUOTA_ENFORCEMENT_CAPACITY_MULTIPLE = "server.quota.enforcement.capacity.multiple";
-
-  /**
-   * This config is used to control the maximum records returned by every poll request.
-   * So far, Store Ingestion is throttling per poll, so if the configured value is too big,
-   * the throttling could be inaccurate and it may impact GC as well.
-   *
-   * We should try to avoid too many long-lasting objects in JVM to minimize GC overhead.
-   */
-  public static final String SERVER_KAFKA_MAX_POLL_RECORDS = "server.kafka.max.poll.records";
 
   /**
    * This config is used to control how many times PubSub consumer would retry polling during ingestion

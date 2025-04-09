@@ -7,10 +7,6 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_CLUSTER_MAP_KEY_OTHER_URLS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_CLUSTER_MAP_KEY_URL;
 import static com.linkedin.venice.ConfigKeys.KAFKA_CLUSTER_MAP_SECURITY_PROTOCOL;
 import static com.linkedin.venice.ConfigKeys.KAFKA_EMPTY_POLL_SLEEP_MS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_SIZE_PER_SEC;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_WAIT_TIME_MS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MIN_SIZE_PER_SEC;
-import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_PARTITION_MAX_SIZE_PER_SEC;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_BYTES_PER_SECOND;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_RECORDS_PER_SECOND;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_TIME_WINDOW_MS;
@@ -47,7 +43,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -71,10 +66,6 @@ public class VeniceClusterConfig {
   private final long refreshIntervalForZkReconnectInMs;
   private final long kafkaReadCycleDelayMs;
   private final long kafkaEmptyPollSleepMs;
-  private final long kafkaFetchMinSizePerSecond;
-  private final long kafkaFetchMaxSizePerSecond;
-  private final long kafkaFetchMaxTimeMS;
-  private final long kafkaFetchPartitionMaxSizePerSecond;
   private final String regionName;
   private final boolean shouldUseHighThroughputDefaultsForPubSubProducer;
 
@@ -128,13 +119,6 @@ public class VeniceClusterConfig {
         clusterProps.getLong(REFRESH_INTERVAL_FOR_ZK_RECONNECT_MS, TimeUnit.SECONDS.toMillis(10));
     this.kafkaReadCycleDelayMs = clusterProps.getLong(KAFKA_READ_CYCLE_DELAY_MS, 1000);
     this.kafkaEmptyPollSleepMs = clusterProps.getLong(KAFKA_EMPTY_POLL_SLEEP_MS, 0);
-    // get fetching related from config or use the kafka default values.
-    this.kafkaFetchMinSizePerSecond = clusterProps.getSizeInBytes(KAFKA_FETCH_MIN_SIZE_PER_SEC, 1);
-    this.kafkaFetchMaxSizePerSecond =
-        clusterProps.getSizeInBytes(KAFKA_FETCH_MAX_SIZE_PER_SEC, ConsumerConfig.DEFAULT_FETCH_MAX_BYTES);
-    this.kafkaFetchMaxTimeMS = clusterProps.getLong(KAFKA_FETCH_MAX_WAIT_TIME_MS, 500);
-    this.kafkaFetchPartitionMaxSizePerSecond = clusterProps
-        .getSizeInBytes(KAFKA_FETCH_PARTITION_MAX_SIZE_PER_SEC, ConsumerConfig.DEFAULT_MAX_PARTITION_FETCH_BYTES);
     this.shouldUseHighThroughputDefaultsForPubSubProducer =
         clusterProps.getBoolean(ConfigKeys.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, true);
 
@@ -305,22 +289,6 @@ public class VeniceClusterConfig {
 
   public long getKafkaEmptyPollSleepMs() {
     return kafkaEmptyPollSleepMs;
-  }
-
-  public long getKafkaFetchMinSizePerSecond() {
-    return kafkaFetchMinSizePerSecond;
-  }
-
-  public long getKafkaFetchMaxSizePerSecond() {
-    return kafkaFetchMaxSizePerSecond;
-  }
-
-  public long getKafkaFetchMaxTimeMS() {
-    return kafkaFetchMaxTimeMS;
-  }
-
-  public long getKafkaFetchPartitionMaxSizePerSecond() {
-    return kafkaFetchPartitionMaxSizePerSecond;
   }
 
   public long getKafkaFetchQuotaTimeWindow() {
