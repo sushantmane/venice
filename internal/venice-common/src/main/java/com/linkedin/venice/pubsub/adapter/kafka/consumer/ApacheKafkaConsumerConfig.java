@@ -60,12 +60,11 @@ public class ApacheKafkaConsumerConfig {
 
   ApacheKafkaConsumerConfig(PubSubConsumerAdapterContext context) {
     VeniceProperties veniceProperties = context.getVeniceProperties();
-    String brokerAddress = context.getBrokerAddress();
     pubSubMessageDeserializer = context.getPubSubMessageDeserializer();
     offsetsTracker = context.isOffsetCollectionEnabled() ? new TopicPartitionsOffsetsTracker() : null;
     consumerProperties =
         getValidConsumerProperties(veniceProperties.clipAndFilterNamespace(KAFKA_CONSUMER_PREFIXES).toProperties());
-    consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
+    consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, context.getBrokerAddress());
     consumerProperties.put(ConsumerConfig.CLIENT_ID_CONFIG, context.getConsumerName());
 
     // Setup ssl config if needed.
@@ -174,5 +173,24 @@ public class ApacheKafkaConsumerConfig {
   @VisibleForTesting
   void setTopicPartitionsOffsetsTracker(TopicPartitionsOffsetsTracker offsetsTracker) {
     this.offsetsTracker = offsetsTracker;
+  }
+
+  private static Properties getDefaultKafkaConsumerPropertiesForServers() {
+    Properties properties = new Properties();
+    properties.setProperty(KAFKA_FETCH_MIN_BYTES_CONFIG, String.valueOf(PubSubConstants.DEFAULT_KAFKA_FETCH_MIN_BYTES));
+    // properties.setProperty(KAFKA_BOOTSTRAP_SERVERS, serverConfig.getKafkaBootstrapServers());
+    // properties.setProperty(KAFKA_FETCH_MIN_BYTES_CONFIG,
+    // String.valueOf(serverConfig.getKafkaFetchMinSizePerSecond()));
+    // properties.setProperty(KAFKA_FETCH_MAX_BYTES_CONFIG,
+    // String.valueOf(serverConfig.getKafkaFetchMaxSizePerSecond()));
+    // properties.setProperty(KAFKA_MAX_POLL_RECORDS_CONFIG, Integer.toString(serverConfig.getKafkaMaxPollRecords()));
+    // properties.setProperty(KAFKA_FETCH_MAX_WAIT_MS_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxTimeMS()));
+    // properties.setProperty(KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG,
+    // String.valueOf(serverConfig.getKafkaFetchPartitionMaxSizePerSecond()));
+    // properties.setProperty(PubSubConstants.PUBSUB_CONSUMER_POLL_RETRY_TIMES,
+    // String.valueOf(serverConfig.getPubSubConsumerPollRetryTimes()));
+    // properties.setProperty(PubSubConstants.PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS,
+    // String.valueOf(serverConfig.getPubSubConsumerPollRetryBackoffMs()));
+    return properties;
   }
 }

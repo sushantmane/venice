@@ -131,8 +131,6 @@ public class PubSubConsumerAdapterTest {
         PubSubConstants.PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS,
         String.valueOf(PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS));
     properties.setProperty(PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE, "true");
-    properties
-        .setProperty(PUBSUB_CONSUMER_POSITION_RESET_STRATEGY, PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE);
     return properties;
   }
 
