@@ -27,7 +27,6 @@ public class PubSubConsumerAdapterContext {
   private final MetricsRepository metricsRepository;
   private final PubSubTopicRepository pubSubTopicRepository;
   private final PubSubMessageDeserializer pubSubMessageDeserializer;
-  private final String consumerPositionResetStrategy;
   private final boolean isOffsetCollectionEnabled;
 
   private PubSubConsumerAdapterContext(Builder builder) {
@@ -39,7 +38,6 @@ public class PubSubConsumerAdapterContext {
     this.pubSubTopicRepository = builder.pubSubTopicRepository;
     this.isOffsetCollectionEnabled = builder.isOffsetCollectionEnabled;
     this.pubSubMessageDeserializer = builder.pubSubMessageDeserializer;
-    this.consumerPositionResetStrategy = builder.consumerPositionResetStrategy;
   }
 
   public String getConsumerName() {
@@ -74,10 +72,6 @@ public class PubSubConsumerAdapterContext {
     return pubSubMessageDeserializer;
   }
 
-  public String getConsumerPositionResetStrategy() {
-    return consumerPositionResetStrategy;
-  }
-
   public static class Builder {
     private String consumerName;
     private String brokerAddress;
@@ -87,7 +81,6 @@ public class PubSubConsumerAdapterContext {
     private PubSubTopicRepository pubSubTopicRepository;
     private boolean isOffsetCollectionEnabled;
     private PubSubMessageDeserializer pubSubMessageDeserializer;
-    private String consumerPositionResetStrategy;
 
     public Builder setConsumerName(String consumerName) {
       this.consumerName = consumerName;
@@ -129,14 +122,6 @@ public class PubSubConsumerAdapterContext {
       return this;
     }
 
-    /**
-     * todo(sushantmane): Set this when passing pubsub specific configs
-     */
-    public Builder setConsumerPositionResetStrategy(String consumerPositionResetStrategy) {
-      this.consumerPositionResetStrategy = consumerPositionResetStrategy;
-      return this;
-    }
-
     public PubSubConsumerAdapterContext build() {
       if (brokerAddress == null) {
         brokerAddress = PubSubUtil.getPubSubBrokerAddress(veniceProperties, null);
@@ -145,9 +130,6 @@ public class PubSubConsumerAdapterContext {
               "Missing required broker address. Please specify either '" + PUBSUB_BROKER_ADDRESS + "' or '"
                   + KAFKA_BOOTSTRAP_SERVERS + "' in the configuration.");
         }
-      }
-      if (consumerPositionResetStrategy == null) {
-        consumerPositionResetStrategy = PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE;
       }
       if (consumerName == null) {
         consumerName = PubSubUtil.generatePubSubClientId(PubSubClientType.CONSUMER, null, brokerAddress);

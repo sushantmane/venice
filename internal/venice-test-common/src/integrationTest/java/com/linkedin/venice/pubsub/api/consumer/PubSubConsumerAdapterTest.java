@@ -1,8 +1,6 @@
 package com.linkedin.venice.pubsub.api.consumer;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE;
-import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
-import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY_DEFAULT_VALUE;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;

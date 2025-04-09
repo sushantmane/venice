@@ -75,16 +75,8 @@ public class ApacheKafkaConsumerConfig {
       consumerProperties.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_SIZE);
     }
 
-    // Do not change the default value of the following two configs unless you know what you are doing.
-    consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
-    consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
-
-    consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, context.getConsumerPositionResetStrategy());
-    consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-
     // Timeout for consumer APIs which do not have explicit timeout parameter AND have potential to get blocked;
     // When this is not specified, Kafka consumer will use default value of 1 minute.
-
     int defaultApiTimeoutInMs = veniceProperties.getInt(
         PubSubConstants.PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS,
         PubSubConstants.PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS_DEFAULT_VALUE);
@@ -112,6 +104,12 @@ public class ApacheKafkaConsumerConfig {
     shouldCheckTopicExistenceBeforeConsuming = veniceProperties.getBoolean(
         PubSubConstants.PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE,
         PubSubConstants.PUBSUB_CONSUMER_CHECK_TOPIC_EXISTENCE_DEFAULT_VALUE);
+
+    // Do not change the default value of the following configs unless you know what you are doing.
+    consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+    consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+    consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+    consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
     LOGGER.debug("Created ApacheKafkaConsumerConfig: {} - consumerProperties: {}", this, consumerProperties);
   }
