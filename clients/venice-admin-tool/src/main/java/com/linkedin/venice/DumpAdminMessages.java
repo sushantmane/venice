@@ -1,7 +1,6 @@
 package com.linkedin.venice;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
-import static com.linkedin.venice.ConfigKeys.KAFKA_ENABLE_AUTO_COMMIT_CONFIG;
 
 import com.linkedin.venice.controller.kafka.AdminTopicUtils;
 import com.linkedin.venice.controller.kafka.protocol.admin.AdminOperation;
@@ -125,7 +124,6 @@ public class DumpAdminMessages {
     }
 
     pubSubConsumerProperties.setProperty(KAFKA_BOOTSTRAP_SERVERS, kafkaUrl);
-    pubSubConsumerProperties.setProperty(KAFKA_ENABLE_AUTO_COMMIT_CONFIG, "false");
     return pubSubConsumerProperties;
   }
 }

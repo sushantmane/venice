@@ -41,5 +41,9 @@ public interface PubSubConsumerAdapterFactory<ADAPTER extends PubSubConsumerAdap
         context.getConsumerName());
   }
 
+  default VeniceProperties getDefaultProperties() {
+    return new VeniceProperties();
+  }
+
   String getName();
 }

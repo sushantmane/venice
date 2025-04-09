@@ -27,8 +27,6 @@ import org.apache.logging.log4j.Logger;
 public class ApacheKafkaConsumerConfig {
   private static final Logger LOGGER = LogManager.getLogger(ApacheKafkaConsumerConfig.class);
 
-  public static final String KAFKA_ENABLE_AUTO_COMMIT_CONFIG =
-      KAFKA_CONFIG_PREFIX + ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
   public static final String KAFKA_FETCH_MIN_BYTES_CONFIG = KAFKA_CONFIG_PREFIX + ConsumerConfig.FETCH_MIN_BYTES_CONFIG;
   public static final String KAFKA_FETCH_MAX_BYTES_CONFIG = KAFKA_CONFIG_PREFIX + ConsumerConfig.FETCH_MAX_BYTES_CONFIG;
   public static final String KAFKA_MAX_POLL_RECORDS_CONFIG =
@@ -82,6 +80,7 @@ public class ApacheKafkaConsumerConfig {
     consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
 
     consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, context.getConsumerPositionResetStrategy());
+    consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
     // Timeout for consumer APIs which do not have explicit timeout parameter AND have potential to get blocked;
     // When this is not specified, Kafka consumer will use default value of 1 minute.

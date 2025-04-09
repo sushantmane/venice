@@ -2,7 +2,6 @@ package com.linkedin.venice;
 
 import com.linkedin.venice.annotation.UnderDevelopment;
 import com.linkedin.venice.pubsub.PubSubConstants;
-import com.linkedin.venice.pubsub.adapter.kafka.consumer.ApacheKafkaConsumerConfig;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 
 
@@ -70,16 +69,15 @@ public class ConfigKeys {
   public static final String KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS =
       ApacheKafkaProducerConfig.KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS;
 
-  public static final String KAFKA_CLIENT_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_CLIENT_ID_CONFIG;
-  public static final String KAFKA_GROUP_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_GROUP_ID_CONFIG;
-  public static final String KAFKA_ENABLE_AUTO_COMMIT_CONFIG =
-      ApacheKafkaConsumerConfig.KAFKA_ENABLE_AUTO_COMMIT_CONFIG;
-  public static final String KAFKA_FETCH_MIN_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MIN_BYTES_CONFIG;
-  public static final String KAFKA_FETCH_MAX_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_BYTES_CONFIG;
-  public static final String KAFKA_MAX_POLL_RECORDS_CONFIG = ApacheKafkaConsumerConfig.KAFKA_MAX_POLL_RECORDS_CONFIG;
-  public static final String KAFKA_FETCH_MAX_WAIT_MS_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_WAIT_MS_CONFIG;
-  public static final String KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG =
-      ApacheKafkaConsumerConfig.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
+  // public static final String KAFKA_CLIENT_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_CLIENT_ID_CONFIG;
+  // public static final String KAFKA_GROUP_ID_CONFIG = ApacheKafkaConsumerConfig.KAFKA_GROUP_ID_CONFIG;
+  // public static final String KAFKA_FETCH_MIN_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MIN_BYTES_CONFIG;
+  // public static final String KAFKA_FETCH_MAX_BYTES_CONFIG = ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_BYTES_CONFIG;
+  // public static final String KAFKA_MAX_POLL_RECORDS_CONFIG = ApacheKafkaConsumerConfig.KAFKA_MAX_POLL_RECORDS_CONFIG;
+  // public static final String KAFKA_FETCH_MAX_WAIT_MS_CONFIG =
+  // ApacheKafkaConsumerConfig.KAFKA_FETCH_MAX_WAIT_MS_CONFIG;
+  // public static final String KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG =
+  // ApacheKafkaConsumerConfig.KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG;
 
   public static final String KAFKA_ADMIN_GET_TOPIC_CONFIG_MAX_RETRY_TIME_SEC =
       "kafka.admin.get.topic.config.max.retry.sec";

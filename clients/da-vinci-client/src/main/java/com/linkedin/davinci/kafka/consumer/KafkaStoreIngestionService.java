@@ -2,7 +2,6 @@ package com.linkedin.davinci.kafka.consumer;
 
 import static com.linkedin.venice.ConfigKeys.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_CLIENT_ID_CONFIG;
-import static com.linkedin.venice.ConfigKeys.KAFKA_ENABLE_AUTO_COMMIT_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_BYTES_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MAX_WAIT_MS_CONFIG;
 import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_MIN_BYTES_CONFIG;
@@ -1213,34 +1212,23 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
    * @return
    */
   public static Properties getCommonKafkaConsumerProperties(VeniceServerConfig serverConfig) {
-    Properties kafkaConsumerProperties = serverConfig.getClusterProperties().getPropertiesCopy();
-    ApacheKafkaProducerConfig
-        .copyKafkaSASLProperties(serverConfig.getClusterProperties(), kafkaConsumerProperties, false);
-    kafkaConsumerProperties.setProperty(KAFKA_BOOTSTRAP_SERVERS, serverConfig.getKafkaBootstrapServers());
-    // Venice is persisting offset in local offset db.
-    kafkaConsumerProperties.setProperty(KAFKA_ENABLE_AUTO_COMMIT_CONFIG, "false");
-    kafkaConsumerProperties
-        .setProperty(KAFKA_FETCH_MIN_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMinSizePerSecond()));
-    kafkaConsumerProperties
-        .setProperty(KAFKA_FETCH_MAX_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxSizePerSecond()));
-    /**
-     * The following setting is used to control the maximum number of records to returned in one poll request.
-     */
-    kafkaConsumerProperties
-        .setProperty(KAFKA_MAX_POLL_RECORDS_CONFIG, Integer.toString(serverConfig.getKafkaMaxPollRecords()));
-    kafkaConsumerProperties
-        .setProperty(KAFKA_FETCH_MAX_WAIT_MS_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxTimeMS()));
-    kafkaConsumerProperties.setProperty(
+    Properties properties = serverConfig.getClusterProperties().getPropertiesCopy();
+    ApacheKafkaProducerConfig.copyKafkaSASLProperties(serverConfig.getClusterProperties(), properties, false);
+    properties.setProperty(KAFKA_BOOTSTRAP_SERVERS, serverConfig.getKafkaBootstrapServers());
+    properties.setProperty(KAFKA_FETCH_MIN_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMinSizePerSecond()));
+    properties.setProperty(KAFKA_FETCH_MAX_BYTES_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxSizePerSecond()));
+    properties.setProperty(KAFKA_MAX_POLL_RECORDS_CONFIG, Integer.toString(serverConfig.getKafkaMaxPollRecords()));
+    properties.setProperty(KAFKA_FETCH_MAX_WAIT_MS_CONFIG, String.valueOf(serverConfig.getKafkaFetchMaxTimeMS()));
+    properties.setProperty(
         KAFKA_MAX_PARTITION_FETCH_BYTES_CONFIG,
         String.valueOf(serverConfig.getKafkaFetchPartitionMaxSizePerSecond()));
-    kafkaConsumerProperties.setProperty(
+    properties.setProperty(
         PubSubConstants.PUBSUB_CONSUMER_POLL_RETRY_TIMES,
         String.valueOf(serverConfig.getPubSubConsumerPollRetryTimes()));
-    kafkaConsumerProperties.setProperty(
+    properties.setProperty(
         PubSubConstants.PUBSUB_CONSUMER_POLL_RETRY_BACKOFF_MS,
         String.valueOf(serverConfig.getPubSubConsumerPollRetryBackoffMs()));
-
-    return kafkaConsumerProperties;
+    return properties;
   }
 
   private VeniceProperties getPubSubSSLPropertiesFromServerConfig(String kafkaBootstrapUrls) {
