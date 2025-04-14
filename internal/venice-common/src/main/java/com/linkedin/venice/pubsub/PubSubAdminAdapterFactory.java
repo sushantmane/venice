@@ -21,7 +21,12 @@ public interface PubSubAdminAdapterFactory<ADAPTER extends PubSubAdminAdapter> e
    * @param pubSubTopicRepository       A repo to cache created {@link PubSubTopic}s.
    * @return                            Returns an instance of an admin adapter
    */
+  @Deprecated
   ADAPTER create(VeniceProperties veniceProperties, PubSubTopicRepository pubSubTopicRepository);
+
+  default ADAPTER create(PubSubAdminAdapterContext context) {
+    return create(context.getProperties(), context.getPubSubTopicRepository());
+  }
 
   String getName();
 }

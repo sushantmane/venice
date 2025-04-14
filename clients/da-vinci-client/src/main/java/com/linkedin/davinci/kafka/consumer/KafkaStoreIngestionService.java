@@ -1188,6 +1188,10 @@ public class KafkaStoreIngestionService extends AbstractVeniceService implements
     return versionedIngestionStats;
   }
 
+  /**
+   * Step 1: Get the properties from the server config.
+   * Step 2: Copy the properties to a new Properties object.
+   */
   public static Properties getCommonKafkaConsumerProperties(VeniceServerConfig serverConfig) {
     Properties properties = serverConfig.getClusterProperties().getPropertiesCopy();
     ApacheKafkaProducerConfig.copyKafkaSASLProperties(serverConfig.getClusterProperties(), properties, false);

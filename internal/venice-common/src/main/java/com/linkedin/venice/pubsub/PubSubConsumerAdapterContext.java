@@ -124,6 +124,7 @@ public class PubSubConsumerAdapterContext {
 
     public PubSubConsumerAdapterContext build() {
       if (brokerAddress == null) {
+        // TODO (sushantmane): throw an exception if pubSubBrokerAddress is null
         brokerAddress = PubSubUtil.getPubSubBrokerAddress(veniceProperties, null);
         if (brokerAddress == null) {
           throw new IllegalArgumentException(

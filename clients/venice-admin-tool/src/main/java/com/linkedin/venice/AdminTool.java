@@ -1688,9 +1688,8 @@ public class AdminTool {
 
   private static void deleteKafkaTopic(CommandLine cmd, PubSubClientsFactory pubSubClientsFactory) throws Exception {
     long startTime = System.currentTimeMillis();
-    String kafkaBootstrapServer = getRequiredArgument(cmd, Arg.KAFKA_BOOTSTRAP_SERVERS);
+    String pubSubBootstrapServer = getRequiredArgument(cmd, Arg.KAFKA_BOOTSTRAP_SERVERS);
     Properties properties = loadProperties(cmd, Arg.KAFKA_CONSUMER_CONFIG_FILE);
-    properties.put(KAFKA_BOOTSTRAP_SERVERS, kafkaBootstrapServer);
     VeniceProperties veniceProperties = new VeniceProperties(properties);
     int kafkaTimeOut = 30 * Time.MS_PER_SECOND;
     int topicDeletionStatusPollingInterval = 2 * Time.MS_PER_SECOND;
@@ -1698,20 +1697,19 @@ public class AdminTool {
       kafkaTimeOut = Integer.parseInt(getRequiredArgument(cmd, Arg.KAFKA_OPERATION_TIMEOUT)) * Time.MS_PER_SECOND;
     }
 
-    TopicManagerContext topicManagerContext =
-        new TopicManagerContext.Builder().setPubSubPropertiesSupplier(k -> veniceProperties)
-            .setPubSubOperationTimeoutMs(kafkaTimeOut)
-            .setTopicDeletionStatusPollIntervalMs(topicDeletionStatusPollingInterval)
-            .setTopicMinLogCompactionLagMs(0L)
-            .setPubSubConsumerAdapterFactory(pubSubClientsFactory.getConsumerAdapterFactory())
-            .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
-            .setPubSubTopicRepository(TOPIC_REPOSITORY)
-            .setTopicMetadataFetcherConsumerPoolSize(1)
-            .setTopicMetadataFetcherThreadPoolSize(1)
-            .build();
+    TopicManagerContext topicManagerContext = new TopicManagerContext.Builder().setVeniceProperties(veniceProperties)
+        .setPubSubOperationTimeoutMs(kafkaTimeOut)
+        .setTopicDeletionStatusPollIntervalMs(topicDeletionStatusPollingInterval)
+        .setTopicMinLogCompactionLagMs(0L)
+        .setPubSubConsumerAdapterFactory(pubSubClientsFactory.getConsumerAdapterFactory())
+        .setPubSubAdminAdapterFactory(pubSubClientsFactory.getAdminAdapterFactory())
+        .setPubSubTopicRepository(TOPIC_REPOSITORY)
+        .setTopicMetadataFetcherConsumerPoolSize(1)
+        .setTopicMetadataFetcherThreadPoolSize(1)
+        .build();
 
     try (TopicManager topicManager =
-        new TopicManagerRepository(topicManagerContext, kafkaBootstrapServer).getLocalTopicManager()) {
+        new TopicManagerRepository(topicManagerContext, pubSubBootstrapServer).getLocalTopicManager()) {
       String topicName = getRequiredArgument(cmd, Arg.KAFKA_TOPIC_NAME);
       try {
         topicManager.ensureTopicIsDeletedAndBlock(TOPIC_REPOSITORY.getTopic(topicName));

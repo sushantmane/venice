@@ -1,8 +1,10 @@
 package com.linkedin.venice.pubsub.adapter.kafka.admin;
 
+import com.linkedin.venice.pubsub.PubSubAdminAdapterContext;
 import com.linkedin.venice.pubsub.PubSubAdminAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubProducerAdapterFactory;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.PubSubUtil;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.io.IOException;
@@ -19,9 +21,18 @@ public class ApacheKafkaAdminAdapterFactory implements PubSubAdminAdapterFactory
 
   @Override
   public PubSubAdminAdapter create(VeniceProperties veniceProperties, PubSubTopicRepository pubSubTopicRepository) {
-    ApacheKafkaAdminConfig apacheKafkaAdminConfig = new ApacheKafkaAdminConfig(veniceProperties);
-    PubSubAdminAdapter pubSubAdminAdapter = new ApacheKafkaAdminAdapter(apacheKafkaAdminConfig, pubSubTopicRepository);
-    return pubSubAdminAdapter;
+    PubSubAdminAdapterContext context = new PubSubAdminAdapterContext.Builder()
+        .setPubSubBrokerAddress(PubSubUtil.getPubSubBrokerAddress(veniceProperties))
+        .setProperties(veniceProperties)
+        .setPubSubTopicRepository(pubSubTopicRepository)
+        .build();
+    return create(context);
+  }
+
+  @Override
+  public PubSubAdminAdapter create(PubSubAdminAdapterContext context) {
+    ApacheKafkaAdminConfig apacheKafkaAdminConfig = new ApacheKafkaAdminConfig(context);
+    return new ApacheKafkaAdminAdapter(apacheKafkaAdminConfig, context.getPubSubTopicRepository());
   }
 
   @Override

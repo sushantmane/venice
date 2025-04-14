@@ -103,10 +103,11 @@ class TopicMetadataFetcher implements Closeable {
     this.closeables = new ArrayList<>(topicManagerContext.getTopicMetadataFetcherConsumerPoolSize());
     this.cachedEntryTtlInNs = MILLISECONDS.toNanos(topicManagerContext.getTopicOffsetCheckIntervalMs());
     PubSubMessageDeserializer pubSubMessageDeserializer = PubSubMessageDeserializer.getInstance();
-    PubSubConsumerAdapterContext.Builder consumerContextBuilder = new PubSubConsumerAdapterContext.Builder()
-        .setVeniceProperties(topicManagerContext.getPubSubProperties(pubSubClusterAddress))
-        .setIsOffsetCollectionEnabled(false)
-        .setPubSubMessageDeserializer(pubSubMessageDeserializer);
+    PubSubConsumerAdapterContext.Builder consumerContextBuilder =
+        new PubSubConsumerAdapterContext.Builder().setBrokerAddress(pubSubClusterAddress)
+            .setVeniceProperties(topicManagerContext.getVeniceProperties())
+            .setIsOffsetCollectionEnabled(false)
+            .setPubSubMessageDeserializer(pubSubMessageDeserializer);
     for (int i = 0; i < topicManagerContext.getTopicMetadataFetcherConsumerPoolSize(); i++) {
       PubSubConsumerAdapter pubSubConsumerAdapter = topicManagerContext.getPubSubConsumerAdapterFactory()
           .create(consumerContextBuilder.setConsumerName("TopicMetadataFetcherConsumer-" + i).build());

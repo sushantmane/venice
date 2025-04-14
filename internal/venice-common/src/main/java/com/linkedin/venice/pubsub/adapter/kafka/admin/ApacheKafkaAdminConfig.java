@@ -1,14 +1,13 @@
 package com.linkedin.venice.pubsub.adapter.kafka.admin;
 
-import static com.linkedin.venice.pubsub.PubSubClientType.ADMIN;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
 
 import com.linkedin.venice.ConfigKeys;
+import com.linkedin.venice.pubsub.PubSubAdminAdapterContext;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubUtil;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
-import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.time.Duration;
 import java.util.Arrays;
@@ -37,8 +36,9 @@ public class ApacheKafkaAdminConfig {
   private final Duration defaultApiTimeout;
   private final boolean isSslEnabled;
 
-  public ApacheKafkaAdminConfig(VeniceProperties veniceProperties) {
-    this.brokerAddress = veniceProperties.getString(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS);
+  public ApacheKafkaAdminConfig(PubSubAdminAdapterContext context) {
+    VeniceProperties veniceProperties = context.getProperties();
+    this.brokerAddress = context.getPubSubBrokerAddress();
     this.adminProperties =
         getValidAdminProperties(veniceProperties.clipAndFilterNamespace(KAFKA_ADMIN_CONFIG_PREFIXES).toProperties());
     this.adminProperties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
@@ -58,8 +58,7 @@ public class ApacheKafkaAdminConfig {
         PubSubConstants.PUBSUB_ADMIN_API_DEFAULT_TIMEOUT_MS_DEFAULT_VALUE);
     defaultApiTimeout = Duration.ofMillis(defaultApiTimeoutInMs);
     this.adminProperties.put(AdminClientConfig.REQUEST_TIMEOUT_MS_CONFIG, defaultApiTimeoutInMs);
-    this.adminProperties
-        .put(AdminClientConfig.CLIENT_ID_CONFIG, PubSubUtil.generatePubSubClientId(ADMIN, "KcAdmin", brokerAddress));
+    this.adminProperties.put(AdminClientConfig.CLIENT_ID_CONFIG, context.getAdminClientName());
 
     LOGGER.debug("Created ApacheKafkaAdminConfig: {} - adminProperties: {}", this, adminProperties);
   }
