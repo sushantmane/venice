@@ -9,11 +9,12 @@ import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.annotation.VisibleForTesting;
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
+import com.linkedin.venice.pubsub.PubSubPositionTypeRegistry;
+import com.linkedin.venice.pubsub.PubSubProducerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubProducerAdapterFactory;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerAdapterFactory;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterConcurrentDelegator;
-import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterDelegator;
 import com.linkedin.venice.stats.VeniceWriterStats;
 import com.linkedin.venice.utils.VeniceProperties;
@@ -37,20 +38,23 @@ public class VeniceWriterFactory {
   private final PubSubProducerAdapterFactory producerAdapterFactory;
   private final MetricsRepository metricsRepository;
   private final String defaultBrokerAddress;
+  private final PubSubPositionTypeRegistry pubSubPositionTypeRegistry;
 
   public VeniceWriterFactory(Properties properties) {
-    this(properties, PubSubClientsFactory.createProducerFactory(properties), null);
+    this(properties, PubSubClientsFactory.createProducerFactory(properties), null, null);
   }
 
   public VeniceWriterFactory(Properties properties, MetricsRepository metricsRepository) {
-    this(properties, PubSubClientsFactory.createProducerFactory(properties), metricsRepository);
+    this(properties, PubSubClientsFactory.createProducerFactory(properties), metricsRepository, null);
   }
 
   public VeniceWriterFactory(
       Properties properties,
       PubSubProducerAdapterFactory producerAdapterFactory,
-      MetricsRepository metricsRepository) {
+      MetricsRepository metricsRepository,
+      PubSubPositionTypeRegistry pubSubPositionTypeRegistry) {
     this.metricsRepository = metricsRepository;
+    this.pubSubPositionTypeRegistry = pubSubPositionTypeRegistry;
     this.venicePropertiesLazy = Lazy.of(() -> new VeniceProperties(properties));
     if (metricsRepository != null) {
       new VeniceWriterStats(metricsRepository);
@@ -87,7 +91,8 @@ public class VeniceWriterFactory {
             .setBrokerAddress(targetBrokerAddress)
             .setMetricsRepository(metricsRepository)
             .setPubSubMessageSerializer(options.getPubSubMessageSerializer())
-            .setProducerCompressionEnabled(options.isProducerCompressionEnabled());
+            .setProducerCompressionEnabled(options.isProducerCompressionEnabled())
+            .setPubSubPositionTypeRegistry(pubSubPositionTypeRegistry);
 
     Supplier<PubSubProducerAdapter> producerAdapterSupplier =
         () -> producerAdapterFactory.create(producerContext.build());

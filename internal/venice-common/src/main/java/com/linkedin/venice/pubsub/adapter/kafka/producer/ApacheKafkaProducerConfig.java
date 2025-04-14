@@ -2,12 +2,13 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CLIENT_CONFIG_PREFIX;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS;
-import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.generateClientId;
 
 import com.linkedin.venice.exceptions.VeniceException;
+import com.linkedin.venice.pubsub.PubSubPositionTypeRegistry;
+import com.linkedin.venice.pubsub.PubSubProducerAdapterContext;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
+import com.linkedin.venice.pubsub.adapter.kafka.common.ApacheKafkaOffsetPosition;
 import com.linkedin.venice.pubsub.api.PubSubMessageSerializer;
-import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -44,6 +45,8 @@ public class ApacheKafkaProducerConfig {
       KAFKA_CONFIG_PREFIX + ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG;
   public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = "ssl." + KAFKA_BOOTSTRAP_SERVERS;
 
+  protected static final String KAFKA_POSITION_CLASS_NAME = ApacheKafkaOffsetPosition.class.getName();
+
   /**
    * N.B. do not attempt to change spelling, "kakfa", without carefully replacing all instances in use and some of them
    * may be external to this repo
@@ -61,24 +64,32 @@ public class ApacheKafkaProducerConfig {
 
   private final Properties producerProperties;
   private final PubSubMessageSerializer pubSubMessageSerializer;
+  private final int positionTypeId;
 
   public ApacheKafkaProducerConfig(PubSubProducerAdapterContext context) {
-    String brokerAddressToOverride = context.getBrokerAddress();
-    String producerName = context.getProducerName();
+    String brokerAddress = context.getBrokerAddress();
     VeniceProperties allVeniceProperties = context.getVeniceProperties();
     boolean strictConfigs = context.shouldValidateProducerConfigStrictly();
     this.pubSubMessageSerializer = context.getPubSubMessageSerializer();
-    String brokerAddress =
-        brokerAddressToOverride != null ? brokerAddressToOverride : getPubsubBrokerAddress(allVeniceProperties);
+    PubSubPositionTypeRegistry positionMapper = context.getPubSubPositionTypeRegistry();
+    if (positionMapper.hasType(KAFKA_POSITION_CLASS_NAME)) {
+      positionTypeId = positionMapper.getTypeId(KAFKA_POSITION_CLASS_NAME);
+    } else {
+      LOGGER.error(
+          "PubSubPositionMapper: {} does not support Kafka position type: {}",
+          positionMapper,
+          KAFKA_POSITION_CLASS_NAME);
+      throw new VeniceException(
+          "PubSubPositionMapper: " + positionMapper + " does not support Kafka position type: "
+              + KAFKA_POSITION_CLASS_NAME);
+    }
+
     this.producerProperties = getValidProducerProperties(
         allVeniceProperties
             .clipAndFilterNamespace(
                 new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)))
             .toProperties());
-    this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     validateAndUpdateProperties(this.producerProperties, strictConfigs);
-    producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, generateClientId(producerName, brokerAddress));
-
     if (allVeniceProperties.getBoolean(PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, false)) {
       addHighThroughputDefaults();
     }
@@ -94,6 +105,8 @@ public class ApacheKafkaProducerConfig {
       this.producerProperties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, context.getCompressionType());
     }
 
+    producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
+    producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, context.getProducerName());
     // Do not remove the following configurations unless you fully understand the implications.
     producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
     producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
@@ -112,27 +125,11 @@ public class ApacheKafkaProducerConfig {
     }
   }
 
-  public Properties getProducerProperties() {
+  protected Properties getProducerProperties() {
     return producerProperties;
   }
 
-  public static String getPubsubBrokerAddress(VeniceProperties properties) {
-    if (Boolean.parseBoolean(properties.getStringWithAlternative(SSL_TO_KAFKA_LEGACY, KAFKA_OVER_SSL, "false"))) {
-      checkProperty(properties, SSL_KAFKA_BOOTSTRAP_SERVERS);
-      return properties.getString(SSL_KAFKA_BOOTSTRAP_SERVERS);
-    }
-    checkProperty(properties, KAFKA_BOOTSTRAP_SERVERS);
-    return properties.getString(KAFKA_BOOTSTRAP_SERVERS);
-  }
-
-  private static void checkProperty(VeniceProperties properties, String key) {
-    if (!properties.containsKey(key)) {
-      throw new VeniceException(
-          "Invalid properties for Kafka producer factory. Required property: " + key + " is missing.");
-    }
-  }
-
-  public String getBrokerAddress() {
+  protected String getBrokerAddress() {
     return producerProperties.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG);
   }
 
@@ -207,7 +204,7 @@ public class ApacheKafkaProducerConfig {
     }
   }
 
-  public static Properties getValidProducerProperties(Properties extractedProperties) {
+  protected static Properties getValidProducerProperties(Properties extractedProperties) {
     Properties validProperties = new Properties();
     extractedProperties.forEach((configKey, configVal) -> {
       if (ProducerConfig.configNames().contains(configKey)) {
@@ -253,7 +250,11 @@ public class ApacheKafkaProducerConfig {
     }
   }
 
-  public PubSubMessageSerializer getPubSubMessageSerializer() {
+  protected PubSubMessageSerializer getPubSubMessageSerializer() {
     return pubSubMessageSerializer;
+  }
+
+  protected int getPositionTypeId() {
+    return positionTypeId;
   }
 }

@@ -60,6 +60,13 @@ public interface PubSubConsumerAdapter extends AutoCloseable, Closeable {
   @UnderDevelopment("This method is under development and may be subject to change.")
   void subscribe(@Nonnull PubSubTopicPartition pubSubTopicPartition, @Nonnull PubSubPosition lastReadPubSubPosition);
 
+  // void subscribe(
+  // @Nonnull PubSubTopicPartition pubSubTopicPartition,
+  // @Nonnull PubSubPosition lastReadPubSubPosition,
+  // boolean isInclusive);
+  //
+  // void subscribe(@Nonnull PubSubTopicPartition topicPartition, @Nonnull byte[] startPosition, boolean isInclusive);
+
   /**
    * Unsubscribes the consumer from a specified topic-partition.
    * If the consumer was previously subscribed to the given partition, it will be unsubscribed,

@@ -14,7 +14,7 @@ import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubConstants;
-import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
+import com.linkedin.venice.pubsub.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
 import java.util.function.BiConsumer;
@@ -55,6 +55,7 @@ public class ApacheKafkaProducerConfigTest {
     when(context.getBrokerAddress()).thenReturn(null);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     ApacheKafkaProducerConfig producerConfig = new ApacheKafkaProducerConfig(context);
     assertNotNull(producerConfig);
     assertEquals(producerConfig.getBrokerAddress(), KAFKA_BROKER_ADDR);
@@ -84,6 +85,7 @@ public class ApacheKafkaProducerConfigTest {
     when(context.getBrokerAddress()).thenReturn(null);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     assertEquals(new ApacheKafkaProducerConfig(context).getBrokerAddress(), "ssl.kafka.broker.com:8182");
   }
 
@@ -102,6 +104,7 @@ public class ApacheKafkaProducerConfigTest {
     when(context.getBrokerAddress()).thenReturn(null);
     when(context.getVeniceProperties()).thenReturn(new VeniceProperties(props));
     when(context.shouldValidateProducerConfigStrictly()).thenReturn(true);
+    when(context.getProducerName()).thenReturn(PRODUCER_NAME);
     ApacheKafkaProducerConfig apacheKafkaProducerConfig = new ApacheKafkaProducerConfig(context);
     Properties producerProperties = apacheKafkaProducerConfig.getProducerProperties();
     assertEquals(SASL_JAAS_CONFIG, producerProperties.get("sasl.jaas.config"));

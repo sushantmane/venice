@@ -58,6 +58,27 @@ public class ConfigKeys {
 
   public static final String PUBSUB_BROKER_ADDRESS = PubSubConstants.PUBSUB_BROKER_ADDRESS;
 
+  /**
+   * Configuration key for the mapping between PubSub position type IDs and their corresponding
+   * fully qualified class names.
+   * <p>
+   * This mapping is used for serializing and deserializing {@code PubSubPosition} implementations.
+   * Each type ID should uniquely identify a position class, enabling the PubSub client to resolve
+   * the correct class when handling position data.
+   * <p>
+   * The expected value is a comma-separated list of mappings in the format:
+   * <pre>
+   *   typeId1:fully.qualified.ClassName1,typeId2:fully.qualified.ClassName2,...
+   * </pre>
+   * <p>
+   * Example:
+   * <pre>
+   *   pubsub.type.id.to.position.class.name.map=1:com.linkedin.venice.pubsub.adapter.kafka.common.ApacheKafkaOffsetPosition,2:com.linkedin.venice.pubsub.adapter.pulsar.PulsarPosition
+   * </pre>
+   */
+  public static final String PUBSUB_TYPE_ID_TO_POSITION_CLASS_NAME_MAP =
+      PubSubConstants.PUBSUB_CLIENT_CONFIG_PREFIX + "type.id.to.position.class.name.map";
+
   public static final String KAFKA_CONFIG_PREFIX = ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
   public static final String KAFKA_BOOTSTRAP_SERVERS = ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
   public static final String SSL_KAFKA_BOOTSTRAP_SERVERS = ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;

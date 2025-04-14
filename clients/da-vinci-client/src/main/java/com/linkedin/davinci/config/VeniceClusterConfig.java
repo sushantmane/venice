@@ -19,6 +19,7 @@ import static com.linkedin.venice.ConfigKeys.KAFKA_FETCH_QUOTA_UNORDERED_RECORDS
 import static com.linkedin.venice.ConfigKeys.KAFKA_READ_CYCLE_DELAY_MS;
 import static com.linkedin.venice.ConfigKeys.KAFKA_SECURITY_PROTOCOL;
 import static com.linkedin.venice.ConfigKeys.PERSISTENCE_TYPE;
+import static com.linkedin.venice.ConfigKeys.PUBSUB_TYPE_ID_TO_POSITION_CLASS_NAME_MAP;
 import static com.linkedin.venice.ConfigKeys.REFRESH_ATTEMPTS_FOR_ZK_RECONNECT;
 import static com.linkedin.venice.ConfigKeys.REFRESH_INTERVAL_FOR_ZK_RECONNECT_MS;
 import static com.linkedin.venice.ConfigKeys.ZOOKEEPER_ADDRESS;
@@ -27,6 +28,7 @@ import com.linkedin.venice.SSLConfig;
 import com.linkedin.venice.exceptions.ConfigurationException;
 import com.linkedin.venice.exceptions.UndefinedPropertyException;
 import com.linkedin.venice.meta.PersistenceType;
+import com.linkedin.venice.pubsub.PubSubPositionTypeRegistry;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubSecurityProtocol;
 import com.linkedin.venice.utils.RegionUtils;
@@ -93,11 +95,19 @@ public class VeniceClusterConfig {
   private final PubSubSecurityProtocol kafkaSecurityProtocol;
   private final Map<String, PubSubSecurityProtocol> kafkaBootstrapUrlToSecurityProtocol;
   private final Optional<SSLConfig> sslConfig;
+  private final PubSubPositionTypeRegistry pubSubPositionTypeRegistry;
 
   public VeniceClusterConfig(VeniceProperties clusterProps, Map<String, Map<String, String>> kafkaClusterMap)
       throws ConfigurationException {
     this.clusterName = clusterProps.getString(CLUSTER_NAME);
     this.zookeeperAddress = clusterProps.getString(ZOOKEEPER_ADDRESS);
+
+    if (clusterProps.containsKey(PUBSUB_TYPE_ID_TO_POSITION_CLASS_NAME_MAP)) {
+      this.pubSubPositionTypeRegistry =
+          new PubSubPositionTypeRegistry(clusterProps.getIntKeyedMap(PUBSUB_TYPE_ID_TO_POSITION_CLASS_NAME_MAP));
+    } else {
+      this.pubSubPositionTypeRegistry = PubSubPositionTypeRegistry.RESERVED_POSITION_TYPE_REGISTRY;
+    }
 
     try {
       this.persistenceType =
@@ -379,6 +389,13 @@ public class VeniceClusterConfig {
 
   public Map<String, Map<String, String>> getKafkaClusterMap() {
     return kafkaClusterMap;
+  }
+
+  /**
+   * @return pubsub position mapper
+   */
+  public PubSubPositionTypeRegistry getPubSubPositionTypeRegistry() {
+    return pubSubPositionTypeRegistry;
   }
 
   /**
