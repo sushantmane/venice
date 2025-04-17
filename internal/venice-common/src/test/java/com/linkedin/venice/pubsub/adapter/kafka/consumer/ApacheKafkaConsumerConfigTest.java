@@ -11,6 +11,7 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
+import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
@@ -53,7 +54,8 @@ public class ApacheKafkaConsumerConfigTest {
     allProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     allProps.put("bogus.kafka.config", "bogusValue");
 
-    Properties validProps = ApacheKafkaConsumerConfig.getValidConsumerProperties(allProps);
+    Properties validProps =
+        ApacheKafkaUtils.getValidKafkaClientProperties(new VeniceProperties(allProps), ConsumerConfig.configNames());
     assertEquals(validProps.size(), 2);
     assertEquals(validProps.get(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG), "localhost:9092");
     assertEquals(validProps.get(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG), "2000");

@@ -1,6 +1,8 @@
 package com.linkedin.venice.pubsub.adapter.kafka.admin;
 
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_ADMIN_GET_TOPIC_CONFIG_RETRY_IN_SECONDS_DEFAULT_VALUE;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX;
 
 import com.linkedin.venice.ConfigKeys;
 import com.linkedin.venice.pubsub.PubSubConstants;
@@ -8,6 +10,8 @@ import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.logging.log4j.LogManager;
@@ -21,15 +25,15 @@ public class ApacheKafkaAdminConfig {
   private final String brokerAddress;
   private final long topicConfigMaxRetryInMs;
   private final Duration defaultApiTimeout;
-  private final boolean isSslEnabled;
 
   public ApacheKafkaAdminConfig(VeniceProperties veniceProperties) {
     this.brokerAddress = veniceProperties.getString(ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS);
-    this.adminProperties = getValidAdminProperties(
-        veniceProperties.clipAndFilterNamespace(ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX).toProperties());
+    VeniceProperties strippedProperties = veniceProperties
+        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)));
+    this.adminProperties =
+        ApacheKafkaUtils.getValidKafkaClientProperties(strippedProperties, AdminClientConfig.configNames());
     this.adminProperties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     // Setup ssl config if needed.
-    this.isSslEnabled = ApacheKafkaUtils.validateAndCopyKafkaSSLConfig(veniceProperties, this.adminProperties);
     this.adminProperties.put(AdminClientConfig.RECEIVE_BUFFER_CONFIG, 1024 * 1024);
     this.topicConfigMaxRetryInMs =
         Duration
@@ -53,7 +57,7 @@ public class ApacheKafkaAdminConfig {
   @Override
   public String toString() {
     return "ApacheKafkaAdminConfig{brokerAddress=" + adminProperties.get(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG)
-        + ", isSslEnabled=" + isSslEnabled + ", defaultApiTimeout=" + defaultApiTimeout + "}";
+        + ", defaultApiTimeout=" + defaultApiTimeout + "}";
   }
 
   long getTopicConfigMaxRetryInMs() {
@@ -66,15 +70,5 @@ public class ApacheKafkaAdminConfig {
 
   public String getBrokerAddress() {
     return brokerAddress;
-  }
-
-  public static Properties getValidAdminProperties(Properties extractedProperties) {
-    Properties validProperties = new Properties();
-    extractedProperties.forEach((configKey, configVal) -> {
-      if (AdminClientConfig.configNames().contains(configKey)) {
-        validProperties.put(configKey, configVal);
-      }
-    });
-    return validProperties;
   }
 }

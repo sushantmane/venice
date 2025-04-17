@@ -6,9 +6,11 @@ import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
 import com.linkedin.venice.pubsub.api.PubSubSecurityProtocol;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 
@@ -32,13 +34,56 @@ public class ApacheKafkaUtils {
   }
 
   /**
+   * Extracts and returns only the valid Kafka client configuration properties from the provided
+   * {@link VeniceProperties}.
+   *
+   * <p>
+   * This method filters the provided properties against a supplied set of valid configuration
+   * keys specific to a Kafka client type (e.g., {@code ProducerConfig.configNames()},
+   * {@code ConsumerConfig.configNames()}, or {@code AdminClientConfig.configNames()}).
+   * </p>
+   *
+   * <p>
+   * In addition to the client-specific configuration keys, this method always retains common
+   * SASL-related properties defined in {@code KAFKA_SASL_CONFIGS}. If the extracted configuration
+   * specifies a Kafka security protocol that implies SSL (e.g., {@code SSL} or {@code SASL_SSL}),
+   * it also validates that all required SSL configurations are present. These required keys are
+   * defined in {@code KAFKA_SSL_MANDATORY_CONFIGS}. If any mandatory SSL property is missing or
+   * an invalid security protocol is specified, a {@link VeniceException} is thrown.
+   * </p>
+   *
+   * <p>
+   * This utility is intended for safely extracting Kafka configuration subsets suitable for
+   * initializing Kafka {@code Producer}, {@code Consumer}, or {@code AdminClient} instances.
+   * </p>
+   *
+   * @param extractedProperties The source {@link VeniceProperties} containing client configuration.
+   * @param validKafkaClientSpecificConfigKeys The set of config keys valid for the specific Kafka client type.
+   * @return A {@link Properties} object containing only valid and required Kafka client configurations.
+   * @throws VeniceException if required SSL configs are missing or an invalid protocol is specified.
+   */
+  public static Properties getValidKafkaClientProperties(
+      VeniceProperties extractedProperties,
+      Set<String> validKafkaClientSpecificConfigKeys) {
+    Properties validProperties = new Properties();
+    extractedProperties.getAsMap().forEach((configKey, configVal) -> {
+      if (validKafkaClientSpecificConfigKeys.contains(configKey) || KAFKA_SASL_CONFIGS.contains(configKey)) {
+        validProperties.put(configKey, configVal);
+      }
+    });
+
+    validateAndCopyKafkaSSLConfig(extractedProperties, validProperties);
+    return validProperties;
+  }
+
+  /**
    * This function will extract SSL related config if Kafka SSL is enabled.
    *
    * @param veniceProperties
    * @param properties
    * @return whether Kafka SSL is enabled or not0
    */
-  public static boolean validateAndCopyKafkaSSLConfig(VeniceProperties veniceProperties, Properties properties) {
+  private static boolean validateAndCopyKafkaSSLConfig(VeniceProperties veniceProperties, Properties properties) {
     if (!veniceProperties.containsKey(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG)) {
       // No security protocol specified
       return false;
@@ -64,18 +109,28 @@ public class ApacheKafkaUtils {
   /**
    * Mandatory Kafka SSL configs when SSL is enabled.
    */
-  private static final List<String> KAFKA_SSL_MANDATORY_CONFIGS = Arrays.asList(
-      CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
-      SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,
-      SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG,
-      SslConfigs.SSL_KEYSTORE_TYPE_CONFIG,
-      SslConfigs.SSL_KEY_PASSWORD_CONFIG,
-      SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG,
-      SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG,
-      SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG,
-      SslConfigs.SSL_KEYMANAGER_ALGORITHM_CONFIG,
-      SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG,
-      SslConfigs.SSL_SECURE_RANDOM_IMPLEMENTATION_CONFIG);
+  private static final Set<String> KAFKA_SSL_MANDATORY_CONFIGS = new HashSet<>(
+      Arrays.asList(
+          CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
+          SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,
+          SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG,
+          SslConfigs.SSL_KEYSTORE_TYPE_CONFIG,
+          SslConfigs.SSL_KEY_PASSWORD_CONFIG,
+          SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG,
+          SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG,
+          SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG,
+          SslConfigs.SSL_KEYMANAGER_ALGORITHM_CONFIG,
+          SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG,
+          SslConfigs.SSL_SECURE_RANDOM_IMPLEMENTATION_CONFIG));
+
+  private static final Set<String> KAFKA_SASL_CONFIGS = new HashSet<>(
+      Arrays.asList(
+          SaslConfigs.SASL_JAAS_CONFIG,
+          SaslConfigs.SASL_MECHANISM,
+          SaslConfigs.SASL_KERBEROS_SERVICE_NAME,
+          SaslConfigs.SASL_CLIENT_CALLBACK_HANDLER_CLASS,
+          SaslConfigs.SASL_LOGIN_CALLBACK_HANDLER_CLASS,
+          SaslConfigs.SASL_LOGIN_CLASS));
 
   public static boolean isKafkaSSLProtocol(PubSubSecurityProtocol kafkaProtocol) {
     return kafkaProtocol == PubSubSecurityProtocol.SSL || kafkaProtocol == PubSubSecurityProtocol.SASL_SSL;

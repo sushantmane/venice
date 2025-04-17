@@ -3,11 +3,14 @@ package com.linkedin.venice.pubsub.adapter.kafka.consumer;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
 import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.generateClientId;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX;
 
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -38,7 +41,6 @@ public class ApacheKafkaConsumerConfig {
   public static final int DEFAULT_RECEIVE_BUFFER_SIZE = 1024 * 1024;
 
   private final Properties consumerProperties;
-  private final boolean isSslEnabled;
   private final int consumerPollRetryTimes;
   private final int consumerPollRetryBackoffMs;
   private final int topicQueryRetryTimes;
@@ -47,14 +49,13 @@ public class ApacheKafkaConsumerConfig {
   private final boolean shouldCheckTopicExistenceBeforeConsuming;
 
   ApacheKafkaConsumerConfig(VeniceProperties veniceProperties, String consumerName) {
+    VeniceProperties strippedProperties = veniceProperties
+        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)));
     this.consumerProperties =
-        getValidConsumerProperties(veniceProperties.clipAndFilterNamespace(KAFKA_CONFIG_PREFIX).toProperties());
+        ApacheKafkaUtils.getValidKafkaClientProperties(strippedProperties, ConsumerConfig.configNames());
     consumerProperties.put(
         ConsumerConfig.CLIENT_ID_CONFIG,
         generateClientId(consumerName, consumerProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG)));
-
-    // Setup ssl config if needed.
-    isSslEnabled = ApacheKafkaUtils.validateAndCopyKafkaSSLConfig(veniceProperties, this.consumerProperties);
 
     if (!consumerProperties.containsKey(ConsumerConfig.RECEIVE_BUFFER_CONFIG)) {
       consumerProperties.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_SIZE);
@@ -108,16 +109,12 @@ public class ApacheKafkaConsumerConfig {
   @Override
   public String toString() {
     return "ApacheKafkaConsumerConfig{brokerAddress=" + consumerProperties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG)
-        + ", isSslEnabled=" + isSslEnabled + ", consumerPollRetryTimes=" + consumerPollRetryTimes
-        + ", consumerPollRetryBackoffMs=" + consumerPollRetryBackoffMs + "}";
+        + ", consumerPollRetryTimes=" + consumerPollRetryTimes + ", consumerPollRetryBackoffMs="
+        + consumerPollRetryBackoffMs + "}";
   }
 
   Properties getConsumerProperties() {
     return consumerProperties;
-  }
-
-  boolean isSslEnabled() {
-    return isSslEnabled;
   }
 
   int getConsumerPollRetryTimes() {
@@ -142,15 +139,5 @@ public class ApacheKafkaConsumerConfig {
 
   boolean shouldCheckTopicExistenceBeforeConsuming() {
     return shouldCheckTopicExistenceBeforeConsuming;
-  }
-
-  public static Properties getValidConsumerProperties(Properties extractedProperties) {
-    Properties validProperties = new Properties();
-    extractedProperties.forEach((configKey, configVal) -> {
-      if (ConsumerConfig.configNames().contains(configKey)) {
-        validProperties.put(configKey, configVal);
-      }
-    });
-    return validProperties;
   }
 }

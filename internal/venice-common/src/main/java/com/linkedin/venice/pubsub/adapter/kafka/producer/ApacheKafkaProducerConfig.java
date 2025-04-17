@@ -70,24 +70,16 @@ public class ApacheKafkaProducerConfig {
     this.pubSubMessageSerializer = context.getPubSubMessageSerializer();
     String brokerAddress =
         brokerAddressToOverride != null ? brokerAddressToOverride : getPubsubBrokerAddress(allVeniceProperties);
-    this.producerProperties = getValidProducerProperties(
-        allVeniceProperties
-            .clipAndFilterNamespace(
-                new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)))
-            .toProperties());
+    VeniceProperties strippedProperties = allVeniceProperties
+        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)));
+    this.producerProperties =
+        ApacheKafkaUtils.getValidKafkaClientProperties(strippedProperties, ProducerConfig.configNames());
     this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     validateAndUpdateProperties(this.producerProperties, strictConfigs);
     producerProperties.put(ProducerConfig.CLIENT_ID_CONFIG, generateClientId(producerName, brokerAddress));
 
     if (allVeniceProperties.getBoolean(PUBSUB_PRODUCER_USE_HIGH_THROUGHPUT_DEFAULTS, false)) {
       addHighThroughputDefaults();
-    }
-
-    // Setup ssl config if needed.
-    if (ApacheKafkaUtils.validateAndCopyKafkaSSLConfig(allVeniceProperties, this.producerProperties)) {
-      LOGGER.info("Will initialize an SSL Kafka producer");
-    } else {
-      LOGGER.info("Will initialize a non-SSL Kafka producer");
     }
 
     if (context.isProducerCompressionEnabled()) {
@@ -205,16 +197,6 @@ public class ApacheKafkaProducerConfig {
               + "requiredConfigKey: '" + requiredConfigKey + "', requiredConfigValue: '" + requiredConfigValue
               + "', actualConfigValue: '" + actualConfigValue + "'.");
     }
-  }
-
-  public static Properties getValidProducerProperties(Properties extractedProperties) {
-    Properties validProperties = new Properties();
-    extractedProperties.forEach((configKey, configVal) -> {
-      if (ProducerConfig.configNames().contains(configKey)) {
-        validProperties.put(configKey, configVal);
-      }
-    });
-    return validProperties;
   }
 
   public static void copyKafkaSASLProperties(

@@ -14,6 +14,7 @@ import static org.testng.Assert.expectThrows;
 
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.PubSubConstants;
+import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
@@ -124,8 +125,7 @@ public class ApacheKafkaProducerConfigTest {
     testCopy(
         stripPrefix,
         config,
-        (input, output) -> ApacheKafkaProducerConfig
-            .copyKafkaSASLProperties(new VeniceProperties(input), output, stripPrefix));
+        (input, output) -> ApacheKafkaProducerConfig.copyKafkaSASLProperties(input, output, stripPrefix));
 
     testCopy(
         stripPrefix,
@@ -207,7 +207,8 @@ public class ApacheKafkaProducerConfigTest {
     allProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     allProps.put("bogus.kafka.config", "bogusValue");
 
-    Properties validProps = ApacheKafkaProducerConfig.getValidProducerProperties(allProps);
+    Properties validProps =
+        ApacheKafkaUtils.getValidKafkaClientProperties(new VeniceProperties(allProps), ProducerConfig.configNames());
     assertEquals(validProps.size(), 2);
     assertEquals(validProps.get(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG), "localhost:9092");
     assertEquals(validProps.get(ProducerConfig.MAX_BLOCK_MS_CONFIG), "1000");
