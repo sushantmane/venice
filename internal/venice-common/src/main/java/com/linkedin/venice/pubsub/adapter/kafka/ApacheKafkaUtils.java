@@ -1,5 +1,9 @@
 package com.linkedin.venice.pubsub.adapter.kafka;
 
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_SECURITY_PROTOCOL;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX;
+
 import com.linkedin.venice.exceptions.VeniceException;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeader;
 import com.linkedin.venice.pubsub.api.PubSubMessageHeaders;
@@ -57,23 +61,33 @@ public class ApacheKafkaUtils {
    * initializing Kafka {@code Producer}, {@code Consumer}, or {@code AdminClient} instances.
    * </p>
    *
-   * @param extractedProperties The source {@link VeniceProperties} containing client configuration.
+   * @param veniceProperties The source {@link VeniceProperties} containing client configuration.
    * @param validKafkaClientSpecificConfigKeys The set of config keys valid for the specific Kafka client type.
    * @return A {@link Properties} object containing only valid and required Kafka client configurations.
    * @throws VeniceException if required SSL configs are missing or an invalid protocol is specified.
    */
   public static Properties getValidKafkaClientProperties(
-      VeniceProperties extractedProperties,
+      VeniceProperties veniceProperties,
       Set<String> validKafkaClientSpecificConfigKeys) {
-    Properties validProperties = new Properties();
-    extractedProperties.getAsMap().forEach((configKey, configVal) -> {
+    Properties extractedValidProperties = new Properties();
+
+    // Step 1: Extract properties with the specified prefixes
+    Properties strippedProperties = veniceProperties
+        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)))
+        .toProperties();
+
+    // Step 2: Filter properties based on valid Kafka client config keys
+    strippedProperties.forEach((configKey, configVal) -> {
       if (validKafkaClientSpecificConfigKeys.contains(configKey) || KAFKA_SASL_CONFIGS.contains(configKey)) {
-        validProperties.put(configKey, configVal);
+        extractedValidProperties.put(configKey, configVal);
       }
     });
 
-    validateAndCopyKafkaSSLConfig(extractedProperties, validProperties);
-    return validProperties;
+    // Step 3: Copy SSL related properties. These properties are mandatory if SSL is enabled. But they
+    // usually not have prefixes.
+    validateAndCopyKafkaSSLConfig(veniceProperties, extractedValidProperties);
+
+    return extractedValidProperties;
   }
 
   /**
@@ -84,11 +98,13 @@ public class ApacheKafkaUtils {
    * @return whether Kafka SSL is enabled or not0
    */
   private static boolean validateAndCopyKafkaSSLConfig(VeniceProperties veniceProperties, Properties properties) {
-    if (!veniceProperties.containsKey(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG)) {
+    if (!veniceProperties.containsKey(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG)
+        && !veniceProperties.containsKey(KAFKA_SECURITY_PROTOCOL)) {
       // No security protocol specified
       return false;
     }
-    String kafkaProtocol = veniceProperties.getString(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
+    String kafkaProtocol = veniceProperties
+        .getStringWithAlternative(KAFKA_SECURITY_PROTOCOL, CommonClientConfigs.SECURITY_PROTOCOL_CONFIG);
     if (!isKafkaProtocolValid(kafkaProtocol)) {
       throw new VeniceException("Invalid Kafka protocol specified: " + kafkaProtocol);
     }
@@ -98,7 +114,9 @@ public class ApacheKafkaUtils {
     }
     // Since SSL is enabled, the following configs are mandatory
     KAFKA_SSL_MANDATORY_CONFIGS.forEach(config -> {
-      if (!veniceProperties.containsKey(config)) {
+      String configWithPrefix = KAFKA_CONFIG_PREFIX + config;
+      String value = veniceProperties.getStringWithAlternative(configWithPrefix, config, null);
+      if (value == null) {
         throw new VeniceException(config + " is required when Kafka SSL is enabled");
       }
       properties.setProperty(config, veniceProperties.getString(config));
@@ -109,7 +127,7 @@ public class ApacheKafkaUtils {
   /**
    * Mandatory Kafka SSL configs when SSL is enabled.
    */
-  private static final Set<String> KAFKA_SSL_MANDATORY_CONFIGS = new HashSet<>(
+  public static final Set<String> KAFKA_SSL_MANDATORY_CONFIGS = new HashSet<>(
       Arrays.asList(
           CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
           SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,

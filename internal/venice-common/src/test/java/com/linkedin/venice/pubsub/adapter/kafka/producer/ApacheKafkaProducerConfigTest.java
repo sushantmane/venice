@@ -1,5 +1,6 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
+import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.KAFKA_SSL_MANDATORY_CONFIGS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA_LEGACY;
@@ -115,22 +116,20 @@ public class ApacheKafkaProducerConfigTest {
     return new Object[][] { { true }, { false } };
   }
 
-  @Test(dataProvider = "stripPrefix")
-  public void testCopySaslConfiguration(boolean stripPrefix) {
+  @Test
+  public void testCopySaslConfiguration() {
     Properties config = new Properties();
     config.put("kafka.sasl.jaas.config", SASL_JAAS_CONFIG);
     config.put("kafka.sasl.mechanism", SASL_MECHANISM);
-    config.put("kafka.security.protocol", "SASL_SSL");
-
-    testCopy(
-        stripPrefix,
-        config,
-        (input, output) -> ApacheKafkaProducerConfig.copyKafkaSASLProperties(input, output, stripPrefix));
-
-    testCopy(
-        stripPrefix,
-        config,
-        (input, output) -> ApacheKafkaProducerConfig.copyKafkaSASLProperties(input, output, stripPrefix));
+    KAFKA_SSL_MANDATORY_CONFIGS.forEach(configName -> config.put(configName, configName + "DefaultValue"));
+    config.put("security.protocol", "SASL_SSL");
+    VeniceProperties veniceProperties = new VeniceProperties(config);
+    Properties filteredConfig =
+        ApacheKafkaUtils.getValidKafkaClientProperties(veniceProperties, ProducerConfig.configNames());
+    // assertEquals(filteredConfig.size(), 3, "Got: " + filteredConfig);
+    assertEquals(filteredConfig.get("sasl.jaas.config"), SASL_JAAS_CONFIG);
+    assertEquals(filteredConfig.get("sasl.mechanism"), SASL_MECHANISM);
+    assertEquals(filteredConfig.get("security.protocol"), "SASL_SSL");
   }
 
   private static void testCopy(boolean stripPrefix, Properties input, BiConsumer<Properties, Properties> copy) {
