@@ -67,8 +67,8 @@ public class ApacheKafkaUtils {
    * @throws VeniceException if required SSL configs are missing or an invalid protocol is specified.
    */
   public static Properties getValidKafkaClientProperties(
-      VeniceProperties veniceProperties,
-      Set<String> validKafkaClientSpecificConfigKeys) {
+      final VeniceProperties veniceProperties,
+      final Set<String> validKafkaClientSpecificConfigKeys) {
     Properties extractedValidProperties = new Properties();
 
     // Step 1: Extract properties with the specified prefixes
@@ -119,7 +119,7 @@ public class ApacheKafkaUtils {
       if (value == null) {
         throw new VeniceException(config + " is required when Kafka SSL is enabled");
       }
-      properties.setProperty(config, veniceProperties.getString(config));
+      properties.setProperty(config, value);
     });
     return true;
   }

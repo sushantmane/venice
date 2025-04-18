@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
 import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.KAFKA_SSL_MANDATORY_CONFIGS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
+import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_TO_KAFKA_LEGACY;
 import static org.mockito.Mockito.mock;
@@ -184,10 +185,10 @@ public class ApacheKafkaProducerConfigTest {
   @Test
   public void testGetValidProducerProperties() {
     Properties allProps = new Properties();
-    allProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, "1000");
-    allProps.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, "2000");
+    allProps.put(KAFKA_CONFIG_PREFIX + ProducerConfig.MAX_BLOCK_MS_CONFIG, "1000");
+    allProps.put(KAFKA_CONFIG_PREFIX + ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, "2000");
     // this is common config; there are no admin specific configs
-    allProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    allProps.put(KAFKA_CONFIG_PREFIX + AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     allProps.put("bogus.kafka.config", "bogusValue");
 
     Properties validProps =
