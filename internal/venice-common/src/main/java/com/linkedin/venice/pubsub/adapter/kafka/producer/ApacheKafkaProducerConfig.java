@@ -9,8 +9,6 @@ import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubMessageSerializer;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Properties;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -73,11 +71,8 @@ public class ApacheKafkaProducerConfig {
     this.pubSubMessageSerializer = context.getPubSubMessageSerializer();
     String brokerAddress =
         brokerAddressToOverride != null ? brokerAddressToOverride : getPubsubBrokerAddress(allVeniceProperties);
-
-    VeniceProperties strippedProperties = allVeniceProperties
-        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)));
     this.producerProperties =
-        ApacheKafkaUtils.getValidKafkaClientProperties(strippedProperties, ProducerConfig.configNames());
+        ApacheKafkaUtils.getValidKafkaClientProperties(allVeniceProperties, ProducerConfig.configNames());
 
     this.producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerAddress);
     validateAndUpdateProperties(this.producerProperties, strictConfigs);

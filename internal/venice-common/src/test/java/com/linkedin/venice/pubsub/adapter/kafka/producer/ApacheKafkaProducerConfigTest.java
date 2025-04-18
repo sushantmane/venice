@@ -19,7 +19,6 @@ import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubProducerAdapterContext;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
-import java.util.function.BiConsumer;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -121,29 +120,14 @@ public class ApacheKafkaProducerConfigTest {
     Properties config = new Properties();
     config.put("kafka.sasl.jaas.config", SASL_JAAS_CONFIG);
     config.put("kafka.sasl.mechanism", SASL_MECHANISM);
+    config.put("kafka.security.protocol", "SASL_SSL");
     KAFKA_SSL_MANDATORY_CONFIGS.forEach(configName -> config.put(configName, configName + "DefaultValue"));
-    config.put("security.protocol", "SASL_SSL");
     VeniceProperties veniceProperties = new VeniceProperties(config);
     Properties filteredConfig =
         ApacheKafkaUtils.getValidKafkaClientProperties(veniceProperties, ProducerConfig.configNames());
-    // assertEquals(filteredConfig.size(), 3, "Got: " + filteredConfig);
     assertEquals(filteredConfig.get("sasl.jaas.config"), SASL_JAAS_CONFIG);
     assertEquals(filteredConfig.get("sasl.mechanism"), SASL_MECHANISM);
     assertEquals(filteredConfig.get("security.protocol"), "SASL_SSL");
-  }
-
-  private static void testCopy(boolean stripPrefix, Properties input, BiConsumer<Properties, Properties> copy) {
-    Properties output = new Properties();
-    copy.accept(input, output);
-    if (stripPrefix) {
-      assertEquals(SASL_JAAS_CONFIG, output.get("sasl.jaas.config"));
-      assertEquals(SASL_MECHANISM, output.get("sasl.mechanism"));
-      assertEquals("SASL_SSL", output.get("security.protocol"));
-    } else {
-      assertEquals(SASL_JAAS_CONFIG, output.get("kafka.sasl.jaas.config"));
-      assertEquals(SASL_MECHANISM, output.get("kafka.sasl.mechanism"));
-      assertEquals("SASL_SSL", output.get("kafka.security.protocol"));
-    }
   }
 
   @Test

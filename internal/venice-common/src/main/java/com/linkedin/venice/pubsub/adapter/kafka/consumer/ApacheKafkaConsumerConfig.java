@@ -3,14 +3,11 @@ package com.linkedin.venice.pubsub.adapter.kafka.consumer;
 import static com.linkedin.venice.pubsub.PubSubConstants.PUBSUB_CONSUMER_POSITION_RESET_STRATEGY;
 import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.generateClientId;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
-import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX;
 
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -49,10 +46,8 @@ public class ApacheKafkaConsumerConfig {
   private final boolean shouldCheckTopicExistenceBeforeConsuming;
 
   ApacheKafkaConsumerConfig(VeniceProperties veniceProperties, String consumerName) {
-    VeniceProperties strippedProperties = veniceProperties
-        .clipAndFilterNamespace(new HashSet<>(Arrays.asList(KAFKA_CONFIG_PREFIX, PUBSUB_KAFKA_CLIENT_CONFIG_PREFIX)));
     this.consumerProperties =
-        ApacheKafkaUtils.getValidKafkaClientProperties(strippedProperties, ConsumerConfig.configNames());
+        ApacheKafkaUtils.getValidKafkaClientProperties(veniceProperties, ConsumerConfig.configNames());
     consumerProperties.put(
         ConsumerConfig.CLIENT_ID_CONFIG,
         generateClientId(consumerName, consumerProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG)));
