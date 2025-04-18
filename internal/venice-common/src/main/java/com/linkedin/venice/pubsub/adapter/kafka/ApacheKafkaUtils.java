@@ -141,7 +141,7 @@ public class ApacheKafkaUtils {
           SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG,
           SslConfigs.SSL_SECURE_RANDOM_IMPLEMENTATION_CONFIG));
 
-  private static final Set<String> KAFKA_SASL_CONFIGS = new HashSet<>(
+  public static final Set<String> KAFKA_SASL_CONFIGS = new HashSet<>(
       Arrays.asList(
           SaslConfigs.SASL_JAAS_CONFIG,
           SaslConfigs.SASL_MECHANISM,
