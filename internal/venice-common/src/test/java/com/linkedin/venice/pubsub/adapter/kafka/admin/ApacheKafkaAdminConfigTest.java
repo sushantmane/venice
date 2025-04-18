@@ -2,6 +2,7 @@ package com.linkedin.venice.pubsub.adapter.kafka.admin;
 
 import static org.testng.Assert.assertEquals;
 
+import com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils;
 import com.linkedin.venice.pubsub.api.PubSubSecurityProtocol;
 import com.linkedin.venice.utils.VeniceProperties;
 import java.util.Properties;
@@ -60,7 +61,8 @@ public class ApacheKafkaAdminConfigTest {
     allProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
     allProps.put("bogus.kafka.config", "bogusValue");
 
-    Properties validProps = ApacheKafkaAdminConfig.getValidAdminProperties(allProps);
+    Properties validProps =
+        ApacheKafkaUtils.getValidKafkaClientProperties(new VeniceProperties(allProps), AdminClientConfig.configNames());
     assertEquals(validProps.size(), 1);
     assertEquals(validProps.get(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG), "localhost:9092");
   }
