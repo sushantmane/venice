@@ -127,7 +127,7 @@ public class ApacheKafkaUtils {
   /**
    * Mandatory Kafka SSL configs when SSL is enabled.
    */
-  public static final Set<String> KAFKA_SSL_MANDATORY_CONFIGS = new HashSet<>(
+  protected static final Set<String> KAFKA_SSL_MANDATORY_CONFIGS = new HashSet<>(
       Arrays.asList(
           CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
           SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,

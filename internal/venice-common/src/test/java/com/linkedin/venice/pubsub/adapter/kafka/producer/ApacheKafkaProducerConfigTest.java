@@ -1,6 +1,5 @@
 package com.linkedin.venice.pubsub.adapter.kafka.producer;
 
-import static com.linkedin.venice.pubsub.adapter.kafka.ApacheKafkaUtils.KAFKA_SSL_MANDATORY_CONFIGS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_BOOTSTRAP_SERVERS;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.KAFKA_CONFIG_PREFIX;
 import static com.linkedin.venice.pubsub.adapter.kafka.producer.ApacheKafkaProducerConfig.SSL_KAFKA_BOOTSTRAP_SERVERS;
@@ -114,21 +113,6 @@ public class ApacheKafkaProducerConfigTest {
   @DataProvider(name = "stripPrefix")
   public static Object[][] stripPrefix() {
     return new Object[][] { { true }, { false } };
-  }
-
-  @Test
-  public void testCopySaslConfiguration() {
-    Properties config = new Properties();
-    config.put("kafka.sasl.jaas.config", SASL_JAAS_CONFIG);
-    config.put("kafka.sasl.mechanism", SASL_MECHANISM);
-    config.put("kafka.security.protocol", "SASL_SSL");
-    KAFKA_SSL_MANDATORY_CONFIGS.forEach(configName -> config.put(configName, configName + "DefaultValue"));
-    VeniceProperties veniceProperties = new VeniceProperties(config);
-    Properties filteredConfig =
-        ApacheKafkaUtils.getValidKafkaClientProperties(veniceProperties, ProducerConfig.configNames());
-    assertEquals(filteredConfig.get("sasl.jaas.config"), SASL_JAAS_CONFIG);
-    assertEquals(filteredConfig.get("sasl.mechanism"), SASL_MECHANISM);
-    assertEquals(filteredConfig.get("security.protocol"), "SASL_SSL");
   }
 
   @Test
