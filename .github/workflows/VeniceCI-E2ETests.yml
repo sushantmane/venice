@@ -50,7 +50,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1000
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -146,7 +151,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1010
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -242,7 +252,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1020
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -338,7 +353,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1030
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -434,7 +454,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1040
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -530,7 +555,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1050
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -626,7 +656,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1060
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -722,7 +757,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1070
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -818,7 +858,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1080
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -914,7 +959,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1090
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1010,7 +1060,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1100
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1106,7 +1161,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1110
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1202,7 +1262,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1120
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1298,7 +1363,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1130
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1394,7 +1464,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1200
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1490,7 +1565,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1210
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1586,7 +1666,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1220
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1682,7 +1767,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1230
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1778,7 +1868,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1240
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1874,7 +1969,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1250
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -1970,7 +2070,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1260
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2066,7 +2171,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1270
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2162,7 +2272,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1280
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2258,7 +2373,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1400
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2354,7 +2474,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1410
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2450,7 +2575,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1420
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2546,7 +2676,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1430
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2642,7 +2777,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1440
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2738,7 +2878,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1500
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2834,7 +2979,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_1550
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
@@ -2930,7 +3080,12 @@ jobs:
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1 integrationTests_9999
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash

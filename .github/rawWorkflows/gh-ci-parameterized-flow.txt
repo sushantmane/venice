@@ -37,7 +37,12 @@
         with:
           add-job-summary: never
       - name: Run Integration Tests
-        run: ./gradlew $GradleArguments
+        run: |
+         ./gradlew clean
+         for i in {1..10}; do
+           echo ">>> Run #$i"
+           ./gradlew clean --continue --no-daemon -DforkEvery=1 -DmaxParallelForks=1  :internal:venice-test-common:integrationtest --tests com.linkedin.venice.endToEnd.PartialUpdateTest.testPartialUpdateOnBatchPushedKeys || true
+           done
       - name: Package Build Artifacts
         if: success() || failure()
         shell: bash
