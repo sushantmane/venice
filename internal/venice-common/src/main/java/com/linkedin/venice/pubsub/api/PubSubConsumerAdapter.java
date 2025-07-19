@@ -1,5 +1,6 @@
 package com.linkedin.venice.pubsub.api;
 
+import com.linkedin.venice.annotation.Threadsafe;
 import com.linkedin.venice.pubsub.PubSubConstants;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.api.exceptions.PubSubClientException;
@@ -24,6 +25,7 @@ import javax.annotation.Nonnull;
  * 2) Non-blocking behavior for methods that do not have an explicit timeout parameter. In other words, they should
  *  timeout after the default timeout period: {@link PubSubConstants#PUBSUB_CONSUMER_API_DEFAULT_TIMEOUT_MS}.
  */
+@Threadsafe
 public interface PubSubConsumerAdapter extends AutoCloseable, Closeable {
   /**
    * Subscribes to a topic-partition if it is not already subscribed. If the topic-partition is already subscribed,
