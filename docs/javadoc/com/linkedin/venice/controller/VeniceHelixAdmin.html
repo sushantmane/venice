@@ -148,10 +148,10 @@ implements <a href="Admin.html" title="interface in com.linkedin.venice.controll
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.linkedin.venice.controller.VeniceControllerMultiClusterConfig,io.tehuti.metrics.MetricsRepository,boolean,java.util.Map,java.util.Optional,java.util.Optional,java.util.Optional,com.linkedin.venice.pubsub.PubSubTopicRepository,com.linkedin.venice.pubsub.PubSubClientsFactory,com.linkedin.venice.pubsub.PubSubPositionTypeRegistry,java.util.List)" class="member-name-link">VeniceHelixAdmin</a><wbr>(<a href="VeniceControllerMultiClusterConfig.html" title="class in com.linkedin.venice.controller">VeniceControllerMultiClusterConfig</a>&nbsp;multiClusterConfigs,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.linkedin.venice.controller.VeniceControllerMultiClusterConfig,io.tehuti.metrics.MetricsRepository,boolean,com.linkedin.d2.balancer.D2Client,java.util.Optional,java.util.Optional,java.util.Optional,com.linkedin.venice.pubsub.PubSubTopicRepository,com.linkedin.venice.pubsub.PubSubClientsFactory,com.linkedin.venice.pubsub.PubSubPositionTypeRegistry,java.util.List)" class="member-name-link">VeniceHelixAdmin</a><wbr>(<a href="VeniceControllerMultiClusterConfig.html" title="class in com.linkedin.venice.controller">VeniceControllerMultiClusterConfig</a>&nbsp;multiClusterConfigs,
  io.tehuti.metrics.MetricsRepository&nbsp;metricsRepository,
  boolean&nbsp;sslEnabled,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr>com.linkedin.d2.balancer.D2Client&gt;&nbsp;d2Clients,
+ com.linkedin.d2.balancer.D2Client&nbsp;d2Client,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../SSLConfig.html" title="class in com.linkedin.venice">SSLConfig</a>&gt;&nbsp;sslConfig,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../acl/DynamicAccessController.html" title="interface in com.linkedin.venice.acl">DynamicAccessController</a>&gt;&nbsp;accessController,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../service/ICProvider.html" title="interface in com.linkedin.venice.service">ICProvider</a>&gt;&nbsp;icProvider,
@@ -1572,12 +1572,13 @@ implements <a href="Admin.html" title="interface in com.linkedin.venice.controll
 </section>
 </li>
 <li>
-<section class="detail" id="&lt;init&gt;(com.linkedin.venice.controller.VeniceControllerMultiClusterConfig,io.tehuti.metrics.MetricsRepository,boolean,java.util.Map,java.util.Optional,java.util.Optional,java.util.Optional,com.linkedin.venice.pubsub.PubSubTopicRepository,com.linkedin.venice.pubsub.PubSubClientsFactory,com.linkedin.venice.pubsub.PubSubPositionTypeRegistry,java.util.List)">
+<section class="detail" id="&lt;init&gt;(com.linkedin.venice.controller.VeniceControllerMultiClusterConfig,io.tehuti.metrics.MetricsRepository,boolean,com.linkedin.d2.balancer.D2Client,java.util.Optional,java.util.Optional,java.util.Optional,com.linkedin.venice.pubsub.PubSubTopicRepository,com.linkedin.venice.pubsub.PubSubClientsFactory,com.linkedin.venice.pubsub.PubSubPositionTypeRegistry,java.util.List)">
 <h3>VeniceHelixAdmin</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">VeniceHelixAdmin</span><wbr><span class="parameters">(<a href="VeniceControllerMultiClusterConfig.html" title="class in com.linkedin.venice.controller">VeniceControllerMultiClusterConfig</a>&nbsp;multiClusterConfigs,
  io.tehuti.metrics.MetricsRepository&nbsp;metricsRepository,
  boolean&nbsp;sslEnabled,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr>com.linkedin.d2.balancer.D2Client&gt;&nbsp;d2Clients,
+ @Nonnull
+ com.linkedin.d2.balancer.D2Client&nbsp;d2Client,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../SSLConfig.html" title="class in com.linkedin.venice">SSLConfig</a>&gt;&nbsp;sslConfig,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../acl/DynamicAccessController.html" title="interface in com.linkedin.venice.acl">DynamicAccessController</a>&gt;&nbsp;accessController,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="../service/ICProvider.html" title="interface in com.linkedin.venice.service">ICProvider</a>&gt;&nbsp;icProvider,
@@ -4017,10 +4018,6 @@ implements <a href="Admin.html" title="interface in com.linkedin.venice.controll
 <section class="detail" id="getAdminConsumerService(java.lang.String)">
 <h3>getAdminConsumerService</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="kafka/consumer/AdminConsumerService.html" title="class in com.linkedin.venice.controller.kafka.consumer">AdminConsumerService</a></span>&nbsp;<span class="element-name">getAdminConsumerService</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;clusterName)</span></div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code><a href="Admin.html#getAdminConsumerService(java.lang.String)">getAdminConsumerService</a></code>&nbsp;in interface&nbsp;<code><a href="Admin.html" title="interface in com.linkedin.venice.controller">Admin</a></code></dd>
-</dl>
 </section>
 </li>
 <li>
