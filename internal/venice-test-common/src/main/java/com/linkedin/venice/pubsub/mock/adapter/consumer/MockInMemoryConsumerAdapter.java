@@ -251,6 +251,17 @@ public class MockInMemoryConsumerAdapter implements PubSubConsumerAdapter {
   }
 
   @Override
+  public Map<PubSubTopicPartition, PubSubPosition> beginningPositions(
+      Collection<PubSubTopicPartition> partitions,
+      Duration timeout) {
+    Map<PubSubTopicPartition, PubSubPosition> retPositions = new HashMap<>(partitions.size());
+    for (PubSubTopicPartition pubSubTopicPartition: partitions) {
+      retPositions.put(pubSubTopicPartition, beginningPosition(pubSubTopicPartition, timeout));
+    }
+    return retPositions;
+  }
+
+  @Override
   public synchronized Map<PubSubTopicPartition, Long> endOffsets(
       Collection<PubSubTopicPartition> partitions,
       Duration timeout) {

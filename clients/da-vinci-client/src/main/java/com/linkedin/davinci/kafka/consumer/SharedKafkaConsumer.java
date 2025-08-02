@@ -396,6 +396,13 @@ class SharedKafkaConsumer implements PubSubConsumerAdapter {
   }
 
   @Override
+  public Map<PubSubTopicPartition, PubSubPosition> beginningPositions(
+      Collection<PubSubTopicPartition> partitions,
+      Duration timeout) {
+    throw new UnsupportedOperationException("beginningPositions is not supported in SharedKafkaConsumer");
+  }
+
+  @Override
   public Map<PubSubTopicPartition, Long> endOffsets(Collection<PubSubTopicPartition> partitions, Duration timeout) {
     throw new UnsupportedOperationException("endOffsets is not supported in SharedKafkaConsumer");
   }
