@@ -1,0 +1,177 @@
+name: PR title and description lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title and description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Globals: core, github, context
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            const title = pr.title || '';
+            const bodyRaw = pr.body || '';
+
+            const MAX_LINE = 90;
+            const errors = [];
+
+            // Allowed tags and aliases
+            const allowed = new Set([
+              'da-vinci','dvc',
+              'server','controller','router','samza','vpj',
+              'fast-client','fc','thin-client','tc',
+              'changelog','cc',
+              'pulsar-sink','producer','admin-tool',
+              'test','build','doc','script','compat','protocol'
+            ]);
+
+            // 1) Title must be: [tag][tag] Message
+            const titleMatch = title.match(/^(($begin:math:display$[^$end:math:display$]+\])+)\s+(.*)$/);
+            if (!titleMatch) {
+              errors.push(
+                "Title must start with one or more [tag] blocks, then a space, then a message. " +
+                "Example: [server][da-vinci] Use dedicated thread to persist data to storage engine"
+              );
+            } else {
+              const tagBlock = titleMatch[1];
+              const message = titleMatch[3].trim();
+              if (!message) {
+                errors.push("Title must include a concise message after the tags.");
+              }
+              const tagRegex = /$begin:math:display$([^$end:math:display$]+)\]/g;
+              let m;
+              const badTags = [];
+              while ((m = tagRegex.exec(tagBlock)) !== null) {
+                const tag = m[1].trim().toLowerCase();
+                if (!allowed.has(tag)) badTags.push(m[1]);
+              }
+              if (badTags.length > 0) {
+                errors.push(
+                  "Invalid tag(s) in title: " + badTags.map(t => `[${t}]`).join(' ') +
+                  ". Valid tags are: " +
+                  [
+                    "[da-vinci] or [dvc]",
+                    "[server]", "[controller]", "[router]", "[samza]", "[vpj]",
+                    "[fast-client] or [fc]", "[thin-client] or [tc]",
+                    "[changelog] or [cc]",
+                    "[pulsar-sink]", "[producer]", "[admin-tool]",
+                    "[test]", "[build]", "[doc]", "[script]", "[compat]", "[protocol]"
+                  ].join(", ")
+                );
+              }
+            }
+
+            // 2) PR description line-length check
+            const body = bodyRaw.replace(/\r\n/g, '\n');
+            const lines = body.split('\n');
+
+            // If a fenced block is explicitly marked as commit-message,
+            // we only lint that block. Otherwise, lint plain prose outside code blocks.
+            let inCode = false;
+            let lintOnlyCommitBlock = false;
+            let inCommitBlock = false;
+
+            // First pass: detect if a commit-message fence exists
+            for (const raw of lines) {
+              const t = raw.trim();
+              if (t.startsWith('```')) {
+                const lang = t.slice(3).trim().toLowerCase();
+                if (!inCode) {
+                  inCode = true;
+                  if (['commit-message', 'commit', 'message'].includes(lang)) {
+                    lintOnlyCommitBlock = true;
+                    break;
+                  }
+                } else {
+                  inCode = false;
+                }
+              }
+            }
+
+            // Helper to pretty print an overlong line with a caret marker
+            function formatOverflow(line) {
+              const head = line.slice(0, MAX_LINE);
+              const tail = line.slice(MAX_LINE);
+              const marker = ' '.repeat(2 + MAX_LINE) + '^ overflow here';
+              return `> ${head}${tail}\n${marker}`;
+            }
+
+            // Reset code state for the main pass
+            inCode = false;
+
+            lines.forEach((raw, idx) => {
+              const lineNum = idx + 1;
+              const trimmed = raw.trim();
+
+              // Fence handling
+              if (trimmed.startsWith('```')) {
+                const lang = trimmed.slice(3).trim().toLowerCase();
+                if (!inCode) {
+                  inCode = true;
+                  if (lintOnlyCommitBlock && ['commit-message','commit','message'].includes(lang)) {
+                    inCommitBlock = true;
+                  }
+                } else {
+                  // Closing fence
+                  if (lintOnlyCommitBlock && inCommitBlock) {
+                    inCommitBlock = false;
+                  }
+                  inCode = false;
+                }
+                return;
+              }
+
+              // Decide whether to lint this line
+              let shouldCheck = false;
+
+              if (lintOnlyCommitBlock) {
+                // Only check inside the explicit commit-message fence
+                shouldCheck = inCommitBlock;
+              } else {
+                // No explicit commit-message fence:
+                // check only plain prose outside code, skip headings, lists, checkboxes, quotes, HTML comments
+                if (!inCode) {
+                  if (
+                    trimmed.length > 0 &&
+                    !/^(#{1,6}\s)/.test(trimmed) &&      // headings
+                    !/^([-*]\s|\d+\.\s)/.test(trimmed) && // lists
+                    !/^-\s$begin:math:display$[ xX]$end:math:display$\s/.test(trimmed) &&   // checkboxes
+                    !/^>\s/.test(trimmed) &&              // blockquotes
+                    !/^<!--/.test(trimmed)                // HTML comments
+                  ) {
+                    shouldCheck = true;
+                  }
+                }
+              }
+
+              if (!shouldCheck) return;
+
+              if (raw.length > MAX_LINE) {
+                errors.push(
+                  `PR description line ${lineNum} exceeds ${MAX_LINE} chars (${raw.length}).\n` +
+                  formatOverflow(raw)
+                );
+              }
+            });
+
+            if (errors.length) {
+              core.summary
+                .addHeading('PR lint failed')
+                .addList(errors)
+                .addSeparator()
+                .addRaw('Title must follow: `[component1]...[componentN] Concise commit message`')
+                .write();
+              core.setFailed(errors.join('\n\n'));
+            } else {
+              core.summary.addHeading('PR lint passed').write();
+            }
