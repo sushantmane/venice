@@ -1,5 +1,7 @@
 package com.linkedin.venice.spark.input.pubsub.raw;
 
+import static com.linkedin.venice.vpj.VenicePushJobConstants.KAFKA_INPUT_BROKER_URL;
+
 import com.linkedin.venice.pubsub.PubSubClientsFactory;
 import com.linkedin.venice.pubsub.PubSubConsumerAdapterContext;
 import com.linkedin.venice.pubsub.PubSubPositionTypeRegistry;
@@ -35,8 +37,8 @@ public class VeniceRawPubsubInputPartitionReaderFactory implements PartitionRead
     final VeniceBasicPubsubInputPartition inputPartition = (VeniceBasicPubsubInputPartition) genericInputPartition;
     final String topicName = inputPartition.getTopicName();
     final int partitionNumber = inputPartition.getPartitionNumber();
-    final String consumerName =
-        String.format("raw_kif_%s_%s_%d", inputPartition.getRegion(), topicName, partitionNumber);
+    final String inputRegionBroker = jobConfig.getString(KAFKA_INPUT_BROKER_URL);
+    final String consumerName = String.format("raw_kif_%s_%s_%d", inputRegionBroker, topicName, partitionNumber);
 
     // Create a single topic repository instance to be used throughout
     final PubSubTopicRepository pubSubTopicRepository = new PubSubTopicRepository();

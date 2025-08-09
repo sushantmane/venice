@@ -14,6 +14,8 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -22,6 +24,8 @@ import org.apache.hadoop.io.WritableComparator;
  * and then compare the position part when keys are equal to maintain an offset-descending order for the same key.
  */
 public class KafkaInputKeyComparator implements RawComparator<BytesWritable>, Serializable {
+  private static final Logger LOGGER = LogManager.getLogger(KafkaInputKeyComparator.class);
+
   private static final long serialVersionUID = 1L;
 
   private static final OptimizedBinaryDecoderFactory OPTIMIZED_BINARY_DECODER_FACTORY =
@@ -86,6 +90,7 @@ public class KafkaInputKeyComparator implements RawComparator<BytesWritable>, Se
         deserializePubSubPosition(k1.positionWireBytes, k1.getPositionFactoryClass().toString());
     PubSubPosition k2Position =
         deserializePubSubPosition(k2.positionWireBytes, k2.getPositionFactoryClass().toString());
+    LOGGER.info("##### comparing k1Position: {}, k2Position: {}", k1Position, k2Position);
 
     // Original logic had reversed comparator semantics — it returned -1 for k1 > k2,
     // which is opposite of Java’s contract. Keeping the semantics of the original code hence k2position first

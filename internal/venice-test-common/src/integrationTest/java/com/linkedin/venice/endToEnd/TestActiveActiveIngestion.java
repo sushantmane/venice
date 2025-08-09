@@ -332,6 +332,10 @@ public class TestActiveActiveIngestion {
     // Add a marker record to make sure we have consumed to all the RT record.
     int putWithRmdKeyIndex = 1001;
 
+    int repeatedRecordIndex = 1000000;
+    int repeatedRecordFrequency = 100;
+    String lastExpectedValue = "stream_" + repeatedRecordIndex + "_" + (repeatedRecordFrequency - 1);
+
     // Enable concurrent producer
     try (VeniceSystemProducer veniceProducer = IntegrationTestPushUtils.getSamzaProducerForStream(
         multiRegionMultiClusterWrapper,
@@ -344,6 +348,16 @@ public class TestActiveActiveIngestion {
       produceRecordWithLogicalTimestamp(veniceProducer, storeName, deleteWithRmdKeyIndex, 1000, true);
       // Produce a PUT record with large timestamp
       produceRecordWithLogicalTimestamp(veniceProducer, storeName, putWithRmdKeyIndex, 1000, false);
+
+      // Write same record multiple times with increasing logical timestamp and value
+      for (int i = 0; i < repeatedRecordFrequency; i++) {
+        sendStreamingRecord(
+            veniceProducer,
+            storeName,
+            Integer.toString(repeatedRecordIndex),
+            "stream_" + repeatedRecordIndex + "_" + i,
+            1000L + i);
+      }
     }
 
     try (AvroGenericStoreClient<String, Utf8> client = ClientFactory.getAndStartGenericAvroClient(
@@ -352,6 +366,15 @@ public class TestActiveActiveIngestion {
             .setMetricsRepository(metricsRepository))) {
       TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
         Assert.assertNotNull(client.get(Integer.toString(putWithRmdKeyIndex)).get());
+      });
+      TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
+        // verify the value matches the last produced value
+        Utf8 value = client.get(Integer.toString(repeatedRecordIndex)).get();
+        Assert.assertNotNull(value, "Value for key: " + repeatedRecordIndex + " is null, but expected to be non-null");
+        Assert.assertEquals(
+            value.toString(),
+            lastExpectedValue,
+            "Value for key: " + repeatedRecordIndex + " does not match the expected value: " + lastExpectedValue);
       });
     }
 
@@ -397,6 +420,15 @@ public class TestActiveActiveIngestion {
           Assert.assertNotNull(value);
           Assert.assertEquals(value.toString(), "test_name_" + i);
         }
+      });
+      TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, true, () -> {
+        // verify the value matches the last produced value
+        Utf8 value = client.get(Integer.toString(repeatedRecordIndex)).get();
+        Assert.assertNotNull(value, "Value for key: " + repeatedRecordIndex + " is null, but expected to be non-null");
+        Assert.assertEquals(
+            value.toString(),
+            lastExpectedValue,
+            "Value for key: " + repeatedRecordIndex + " does not match the expected value: " + lastExpectedValue);
       });
     }
     try (VeniceSystemProducer veniceProducer =

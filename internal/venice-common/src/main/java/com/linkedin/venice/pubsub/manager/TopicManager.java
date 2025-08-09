@@ -26,6 +26,7 @@ import com.linkedin.venice.pubsub.PubSubTopicConfiguration;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionImpl;
 import com.linkedin.venice.pubsub.PubSubTopicPartitionInfo;
 import com.linkedin.venice.pubsub.PubSubTopicRepository;
+import com.linkedin.venice.pubsub.adapter.kafka.common.ApacheKafkaOffsetPosition;
 import com.linkedin.venice.pubsub.api.PubSubAdminAdapter;
 import com.linkedin.venice.pubsub.api.PubSubConsumerAdapter;
 import com.linkedin.venice.pubsub.api.PubSubPosition;
@@ -914,5 +915,39 @@ public class TopicManager implements Closeable {
   @Override
   public String toString() {
     return "TopicManager{pubSubClusterAddress=" + pubSubClusterAddress + "}";
+  }
+
+  /**
+   * Advances a position within a {@link PubSubTopicPartition} by a specified number of records.
+   *
+   * <p>Currently, this method always returns an {@link ApacheKafkaOffsetPosition} constructed
+   * by incrementing the numeric offset in {@code startInclusive} by {@code n}. In the future,
+   * this will be replaced with a call to the underlying {@code PubSubClient} so that each
+   * implementation can return its own {@link PubSubPosition} type.
+   *
+   * @param tp the topic partition in which the position is being advanced; must not be {@code null}
+   * @param startInclusive the starting position (inclusive) from which advancement begins; must not be {@code null}
+   * @param n the number of records to advance; must be non-negative
+   * @return a new {@link PubSubPosition} representing the position {@code n} records after {@code startInclusive}
+   * @throws IllegalArgumentException if {@code n} is negative
+   * @throws NullPointerException if {@code tp} or {@code startInclusive} is {@code null}
+   */
+  public PubSubPosition advancePosition(PubSubTopicPartition tp, PubSubPosition startInclusive, long n) {
+
+    Objects.requireNonNull(tp, "tp");
+    Objects.requireNonNull(startInclusive, "startInclusive");
+    if (n < 0) {
+      throw new IllegalArgumentException("n must be >= 0");
+    }
+
+    // Get the numeric offset from the start position.
+    // If your getter is named differently, swap it in here.
+    long startOffset = startInclusive.getNumericOffset();
+
+    // Exclusive end = start + n. Use addExact to catch overflow.
+    long targetOffset = Math.addExact(startOffset, n);
+
+    // Create the new position.
+    return ApacheKafkaOffsetPosition.of(targetOffset);
   }
 }
