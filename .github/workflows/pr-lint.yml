@@ -16,13 +16,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Globals available here: core, github, context
+            // Globals: core, github, context
             const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
             const prNumber = pr.number;
             const title = pr.title || '';
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
 
+            const MAX_LINE = 90;
             const errors = [];
 
             // Allowed tags and aliases
@@ -35,7 +35,7 @@ jobs:
               'test','build','doc','script','compat','protocol'
             ]);
 
-            // Title must be: [tag][tag] Message
+            // Verify title format: [tag][tag] Message
             const titleMatch = title.match(/^((\[[^\]]+\])+)\s+(.*)$/);
             if (!titleMatch) {
               errors.push(
@@ -71,27 +71,36 @@ jobs:
               }
             }
 
-            // Fetch commits on this PR
+            // Fetch commits for this PR
             const commits = await github.paginate(
               github.rest.pulls.listCommits,
               { owner, repo, pull_number: prNumber, per_page: 100 }
             );
 
-            const MAX_LINE = 90;
+            // Helper to pretty print an overlong line with a caret marker
+            function formatOverflow(line) {
+              const head = line.slice(0, MAX_LINE);
+              const tail = line.slice(MAX_LINE);
+              // Marker under the first overflow character, account for "> " prefix
+              const marker = ' '.repeat(2 + MAX_LINE) + '^ overflow here';
+              return `> ${head}${tail}\n${marker}`;
+            }
 
+            // Check commit messages
             for (const c of commits) {
               const sha = c.sha.substring(0, 12);
               const msg = c.commit?.message || '';
-              const titleLine = msg.split('\n')[0];
+              const subject = msg.split('\n')[0];
               // Skip merges
-              if (/^Merge\b/.test(titleLine)) continue;
+              if (/^Merge\b/.test(subject)) continue;
 
               const lines = msg.split('\n');
               lines.forEach((line, idx) => {
                 if (line.length === 0) return;
                 if (line.length > MAX_LINE) {
                   errors.push(
-                    `Commit ${sha} line ${idx + 1} exceeds ${MAX_LINE} chars (${line.length}).`
+                    `Commit ${sha} line ${idx + 1} exceeds ${MAX_LINE} chars (${line.length}).\n` +
+                    formatOverflow(line)
                   );
                 }
               });
@@ -104,13 +113,13 @@ jobs:
                 .addSeparator()
                 .addRaw('Title must follow: `[component1]...[componentN] Concise commit message`')
                 .write();
-              core.setFailed(errors.join('\n'));
+              core.setFailed(errors.join('\n\n'));
             } else {
               core.summary.addHeading('PR lint passed').write();
             }
 
-      # Optional step to preserve first commit message formatting in PR body
-      # (only when body is empty). Remove comment markers to enable.
+      # Optional: preserve first commit message formatting in the PR body if empty
+      # Uncomment to enable
       # - name: Preserve first commit message in PR body (optional)
       #   if: ${{ github.event.action == 'opened' || github.event.action == 'reopened' }}
       #   uses: actions/github-script@v7
