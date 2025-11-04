@@ -396,6 +396,13 @@ public class ConfigKeys {
    */
   public static final String CONTROLLER_GRPC_SERVER_THREAD_COUNT = "controller.grpc.server.thread.count";
 
+  /**
+   * Number of threads to use for the controller's general-purpose task executor.
+   * This executor is used for concurrent operations like store deletion, topic cleanup, etc.
+   */
+  public static final String CONTROLLER_CONCURRENT_TASK_EXECUTOR_THREAD_COUNT =
+      "controller.concurrent.task.executor.thread.count";
+
   /** List of forbidden admin paths */
   public static final String CONTROLLER_DISABLED_ROUTES = "controller.cluster.disabled.routes";
 

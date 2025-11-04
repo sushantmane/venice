@@ -397,6 +397,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
   private final long deprecatedJobTopicRetentionMs;
 
   private final long fatalDataValidationFailureRetentionMs;
+
+  /**
+   * General-purpose thread pool for concurrent controller operations.
+   * Used to parallelize independent tasks like store deletion, topic cleanup, system store operations, etc.
+   */
+  private final ExecutorService concurrentTaskExecutor;
   private final long deprecatedJobTopicMaxRetentionMs;
   private final HelixReadOnlyStoreConfigRepository storeConfigRepo;
   private final VeniceWriterFactory veniceWriterFactory;
@@ -629,6 +635,12 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
     isControllerClusterHAAS = commonConfig.isControllerClusterLeaderHAAS();
     coloLeaderClusterName = commonConfig.getClusterName();
     pushJobStatusStoreClusterName = commonConfig.getPushJobStatusStoreClusterName();
+
+    // Initialize general-purpose thread pool for concurrent controller operations
+    int concurrentTaskExecutorThreadCount = commonConfig.getConcurrentTaskExecutorThreadCount();
+    this.concurrentTaskExecutor = Executors.newFixedThreadPool(
+        concurrentTaskExecutorThreadCount,
+        new DaemonThreadFactory("VeniceControllerTaskExecutor", this.logContext));
 
     zkSharedSystemStoreRepository = new SharedHelixReadOnlyZKSharedSystemStoreRepository(
         zkClient,
@@ -1309,27 +1321,80 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
           // to truncate it. Because of this, `truncateKafkaTopic` may take long enough time to make `delete store`
           // operation time out. Therefore, we check for the existence of RT topic before trying to truncate it.
           // No known implementation of PubSubAdminAdapter does retries for `containsTopic`.
+
+          // Use thread pool to parallelize RT topic truncation
+          List<Future<?>> rtTopicTruncationFutures = new ArrayList<>();
           for (PubSubTopic rtTopic: rtTopics) {
             if (getTopicManager().containsTopic(rtTopic)) {
-              // for RT topic block on deletion so that next create store does not see the lingering RT topic which
-              // could have different partition count
-              truncateKafkaTopic(rtTopic.getName());
-              if (waitOnRTTopicDeletion && getTopicManager().containsTopic(rtTopic)) {
-                throw new VeniceRetriableException("Waiting for RT topic deletion for store: " + storeName);
-              }
+              // Submit RT topic truncation tasks to thread pool for parallel execution
+              Future<?> future = concurrentTaskExecutor.submit(() -> {
+                try {
+                  // for RT topic block on deletion so that next create store does not see the lingering RT topic which
+                  // could have different partition count
+                  truncateKafkaTopic(rtTopic.getName());
+                  if (waitOnRTTopicDeletion && getTopicManager().containsTopic(rtTopic)) {
+                    throw new VeniceRetriableException("Waiting for RT topic deletion for store: " + storeName);
+                  }
+                } catch (Exception e) {
+                  LOGGER.error("Failed to truncate RT topic: {} for store: {}", rtTopic.getName(), storeName, e);
+                  throw new VeniceException("Failed to truncate RT topic: " + rtTopic.getName(), e);
+                }
+              });
+              rtTopicTruncationFutures.add(future);
+            }
+          }
+
+          // Wait for all RT topic truncation tasks to complete
+          for (Future<?> future: rtTopicTruncationFutures) {
+            try {
+              future.get(5, TimeUnit.MINUTES); // Timeout per RT topic truncation
+            } catch (TimeoutException e) {
+              LOGGER.error("Timeout waiting for RT topic truncation for store: {}", storeName, e);
+              future.cancel(true);
+              throw new VeniceException("Timeout waiting for RT topic truncation for store: " + storeName, e);
+            } catch (InterruptedException e) {
+              LOGGER.error("Interrupted while waiting for RT topic truncation for store: {}", storeName, e);
+              Thread.currentThread().interrupt();
+              throw new VeniceException("Interrupted while waiting for RT topic truncation for store: " + storeName, e);
+            } catch (ExecutionException e) {
+              LOGGER.error("Error during RT topic truncation for store: {}", storeName, e);
+              throw new VeniceException("Error during RT topic truncation for store: " + storeName, e.getCause());
             }
           }
         }
 
-        // Cleanup system stores if applicable
-        UserSystemStoreLifeCycleHelper.maybeDeleteSystemStoresForUserStore(
-            this,
-            storeRepository,
-            resources.getPushMonitor(),
-            clusterName,
-            store,
-            metaStoreWriter,
-            LOGGER);
+        // Cleanup system stores if applicable - submit to thread pool for async execution
+        Future<?> systemStoreCleanupFuture = concurrentTaskExecutor.submit(() -> {
+          try {
+            UserSystemStoreLifeCycleHelper.maybeDeleteSystemStoresForUserStore(
+                this,
+                storeRepository,
+                resources.getPushMonitor(),
+                clusterName,
+                store,
+                metaStoreWriter,
+                LOGGER);
+          } catch (Exception e) {
+            LOGGER.error("Failed to cleanup system stores for store: {}", storeName, e);
+            throw new VeniceException("Failed to cleanup system stores for store: " + storeName, e);
+          }
+        });
+
+        // Wait for system store cleanup to complete
+        try {
+          systemStoreCleanupFuture.get(5, TimeUnit.MINUTES);
+        } catch (TimeoutException e) {
+          LOGGER.error("Timeout waiting for system store cleanup for store: {}", storeName, e);
+          systemStoreCleanupFuture.cancel(true);
+          throw new VeniceException("Timeout waiting for system store cleanup for store: " + storeName, e);
+        } catch (InterruptedException e) {
+          LOGGER.error("Interrupted while waiting for system store cleanup for store: {}", storeName, e);
+          Thread.currentThread().interrupt();
+          throw new VeniceException("Interrupted while waiting for system store cleanup for store: " + storeName, e);
+        } catch (ExecutionException e) {
+          LOGGER.error("Error during system store cleanup for store: {}", storeName, e);
+          throw new VeniceException("Error during system store cleanup for store: " + storeName, e.getCause());
+        }
 
         if (isForcedDelete) {
           storeGraveyard.removeStoreFromGraveyard(clusterName, storeName);
@@ -8453,6 +8518,20 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
       this.clusterControllerClientPerColoMap.values()
           .forEach(ccMap -> ccMap.values().forEach(Utils::closeQuietlyWithErrorLogged));
       D2ClientUtils.shutdownClient(this.d2Client);
+
+      // Shutdown concurrent task executor
+      LOGGER.info("Shutting down concurrent task executor");
+      this.concurrentTaskExecutor.shutdown();
+      try {
+        if (!this.concurrentTaskExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+          LOGGER.warn("Concurrent task executor did not terminate gracefully, forcing shutdown");
+          this.concurrentTaskExecutor.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        LOGGER.warn("Interrupted while waiting for concurrent task executor to terminate", e);
+        this.concurrentTaskExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
 
       long elapsedTime = System.currentTimeMillis() - closeStartTime;
       long remainingTime = Math.max(1, HELIX_MANAGER_DISCONNECT_TIMEOUT_MS - elapsedTime);

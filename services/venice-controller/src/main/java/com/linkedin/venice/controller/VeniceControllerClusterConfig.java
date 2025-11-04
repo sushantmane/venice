@@ -340,6 +340,7 @@ public class VeniceControllerClusterConfig {
 
   private final boolean grpcServerEnabled;
   private final int grpcServerThreadCount;
+  private final int concurrentTaskExecutorThreadCount;
   private final boolean enforceSSLOnly;
   private final long terminalStateTopicCheckerDelayMs;
   private final List<ControllerRoute> disabledRoutes;
@@ -795,6 +796,9 @@ public class VeniceControllerClusterConfig {
     this.grpcServerEnabled = props.getBoolean(CONTROLLER_GRPC_SERVER_ENABLED, false);
     this.grpcServerThreadCount =
         props.getInt(CONTROLLER_GRPC_SERVER_THREAD_COUNT, Runtime.getRuntime().availableProcessors());
+    this.concurrentTaskExecutorThreadCount = props.getInt(
+        CONTROLLER_CONCURRENT_TASK_EXECUTOR_THREAD_COUNT,
+        Math.max(4, Runtime.getRuntime().availableProcessors()));
 
     /**
      * Override the config to false if the "Read" method check is not working as expected.
@@ -1786,6 +1790,10 @@ public class VeniceControllerClusterConfig {
 
   public int getGrpcServerThreadCount() {
     return grpcServerThreadCount;
+  }
+
+  public int getConcurrentTaskExecutorThreadCount() {
+    return concurrentTaskExecutorThreadCount;
   }
 
   public long getDeferredVersionSwapSleepMs() {
