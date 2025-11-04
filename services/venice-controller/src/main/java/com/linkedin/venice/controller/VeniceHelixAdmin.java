@@ -1306,95 +1306,15 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         }
       }
       if (store != null) {
-        List<PubSubTopic> rtTopics = Utils.getAllRealTimeTopicNames(store)
-            .stream()
-            .map(pubSubTopicRepository::getTopic)
-            .collect(Collectors.toList());
-        // Delete All versions and push statues
-        deleteAllVersionsInStore(clusterName, storeName);
-        resources.getPushMonitor().cleanupStoreStatus(storeName);
-        // Truncate all the version topics, this is a prerequisite to delete the RT topic
-        truncateOldTopics(clusterName, store, true);
-
-        if (!store.isMigrating() && !isAbortMigrationCleanup) {
-          // Some implementations of PubSubAdminAdapter may retry multiple times to get/update topic's config in order
-          // to truncate it. Because of this, `truncateKafkaTopic` may take long enough time to make `delete store`
-          // operation time out. Therefore, we check for the existence of RT topic before trying to truncate it.
-          // No known implementation of PubSubAdminAdapter does retries for `containsTopic`.
-
-          // Use thread pool to parallelize RT topic truncation
-          List<Future<?>> rtTopicTruncationFutures = new ArrayList<>();
-          for (PubSubTopic rtTopic: rtTopics) {
-            if (getTopicManager().containsTopic(rtTopic)) {
-              // Submit RT topic truncation tasks to thread pool for parallel execution
-              Future<?> future = concurrentTaskExecutor.submit(() -> {
-                try {
-                  // for RT topic block on deletion so that next create store does not see the lingering RT topic which
-                  // could have different partition count
-                  truncateKafkaTopic(rtTopic.getName());
-                  if (waitOnRTTopicDeletion && getTopicManager().containsTopic(rtTopic)) {
-                    throw new VeniceRetriableException("Waiting for RT topic deletion for store: " + storeName);
-                  }
-                } catch (Exception e) {
-                  LOGGER.error("Failed to truncate RT topic: {} for store: {}", rtTopic.getName(), storeName, e);
-                  throw new VeniceException("Failed to truncate RT topic: " + rtTopic.getName(), e);
-                }
-              });
-              rtTopicTruncationFutures.add(future);
-            }
-          }
-
-          // Wait for all RT topic truncation tasks to complete
-          for (Future<?> future: rtTopicTruncationFutures) {
-            try {
-              future.get(5, TimeUnit.MINUTES); // Timeout per RT topic truncation
-            } catch (TimeoutException e) {
-              LOGGER.error("Timeout waiting for RT topic truncation for store: {}", storeName, e);
-              future.cancel(true);
-              throw new VeniceException("Timeout waiting for RT topic truncation for store: " + storeName, e);
-            } catch (InterruptedException e) {
-              LOGGER.error("Interrupted while waiting for RT topic truncation for store: {}", storeName, e);
-              Thread.currentThread().interrupt();
-              throw new VeniceException("Interrupted while waiting for RT topic truncation for store: " + storeName, e);
-            } catch (ExecutionException e) {
-              LOGGER.error("Error during RT topic truncation for store: {}", storeName, e);
-              throw new VeniceException("Error during RT topic truncation for store: " + storeName, e.getCause());
-            }
-          }
-        }
-
-        // Cleanup system stores if applicable - submit to thread pool for async execution
-        Future<?> systemStoreCleanupFuture = concurrentTaskExecutor.submit(() -> {
-          try {
-            UserSystemStoreLifeCycleHelper.maybeDeleteSystemStoresForUserStore(
-                this,
-                storeRepository,
-                resources.getPushMonitor(),
-                clusterName,
-                store,
-                metaStoreWriter,
-                LOGGER);
-          } catch (Exception e) {
-            LOGGER.error("Failed to cleanup system stores for store: {}", storeName, e);
-            throw new VeniceException("Failed to cleanup system stores for store: " + storeName, e);
-          }
-        });
-
-        // Wait for system store cleanup to complete
-        try {
-          systemStoreCleanupFuture.get(5, TimeUnit.MINUTES);
-        } catch (TimeoutException e) {
-          LOGGER.error("Timeout waiting for system store cleanup for store: {}", storeName, e);
-          systemStoreCleanupFuture.cancel(true);
-          throw new VeniceException("Timeout waiting for system store cleanup for store: " + storeName, e);
-        } catch (InterruptedException e) {
-          LOGGER.error("Interrupted while waiting for system store cleanup for store: {}", storeName, e);
-          Thread.currentThread().interrupt();
-          throw new VeniceException("Interrupted while waiting for system store cleanup for store: " + storeName, e);
-        } catch (ExecutionException e) {
-          LOGGER.error("Error during system store cleanup for store: {}", storeName, e);
-          throw new VeniceException("Error during system store cleanup for store: " + storeName, e.getCause());
-        }
+        // Execute all deletion tasks in parallel
+        executeStoreDeletionTasksInParallel(
+            clusterName,
+            storeName,
+            store,
+            resources,
+            storeRepository,
+            waitOnRTTopicDeletion,
+            isAbortMigrationCleanup);
 
         if (isForcedDelete) {
           storeGraveyard.removeStoreFromGraveyard(clusterName, storeName);
@@ -1413,6 +1333,169 @@ public class VeniceHelixAdmin implements Admin, StoreCleaner {
         storeConfigAccessor.deleteConfig(storeName);
       }
       LOGGER.info("Store {} in cluster {} has been deleted.", storeName, clusterName);
+    }
+  }
+
+  /**
+   * Executes all store deletion tasks in parallel for better performance.
+   * Tasks include:
+   * 1. Delete all versions, cleanup push status, and truncate old topics
+   * 2. Truncate RT topics
+   * 3. Delete DaVinci push status system store
+   * 4. Delete meta system store
+   *
+   * All tasks must succeed for the deletion to be considered successful.
+   */
+  private void executeStoreDeletionTasksInParallel(
+      String clusterName,
+      String storeName,
+      Store store,
+      HelixVeniceClusterResources resources,
+      ReadWriteStoreRepository storeRepository,
+      boolean waitOnRTTopicDeletion,
+      boolean isAbortMigrationCleanup) {
+    List<Future<?>> allDeletionTasks = new ArrayList<>();
+
+    // Task 1: Delete all versions, cleanup push status, and truncate old topics
+    Future<?> versionCleanupTask = concurrentTaskExecutor.submit(() -> {
+      try {
+        deleteAllVersionsInStore(clusterName, storeName);
+        resources.getPushMonitor().cleanupStoreStatus(storeName);
+        truncateOldTopics(clusterName, store, true);
+        LOGGER.info("Completed version cleanup for store: {}", storeName);
+      } catch (Exception e) {
+        LOGGER.error("Failed to cleanup versions for store: {}", storeName, e);
+        throw new VeniceException("Failed to cleanup versions for store: " + storeName, e);
+      }
+    });
+    allDeletionTasks.add(versionCleanupTask);
+
+    // Task 2: Truncate RT topics (only if not migrating)
+    if (!store.isMigrating() && !isAbortMigrationCleanup) {
+      List<PubSubTopic> rtTopics = Utils.getAllRealTimeTopicNames(store)
+          .stream()
+          .map(pubSubTopicRepository::getTopic)
+          .collect(Collectors.toList());
+
+      for (PubSubTopic rtTopic: rtTopics) {
+        if (getTopicManager().containsTopic(rtTopic)) {
+          Future<?> rtTopicTask =
+              concurrentTaskExecutor.submit(() -> truncateRTTopicTask(rtTopic, storeName, waitOnRTTopicDeletion));
+          allDeletionTasks.add(rtTopicTask);
+        }
+      }
+    }
+
+    // Task 3: Delete DaVinci push status system store
+    if (store.isDaVinciPushStatusStoreEnabled()) {
+      Future<?> daVinciStoreTask = concurrentTaskExecutor.submit(
+          () -> deleteDaVinciPushStatusSystemStore(clusterName, store, storeRepository, resources.getPushMonitor()));
+      allDeletionTasks.add(daVinciStoreTask);
+    }
+
+    // Wait for all tasks (version cleanup, RT topics, DaVinci store) to complete
+    waitForTasksToComplete(allDeletionTasks, storeName, "store deletion tasks");
+
+    // Task 4: Delete meta system store AFTER all other tasks complete
+    // This must be done last because deleting other system stores may send updates to the meta system store
+    if (store.isStoreMetaSystemStoreEnabled()) {
+      Future<?> metaStoreTask = concurrentTaskExecutor
+          .submit(() -> deleteMetaSystemStore(clusterName, store, storeRepository, resources.getPushMonitor()));
+      waitForTasksToComplete(Collections.singletonList(metaStoreTask), storeName, "meta system store deletion");
+    }
+  }
+
+  /**
+   * Truncates a single RT topic with proper error handling.
+   */
+  private void truncateRTTopicTask(PubSubTopic rtTopic, String storeName, boolean waitOnRTTopicDeletion) {
+    try {
+      // For RT topic block on deletion so that next create store does not see the lingering RT topic
+      // which could have different partition count
+      truncateKafkaTopic(rtTopic.getName());
+      if (waitOnRTTopicDeletion && getTopicManager().containsTopic(rtTopic)) {
+        throw new VeniceRetriableException("Waiting for RT topic deletion for store: " + storeName);
+      }
+      LOGGER.info("Successfully truncated RT topic: {} for store: {}", rtTopic.getName(), storeName);
+    } catch (Exception e) {
+      LOGGER.error("Failed to truncate RT topic: {} for store: {}", rtTopic.getName(), storeName, e);
+      throw new VeniceException("Failed to truncate RT topic: " + rtTopic.getName(), e);
+    }
+  }
+
+  /**
+   * Deletes the DaVinci push status system store for the given user store.
+   */
+  private void deleteDaVinciPushStatusSystemStore(
+      String clusterName,
+      Store userStore,
+      ReadWriteStoreRepository storeRepository,
+      PushMonitorDelegator pushMonitor) {
+    try {
+      String systemStoreName = VeniceSystemStoreType.DAVINCI_PUSH_STATUS_STORE.getSystemStoreName(userStore.getName());
+      UserSystemStoreLifeCycleHelper.deleteSystemStore(
+          this,
+          storeRepository,
+          pushMonitor,
+          clusterName,
+          systemStoreName,
+          userStore.isMigrating(),
+          metaStoreWriter,
+          LOGGER);
+      LOGGER.info("Successfully deleted DaVinci push status system store for: {}", userStore.getName());
+    } catch (Exception e) {
+      LOGGER.error("Failed to delete DaVinci push status system store for: {}", userStore.getName(), e);
+      throw new VeniceException("Failed to delete DaVinci push status system store for: " + userStore.getName(), e);
+    }
+  }
+
+  /**
+   * Deletes the meta system store for the given user store.
+   * This must be called last as other system store deletions may try to send updates to the meta system store.
+   */
+  private void deleteMetaSystemStore(
+      String clusterName,
+      Store userStore,
+      ReadWriteStoreRepository storeRepository,
+      PushMonitorDelegator pushMonitor) {
+    try {
+      String systemStoreName = VeniceSystemStoreType.META_STORE.getSystemStoreName(userStore.getName());
+      UserSystemStoreLifeCycleHelper.deleteSystemStore(
+          this,
+          storeRepository,
+          pushMonitor,
+          clusterName,
+          systemStoreName,
+          userStore.isMigrating(),
+          metaStoreWriter,
+          LOGGER);
+      LOGGER.info("Successfully deleted meta system store for: {}", userStore.getName());
+    } catch (Exception e) {
+      LOGGER.error("Failed to delete meta system store for: {}", userStore.getName(), e);
+      throw new VeniceException("Failed to delete meta system store for: " + userStore.getName(), e);
+    }
+  }
+
+  /**
+   * Waits for all provided tasks to complete with proper timeout and error handling.
+   * All tasks must succeed for this method to return successfully.
+   */
+  private void waitForTasksToComplete(List<Future<?>> tasks, String storeName, String taskDescription) {
+    for (Future<?> task: tasks) {
+      try {
+        task.get(5, TimeUnit.MINUTES); // Timeout per task
+      } catch (TimeoutException e) {
+        LOGGER.error("Timeout waiting for {} for store: {}", taskDescription, storeName, e);
+        task.cancel(true);
+        throw new VeniceException("Timeout waiting for " + taskDescription + " for store: " + storeName, e);
+      } catch (InterruptedException e) {
+        LOGGER.error("Interrupted while waiting for {} for store: {}", taskDescription, storeName, e);
+        Thread.currentThread().interrupt();
+        throw new VeniceException("Interrupted while waiting for " + taskDescription + " for store: " + storeName, e);
+      } catch (ExecutionException e) {
+        LOGGER.error("Error during {} for store: {}", taskDescription, storeName, e);
+        throw new VeniceException("Error during " + taskDescription + " for store: " + storeName, e.getCause());
+      }
     }
   }
 
