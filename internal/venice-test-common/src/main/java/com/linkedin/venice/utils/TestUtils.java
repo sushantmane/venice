@@ -783,7 +783,30 @@ public class TestUtils {
     return response;
   }
 
+  private static final int JAVA_MAJOR_VERSION = getJavaMajorVersion();
+
+  private static int getJavaMajorVersion() {
+    String version = System.getProperty("java.version");
+    if (version.startsWith("1.")) {
+      // Java 8 or earlier: "1.8.0_xxx"
+      return Integer.parseInt(version.substring(2, 3));
+    }
+    // Java 9+: "9.x.x", "11.x.x", "17.x.x", "21.x.x"
+    int dotIndex = version.indexOf('.');
+    if (dotIndex > 0) {
+      return Integer.parseInt(version.substring(0, dotIndex));
+    }
+    return Integer.parseInt(version);
+  }
+
+  @SuppressWarnings("removal")
   public static void preventSystemExit() {
+    // SecurityManager is deprecated for removal in JDK 17+ and throws UnsupportedOperationException in JDK 21+
+    // Skip setting SecurityManager on JDK 17+ to avoid the exception
+    if (JAVA_MAJOR_VERSION >= 17) {
+      LOGGER.info("Skipping preventSystemExit() on JDK {} as SecurityManager is deprecated", JAVA_MAJOR_VERSION);
+      return;
+    }
     System.setSecurityManager(new SecurityManager() {
       @Override
       public void checkPermission(Permission perm) {
@@ -805,7 +828,12 @@ public class TestUtils {
     });
   }
 
+  @SuppressWarnings("removal")
   public static void restoreSystemExit() {
+    // SecurityManager is deprecated for removal in JDK 17+ and throws UnsupportedOperationException in JDK 21+
+    if (JAVA_MAJOR_VERSION >= 17) {
+      return;
+    }
     System.setSecurityManager(null);
   }
 

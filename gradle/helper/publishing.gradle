@@ -45,8 +45,10 @@ ext.mavenPublishing = [
               && it.name.startsWith('publish')
               && it.name.endsWith(getMavenRepositoryPublicationTaskSuffix(repo.name))
         }
-        rootProject.tasks.named(allModulesMavenRepoTaskName) {
-          dependsOn otherModulesMavenRepoTaskNames
+        // Use findByName for Gradle 8.x compatibility - task may not exist during configuration
+        def allModulesTask = rootProject.tasks.findByName(allModulesMavenRepoTaskName)
+        if (allModulesTask != null) {
+          allModulesTask.dependsOn otherModulesMavenRepoTaskNames
         }
       }
     }

@@ -542,7 +542,7 @@ idea {
 }
 
 task integrationTestJar(type: Jar) {
-  classifier 'integrationTest'
+  archiveClassifier.set('integrationTest')
   from sourceSets.integrationTest.output
 }
 

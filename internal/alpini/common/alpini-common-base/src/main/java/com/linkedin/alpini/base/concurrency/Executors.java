@@ -481,6 +481,9 @@ public enum Executors {
       super(executor);
     }
 
+    // TODO: Replace with Cleaner-based approach when Java 8 support is dropped (Cleaner requires Java 9+)
+    @SuppressWarnings("deprecation")
+    @Override
     protected void finalize() {
       super.shutdown();
     }

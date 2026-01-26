@@ -8,10 +8,10 @@ plugins {
   id 'idea'
   id 'java'
   id 'maven-publish'
-  id 'com.diffplug.spotless' version '6.12.0'
+  id 'com.diffplug.spotless' version '6.25.0'
   id 'com.dorongold.task-tree' version '2.1.0'
   id 'com.github.johnrengelman.shadow' version '7.1.2' apply false
-  id 'com.github.spotbugs' version '4.8.0' apply false
+  id 'com.github.spotbugs' version '5.2.5' apply false
   id 'org.gradle.test-retry' version '1.6.0' apply false
   id 'com.form.diff-coverage' version '0.9.5' apply false
   id 'me.champeau.jmh' version '0.6.7' apply false
@@ -118,7 +118,7 @@ ext.libraries = [
     mail: 'javax.mail:mail:1.4.4',
     mapreduceClientCore: "org.apache.hadoop:hadoop-mapreduce-client-core:${hadoopVersion}",
     mapreduceClientJobClient: "org.apache.hadoop:hadoop-mapreduce-client-jobclient:${hadoopVersion}",
-    mockito: 'org.mockito:mockito-core:4.11.0',
+    mockito: 'org.mockito:mockito-core:5.11.0',
     netty: 'io.netty:netty-all:4.1.74.Final',
     opentelemetryApi: "io.opentelemetry:opentelemetry-api:${openTelemetryVersion}",
     opentelemetrySdk: "io.opentelemetry:opentelemetry-sdk:${openTelemetryVersion}",
@@ -141,10 +141,10 @@ ext.libraries = [
     slf4jSimple: 'org.slf4j:slf4j-simple:1.7.36',
     snappy: 'org.iq80.snappy:snappy:0.4',
     spark: 'com.sparkjava:spark-core:2.9.4', // Spark-Java Rest framework
-    spotbugs: 'com.github.spotbugs:spotbugs:4.5.2',
+    spotbugs: 'com.github.spotbugs:spotbugs:4.8.3',
     tehuti: 'io.tehuti:tehuti:0.12.5',
     testcontainers: 'org.testcontainers:testcontainers:1.18.0',
-    testng: 'org.testng:testng:6.14.3',
+    testng: 'org.testng:testng:7.5.1',
     tomcatAnnotations: 'org.apache.tomcat:annotations-api:6.0.53',
     // Resolves java.lang.UnsupportedOperationException:  setXIncludeAware is not supported on this JAXP implementation
     // or earlier: class org.apache.xerces.jaxp.DocumentBuilderFactoryImpl
@@ -383,10 +383,10 @@ subprojects {
     showStackTraces = false
     reports ({
       xml {
-        enabled = project.hasProperty('spotbugs.xml') || project.hasProperty('spotbugs.reports.all')
+        required = project.hasProperty('spotbugs.xml') || project.hasProperty('spotbugs.reports.all')
       }
       html {
-        enabled = !reports.getByName('XML').enabled || project.hasProperty('spotbugs.reports.all')
+        required = !reports.getByName('xml').required.get() || project.hasProperty('spotbugs.reports.all')
         stylesheet = 'fancy-hist.xsl'
       }
     })
@@ -416,15 +416,20 @@ subprojects {
   tasks.withType(Test) {
     mustRunAfter tasks.withType(SpotBugsTask)
 
-    // For Spark to run on Java 17
+    // For Spark and other libraries to run on Java 17/21
     jvmArgs "-XX:+IgnoreUnrecognizedVMOptions"
+    jvmArgs "-Xshare:off" // Disable CDS to avoid warning with --add-opens
     jvmArgs "--add-opens=java.base/java.nio=ALL-UNNAMED"
     jvmArgs "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
     jvmArgs "--add-opens=java.base/java.lang=ALL-UNNAMED"
     jvmArgs "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
     jvmArgs "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
+    // Additional opens for JDK 21 compatibility
+    jvmArgs "--add-opens=java.base/java.util=ALL-UNNAMED"
+    jvmArgs "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED"
+    jvmArgs "--add-opens=java.base/sun.security.ssl=ALL-UNNAMED"
 
-    if (JavaVersion.current() == JavaVersion.VERSION_11) {
+    if (JavaVersion.current() >= JavaVersion.VERSION_11) {
       jvmArgs "-Dio.netty.tryReflectionSetAccessible=true"
     }
 
@@ -518,8 +523,8 @@ subprojects {
       dependsOn test // tests are required to run before generating the report
 
       reports {
-        xml.enabled = true
-        html.enabled = true
+        xml.required = true
+        html.required = true
       }
     }
 
@@ -597,7 +602,7 @@ subprojects {
   }
 
   task testJar(type: Jar) {
-    classifier 'tests'
+    archiveClassifier.set('tests')
     from sourceSets.test.output
   }
 
@@ -840,7 +845,7 @@ allprojects {
   task printAllDependencies(type: DependencyReportTask) {}
 }
 
-def supportedJdkVersions = [JavaVersion.VERSION_1_8, JavaVersion.VERSION_11, JavaVersion.VERSION_17]
+def supportedJdkVersions = [JavaVersion.VERSION_1_8, JavaVersion.VERSION_11, JavaVersion.VERSION_17, JavaVersion.VERSION_21]
 
 task verifyJdkVersion {
   def currentJdkVersion = JavaVersion.current()
