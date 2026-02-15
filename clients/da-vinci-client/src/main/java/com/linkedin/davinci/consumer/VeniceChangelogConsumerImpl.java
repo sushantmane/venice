@@ -1523,15 +1523,6 @@ public class VeniceChangelogConsumerImpl<K, V> implements VeniceChangelogConsume
           PubSubTopic newServingVersionTopic =
               pubSubTopicRepository.getTopic(versionSwap.newServingVersionTopic.toString());
 
-          // TODO: There seems to exist a condition in the server where highwatermark offsets may regress when
-          // transmitting the version swap message it seems like this can potentially happen if a repush occurs
-          // and no data is consumed on that previous version.
-          // To make the client handle this gracefully, we instate the below condition that says the hwm in the
-          // client should never go backwards.
-          List<Long> localOffset = (List<Long>) currentVersionHighWatermarks
-              .getOrDefault(pubSubTopicPartition.getPartitionNumber(), Collections.EMPTY_MAP)
-              .getOrDefault(upstreamPartition, new ArrayList<>(4));
-
           // Prefer position-based high watermarks if available, otherwise use legacy offset-based
           List<ByteBuffer> positions = versionSwap.getLocalHighWatermarkPubSubPositions();
           List<Long> highWatermarkOffsets;
