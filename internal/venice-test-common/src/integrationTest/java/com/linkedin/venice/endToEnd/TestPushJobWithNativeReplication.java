@@ -844,6 +844,18 @@ public class TestPushJobWithNativeReplication {
               false,
               -1);
 
+          // Wait for version 2 to be created in all child datacenters before killing
+          // This prevents a race condition where kill command arrives before version creation
+          for (VeniceMultiClusterWrapper childDatacenter: childDatacenters) {
+            ControllerClient childControllerClient =
+                new ControllerClient(clusterName, childDatacenter.getControllerConnectString());
+            TestUtils.waitForNonDeterministicAssertion(30, TimeUnit.SECONDS, () -> {
+              StoreResponse store = childControllerClient.getStore(storeName);
+              Optional<Version> version = store.getStore().getVersion(2);
+              assertTrue(version.isPresent(), "Version 2 should be created in child datacenter before killing");
+            });
+          }
+
           // kill repush version
           parentControllerClient.killOfflinePushJob(Version.composeKafkaTopic(storeName, 2));
 
