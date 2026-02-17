@@ -1005,7 +1005,7 @@ public class LeaderFollowerStoreIngestionTask extends StoreIngestionTask {
       // critical for cluster operation and we want faster leader transitions there. Once DoL is proven stable
       // in production, this extra check can be removed to get the full performance benefit.
       if (!isSystemStore && !canSwitchToLeaderTopicLegacy(pcs)) {
-        LOGGER.info(
+        LOGGER.debug(
             "DoL mechanism complete for replica: {} but legacy time-based check not yet satisfied. Waiting for legacy check to pass.",
             pcs.getReplicaId());
         return false;
