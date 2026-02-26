@@ -10,7 +10,14 @@
 
 name: E2ETests
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches-ignore:
+      - ci-data
+  pull_request:
+    branches-ignore:
+      - ci-data
+  workflow_dispatch:
 
 jobs:
   IntegrationTests_1:

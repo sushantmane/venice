@@ -2,7 +2,14 @@
 
 name:  TestsDeCompatibilite
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches-ignore:
+      - ci-data
+  pull_request:
+    branches-ignore:
+      - ci-data
+  workflow_dispatch:
 
 jobs:
 

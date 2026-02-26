@@ -1,0 +1,116 @@
+# Flaky Test Report — runs daily on weekdays, analyzes E2ETest results on main.
+#
+# - Downloads test artifacts from recent CI runs
+# - Tracks pass/fail per test method in a rolling 90-day window
+# - Classifies tests as flaky, newly broken, consistently failing, or resolved
+# - Creates/updates a single GitHub issue labeled "flaky-test"
+# - Stores history on the ci-data branch (squashed monthly)
+#
+# Manual trigger: Actions → FlakyTestReport → Run workflow
+
+name: FlakyTestReport
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'  # Weekdays at 8:00 AM UTC
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: 'Number of recent CI runs to analyze'
+        required: false
+        default: '20'
+      dry_run:
+        description: 'Dry run (no issue creation, no history update)'
+        required: false
+        type: boolean
+        default: false
+      squash:
+        description: 'Squash ci-data branch to single commit'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # push to ci-data branch
+  issues: write     # create/update flaky-test issue
+
+jobs:
+  flaky-test-report:
+    runs-on: ubuntu-latest
+    if: github.repository == 'linkedin/venice'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # full history for git log attribution
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Flaky Test Report
+        if: ${{ !inputs.squash }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/ci/flaky_test_report.py \
+            --repo ${{ github.repository }} \
+            --workflow E2ETests \
+            --branch main \
+            --runs ${{ inputs.runs || '20' }} \
+            --window-days 90 \
+            ${{ inputs.dry_run == true && '--dry-run' || '' }}
+
+      - name: Squash ci-data branch
+        if: ${{ inputs.squash == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/ci/flaky_test_report.py \
+            --repo ${{ github.repository }} \
+            --squash
+
+  # Monthly squash of ci-data branch history (1st of each month)
+  monthly-squash:
+    runs-on: ubuntu-latest
+    if: github.repository == 'linkedin/venice' && github.event.schedule && (github.run_number == 1 || startsWith(github.event.schedule, '0 8 * * 1'))
+    # This job only actually squashes on the 1st of the month
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check if 1st of month
+        id: check-date
+        run: |
+          if [ "$(date -u +%d)" = "01" ]; then
+            echo "should_squash=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_squash=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.check-date.outputs.should_squash == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure git
+        if: steps.check-date.outputs.should_squash == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Squash ci-data branch
+        if: steps.check-date.outputs.should_squash == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/ci/flaky_test_report.py \
+            --repo ${{ github.repository }} \
+            --squash
