@@ -123,7 +123,7 @@ public class PartitionStatus implements Comparable<PartitionStatus> {
 
   @Override
   public int compareTo(PartitionStatus o) {
-    return this.partitionId - o.partitionId;
+    return Integer.compare(this.partitionId, o.partitionId);
   }
 
   @Override

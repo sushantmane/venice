@@ -60,6 +60,21 @@ public class PartitionStatusTest {
   }
 
   @Test
+  public void testCompareTo() {
+    PartitionStatus ps0 = new PartitionStatus(0);
+    PartitionStatus ps1 = new PartitionStatus(1);
+    PartitionStatus ps2 = new PartitionStatus(Integer.MAX_VALUE);
+    PartitionStatus ps3 = new PartitionStatus(Integer.MIN_VALUE);
+
+    Assert.assertTrue(ps0.compareTo(ps1) < 0);
+    Assert.assertTrue(ps1.compareTo(ps0) > 0);
+    Assert.assertEquals(ps0.compareTo(new PartitionStatus(0)), 0);
+    // Verify no integer overflow: MAX_VALUE compared to MIN_VALUE must be positive
+    Assert.assertTrue(ps2.compareTo(ps3) > 0);
+    Assert.assertTrue(ps3.compareTo(ps2) < 0);
+  }
+
+  @Test
   public void testValidateBatchUpdateEOIP() {
     PartitionStatus partitionStatus = new PartitionStatus(PARTITION_ID);
     Assert.assertFalse(partitionStatus.hasFatalDataValidationError());
